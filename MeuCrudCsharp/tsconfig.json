@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "noImplicitAny": true, // Força a declarar tipos, evitando o 'any' implícito.
+    "noEmitOnError": true, // Não gera o arquivo .js se houver erros no .ts.
+    "removeComments": false, // Mantém os comentários no .js final.
+    "sourceMap": true,       // Essencial! Cria um arquivo .map para debugging do .ts no navegador.
+    "target": "es6",         // Define a versão do JavaScript que será gerada (es6 é um bom padrão).
+    "outDir": "wwwroot/js"   // MUITO IMPORTANTE: Onde os arquivos .js compilados serão salvos.
+  },
+  "include": [
+    "ClientApp/**/*.ts"      // MUITO IMPORTANTE: Onde estão seus arquivos-fonte .ts.
+  ],
+  "exclude": [ "node_modules" ]
+}

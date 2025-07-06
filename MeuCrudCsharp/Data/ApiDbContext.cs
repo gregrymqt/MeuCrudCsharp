@@ -11,5 +11,7 @@ namespace MeuCrudCsharp.Data
 
         // Esta linha cria uma tabela chamada "Produtos" baseada no modelo "Produto"
         public DbSet<Produto> Produtos { get; set; }
+        public DbSet<Users> Users { get; set; }
+
     }
 }
