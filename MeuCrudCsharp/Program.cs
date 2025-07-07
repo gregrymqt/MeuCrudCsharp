@@ -26,6 +26,9 @@ builder.Services.AddDbContext<ApiDbContext>(options =>
 // 'AddScoped' significa que uma nova instância será criada para cada requisição HTTP.
 builder.Services.AddScoped<ProdutoService>();
 
+// Adicione esta linha! Ela registra todos os serviços necessários para Razor Pages.
+builder.Services.AddRazorPages();
+
 // Registra os serviços para gerar a documentação da API (Swagger).
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -128,6 +131,9 @@ app.UseDefaultFiles();
 
 // Redireciona requisições HTTP para HTTPS.
 app.UseHttpsRedirection();
+
+//para os razorPages
+app.MapRazorPages();
 
 // Mapeia as rotas para os seus Controllers.
 app.MapControllers();
