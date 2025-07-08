@@ -1,0 +1,89 @@
+﻿/* Adicione estas novas classes para criar o card de login */
+
+body, html {
+    background-color: #f0f2f5; /* Um fundo suave para a página */
+}
+
+.login-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 80vh; /* Centraliza verticalmente na tela */
+    padding: 20px;
+}
+
+.login-card {
+    background-color: white;
+    padding: 32px 40px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    max-width: 400px;
+    width: 100%;
+}
+
+.login-title {
+    font-family: 'Google Sans', arial, sans-serif;
+    font-size: 24px;
+    color: #202124;
+    margin-bottom: 8px;
+}
+
+.login-subtitle {
+    font-family: 'Roboto', arial, sans-serif;
+    font-size: 16px;
+    color: #5f6368;
+    margin-bottom: 24px;
+}
+
+
+/* SEU CSS EXISTENTE PARA O BOTÃO (não precisa mudar) */
+
+.google-button {
+    cursor: pointer; /* Adiciona feedback visual de que é clicável */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 24px; /* Aumentei um pouco o padding para melhor toque */
+    background-color: white;
+    border: 1px solid #dadce0;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    transition: all 0.2s ease;
+    text-decoration: none;
+    width: 100%;
+    color: #3c4043;
+    font-family: 'Google Sans', arial, sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+    .google-button:hover {
+        background-color: #f8f9fa;
+        box-shadow: 0 1px 6px rgba(0,0,0,0.12);
+        border-color: #d2d3d5;
+    }
+
+    .google-button svg {
+        width: 18px;
+        height: 18px;
+        margin-right: 12px; /* Aumentei a margem para mais respiro */
+    }
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .login-card {
+        padding: 24px;
+    }
+
+    .google-button {
+        padding: 8px 16px;
+        font-size: 13px;
+    }
+
+        .google-button svg {
+            width: 16px;
+            height: 16px;
+            margin-right: 8px;
+        }
+}

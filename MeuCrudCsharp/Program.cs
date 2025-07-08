@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Authentication.Cookies; // Microsoft.AspNetCore.Authe
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -25,6 +27,9 @@ builder.Services.AddDbContext<ApiDbContext>(options =>
 // Você está registrando sua classe de serviço 'ProdutoService' no contêiner de DI.
 // 'AddScoped' significa que uma nova instância será criada para cada requisição HTTP.
 builder.Services.AddScoped<ProdutoService>();
+
+//servico de autenticação para login
+builder.Services.AddScoped<IAppAuthService, AppAuthService>();
 
 // Adicione esta linha! Ela registra todos os serviços necessários para Razor Pages.
 builder.Services.AddRazorPages();
@@ -65,11 +70,19 @@ builder.Services.AddAuthentication(options =>
     // No Program.cs, dentro do .AddGoogle(...)
     options.Events.OnCreatingTicket = context =>
     {
-        // Extrai os dados. Eles podem ser nulos!
-        var googleId = context.Principal.FindFirstValue(ClaimTypes.NameIdentifier);
-        var email = context.Principal.FindFirstValue(ClaimTypes.Email);
-        var name = context.Principal.FindFirstValue(ClaimTypes.Name);
-        var avatar = context.Principal.FindFirstValue("urn:google:picture");
+        // 1. EXTRAIR AS INFORMAÇÕES (CLAIMS) DO GOOGLE
+        var principal = context.Principal;
+        if (principal == null)
+        {
+            return Task.CompletedTask;
+        }
+
+        // Pega o ID único do Google
+        string googleId = principal.FindFirstValue(ClaimTypes.NameIdentifier);
+        string email = principal.FindFirstValue(ClaimTypes.Email);
+        string name = principal.FindFirstValue(ClaimTypes.Name);
+        string avatar = principal.FindFirstValue("urn:google:picture"); // Claim específica para a foto de perfil
+
 
         // VERIFICAÇÃO DE SEGURANÇA: Se não conseguimos o ID ou o Email, algo deu errado.
         if (string.IsNullOrEmpty(googleId) || string.IsNullOrEmpty(email))
@@ -95,7 +108,17 @@ builder.Services.AddAuthentication(options =>
                 };
                 dbContext.Users.Add(newUser);
                 dbContext.SaveChanges();
+                // O usuário a ser autenticado agora é o recém-criado
+                user = newUser;
             }
+
+            // 4. REALIZAR A AUTENTICAÇÃO LOCAL (A PARTE DO "identify.authentic")
+            // Resolve o seu serviço de autenticação
+            var authService = scope.ServiceProvider.GetRequiredService<IAppAuthService>();
+
+            // Passa o usuário (novo ou existente) e o HttpContext para criar a sessão/cookie
+            // Usamos .Result aqui porque o evento não é async por padrão
+            authService.SignInUser(user, context.HttpContext).Wait();
         }
 
         return Task.CompletedTask;
