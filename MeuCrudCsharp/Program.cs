@@ -31,6 +31,8 @@ builder.Services.AddScoped<ProdutoService>();
 //servico de autenticação para login
 builder.Services.AddScoped<IAppAuthService, AppAuthService>();
 
+builder.Services.AddSingleton<TokenMercadoPago>();
+
 // Adicione esta linha! Ela registra todos os serviços necessários para Razor Pages.
 builder.Services.AddRazorPages();
 
