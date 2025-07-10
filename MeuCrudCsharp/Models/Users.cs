@@ -1,5 +1,4 @@
-﻿// Em Models/ApplicationUser.cs
-
+﻿using System; // Necessário para usar o tipo Guid
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -7,7 +6,8 @@ namespace MeuCrudCsharp.Models
 {
     public class Users
     {
-        public int Id { get; set; } // Chave primária do seu banco
+        [Key] // Define explicitamente esta propriedade como a chave primária.
+        public Guid Id { get; set; }
 
         [Required]
         public string GoogleId { get; set; } // O ID do Google é uma string, não um número.
@@ -23,6 +23,10 @@ namespace MeuCrudCsharp.Models
         [MaxLength(500)]
         public string AvatarUrl { get; set; }
 
-        // REMOVEMOS A PROPRIEDADE DE SENHA. NÃO PRECISAMOS DELA!
+       
+        public Users()
+        {
+            Id = Guid.NewGuid();
+        }
     }
 }

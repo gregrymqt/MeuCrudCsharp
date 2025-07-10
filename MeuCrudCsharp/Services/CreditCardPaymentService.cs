@@ -18,6 +18,7 @@ namespace MeuCrudCsharp.Services
         private readonly TokenMercadoPago _tokenMercadoPago;
         private readonly PaymentClient _paymentClient;
         private readonly ApiDbContext _context;
+        private readonly IConfiguration _configuration;
 
         // Dicionário para mapear os status, agora com a sintaxe correta de C#
         private readonly Dictionary<string, string> _statusMap = new()
@@ -34,62 +35,76 @@ namespace MeuCrudCsharp.Services
         public CreditCardPaymentService(
             TokenMercadoPago tokenMercadoPago,
             PaymentClient paymentClient,
-            ApiDbContext context)
+            ApiDbContext context,
+            IConfiguration configuration)
         {
             _tokenMercadoPago = tokenMercadoPago;
             _paymentClient = paymentClient;
             _context = context;
+            _configuration = configuration;
         }
 
-        public async Task<PaymentResponseDto> CreatePaymentAsync(PaymentRequestDto paymentData, long userId, decimal transactionAmount)
+        public async Task<PaymentResponseDto> CreatePaymentAsync(PaymentRequestDto paymentData, Guid userId, decimal transactionAmount)
         {
+            // PASSO 1: Crie a entidade local PRIMEIRO, mas ainda não salve.
+            // O construtor já gera o nosso ID local único (novoPagamento.Id).
+            var novoPagamento = new Payment_User
+            {
+                UserId = userId,
+                Status = "iniciando", // Um status inicial para indicar que a transação começou
+                Method = "cartao_credito",
+                Installments = paymentData.Installments,
+                Amount = transactionAmount,
+                // O PaymentId do Mercado Pago ainda é nulo, o que está correto.
+            };
+
+            // PASSO 2: Configure a requisição para o Mercado Pago
+            var requestOptions = new RequestOptions();
+            requestOptions.AccessToken = _tokenMercadoPago._access_Token;
+            requestOptions.CustomHeaders.Add("X-Idempotency-Key", Guid.NewGuid().ToString());
+
+            var paymentRequest = new PaymentCreateRequest
+            {
+                TransactionAmount = transactionAmount,
+                Token = paymentData.Token,
+                Description = _configuration["Defaultdescription"],
+                Installments = paymentData.Installments,
+                PaymentMethodId = paymentData.PaymentMethodId,
+                IssuerId = paymentData.IssuerId,
+                Payer = new PaymentPayerRequest
+                {
+                    Email = paymentData.Payer.Email,
+                    Identification = new IdentificationRequest
+                    {
+                        Type = paymentData.Payer.Identification.Type,
+                        Number = paymentData.Payer.Identification.Number
+                    }
+                },
+                NotificationUrl = _configuration["notification_url"],
+
+                // AQUI ESTÁ A MÁGICA:
+                // Enviamos o ID do NOSSO banco de dados para o Mercado Pago.
+                ExternalReference = novoPagamento.Id.ToString()
+            };
+
             try
             {
-                // 1. Criação do objeto de requisição fortemente tipado
-                var paymentRequest = new PaymentCreateRequest
-                {
-                    TransactionAmount = transactionAmount,
-                    Token = paymentData.Token,
-                    Description = "Curso Online", // Exemplo de descrição
-                    Installments = paymentData.Installments,
-                    PaymentMethodId = paymentData.PaymentMethodId,
-                    IssuerId = paymentData.IssuerId,
-                    Payer = new PaymentPayerRequest
-                    {
-                        Email = paymentData.Payer.Email,
-                        Identification = new IdentificationRequest
-                        {
-                            Type = paymentData.Payer.Identification.Type,
-                            Number = paymentData.Payer.Identification.Number
-                        }
-                    },
-                    NotificationUrl = "https://seu-site.com/api/notifications" // Preencha com sua URL real
-                };
-
-                // 2. Configuração do Access Token por requisição (Thread-Safe)
-                var requestOptions = new RequestOptions
-                {
-                    AccessToken = _tokenMercadoPago._access_Token
-                };
-
-                // 3. Chamada assíncrona para a API do Mercado Pago
-                Payment payment = await _paymentClient.CreateAsync(paymentRequest, requestOptions);
-
-                // 4. Criação da entidade para salvar no banco de dados
-                var novoPagamento = new Pagamento // Supondo que você tenha uma classe "Pagamento"
-                {
-                    PaymentId = payment.Id.ToString(),
-                    UserId = userId,
-                    Status = MapPaymentStatus(payment.Status),
-                    method = "cartao_credito",
-                    Installments = payment.Installments ?? 0,
-                    amount = transactionAmount,
-                };
-
-                _context.Pagamentos.Add(novoPagamento);
+                // PASSO 3: Salve a entidade no banco ANTES da chamada da API.
+                // Agora temos um registro persistido da tentativa de pagamento.
+                _context.Payment_User.Add(novoPagamento);
                 await _context.SaveChangesAsync();
 
-                // 5. Retorno dos dados relevantes usando o DTO de resposta
+                // PASSO 4: Chame a API do Mercado Pago
+                Payment payment = await _paymentClient.CreateAsync(paymentRequest, requestOptions);
+
+                // PASSO 5: ATUALIZE o registro com os dados da resposta IMEDIATA.
+                // Isso melhora a experiência do usuário, que não precisa esperar o webhook
+                // para um status de "aprovado" ou "recusado" instantâneo.
+                novoPagamento.PaymentId = payment.Id.ToString(); // Agora sim, o ID real do MP
+                novoPagamento.Status = MapPaymentStatus(payment.Status); // O status retornado pela API
+                await _context.SaveChangesAsync(); // Salva as atualizações
+
+                // PASSO 6: Retorne a resposta para o frontend
                 return new PaymentResponseDto
                 {
                     Status = payment.Status,
@@ -99,12 +114,15 @@ namespace MeuCrudCsharp.Services
             }
             catch (MercadoPagoApiException ex)
             {
-                // Captura erros específicos da API e lança uma exceção clara
+                // Se a API falhar, atualizamos nosso registro para "falhou".
+                novoPagamento.Status = "falhou";
+                await _context.SaveChangesAsync();
                 throw new Exception($"Erro na API do Mercado Pago: {ex.ApiError.Message}", ex);
             }
             catch (Exception ex)
             {
-                // Captura outros erros e lança uma exceção genérica
+                novoPagamento.Status = "erro_interno";
+                await _context.SaveChangesAsync();
                 throw new Exception("Erro inesperado ao processar o pagamento.", ex);
             }
         }
