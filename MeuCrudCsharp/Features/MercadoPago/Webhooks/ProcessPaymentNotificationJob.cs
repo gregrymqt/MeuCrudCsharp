@@ -1,12 +1,11 @@
 ﻿// Em Jobs/ProcessPaymentNotificationJob.cs
 
 using MeuCrudCsharp.Data;
-using MeuCrudCsharp.Services;
 using Microsoft.EntityFrameworkCore;
 using System.Threading.Tasks;
-using Hangfire; // Exemplo usando Hangfire para retentativas
+using Hangfire;
 
-namespace MeuCrudCsharp.Jobs
+namespace MeuCrudCsharp.Features.MercadoPago.Webhooks
 {
     public class ProcessPaymentNotificationJob
     {

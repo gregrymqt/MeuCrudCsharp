@@ -1,13 +1,14 @@
 ﻿// Em Controllers/WebHookController.cs
 
+using MeuCrudCsharp.Features.MercadoPago.Jobs;
+using MeuCrudCsharp.Features.MercadoPago.Tokens;
 using MeuCrudCsharp.Models;
-using MeuCrudCsharp.Services;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json; // Adicione este using
 
-namespace MeuCrudCsharp.Controllers
+namespace MeuCrudCsharp.Features.MercadoPago.Webhooks
 {
     [ApiController]
     [Route("api/[controller]")] // É uma boa prática usar um prefixo como 'api'

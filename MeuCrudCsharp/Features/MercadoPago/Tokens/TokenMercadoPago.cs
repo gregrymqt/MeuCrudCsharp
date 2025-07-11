@@ -1,8 +1,8 @@
 ﻿using Azure.Core;
 using Microsoft.Extensions.Configuration; // Adicione este using
-using System;     
+using System;
 // Adicione este using
-namespace MeuCrudCsharp.Services
+namespace MeuCrudCsharp.Features.MercadoPago.Tokens
 {
     public class TokenMercadoPago
     {

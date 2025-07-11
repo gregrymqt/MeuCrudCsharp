@@ -1,5 +1,4 @@
-﻿// Crie um novo arquivo, ex: Services/IQueueService.cs
-namespace MeuCrudCsharp.Services
+﻿namespace MeuCrudCsharp.Features.MercadoPago.Webhooks
 {
     public interface INotificationPaymentService
     {

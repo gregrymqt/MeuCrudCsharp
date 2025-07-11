@@ -4,15 +4,17 @@ using MercadoPago.Client.Payment;
 using MercadoPago.Error;
 using MercadoPago.Resource.Payment;
 using MeuCrudCsharp.Data; // Supondo que seu DbContext e Pagamento estão aqui
+using MeuCrudCsharp.Features.MercadoPago.Tokens;
 using MeuCrudCsharp.Models; // Supondo que sua entidade Pagamento está aqui
+using MeuCrudCsharp.Services;
 using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace MeuCrudCsharp.Services
+namespace MeuCrudCsharp.Features.MercadoPago.Payments
 {
-    public class CreditCardPaymentService // Nome da classe alterado para seguir convenções
+    public class CreditCardPaymentService : ICreditCardPaymentService // Nome da classe alterado para seguir convenções
     {
         // Campos privados com convenção de nomenclatura _camelCase
         private readonly TokenMercadoPago _tokenMercadoPago;
@@ -44,7 +46,7 @@ namespace MeuCrudCsharp.Services
             _configuration = configuration;
         }
 
-        public async Task<PaymentResponseDto> CreatePaymentAsync(PaymentRequestDto paymentData, Guid userId, decimal transactionAmount)
+        public async Task<PaymentResponseDto> CreatePaymentAsync(PaymentRequestDto paymentData, Guid userId, decimal transactionAmount) 
         {
             // PASSO 1: Crie a entidade local PRIMEIRO, mas ainda não salve.
             // O construtor já gera o nosso ID local único (novoPagamento.Id).
@@ -128,7 +130,7 @@ namespace MeuCrudCsharp.Services
         }
 
         // Método auxiliar para mapear o status do pagamento
-        private string MapPaymentStatus(string mercadopagoStatus)
+        public string MapPaymentStatus(string mercadopagoStatus)
         {
             // TryGetValue é a forma segura de acessar um dicionário
             if (_statusMap.TryGetValue(mercadopagoStatus, out var status))

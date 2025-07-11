@@ -1,9 +1,9 @@
 ﻿// Em Services/BackgroundJobQueueService.cs (Exemplo de implementação)
 
-using Hangfire; // Usando Hangfire como exemplo
-using MeuCrudCsharp.Jobs;
+using Hangfire;
+using MeuCrudCsharp.Features.MercadoPago.Webhooks; // Usando Hangfire como exemplo
 
-namespace MeuCrudCsharp.Services
+namespace MeuCrudCsharp.Features.MercadoPago.Jobs
 {
     // Esta é a implementação real da interface que seu controller usa.
     public class BackgroundJobQueueService : IQueueService

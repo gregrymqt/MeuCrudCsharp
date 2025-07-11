@@ -29,7 +29,7 @@ namespace MeuCrudCsharp.Models
         public string Type { get; set; }
 
         [JsonPropertyName("user_id")]
-        public int UserId { get; set; }
+        public Guid UserId { get; set; }
     }
 
     public class NotificationData

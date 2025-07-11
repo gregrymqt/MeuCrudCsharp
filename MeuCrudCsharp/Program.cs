@@ -6,6 +6,10 @@ using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
+using MeuCrudCsharp.Features.MercadoPago.Tokens;
+using MeuCrudCsharp.Features.MercadoPago.Payments;
+
+
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -30,6 +34,8 @@ builder.Services.AddScoped<ProdutoService>();
 
 //servico de autenticação para login
 builder.Services.AddScoped<IAppAuthService, AppAuthService>();
+builder.Services.AddScoped<ICreditCardPaymentService, CreditCardPaymentService>();
+
 
 builder.Services.AddSingleton<TokenMercadoPago>();
 
