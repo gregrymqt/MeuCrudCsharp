@@ -1,7 +1,6 @@
 ﻿// Em Services/BackgroundJobQueueService.cs (Exemplo de implementação)
 
 using Hangfire;
-using MeuCrudCsharp.Features.MercadoPago.Webhooks; // Usando Hangfire como exemplo
 
 namespace MeuCrudCsharp.Features.MercadoPago.Jobs
 {

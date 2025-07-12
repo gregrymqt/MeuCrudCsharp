@@ -7,9 +7,9 @@ using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
 using MeuCrudCsharp.Features.MercadoPago.Tokens;
-using MeuCrudCsharp.Features.MercadoPago.Payments;
-
-
+using MeuCrudCsharp.Features.Auth;
+using MeuCrudCsharp.Features.MercadoPago.Payments.Services;
+using MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -34,7 +34,9 @@ builder.Services.AddScoped<ProdutoService>();
 
 //servico de autenticação para login
 builder.Services.AddScoped<IAppAuthService, AppAuthService>();
-builder.Services.AddScoped<ICreditCardPaymentService, CreditCardPaymentService>();
+builder.Services.AddScoped<ICreditCardPayment, CreditCardPaymentService>();
+builder.Services.AddScoped<IPreferencePayment, PreferencePaymentService>();
+
 
 
 builder.Services.AddSingleton<TokenMercadoPago>();
@@ -57,6 +59,8 @@ builder.Services.AddAuthentication(options =>
     options.DefaultChallengeScheme = GoogleDefaults.AuthenticationScheme;
 })
 .AddCookie() // Adiciona o handler para gerenciar a sessão do usuário com um cookie após o login.
+//.AddGoogle() registra e configura o "manipulador" (handler),...
+//ele que constroi a url para redirecionamento para o google
 .AddGoogle(GoogleDefaults.AuthenticationScheme, options =>
 {
     // 1. Lê as configurações em variáveis que podem ser nulas.
@@ -76,8 +80,10 @@ builder.Services.AddAuthentication(options =>
     options.ClientSecret = clientSecret;
 
     // No Program.cs, dentro do .AddGoogle(...)
+    //quando esse evento acontecer ele entra nesse escopo de codigo 
     options.Events.OnCreatingTicket = context =>
     {
+        //context.Principal é um objeto do tipo ClaimsPrincipal.
         // 1. EXTRAIR AS INFORMAÇÕES (CLAIMS) DO GOOGLE
         var principal = context.Principal;
         if (principal == null)

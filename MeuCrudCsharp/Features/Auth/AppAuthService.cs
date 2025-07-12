@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Authentication;
 using System.Security.Claims;
 
-namespace MeuCrudCsharp.Services
+namespace MeuCrudCsharp.Features.Auth
 {
     public class AppAuthService : IAppAuthService
     {
@@ -18,7 +18,7 @@ namespace MeuCrudCsharp.Services
             new Claim(ClaimTypes.Email, user.Email),
             new Claim("AvatarUrl", user.AvatarUrl ?? "") // Adiciona claims customizadas se precisar
         };
-
+            
             // Crie a identidade do usuário para o seu esquema de cookie
             var claimsIdentity = new ClaimsIdentity(claims, "MeuEsquemaDeCookie");
             var authProperties = new AuthenticationProperties

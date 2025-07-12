@@ -4,17 +4,18 @@ using MercadoPago.Client.Payment;
 using MercadoPago.Error;
 using MercadoPago.Resource.Payment;
 using MeuCrudCsharp.Data; // Supondo que seu DbContext e Pagamento estão aqui
+using MeuCrudCsharp.Features.MercadoPago.Payments.Dtos;
+using MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces;
 using MeuCrudCsharp.Features.MercadoPago.Tokens;
 using MeuCrudCsharp.Models; // Supondo que sua entidade Pagamento está aqui
-using MeuCrudCsharp.Services;
 using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace MeuCrudCsharp.Features.MercadoPago.Payments
+namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
 {
-    public class CreditCardPaymentService : ICreditCardPaymentService // Nome da classe alterado para seguir convenções
+    public class CreditCardPaymentService : ICreditCardPayment // Nome da classe alterado para seguir convenções
     {
         // Campos privados com convenção de nomenclatura _camelCase
         private readonly TokenMercadoPago _tokenMercadoPago;

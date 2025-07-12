@@ -1,4 +1,4 @@
-﻿namespace MeuCrudCsharp.Services
+﻿namespace MeuCrudCsharp.Features.MercadoPago.Payments.Dtos
 {
     public class PayerDto
     {

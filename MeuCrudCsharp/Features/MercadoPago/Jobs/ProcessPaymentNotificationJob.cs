@@ -4,8 +4,9 @@ using MeuCrudCsharp.Data;
 using Microsoft.EntityFrameworkCore;
 using System.Threading.Tasks;
 using Hangfire;
+using MeuCrudCsharp.Features.MercadoPago.Webhooks.Interfaces;
 
-namespace MeuCrudCsharp.Features.MercadoPago.Webhooks
+namespace MeuCrudCsharp.Features.MercadoPago.Jobs
 {
     public class ProcessPaymentNotificationJob
     {

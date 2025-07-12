@@ -8,7 +8,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json; // Adicione este using
 
-namespace MeuCrudCsharp.Features.MercadoPago.Webhooks
+namespace MeuCrudCsharp.Features.MercadoPago.Webhooks.Controllers
 {
     [ApiController]
     [Route("api/[controller]")] // É uma boa prática usar um prefixo como 'api'

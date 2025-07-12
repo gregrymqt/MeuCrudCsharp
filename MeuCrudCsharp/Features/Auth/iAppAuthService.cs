@@ -1,6 +1,6 @@
 ﻿using MeuCrudCsharp.Models;
 
-namespace MeuCrudCsharp.Services
+namespace MeuCrudCsharp.Features.Auth
 {
     public interface IAppAuthService
     {
