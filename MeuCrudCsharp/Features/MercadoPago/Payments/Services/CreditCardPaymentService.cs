@@ -1,4 +1,8 @@
-﻿using MercadoPago.Client;
+﻿using System;
+using System.Collections.Generic;
+using System.Security.Claims;
+using System.Threading.Tasks;
+using MercadoPago.Client;
 using MercadoPago.Client.Common;
 using MercadoPago.Client.Payment;
 using MercadoPago.Error;
@@ -9,9 +13,6 @@ using MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces;
 using MeuCrudCsharp.Features.MercadoPago.Tokens;
 using MeuCrudCsharp.Models; // Supondo que sua entidade Pagamento está aqui
 using Microsoft.Extensions.Options;
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
 {
@@ -31,7 +32,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
             { "in_process", "pendente" },
             { "rejected", "recusado" },
             { "refunded", "reembolsado" },
-            { "cancelled", "cancelado" }
+            { "cancelled", "cancelado" },
         };
 
         // Construtor com injeção de dependência
@@ -39,7 +40,8 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
             TokenMercadoPago tokenMercadoPago,
             PaymentClient paymentClient,
             ApiDbContext context,
-            IConfiguration configuration)
+            IConfiguration configuration
+        )
         {
             _tokenMercadoPago = tokenMercadoPago;
             _paymentClient = paymentClient;
@@ -47,13 +49,24 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
             _configuration = configuration;
         }
 
-        public async Task<PaymentResponseDto> CreatePaymentAsync(PaymentRequestDto paymentData, Guid userId, decimal transactionAmount) 
+        public async Task<PaymentResponseDto> CreatePaymentAsync(
+            PaymentRequestDto paymentData,
+            decimal transactionAmount
+        )
         {
+            var user = new ClaimsPrincipal();
+            var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (!Guid.TryParse(userId, out Guid userIdGuid))
+            {
+                throw new InvalidOperationException("O ID do usuário não esta correto");
+            }
+
             // PASSO 1: Crie a entidade local PRIMEIRO, mas ainda não salve.
             // O construtor já gera o nosso ID local único (novoPagamento.Id).
             var novoPagamento = new Payment_User
             {
-                UserId = userId,
+                UserId = userIdGuid,
                 Status = "iniciando", // Um status inicial para indicar que a transação começou
                 Method = "cartao_credito",
                 Installments = paymentData.Installments,
@@ -80,14 +93,14 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
                     Identification = new IdentificationRequest
                     {
                         Type = paymentData.Payer.Identification.Type,
-                        Number = paymentData.Payer.Identification.Number
-                    }
+                        Number = paymentData.Payer.Identification.Number,
+                    },
                 },
-                NotificationUrl = _configuration["notification_url"],
+                NotificationUrl = _configuration["Redirect.Url"] + "/webhook/mercadopago",
 
                 // AQUI ESTÁ A MÁGICA:
                 // Enviamos o ID do NOSSO banco de dados para o Mercado Pago.
-                ExternalReference = novoPagamento.Id.ToString()
+                ExternalReference = novoPagamento.Id.ToString(),
             };
 
             try
@@ -112,7 +125,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
                 {
                     Status = payment.Status,
                     Id = payment.Id,
-                    PaymentTypeId = payment.PaymentTypeId
+                    PaymentTypeId = payment.PaymentTypeId,
                 };
             }
             catch (MercadoPagoApiException ex)

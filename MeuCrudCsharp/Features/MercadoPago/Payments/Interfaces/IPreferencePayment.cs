@@ -1,9 +1,10 @@
-﻿using MeuCrudCsharp.Models;
-using MeuCrudCsharp.Features.MercadoPago.Payments.Dtos;
+﻿using System.Security.Claims;
+using MercadoPago.Resource.Preference;
+
 namespace MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces
 {
     public interface IPreferencePayment
     {
-        Task<PaymentRequestDto> createPreference(decimal amount,Users user);
+        Task<Preference> CreatePreferenceAsync(decimal amount, ClaimsPrincipal user);
     }
 }

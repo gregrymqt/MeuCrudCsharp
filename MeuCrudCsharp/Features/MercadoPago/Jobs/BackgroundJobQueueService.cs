@@ -19,7 +19,9 @@ namespace MeuCrudCsharp.Features.MercadoPago.Jobs
             // Apenas enfileira o trabalho para ser executado em segundo plano.
             // O Hangfire irá instanciar a classe 'ProcessPaymentNotificationJob'
             // e chamar o método 'ExecuteAsync' com o 'paymentId'.
-            _backgroundJobClient.Enqueue<ProcessPaymentNotificationJob>(job => job.ExecuteAsync(paymentId));
+            _backgroundJobClient.Enqueue<ProcessPaymentNotificationJob>(job =>
+                job.ExecuteAsync(paymentId)
+            );
 
             // Retorna imediatamente.
             return Task.CompletedTask;

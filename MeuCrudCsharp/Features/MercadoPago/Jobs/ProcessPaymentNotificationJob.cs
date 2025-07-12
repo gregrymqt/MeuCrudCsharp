@@ -1,10 +1,10 @@
 ﻿// Em Jobs/ProcessPaymentNotificationJob.cs
 
-using MeuCrudCsharp.Data;
-using Microsoft.EntityFrameworkCore;
 using System.Threading.Tasks;
 using Hangfire;
+using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Features.MercadoPago.Webhooks.Interfaces;
+using Microsoft.EntityFrameworkCore;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Jobs
 {
@@ -17,7 +17,8 @@ namespace MeuCrudCsharp.Features.MercadoPago.Jobs
         public ProcessPaymentNotificationJob(
             ILogger<ProcessPaymentNotificationJob> logger,
             ApiDbContext context,
-            INotificationPaymentService notificationPaymentService)
+            INotificationPaymentService notificationPaymentService
+        )
         {
             _logger = logger;
             _context = context;
@@ -31,11 +32,16 @@ namespace MeuCrudCsharp.Features.MercadoPago.Jobs
         [AutomaticRetry(Attempts = 3, DelaysInSeconds = new int[] { 10 })]
         public async Task ExecuteAsync(string paymentId)
         {
-            _logger.LogInformation("Iniciando processamento do job para o Payment ID: {PaymentId}", paymentId);
+            _logger.LogInformation(
+                "Iniciando processamento do job para o Payment ID: {PaymentId}",
+                paymentId
+            );
 
             // Inicia uma transação no banco de dados.
             // Se algo der errado aqui dentro, tudo é revertido (rollback).
-            await using var transaction = await _context.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+            await using var transaction = await _context.Database.BeginTransactionAsync(
+                System.Data.IsolationLevel.Serializable
+            );
 
             try
             {
@@ -43,13 +49,19 @@ namespace MeuCrudCsharp.Features.MercadoPago.Jobs
                 // Esta é a tradução de ->lockForUpdate().
                 // A sintaxe exata do SQL pode variar (ex: "WITH (UPDLOCK)" para SQL Server).
                 // Este exemplo usa a sintaxe do PostgreSQL.
-                var pagamentoLocal = await _context.Payment_User
-                    .FromSqlRaw(@"SELECT * FROM ""Payment_User"" WHERE ""PaymentId"" = {0} FOR UPDATE", paymentId)
+                var pagamentoLocal = await _context
+                    .Payment_User.FromSqlRaw(
+                        @"SELECT * FROM ""Payment_User"" WHERE ""PaymentId"" = {0} FOR UPDATE",
+                        paymentId
+                    )
                     .FirstOrDefaultAsync();
 
                 if (pagamentoLocal == null)
                 {
-                    _logger.LogWarning("Pagamento com ID {PaymentId} não encontrado no banco de dados. O job será descartado.", paymentId);
+                    _logger.LogWarning(
+                        "Pagamento com ID {PaymentId} não encontrado no banco de dados. O job será descartado.",
+                        paymentId
+                    );
                     await transaction.CommitAsync(); // Comita a transação vazia e encerra.
                     return;
                 }
@@ -58,7 +70,11 @@ namespace MeuCrudCsharp.Features.MercadoPago.Jobs
                 // Esta verificação previne o reprocessamento.
                 if (pagamentoLocal.Status != "pendente" && pagamentoLocal.Status != "iniciando")
                 {
-                    _logger.LogInformation("Pagamento {PaymentId} já foi processado (Status: {Status}). Pulando job.", paymentId, pagamentoLocal.Status);
+                    _logger.LogInformation(
+                        "Pagamento {PaymentId} já foi processado (Status: {Status}). Pulando job.",
+                        paymentId,
+                        pagamentoLocal.Status
+                    );
                     await transaction.CommitAsync(); // Libera o "cadeado" e termina o job.
                     return;
                 }
@@ -69,11 +85,18 @@ namespace MeuCrudCsharp.Features.MercadoPago.Jobs
 
                 // A transação é concluída aqui (commit) e o "cadeado" é liberado.
                 await transaction.CommitAsync();
-                _logger.LogInformation("Processamento do Payment ID: {PaymentId} concluído com sucesso.", paymentId);
+                _logger.LogInformation(
+                    "Processamento do Payment ID: {PaymentId} concluído com sucesso.",
+                    paymentId
+                );
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erro ao processar notificação para o Payment ID: {PaymentId}. A transação será revertida.", paymentId);
+                _logger.LogError(
+                    ex,
+                    "Erro ao processar notificação para o Payment ID: {PaymentId}. A transação será revertida.",
+                    paymentId
+                );
 
                 // Reverte todas as alterações no banco de dados.
                 await transaction.RollbackAsync();

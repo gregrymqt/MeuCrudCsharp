@@ -1,12 +1,12 @@
 ﻿// Em Controllers/WebHookController.cs
 
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json; // Adicione este using
 using MeuCrudCsharp.Features.MercadoPago.Jobs;
 using MeuCrudCsharp.Features.MercadoPago.Tokens;
 using MeuCrudCsharp.Models;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Cryptography;
-using System.Text;
-using System.Text.Json; // Adicione este using
 
 namespace MeuCrudCsharp.Features.MercadoPago.Webhooks.Controllers
 {
@@ -24,7 +24,8 @@ namespace MeuCrudCsharp.Features.MercadoPago.Webhooks.Controllers
             ILogger<WebHookController> logger,
             TokenMercadoPago tokenMercadoPago,
             IQueueService queueService,
-            IHostEnvironment environment)
+            IHostEnvironment environment
+        )
         {
             _logger = logger;
             _tokenMercadoPago = tokenMercadoPago;
@@ -36,10 +37,15 @@ namespace MeuCrudCsharp.Features.MercadoPago.Webhooks.Controllers
         }
 
         [HttpPost("mercadopago")] // Rota específica para o webhook do MP
-        public async Task<IActionResult> MercadoPagoWebhook([FromBody] MercadoPagoNotification notification)
+        public async Task<IActionResult> MercadoPagoWebhook(
+            [FromBody] MercadoPagoNotification notification
+        )
         {
             // Log do corpo da requisição para depuração
-            _logger.LogInformation("Webhook do Mercado Pago recebido: {Payload}", JsonSerializer.Serialize(notification));
+            _logger.LogInformation(
+                "Webhook do Mercado Pago recebido: {Payload}",
+                JsonSerializer.Serialize(notification)
+            );
 
             try
             {
@@ -59,12 +65,17 @@ namespace MeuCrudCsharp.Features.MercadoPago.Webhooks.Controllers
                 // 2. Processa a notificação baseada no tipo
                 if (notification.Type != "payment" || string.IsNullOrEmpty(notification.Data?.Id))
                 {
-                    _logger.LogWarning("Notificação ignorada: tipo não é 'payment' ou data.id está vazio.");
+                    _logger.LogWarning(
+                        "Notificação ignorada: tipo não é 'payment' ou data.id está vazio."
+                    );
                     // Retornamos 200 OK para que o MP não tente reenviar uma notificação malformada.
                     return Ok(new { status = "ignorado" });
                 }
 
-                _logger.LogInformation("Enfileirando notificação para o pagamento ID: {PaymentId}", notification.Data.Id);
+                _logger.LogInformation(
+                    "Enfileirando notificação para o pagamento ID: {PaymentId}",
+                    notification.Data.Id
+                );
 
                 // 3. Envia o ID do pagamento para a fila processar em segundo plano
                 await _queueService.EnqueuePaymentNotificationAsync(notification.Data.Id);
@@ -84,8 +95,10 @@ namespace MeuCrudCsharp.Features.MercadoPago.Webhooks.Controllers
             try
             {
                 // Obtém os headers necessários
-                if (!request.Headers.TryGetValue("x-request-id", out var xRequestId) ||
-                    !request.Headers.TryGetValue("x-signature", out var xSignature))
+                if (
+                    !request.Headers.TryGetValue("x-request-id", out var xRequestId)
+                    || !request.Headers.TryGetValue("x-signature", out var xSignature)
+                )
                 {
                     _logger.LogWarning("Headers de assinatura ausentes.");
                     return false;
@@ -95,7 +108,9 @@ namespace MeuCrudCsharp.Features.MercadoPago.Webhooks.Controllers
                 var dataId = notification.Data?.Id;
                 if (string.IsNullOrEmpty(dataId))
                 {
-                    _logger.LogWarning("data.id não encontrado no corpo da notificação para validação.");
+                    _logger.LogWarning(
+                        "data.id não encontrado no corpo da notificação para validação."
+                    );
                     return false;
                 }
 
@@ -109,14 +124,18 @@ namespace MeuCrudCsharp.Features.MercadoPago.Webhooks.Controllers
                     var keyValue = part.Trim().Split('=', 2);
                     if (keyValue.Length == 2)
                     {
-                        if (keyValue[0] == "ts") ts = keyValue[1];
-                        else if (keyValue[0] == "v1") hash = keyValue[1];
+                        if (keyValue[0] == "ts")
+                            ts = keyValue[1];
+                        else if (keyValue[0] == "v1")
+                            hash = keyValue[1];
                     }
                 }
 
                 if (string.IsNullOrEmpty(ts) || string.IsNullOrEmpty(hash))
                 {
-                    _logger.LogWarning("Timestamp (ts) ou hash (v1) não encontrados no header x-signature.");
+                    _logger.LogWarning(
+                        "Timestamp (ts) ou hash (v1) não encontrados no header x-signature."
+                    );
                     return false;
                 }
 
@@ -133,7 +152,12 @@ namespace MeuCrudCsharp.Features.MercadoPago.Webhooks.Controllers
 
                 if (!isValid)
                 {
-                    _logger.LogWarning("Assinatura HMAC inválida. Hash Recebido: {ReceivedHash}, Hash Calculado: {CalculatedHash}, Manifesto: {Manifest}", hash, calculatedHash, manifest);
+                    _logger.LogWarning(
+                        "Assinatura HMAC inválida. Hash Recebido: {ReceivedHash}, Hash Calculado: {CalculatedHash}, Manifesto: {Manifest}",
+                        hash,
+                        calculatedHash,
+                        manifest
+                    );
                 }
 
                 return isValid;

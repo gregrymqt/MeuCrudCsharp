@@ -4,7 +4,10 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces
 {
     public interface ICreditCardPayment
     {
-        Task<PaymentResponseDto> CreatePaymentAsync(PaymentRequestDto paymentData, Guid userId, decimal transactionAmount);
+        Task<PaymentResponseDto> CreatePaymentAsync(
+            PaymentRequestDto paymentData,
+            decimal transactionAmount
+        );
         string MapPaymentStatus(string mercadopagoStatus);
     }
 }

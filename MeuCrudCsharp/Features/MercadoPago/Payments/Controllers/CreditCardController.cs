@@ -1,10 +1,10 @@
-﻿using MercadoPago.Error;
+﻿using System.ComponentModel.Design;
+using System.Security.Claims;
+using MercadoPago.Error;
 using MeuCrudCsharp.Features.MercadoPago.Payments.Dtos; // <-- Adicionar using para o DTO
 using MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces;
 using Microsoft.AspNetCore.Authorization; // <-- Adicionar para proteger a rota
 using Microsoft.AspNetCore.Mvc;
-using System.ComponentModel.Design;
-using System.Security.Claims;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Payments.Controllers
 {
@@ -14,14 +14,17 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Controllers
     public class CreditCardController : ControllerBase
     {
         private const string IDEMPOTENCY_PREFIX = "Credit_Card";
+
         // As injeções de dependência estão corretas!
-        private readonly IPreferenceService _preferenceService;
+        private readonly IPreferencePayment _preferenceService;
         private readonly ICacheService _cacheService;
         private readonly ICreditCardPayment _creditCardPaymentService;
 
-        public CreditCardController(IPreferenceService preferenceService,
-                                      ICacheService cacheService,
-                                      ICreditCardPayment creditCardPaymentService)
+        public CreditCardController(
+            IPreferencePayment preferenceService,
+            ICacheService cacheService,
+            ICreditCardPayment creditCardPaymentService
+        )
         {
             _preferenceService = preferenceService;
             _cacheService = cacheService;
@@ -50,10 +53,13 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Controllers
 
             // 2. Lógica de Cache (como você pediu)
             // Supondo que o seu serviço de cache pode armazenar e retornar um IActionResult
-            var cachedResponse = await _cacheService.GetCachedResponse(IDEMPOTENCY_PREFIX + idempotencyKey);
+            var cachedResponse = await _cacheService.GetCachedResponseAsync(
+                IDEMPOTENCY_PREFIX,
+                idempotencyKey
+            );
             if (cachedResponse != null)
             {
-                return cachedResponse; // Retorna a resposta do cache se o pagamento já foi processado
+                return BadRequest(new { message = "Esse pagamento já foi feito" });
             }
 
             try
@@ -69,20 +75,29 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Controllers
                 {
                     // Se a conversão falhar, significa que o ID no token não é um Guid válido.
                     // Retornamos um erro claro em vez de deixar a aplicação quebrar.
-                    return BadRequest(new { message = "O formato do ID de usuário no token é inválido." });
+                    return BadRequest(
+                        new { message = "O formato do ID de usuário no token é inválido." }
+                    );
                 }
 
-                var result = await _creditCardPaymentService.CreatePaymentAsync(request, userIdAsGuid, 100);
+                var result = await _creditCardPaymentService.CreatePaymentAsync(request, 100);
 
                 // 5. Armazenando a resposta no cache em caso de sucesso
-                await _cacheService.StoreResponse(IDEMPOTENCY_PREFIX + idempotencyKey, Ok(result), TimeSpan.FromDays(1));
+                await _cacheService.StoreResponseAsync(
+                    IDEMPOTENCY_PREFIX,
+                    idempotencyKey,
+                    Ok(result),
+                    200
+                );
 
                 return Ok(result);
             }
             catch (MercadoPagoApiException e)
             {
                 // Retorna um erro específico da API do Mercado Pago
-                return BadRequest(new { error = "MercadoPago Error", message = e.ApiError.Message });
+                return BadRequest(
+                    new { error = "MercadoPago Error", message = e.ApiError.Message }
+                );
             }
             catch (Exception ex)
             {

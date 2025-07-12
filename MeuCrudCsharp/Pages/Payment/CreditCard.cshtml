@@ -1,0 +1,42 @@
+﻿@page
+@model MeuCrudCsharp.Pages.Payment.CreditCardModel
+@{
+    ViewData["Title"] = "Pagamento com Cartão de Crédito";
+}
+<!-- 1. Seu arquivo de CSS (correto) -->
+<link rel="stylesheet" href="~/css/credit_card.css" asp-append-version="true" />
+
+<main class="py-4">
+    <div class="container">
+        <div class="payment-container">
+            <h2 class="text-center mb-4">Pagamento Seguro</h2>
+
+
+            <div class="card_page_payment">
+                <div id="paymentBrick_container"></div>
+
+                <div id="statusScreenBrick_container" style="display: none;"></div>
+
+                <div id="error-container" style="display: none; color: red; text-align: center; margin-top: 15px;"></div>
+
+                <div id="loading-message" style="display: none; text-align: center;">
+                    <p>Processando seu pagamento, por favor aguarde...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<script src="https://sdk.mercadopago.com/js/v2"></script>
+
+<script>
+
+    window.paymentConfig = {
+        publicKey: '@ViewData["PublicKey"]',
+        preferenceId: '@ViewData["PreferenceId"]',
+        amount: 100.00, 
+        processPaymentUrl: '@Url.Page("/Payment/CreditCard", "ProcessPayment")'
+    };
+</script>
+
+<script src="~/js/credit_card.js" asp-append-version="true" defer></script>

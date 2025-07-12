@@ -5,8 +5,6 @@ namespace MeuCrudCsharp.Pages
 {
     public class _ViewStartModel : PageModel
     {
-        public void OnGet()
-        {
-        }
+        public void OnGet() { }
     }
 }

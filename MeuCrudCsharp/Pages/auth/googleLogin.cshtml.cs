@@ -1,30 +1,30 @@
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using System.Threading.Tasks;
 
 namespace MeuCrudCsharp.Pages.auth
 {
     public class googleLoginModel : PageModel
     {
-        // O construtor e a injeção do AccountController foram removidos.
-        // A PageModel não deve chamar métodos de um Controller diretamente.
+        // O construtor e a injeï¿½ï¿½o do AccountController foram removidos.
+        // A PageModel nï¿½o deve chamar mï¿½todos de um Controller diretamente.
 
         public IActionResult OnGet()
         {
-            // Se o usuário já estiver autenticado, redireciona para a página inicial.
+            // Se o usuï¿½rio jï¿½ estiver autenticado, redireciona para a pï¿½gina inicial.
             if (User.Identity.IsAuthenticated)
             {
-                // Use RedirectToAction se "Home" for um Controller, 
+                // Use RedirectToAction se "Home" for um Controller,
                 // ou RedirectToPage se "/Index" for uma Razor Page.
                 return RedirectToAction("Index", "Home");
             }
 
-            // Se não estiver logado, simplesmente renderiza a página para que 
-            // o usuário possa clicar no botão de login.
+            // Se nï¿½o estiver logado, simplesmente renderiza a pï¿½gina para que
+            // o usuï¿½rio possa clicar no botï¿½o de login.
             return Page();
         }
 
-        // O método OnPost() foi removido, pois não usaremos um formulário.
-        // O botão de login será um link direto para a action do controller.
+        // O mï¿½todo OnPost() foi removido, pois nï¿½o usaremos um formulï¿½rio.
+        // O botï¿½o de login serï¿½ um link direto para a action do controller.
     }
 }
