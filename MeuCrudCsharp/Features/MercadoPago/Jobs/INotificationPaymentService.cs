@@ -1,4 +1,4 @@
-﻿namespace MeuCrudCsharp.Features.MercadoPago.Webhooks.Interfaces
+﻿namespace MeuCrudCsharp.Features.MercadoPago.Jobs
 {
     public interface INotificationPaymentService
     {

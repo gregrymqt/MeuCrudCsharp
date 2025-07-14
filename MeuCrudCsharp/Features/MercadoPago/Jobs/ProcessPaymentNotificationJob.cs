@@ -3,7 +3,6 @@
 using System.Threading.Tasks;
 using Hangfire;
 using MeuCrudCsharp.Data;
-using MeuCrudCsharp.Features.MercadoPago.Webhooks.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Jobs
