@@ -1,0 +1,15 @@
+# Dockerfile
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
+COPY ["MeuCrudCsharp.csproj", "."]
+RUN dotnet restore "./MeuCrudCsharp.csproj"
+COPY . .
+RUN dotnet build "MeuCrudCsharp.csproj" -c Release -o /app/build
+
+FROM build AS publish
+RUN dotnet publish "MeuCrudCsharp.csproj" -c Release -o /app/publish /p:UseAppHost=false
+
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
+WORKDIR /app
+COPY --from=publish /app/publish .
+ENTRYPOINT ["dotnet", "MeuCrudCsharp.dll"]

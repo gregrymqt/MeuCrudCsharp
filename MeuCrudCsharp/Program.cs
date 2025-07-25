@@ -1,5 +1,6 @@
 using System.Security.Claims;
-using Hangfire; // Adicionado para o Hangfire
+using Hangfire;
+using Hangfire.Redis.StackExchange;
 using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Features.Auth;
 using MeuCrudCsharp.Features.MercadoPago.Jobs; // Adicionado para os Jobs
@@ -11,44 +12,81 @@ using MeuCrudCsharp.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.EntityFrameworkCore;
+using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // --- Registro de Serviços (Injeção de Dependência) ---
 
+// 1. Registros essenciais do ASP.NET Core
 builder.Services.AddControllers();
-builder.Services.AddDbContext<ApiDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"))
-);
-
-// Registrando seus serviços customizados
-builder.Services.AddScoped<ProdutoService>();
-builder.Services.AddScoped<IAppAuthService, AppAuthService>();
-builder.Services.AddScoped<ICreditCardPayment, CreditCardPaymentService>();
-builder.Services.AddScoped<IPreferencePayment, PreferencePaymentService>();
-builder.Services.AddScoped<ICacheService, MercadoPagoCacheService>();
-builder.Services.AddScoped<IQueueService, BackgroundJobQueueService>(); // Registrando o serviço de fila
-
-// Habilita o serviço de cache em memória nativo do .NET
-builder.Services.AddMemoryCache();
-
-// Token do Mercado Pago deve ser Singleton para manter o mesmo token durante a vida da aplicação
-builder.Services.AddSingleton<TokenMercadoPago>();
-
 builder.Services.AddRazorPages();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// --- Configuração do Hangfire (para Jobs em Segundo Plano) ---
-builder.Services.AddHangfire(config =>
-    config
-        .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
-        .UseSimpleAssemblyNameTypeSerializer()
-        .UseRecommendedSerializerSettings()
-        .UseSqlServerStorage(builder.Configuration.GetConnectionString("DefaultConnection"))
-); // Usa o mesmo banco de dados
+// 2. Configuração do Banco de Dados Principal
+builder.Services.AddDbContext<ApiDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"))
+);
 
-// Adiciona o serviço que processa os jobs na fila
+// 3. Habilita o serviço de cache em memória nativo do .NET
+// É bom registrar isso aqui, pois a implementação MemoryCacheService depende dele.
+builder.Services.AddMemoryCache();
+
+// 4. Configuração do Cache e da Fila (Decide entre Redis e Memória)
+var redisConnectionString = builder.Configuration.GetConnectionString("Redis");
+
+if (!string.IsNullOrEmpty(redisConnectionString))
+{
+    // --- Configuração para ambiente com REDIS ---
+    Console.WriteLine("--> Usando Redis como serviço de cache e para a fila do Hangfire.");
+
+    // Registra a conexão com o Redis como um Singleton
+    builder.Services.AddSingleton<IConnectionMultiplexer>(
+        ConnectionMultiplexer.Connect(redisConnectionString)
+    );
+
+    // Registra a implementação de cache com Redis
+    builder.Services.AddScoped<ICacheService, RedisCacheService>();
+
+    // Configura o Hangfire para usar o Redis (MOVEMOS PARA DENTRO DO IF)
+    builder.Services.AddHangfire(config =>
+        config
+            .UseSimpleAssemblyNameTypeSerializer()
+            .UseRecommendedSerializerSettings()
+            .UseRedisStorage(redisConnectionString)
+    );
+}
+else
+{
+    // --- Configuração para ambiente SEM REDIS ---
+    Console.WriteLine(
+        "--> Usando Cache em Memória. AVISO: Hangfire usará armazenamento em memória, não recomendado para produção."
+    );
+
+    // Registra a implementação de cache em memória
+    builder.Services.AddScoped<ICacheService, MemoryCacheService>();
+
+    // Configura o Hangfire para usar armazenamento em memória como um fallback
+    // (É preciso instalar o pacote Hangfire.InMemory)
+    builder.Services.AddHangfire(config =>
+        config
+            .UseSimpleAssemblyNameTypeSerializer()
+            .UseRecommendedSerializerSettings()
+            .UseInMemoryStorage()
+    );
+}
+
+// 5. Registrando seus serviços customizados da aplicação
+builder.Services.AddScoped<ProdutoService>();
+builder.Services.AddScoped<IAppAuthService, AppAuthService>();
+builder.Services.AddScoped<ICreditCardPayment, CreditCardPaymentService>();
+builder.Services.AddScoped<IPreferencePayment, PreferencePaymentService>();
+builder.Services.AddScoped<IQueueService, BackgroundJobQueueService>();
+builder.Services.AddSingleton<TokenMercadoPago>();
+
+// 6. Adiciona o servidor Hangfire que processa os jobs na fila
+// Isso deve vir depois que o Hangfire foi configurado (AddHangfire)
 builder.Services.AddHangfireServer();
 
 // --- Configuração da Autenticação ---

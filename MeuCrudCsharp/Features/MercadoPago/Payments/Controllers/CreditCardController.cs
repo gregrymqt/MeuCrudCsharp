@@ -1,108 +1,98 @@
-﻿using System.ComponentModel.Design;
+﻿using System;
 using System.Security.Claims;
+using System.Threading.Tasks;
 using MercadoPago.Error;
-using MeuCrudCsharp.Features.MercadoPago.Payments.Dtos; // <-- Adicionar using para o DTO
+using MeuCrudCsharp.Features.MercadoPago.Payments.Dtos;
 using MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces;
-using Microsoft.AspNetCore.Authorization; // <-- Adicionar para proteger a rota
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Payments.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize] // <-- Garante que apenas usuários autenticados podem usar este controller
+    [Authorize]
     public class CreditCardController : ControllerBase
     {
         private const string IDEMPOTENCY_PREFIX = "Credit_Card";
 
-        // As injeções de dependência estão corretas!
-        private readonly IPreferencePayment _preferenceService;
+        // --- CORREÇÃO 1: Injetamos APENAS a interface ICacheService ---
+        // O Program.cs vai decidir se isso é uma instância de MemoryCacheService ou RedisCacheService.
         private readonly ICacheService _cacheService;
         private readonly ICreditCardPayment _creditCardPaymentService;
 
         public CreditCardController(
-            IPreferencePayment preferenceService,
             ICacheService cacheService,
             ICreditCardPayment creditCardPaymentService
         )
         {
-            _preferenceService = preferenceService;
             _cacheService = cacheService;
             _creditCardPaymentService = creditCardPaymentService;
         }
 
-        // Renomeado para seguir a convenção de nomenclatura async do C#
         [HttpPost("process-payment")]
         public async Task<IActionResult> ProcessPaymentAsync([FromBody] PaymentRequestDto request)
         {
-            // O [FromBody] diz ao ASP.NET para pegar o JSON do corpo da requisição
-            // e tentar encaixá-lo no objeto CreateCardPaymentRequestDto.
-
-            // A validação do ModelState continua funcionando, mas agora ela valida o DTO.
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
 
-            // 1. Pegando o Header de Idempotência da forma correta
             if (!Request.Headers.TryGetValue("X-Idempotency-Key", out var idempotencyKey))
             {
-                // Retorna um erro claro se o header estiver faltando
                 return BadRequest(new { message = "O header 'X-Idempotency-Key' é obrigatório." });
             }
 
-            // 2. Lógica de Cache (como você pediu)
-            // Supondo que o seu serviço de cache pode armazenar e retornar um IActionResult
+            // A lógica de verificação do cache agora é mais robusta.
             var cachedResponse = await _cacheService.GetCachedResponseAsync(
                 IDEMPOTENCY_PREFIX,
-                idempotencyKey
+                idempotencyKey.ToString()
             );
+
             if (cachedResponse != null)
             {
-                return BadRequest(new { message = "Esse pagamento já foi feito" });
+                // --- CORREÇÃO 2: Retornamos a resposta original do cache ---
+                // Isso garante a idempotência correta.
+                Console.WriteLine("--> Resposta retornada do cache.");
+                return StatusCode(cachedResponse.StatusCode, cachedResponse.Body);
             }
 
             try
             {
-                // 3. Pegando o ID do usuário autenticado (que vem como uma string)
                 var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
-                if (string.IsNullOrEmpty(userIdString))
+                if (
+                    string.IsNullOrEmpty(userIdString)
+                    || !Guid.TryParse(userIdString, out Guid userIdAsGuid)
+                )
                 {
-                    return Unauthorized();
+                    return Unauthorized(new { message = "Token de usuário inválido ou ausente." });
                 }
 
-                if (!Guid.TryParse(userIdString, out Guid userIdAsGuid))
-                {
-                    // Se a conversão falhar, significa que o ID no token não é um Guid válido.
-                    // Retornamos um erro claro em vez de deixar a aplicação quebrar.
-                    return BadRequest(
-                        new { message = "O formato do ID de usuário no token é inválido." }
-                    );
-                }
-
+                // A lógica de negócio principal permanece a mesma.
                 var result = await _creditCardPaymentService.CreatePaymentAsync(request, 100);
 
-                // 5. Armazenando a resposta no cache em caso de sucesso
+                // --- CORREÇÃO 3: Armazenamos o resultado PURO no cache ---
+                // O objeto 'result' e o status code 200 são armazenados.
                 await _cacheService.StoreResponseAsync(
                     IDEMPOTENCY_PREFIX,
-                    idempotencyKey,
-                    Ok(result),
-                    200
+                    idempotencyKey.ToString(),
+                    result, // Armazena o objeto de dados, não o IActionResult
+                    200 // Ou o status code que você considerar sucesso, ex: 201
                 );
+
+                // --- CORREÇÃO 4: A chamada duplicada ao Redis foi removida ---
 
                 return Ok(result);
             }
             catch (MercadoPagoApiException e)
             {
-                // Retorna um erro específico da API do Mercado Pago
                 return BadRequest(
                     new { error = "MercadoPago Error", message = e.ApiError.Message }
                 );
             }
             catch (Exception ex)
             {
-                // Para qualquer outro erro inesperado, retorna um erro 500
-                // Em um projeto real, você também logaria esse erro (ex.Log(ex))
+                // Em um projeto real, você logaria o erro 'ex'
                 return StatusCode(500, new { message = "Ocorreu um erro inesperado." });
             }
         }

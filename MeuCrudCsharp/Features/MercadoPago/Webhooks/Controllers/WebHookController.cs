@@ -116,8 +116,8 @@ namespace MeuCrudCsharp.Features.MercadoPago.Webhooks.Controllers
 
                 // Separa a assinatura em partes (ts e v1)
                 var signatureParts = xSignature.ToString().Split(',');
-                string ts = null;
-                string hash = null;
+                string? ts = null;
+                string? hash = null;
 
                 foreach (var part in signatureParts)
                 {
