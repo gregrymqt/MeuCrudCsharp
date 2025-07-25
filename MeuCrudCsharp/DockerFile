@@ -1,14 +1,31 @@
-# Dockerfile
+# -----------------------------------------------------------------------------
+# Estágio 1: Build (A Oficina de Montagem)
+# -----------------------------------------------------------------------------
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
+
+# Copia e restaura as dependências (sem alterações aqui)
 COPY ["MeuCrudCsharp.csproj", "."]
 RUN dotnet restore "./MeuCrudCsharp.csproj"
+
+# Copia o resto do código
 COPY . .
-RUN dotnet build "MeuCrudCsharp.csproj" -c Release -o /app/build
 
+# --- CORREÇÃO AQUI ---
+# Constrói a aplicação, mas adiciona um parâmetro para ignorar a compilação de TypeScript.
+RUN dotnet build "MeuCrudCsharp.csproj" -c Release -o /app/build /p:TypeScriptCompileBlocked=true
+
+# -----------------------------------------------------------------------------
+# Estágio 2: Publish (O Empacotamento Final)
+# -----------------------------------------------------------------------------
 FROM build AS publish
-RUN dotnet publish "MeuCrudCsharp.csproj" -c Release -o /app/publish /p:UseAppHost=false
+# --- CORREÇÃO AQUI TAMBÉM ---
+# Adiciona o mesmo parâmetro ao comando de publicação para garantir consistência.
+RUN dotnet publish "MeuCrudCsharp.csproj" -c Release -o /app/publish /p:UseAppHost=false /p:TypeScriptCompileBlocked=true
 
+# -----------------------------------------------------------------------------
+# Estágio 3: Final (O Showroom)
+# -----------------------------------------------------------------------------
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
