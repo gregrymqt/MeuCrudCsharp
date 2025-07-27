@@ -83,6 +83,8 @@ builder.Services.AddScoped<IAppAuthService, AppAuthService>();
 builder.Services.AddScoped<ICreditCardPayment, CreditCardPaymentService>();
 builder.Services.AddScoped<IPreferencePayment, PreferencePaymentService>();
 builder.Services.AddScoped<IQueueService, BackgroundJobQueueService>();
+builder.Services.AddScoped<IEmailSenderService, SendGridEmailSenderService>();
+builder.Services.AddScoped<IRazorViewToStringRenderer, RazorViewToStringRenderer>();
 builder.Services.AddSingleton<TokenMercadoPago>();
 
 // 6. Adiciona o servidor Hangfire que processa os jobs na fila

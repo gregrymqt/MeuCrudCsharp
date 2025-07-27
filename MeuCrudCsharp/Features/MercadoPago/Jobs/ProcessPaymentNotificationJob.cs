@@ -1,8 +1,10 @@
 ﻿// Em Jobs/ProcessPaymentNotificationJob.cs
 
+using System.Security.Claims;
 using System.Threading.Tasks;
 using Hangfire;
 using MeuCrudCsharp.Data;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Jobs
@@ -78,9 +80,22 @@ namespace MeuCrudCsharp.Features.MercadoPago.Jobs
                     return;
                 }
 
+                string userIdString = pagamentoLocal.UserId.ToString();
+
+                if (
+                    string.IsNullOrEmpty(userIdString)
+                    || !Guid.TryParse(userIdString, out Guid userIdAsGuid)
+                )
+                {
+                    return;
+                }
+
                 // Se chegou até aqui, o pagamento é novo ou ainda está pendente.
                 // Chama seu serviço que vai verificar na API do MP e atualizar o banco.
-                await _notificationPaymentService.VerifyAndProcessNotificationAsync(paymentId);
+                await _notificationPaymentService.VerifyAndProcessNotificationAsync(
+                    userIdAsGuid,
+                    paymentId
+                );
 
                 // A transação é concluída aqui (commit) e o "cadeado" é liberado.
                 await transaction.CommitAsync();

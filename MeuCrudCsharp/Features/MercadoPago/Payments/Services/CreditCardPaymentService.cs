@@ -69,7 +69,6 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
                 UserId = userIdGuid,
                 Status = "iniciando", // Um status inicial para indicar que a transação começou
                 Method = "cartao_credito",
-                Installments = paymentData.Installments,
                 Amount = transactionAmount,
                 // O PaymentId do Mercado Pago ainda é nulo, o que está correto.
             };
@@ -113,12 +112,20 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
                 // PASSO 4: Chame a API do Mercado Pago
                 Payment payment = await _paymentClient.CreateAsync(paymentRequest, requestOptions);
 
-                // PASSO 5: ATUALIZE o registro com os dados da resposta IMEDIATA.
-                // Isso melhora a experiência do usuário, que não precisa esperar o webhook
-                // para um status de "aprovado" ou "recusado" instantâneo.
-                novoPagamento.PaymentId = payment.Id.ToString(); // Agora sim, o ID real do MP
-                novoPagamento.Status = MapPaymentStatus(payment.Status); // O status retornado pela API
-                await _context.SaveChangesAsync(); // Salva as atualizações
+                novoPagamento.PaymentId = payment.Id.ToString();
+                novoPagamento.Status = MapPaymentStatus(payment.Status);
+                novoPagamento.DateApproved = payment.DateApproved;
+                if (
+                    payment.Card != null
+                    && int.TryParse(payment.Card.LastFourDigits, out int lastFourDigits)
+                )
+                {
+                    novoPagamento.LastFourDigits = lastFourDigits;
+                }
+                novoPagamento.Installments = payment.Installments ?? 1;
+                novoPagamento.Method = payment.PaymentMethodId;
+                novoPagamento.CustomerCpf = payment.Payer.Identification.Number;
+                await _context.SaveChangesAsync();
 
                 // PASSO 6: Retorne a resposta para o frontend
                 return new PaymentResponseDto

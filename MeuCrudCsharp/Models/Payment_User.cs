@@ -38,6 +38,16 @@ namespace MeuCrudCsharp.Models
         public int Installments { get; set; }
 
         [Required]
+        public DateTime? DateApproved { get; set; }
+
+        [Required]
+        public int LastFourDigits { get; set; }
+
+        [Required]
+        [MaxLength(15)]
+        public string CustomerCpf { get; set; }
+
+        [Required]
         [Column(TypeName = "decimal(10, 2)")]
         public decimal Amount { get; set; }
 
