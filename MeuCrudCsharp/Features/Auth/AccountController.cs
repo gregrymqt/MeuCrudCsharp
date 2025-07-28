@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 public class AccountController : Controller
 {
     [HttpGet]
-    public IActionResult Login(string returnUrl = "/")
+    public IActionResult Login(string returnUrl = "/Profile/Index")
     {
         // Apenas redireciona para o Google. O resto é automático.
         var properties = new AuthenticationProperties { RedirectUri = returnUrl };

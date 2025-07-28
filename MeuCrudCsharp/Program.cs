@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.EntityFrameworkCore;
 using StackExchange.Redis;
+using MeuCrudCsharp.Features.Videos.Service;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -86,6 +87,7 @@ builder.Services.AddScoped<IQueueService, BackgroundJobQueueService>();
 builder.Services.AddScoped<IEmailSenderService, SendGridEmailSenderService>();
 builder.Services.AddScoped<IRazorViewToStringRenderer, RazorViewToStringRenderer>();
 builder.Services.AddSingleton<TokenMercadoPago>();
+builder.Services.AddTransient<VideoProcessingService>();
 
 // 6. Adiciona o servidor Hangfire que processa os jobs na fila
 // Isso deve vir depois que o Hangfire foi configurado (AddHangfire)
