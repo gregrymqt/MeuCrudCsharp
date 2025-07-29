@@ -1,7 +1,7 @@
-﻿using MeuCrudCsharp.Data;
+﻿using System.Threading.Tasks;
+using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Models;
 using Microsoft.EntityFrameworkCore;
-using System.Threading.Tasks;
 
 namespace MeuCrudCsharp.Services
 {

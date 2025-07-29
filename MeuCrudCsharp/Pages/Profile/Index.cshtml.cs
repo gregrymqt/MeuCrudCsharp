@@ -1,21 +1,21 @@
+using System.Security.Claims;
 using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore; // Adicione este using para o .Include()
-using System.Security.Claims;
 
 namespace MeuCrudCsharp.Pages.Profile
 {
-    // 1. Usando [Authorize] para garantir que apenas usuários logados acessem.
-    // O sistema redirecionará para a página de login automaticamente se não estiver logado.
+    // 1. Usando [Authorize] para garantir que apenas usuï¿½rios logados acessem.
+    // O sistema redirecionarï¿½ para a pï¿½gina de login automaticamente se nï¿½o estiver logado.
     [Authorize]
     public class IndexModel : PageModel
     {
         private readonly ApiDbContext _context;
 
-        // Propriedades fortemente tipadas para a View. Mais seguro e prático que ViewData.
+        // Propriedades fortemente tipadas para a View. Mais seguro e prï¿½tico que ViewData.
         public Users? UserProfile { get; private set; }
         public string? PaymentStatus { get; private set; }
 
@@ -24,36 +24,36 @@ namespace MeuCrudCsharp.Pages.Profile
             _context = context;
         }
 
-        // Tornando o método assíncrono, que é a boa prática para operações de I/O (banco de dados)
+        // Tornando o mï¿½todo assï¿½ncrono, que ï¿½ a boa prï¿½tica para operaï¿½ï¿½es de I/O (banco de dados)
         public async Task<IActionResult> OnGetAsync()
         {
             var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-            // A verificação de Guid ainda é uma boa prática de defesa.
+            // A verificaï¿½ï¿½o de Guid ainda ï¿½ uma boa prï¿½tica de defesa.
             if (!Guid.TryParse(userIdString, out Guid userIdAsGuid))
             {
-                // Se o usuário está autenticado mas o ID não é um Guid, algo está muito errado.
+                // Se o usuï¿½rio estï¿½ autenticado mas o ID nï¿½o ï¿½ um Guid, algo estï¿½ muito errado.
                 return Unauthorized();
             }
 
-            // 2. Buscando o usuário e seu pagamento em uma única consulta ao banco de dados com .Include()
-            // Isso é mais eficiente do que fazer duas chamadas separadas.
-            UserProfile = await _context.Users
-                .Include(u => u.Payment_User) // Assumindo que você tem uma propriedade de navegação chamada Payment_User no seu modelo User
+            // 2. Buscando o usuï¿½rio e seu pagamento em uma ï¿½nica consulta ao banco de dados com .Include()
+            // Isso ï¿½ mais eficiente do que fazer duas chamadas separadas.
+            UserProfile = await _context
+                .Users.Include(u => u.Payment_User) // Assumindo que vocï¿½ tem uma propriedade de navegaï¿½ï¿½o chamada Payment_User no seu modelo User
                 .FirstOrDefaultAsync(u => u.Id == userIdAsGuid);
 
             if (UserProfile == null)
             {
-                // Não deveria acontecer se o usuário está logado, mas é uma segurança extra.
-                return NotFound("Usuário não encontrado.");
+                // Nï¿½o deveria acontecer se o usuï¿½rio estï¿½ logado, mas ï¿½ uma seguranï¿½a extra.
+                return NotFound("Usuï¿½rio nï¿½o encontrado.");
             }
 
-            // 3. Lógica de verificação de nulo corrigida e simplificada.
+            // 3. Lï¿½gica de verificaï¿½ï¿½o de nulo corrigida e simplificada.
             PaymentStatus = UserProfile.Payment_User?.Status;
 
             if (PaymentStatus == "rejected")
             {
-                // Para redirecionar para outra Razor Page, o ideal é usar RedirectToPage.
+                // Para redirecionar para outra Razor Page, o ideal ï¿½ usar RedirectToPage.
                 return RedirectToPage("/Payment/CreditCard"); // Ajuste o caminho conforme seu projeto.
             }
 

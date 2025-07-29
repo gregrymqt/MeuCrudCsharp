@@ -7,13 +7,14 @@ using MeuCrudCsharp.Features.MercadoPago.Jobs; // Adicionado para os Jobs
 using MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces;
 using MeuCrudCsharp.Features.MercadoPago.Payments.Services;
 using MeuCrudCsharp.Features.MercadoPago.Tokens;
+using MeuCrudCsharp.Features.Videos.Interfaces;
+using MeuCrudCsharp.Features.Videos.Service;
 using MeuCrudCsharp.Models;
 using MeuCrudCsharp.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.EntityFrameworkCore;
 using StackExchange.Redis;
-using MeuCrudCsharp.Features.Videos.Service;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -86,6 +87,7 @@ builder.Services.AddScoped<IPreferencePayment, PreferencePaymentService>();
 builder.Services.AddScoped<IQueueService, BackgroundJobQueueService>();
 builder.Services.AddScoped<IEmailSenderService, SendGridEmailSenderService>();
 builder.Services.AddScoped<IRazorViewToStringRenderer, RazorViewToStringRenderer>();
+builder.Services.AddScoped<IAdminVideoService, AdminVideoService>();
 builder.Services.AddSingleton<TokenMercadoPago>();
 builder.Services.AddTransient<VideoProcessingService>();
 

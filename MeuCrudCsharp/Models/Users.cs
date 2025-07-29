@@ -1,7 +1,7 @@
-﻿using MercadoPago.Resource.Payment;
-using System; // Necessário para usar o tipo Guid
+﻿using System; // Necessário para usar o tipo Guid
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using MercadoPago.Resource.Payment;
 
 namespace MeuCrudCsharp.Models
 {
@@ -25,7 +25,6 @@ namespace MeuCrudCsharp.Models
         public string AvatarUrl { get; set; }
 
         public virtual Payment_User Payment_User { get; set; }
-
 
         public Users()
         {
