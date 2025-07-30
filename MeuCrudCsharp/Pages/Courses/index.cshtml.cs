@@ -1,0 +1,52 @@
+using System.Security.Claims;
+using MeuCrudCsharp.Data;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.EntityFrameworkCore;
+
+namespace MeuCrudCsharp.Pages.Course
+{
+    [Authorize] // 1. Garante que o usuário precisa estar logado para acessar.
+    public class IndexModel : PageModel
+    {
+        private readonly ApiDbContext _context;
+
+        public IndexModel(ApiDbContext context)
+        {
+            _context = context;
+        }
+
+        public async Task<IActionResult> OnGetAsync()
+        {
+            // 2. Verifica se o usuário é um Admin. Se for, ele tem acesso livre.
+            if (User.IsInRole("Admin"))
+            {
+                return Page(); // Admins podem ver a página sem checagem de pagamento.
+            }
+
+            // 3. Se não for admin, verifica o status do pagamento.
+            var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userIdString))
+            {
+                return Forbid(); // Se não encontrar o ID do usuário, nega o acesso.
+            }
+
+            // Busca o usuário e seu status de pagamento em uma única consulta.
+            var userPaymentStatus = await _context
+                .Users.Where(u => u.Id == userIdString)
+                .Select(u => u.Payment_User.Status) // Pega apenas o status
+                .FirstOrDefaultAsync();
+
+            if (userPaymentStatus == "approved")
+            {
+                return Page(); // Se o pagamento está aprovado, permite o acesso.
+            }
+
+            return RedirectToPage(
+                "/Payment/CreditCard",
+                new { mensage = "Voce precisa pagar para acessar essa área" }
+            );
+        }
+    }
+}

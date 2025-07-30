@@ -1,8 +1,11 @@
 ﻿@page "{videoId}"
-@model MeuCrudCsharp.Pages.Videos.IndexModel
+@using MeuCrudCsharp.Models
+@model MeuCrudCsharp.Pages.Videos.Player.IndexModel
 @{
-    Layout = "_Layout";
+    // Define o título da aba do navegador com o título do vídeo
+    ViewData["Title"] = Model.VideoData?.Title ?? "Vídeo";
 }
+
 <style>
     body {
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
@@ -21,73 +24,74 @@
         box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
         border-radius: 8px;
         overflow: hidden;
+        background-color: #000;
     }
 
     video {
         width: 100%;
         height: auto;
         display: block;
-        background-color: #000;
     }
 
     h1 {
         color: #333;
+        margin-bottom: 1.5rem;
     }
 
-    .error-message {
-        color: #d9534f;
-        background-color: #f2dede;
-        border: 1px solid #ebccd1;
-        padding: 15px;
-        border-radius: 4px;
+    .status-message {
+        color: #333;
+        background-color: #fff;
+        border: 1px solid #ddd;
+        padding: 20px;
+        border-radius: 8px;
         text-align: center;
     }
 </style>
+
 <!-- 1. Importação da biblioteca HLS.js a partir de uma CDN -->
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 
-<h1>Meu Curso Incrível</h1>
+<!-- O título agora é dinâmico, vindo do banco de dados -->
+<h1>@Model.VideoData?.Title</h1>
 
 <div id="videoContainer">
-    <!-- O elemento <video> onde o conteúdo será reproduzido -->
-    <video id="videoPlayer" controls></video>
+    @if (Model.VideoData != null && Model.VideoData.Status == VideoStatus.Available)
+    {
+        <!-- O elemento <video> onde o conteúdo será reproduzido -->
+        <video id="videoPlayer" controls></video>
+    }
+    else
+    {
+        <!-- Mensagem exibida se o vídeo não estiver disponível -->
+        <div class="status-message">
+            <p>Este vídeo ainda está sendo processado ou não está disponível. Por favor, tente novamente mais tarde.</p>
+        </div>
+    }
 </div>
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
+        // Pega o elemento de vídeo. Se ele não existir (porque o vídeo não está disponível),
+        // o script não faz nada.
+        const videoElement = document.getElementById('videoPlayer');
+        if (!videoElement) return;
 
-        // --- PONTO DE INTEGRAÇÃO COM O BACKEND (CORRIGIDO) ---
-        // O ID do vídeo agora é lido dinamicamente da URL.
-        // Para testar, acesse esta página adicionando '?videoId=SEU_GUID' ao final da URL.
-        // Exemplo: http://localhost:5000/sua_pagina.html?videoId=f47ac10b-58cc-4372-a567-0e02b2c3d479
-        const urlParams = new URLSearchParams(window.location.search);
-        const videoId = urlParams.get('videoId');
-
-        if (!videoId) {
-            const errorMessage = "ERRO: O ID do vídeo não foi encontrado na URL. Adicione '?videoId=SEU_GUID' ao final da URL.";
-            console.error(errorMessage);
-            // Mostra uma mensagem de erro visual para o usuário
-            document.getElementById('videoContainer').innerHTML = `<div class="error-message">${errorMessage}</div>`;
-            return;
-        }
-        // ---------------------------------------------
-        // Pega o ID do vídeo diretamente do modelo C# que já foi validado!
+        // --- PONTO DE INTEGRAÇÃO CORRIGIDO ---
+        // Pega o ID do vídeo diretamente do modelo C#, que já foi validado pelo backend.
+        // Isso é mais seguro e robusto do que ler da URL no frontend.
         const videoId = "@Model.VideoId";
 
+        // Monta a URL para o manifesto no seu controller de streaming
+        const manifestUrl = `/api/videos/${videoId}/manifest.m3u8`;
+
         // O resto do seu script HLS.js continua igual...
-        const videoElement = document.getElementById('videoPlayer');
-        const manifestUrl = `/api/streaming/${videoId}/manifest.m3u8`;
-        
-        // 3. Verifica se o navegador suporta HLS através da biblioteca HLS.js
         if (Hls.isSupported()) {
             console.log("HLS.js é suportado. Inicializando player...");
             const hls = new Hls();
             hls.loadSource(manifestUrl);
             hls.attachMedia(videoElement);
             hls.on(Hls.Events.MANIFEST_PARSED, function () {
-                console.log("Manifesto carregado. Reproduzindo vídeo.");
-                // Opcional: iniciar o vídeo automaticamente.
-                // videoElement.play();
+                console.log("Manifesto carregado.");
             });
             hls.on(Hls.Events.ERROR, function (event, data) {
                 if (data.fatal) {
@@ -95,7 +99,6 @@
                 }
             });
         }
-        // 4. Fallback para navegadores que suportam HLS nativamente (como o Safari)
         else if (videoElement.canPlayType('application/vnd.apple.mpegurl')) {
             console.log("Suporte nativo a HLS detectado.");
             videoElement.src = manifestUrl;

@@ -13,6 +13,7 @@ using MeuCrudCsharp.Models;
 using MeuCrudCsharp.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using StackExchange.Redis;
 
@@ -27,9 +28,21 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 // 2. Configuração do Banco de Dados Principal
-builder.Services.AddDbContext<ApiDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"))
-);
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+builder.Services.AddDbContext<ApiDbContext>(options => options.UseSqlServer(connectionString));
+
+// 2. Adicionar o ASP.NET Core Identity
+builder
+    .Services.AddDefaultIdentity<Users>(options =>
+    {
+        // Configurações opcionais de senha, etc.
+        options.SignIn.RequireConfirmedAccount = false;
+    })
+    .AddRoles<IdentityRole>() // <-- Adiciona o suporte a Roles
+    .AddEntityFrameworkStores<ApiDbContext>();
+
+builder.Services.AddAuthentication(); // Adiciona os serviços de autenticação
+builder.Services.AddAuthorization();
 
 // 3. Habilita o serviço de cache em memória nativo do .NET
 // É bom registrar isso aqui, pois a implementação MemoryCacheService depende dele.

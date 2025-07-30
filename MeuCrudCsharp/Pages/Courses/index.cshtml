@@ -1,0 +1,32 @@
+﻿@page
+@model MeuCrudCsharp.Pages.Course.IndexModel
+@{
+}
+
+<link rel="stylesheet" href="~/css/Course/index.css" asp-append-version="true">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+<script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+
+   <div class="page-container">
+
+    <!-- Seção do Carrossel -->
+    <div class="swiper">
+        <div class="swiper-wrapper" id="carousel-wrapper">
+            <!-- O JavaScript irá inserir os slides aqui -->
+        </div>
+        <!-- Opcional: Adicionar botões de navegação e paginação ao Swiper -->
+        <div class="swiper-button-next"></div>
+        <div class="swiper-button-prev"></div>
+        <div class="swiper-pagination"></div>
+    </div>
+
+
+    <!-- Seção das Fileiras de Vídeos -->
+    <div class="courses-section" id="courses-section-container">
+        <!-- O JavaScript irá inserir as fileiras de cursos e vídeos aqui -->
+        <div class="loader" id="page-loader">Carregando cursos...</div>
+    </div>
+</div>
+
+<script src="~/js/Course/index.js" asp-append-version="true"></script>

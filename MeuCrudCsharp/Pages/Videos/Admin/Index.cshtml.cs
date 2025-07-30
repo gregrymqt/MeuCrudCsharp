@@ -1,9 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
-namespace MeuCrudCsharp.Pages.Shared
+namespace MeuCrudCsharp.Pages.Videos.Admin
 {
-    public class _LayoutModel : PageModel
+    public class IndexModel : PageModel
     {
         public void OnGet() { }
     }

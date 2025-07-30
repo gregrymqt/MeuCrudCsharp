@@ -1,0 +1,170 @@
+:root {
+        --background-color: #141414;
+        --card-color: #1f1f1f;
+        --text-primary: #ffffff;
+        --text-secondary: #a0a0a0;
+        --accent-color: #e50914;
+        --font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    }
+
+    body {
+        background-color: var(--background-color);
+        color: var(--text-primary);
+        font-family: var(--font-family);
+        margin: 0;
+    }
+
+    .page-container {
+        padding: 0 0 3rem 0; /* Sem padding no topo para o carrossel colar */
+    }
+
+    /* --- Estilos do Carrossel (Swiper.js) --- */
+    .swiper {
+        width: 100%;
+        height: 60vh; /* Ocupa 60% da altura da tela */
+        max-height: 500px;
+    }
+
+    .swiper-slide {
+        text-align: center;
+        font-size: 18px;
+        background: #fff;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background-size: cover;
+        background-position: center;
+        position: relative;
+    }
+    
+    /* Overlay para escurecer a imagem e dar contraste ao texto */
+    .swiper-slide::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(to top, rgba(20, 20, 20, 0.9) 0%, rgba(20, 20, 20, 0) 50%);
+    }
+
+    .slide-content {
+        position: relative;
+        z-index: 10;
+        color: var(--text-primary);
+        max-width: 600px;
+        margin-top: 15vh; /* Empurra o conteúdo para baixo */
+    }
+
+    .slide-content h2 {
+        font-size: 3rem;
+        font-weight: 700;
+        margin: 0;
+        text-shadow: 2px 2px 8px rgba(0,0,0,0.7);
+    }
+
+    .slide-content .btn {
+        background-color: var(--accent-color);
+        color: var(--text-primary);
+        padding: 0.8rem 2rem;
+        text-decoration: none;
+        font-weight: 600;
+        border-radius: 5px;
+        margin-top: 1.5rem;
+        display: inline-block;
+        transition: transform 0.2s ease;
+    }
+    .slide-content .btn:hover {
+        transform: scale(1.05);
+    }
+
+    /* --- Estilos das Fileiras de Cursos --- */
+    .courses-section {
+        padding: 0 3rem; /* Espaçamento lateral para as fileiras */
+        min-height: 300px; /* Altura mínima para o loader ficar visível */
+    }
+
+    .course-row {
+        margin-top: 3rem;
+    }
+
+    .course-row-title {
+        font-size: 1.8rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+    }
+
+    .videos-scroller {
+        display: flex;
+        gap: 1rem;
+        overflow-x: auto;
+        padding-bottom: 1.5rem; /* Espaço para a barra de rolagem não ficar colada */
+        scrollbar-width: thin;
+        scrollbar-color: var(--card-color) transparent;
+    }
+
+    .videos-scroller::-webkit-scrollbar { height: 8px; }
+    .videos-scroller::-webkit-scrollbar-track { background: transparent; }
+    .videos-scroller::-webkit-scrollbar-thumb { background-color: var(--card-color); border-radius: 10px; }
+
+    /* --- Estilos dos Cards de Vídeo --- */
+    .video-card {
+        flex: 0 0 280px;
+        background-color: var(--card-color);
+        border-radius: 8px;
+        overflow: hidden;
+        text-decoration: none;
+        color: var(--text-primary);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .video-card:hover {
+        transform: scale(1.05);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+    }
+
+    .video-thumbnail {
+        position: relative;
+        width: 100%;
+        padding-top: 56.25%; /* Proporção 16:9 */
+        background-size: cover;
+        background-position: center;
+    }
+
+    .video-thumbnail .play-icon {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 3rem;
+        color: rgba(255, 255, 255, 0.8);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+    
+    .video-card:hover .play-icon {
+        opacity: 1;
+    }
+
+    .video-info { padding: 1rem; }
+
+    .video-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin: 0 0 0.5rem 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .video-duration {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+    }
+
+    /* Estilo para o indicador de carregamento */
+    .loader {
+        text-align: center;
+        padding: 4rem;
+        font-size: 1.5rem;
+    }
