@@ -1,0 +1,93 @@
+﻿@page
+@model MeuCrudCsharp.Pages.Profile.Admin.indexModel
+@{
+    ViewData["Title"] = "Gerenciar Planos de Assinatura";
+}
+
+<!-- 1. Dependência para os Ícones (Font Awesome) -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+<link rel="stylesheet" href="~/css/admin/Profile/index.css" asp-append-version="true" />
+<!-- 3. Estrutura HTML com a Sidebar -->
+<div class="admin-layout">
+    <!-- Sidebar -->
+    <aside class="admin-sidebar">
+        <div class="sidebar-header">Admin</div>
+        <ul class="sidebar-nav">
+            <li><a href="/Admin/Videos"><i class="fas fa-video"></i> Vídeos</a></li>
+            <li><a href="/Admin/Plans" class="active"><i class="fas fa-tags"></i> Planos</a></li>
+            <li><a href="#"><i class="fas fa-users"></i> Alunos</a></li>
+        </ul>
+    </aside>
+
+    <!-- Conteúdo Principal -->
+    <main class="admin-main-content">
+        <div class="admin-container">
+            <h2>Criar Novo Plano de Assinatura</h2>
+            <p>Preencha os detalhes abaixo para criar um novo plano no Mercado Pago.</p>
+
+            <form id="create-plan-form">
+                <div class="form-group">
+                    <label for="plan-reason">Nome do Plano (Motivo da cobrança)</label>
+                    <input type="text" id="plan-reason" class="form-control" placeholder="Ex: Plano Mensal - Acesso Total" required>
+                </div>
+
+                <hr style="margin: 2rem 0;">
+
+                <h4>Detalhes da Recorrência</h4>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="plan-amount">Valor da Transação</label>
+                        <input type="number" id="plan-amount" class="form-control" step="0.01" placeholder="Ex: 49.90" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="plan-currency">Moeda</label>
+                        <select id="plan-currency" class="form-select">
+                            <option value="BRL" selected>Real Brasileiro (BRL)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="plan-frequency">Frequência</label>
+                        <input type="number" id="plan-frequency" class="form-control" value="1" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="plan-frequency-type">Tipo de Frequência</label>
+                        <select id="plan-frequency-type" class="form-select">
+                            <option value="days">Dias</option>
+                            <option value="months" selected>Meses</option>
+                        </select>
+                    </div>
+                </div>
+
+                <hr style="margin: 2rem 0;">
+
+                <h4>Configurações Adicionais</h4>
+                <div class="form-group">
+                    <label for="plan-back-url">URL de Retorno</label>
+                    <input type="url" id="plan-back-url" class="form-control" placeholder="https://www.seusite.com/assinatura/sucesso" required>
+                    <small>Página para onde o usuário será redirecionado após a assinatura.</small>
+                </div>
+
+                <button type="submit" id="save-plan-button" class="btn btn-primary">Criar Plano</button>
+                <div id="form-status" style="margin-top: 1rem;"></div>
+            </form>
+
+            <h2 style="margin-top: 4rem; border-top: 1px solid var(--border-color); padding-top: 2rem;">Planos Existentes</h2>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>ID do Plano</th>
+                        <th>Nome (Motivo)</th>
+                        <th>Valor</th>
+                    </tr>
+                </thead>
+                <tbody id="plans-table-body">
+                    <!-- O JS irá popular esta tabela com os planos existentes -->
+                    <tr><td colspan="3" style="text-align: center;">Carregando planos...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+</div>
+
+<!-- 4. JavaScript para interagir com a API -->
+<script src="~/js/admin/Profile/index.js" asp-append-version="true"></script>

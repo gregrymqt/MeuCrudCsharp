@@ -4,89 +4,91 @@
     ViewData["Title"] = "Gerenciar Vídeos";
 }
 
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 <link rel="stylesheet" href="~/css/Admin/index.css" asp-append-version="true" />
 
-<div class="admin-container">
 
-    <!-- Abas de Navegação -->
-    <div class="nav-tabs">
-        <div id="tab-create" class="nav-tab active">Cadastrar</div>
-        <div id="tab-manage" class="nav-tab">Atualizar / Deletar</div>
-    </div>
+<div class="admin-layout">
+    <!-- Sidebar -->
+    <aside class="admin-sidebar">
+        <div class="sidebar-header">Admin</div>
+        <ul class="sidebar-nav">
+            <li>
+                @* A classe "active" agora está no link correto *@
+                <a href="/Admin/Videos" class="active"><i class="fas fa-video"></i> Vídeos</a>
+            </li>
+            <li>
+                <a href="/Admin/Plans"><i class="fas fa-tags"></i> Planos</a>
+            </li>
+            <li>
+                <a href="#"><i class="fas fa-users"></i> Alunos</a>
+            </li>
+        </ul>
+    </aside>
 
-    <!-- Conteúdo da Aba "Cadastrar" -->
-    <div id="content-create" class="tab-content active">
-        <h2>Adicionar Novo Vídeo</h2>
-        <p>O processo é feito em duas etapas: primeiro envie o arquivo de vídeo e depois preencha seus detalhes.</p>
-
-        <form id="create-video-form">
-            <!-- Etapa 1: Upload do Arquivo -->
-            <div class="form-group">
-                <label for="video-file-input">1. Enviar Arquivo de Vídeo</label>
-                <input type="file" id="video-file-input" class="form-control" accept="video/mp4,video/x-m4v,video/*">
-                <div id="upload-status" style="margin-top: 1rem;"></div>
+    <!-- Conteúdo Principal -->
+    <main class="admin-main-content">
+        <div class="admin-container">
+            <!-- Abas de Navegação -->
+            <div class="nav-tabs">
+                <div id="tab-create" class="nav-tab active">Cadastrar</div>
+                <div id="tab-manage" class="nav-tab">Atualizar / Deletar</div>
             </div>
 
-            <!-- Etapa 2: Preenchimento dos Metadados -->
-            <fieldset id="metadata-fieldset" disabled>
-                <legend style="font-size: 1.2rem; font-weight: 600; margin-bottom: 1rem;">2. Detalhes do Vídeo</legend>
-                <input type="hidden" id="storage-identifier-input">
+            <!-- Conteúdo da Aba "Cadastrar" -->
+            <div id="content-create" class="tab-content active">
+                <h2>Adicionar Novo Vídeo</h2>
+                <p>O processo é feito em duas etapas: primeiro envie o arquivo de vídeo e depois preencha seus detalhes.</p>
+                <form id="create-video-form">
+                    <div class="form-group">
+                        <label for="video-file-input">1. Enviar Arquivo de Vídeo</label>
+                        <input type="file" id="video-file-input" class="form-control" accept="video/mp4,video/x-m4v,video/*">
+                        <div id="upload-status" style="margin-top: 1rem;"></div>
+                    </div>
+                    <fieldset id="metadata-fieldset" disabled>
+                        <legend style="font-size: 1.2rem; font-weight: 600; margin-bottom: 1rem;">2. Detalhes do Vídeo</legend>
+                        <input type="hidden" id="storage-identifier-input">
+                        <div class="form-group">
+                            <label for="video-title">Título do Vídeo</label>
+                            <input type="text" id="video-title" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="video-description">Descrição</label>
+                            <textarea id="video-description" class="form-control" rows="4"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="course-name">Nome do Curso</label>
+                            <input type="text" id="course-name" class="form-control" placeholder="Ex: Curso de C# Web" required>
+                            <small>Se o curso não existir, ele será criado automaticamente.</small>
+                        </div>
+                    </fieldset>
+                    <button type="submit" id="save-video-button" class="btn btn-primary" disabled>Salvar Vídeo</button>
+                </form>
+            </div>
 
-                <div class="form-group">
-                    <label for="video-title">Título do Vídeo</label>
-                    <input type="text" id="video-title" class="form-control" required>
-                </div>
-                <div class="form-group">
-                    <label for="video-description">Descrição</label>
-                    <textarea id="video-description" class="form-control" rows="4"></textarea>
-                </div>
-                <div class="form-group">
-                    <label for="course-name">Nome do Curso</label>
-                    <input type="text" id="course-name" class="form-control" placeholder="Ex: Curso de C# Web" required>
-                    <small>Se o curso não existir, ele será criado automaticamente.</small>
-                </div>
-            </fieldset>
-
-            <button type="submit" id="save-video-button" class="btn btn-primary" disabled>Salvar Vídeo</button>
-        </form>
-    </div>
-
-    <!-- Conteúdo da Aba "Atualizar / Deletar" -->
-    <div id="content-manage" class="tab-content">
-        <h2>Gerenciar Vídeos Existentes</h2>
-
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Título</th>
-                    <th>Curso</th>
-                    <th>Status</th>
-                    <th>Data de Upload</th>
-                    <th>Ações</th>
-                </tr>
-            </thead>
-            <tbody id="videos-table-body">
-                @* O JS irá popular esta tabela com os dados da API. 
-                   Este é um exemplo de como a linha se pareceria. *@
-                @*
-                <tr>
-                    <td>Introdução ao ASP.NET Core</td>
-                    <td>Curso de C# Web</td>
-                    <td><span class="status-badge status-available">Disponível</span></td>
-                    <td>29/07/2025</td>
-                    <td class="actions">
-                        <button class="btn btn-secondary btn-sm" onclick="openEditModal('guid-do-video-aqui', 'Título aqui', 'Descrição aqui')">Editar</button>
-                        <button class="btn btn-danger btn-sm" onclick="deleteVideo('guid-do-video-aqui')">Deletar</button>
-                    </td>
-                </tr>
-                *@
-            </tbody>
-        </table>
-    </div>
+            <!-- Conteúdo da Aba "Atualizar / Deletar" -->
+            <div id="content-manage" class="tab-content">
+                <h2>Gerenciar Vídeos Existentes</h2>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Título</th>
+                            <th>Curso</th>
+                            <th>Status</th>
+                            <th>Data de Upload</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="videos-table-body">
+                        @* O JS irá popular esta tabela com os dados da API. *@
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
 </div>
 
-
-<!-- 3. Modal para Edição (Oculto por Padrão) -->
+<!-- Modal para Edição (Oculto por Padrão) -->
 <div id="edit-modal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
