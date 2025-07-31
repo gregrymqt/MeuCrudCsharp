@@ -4,85 +4,100 @@
     ViewData["Title"] = "Gerenciar Vídeos";
 }
 
+<!-- 1. Dependências -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 <link rel="stylesheet" href="~/css/Admin/index.css" asp-append-version="true" />
 
 
+<!-- 2. Estrutura HTML Principal -->
 <div class="admin-layout">
-    <!-- Sidebar -->
+    <!-- Sidebar Principal (Focada em Vídeos) -->
     <aside class="admin-sidebar">
         <div class="sidebar-header">Admin</div>
         <ul class="sidebar-nav">
             <li>
-                @* A classe "active" agora está no link correto *@
                 <a href="/Admin/Videos" class="active"><i class="fas fa-video"></i> Vídeos</a>
             </li>
-            <li>
-                <a href="/Admin/Plans"><i class="fas fa-tags"></i> Planos</a>
-            </li>
-            <li>
-                <a href="#"><i class="fas fa-users"></i> Alunos</a>
-            </li>
+            @* Links para Planos e Alunos foram removidos desta página *@
         </ul>
     </aside>
 
     <!-- Conteúdo Principal -->
     <main class="admin-main-content">
         <div class="admin-container">
-            <!-- Abas de Navegação -->
+            <!-- Abas de Navegação (Agora com 3 abas) -->
             <div class="nav-tabs">
                 <div id="tab-create" class="nav-tab active">Cadastrar</div>
-                <div id="tab-manage" class="nav-tab">Atualizar / Deletar</div>
+                <div id="tab-manage" class="nav-tab">Gerenciar</div>
+                <div id="tab-viewer" class="nav-tab">Assistir Vídeo</div>
             </div>
 
-            <!-- Conteúdo da Aba "Cadastrar" -->
-            <div id="content-create" class="tab-content active">
-                <h2>Adicionar Novo Vídeo</h2>
-                <p>O processo é feito em duas etapas: primeiro envie o arquivo de vídeo e depois preencha seus detalhes.</p>
-                <form id="create-video-form">
-                    <div class="form-group">
-                        <label for="video-file-input">1. Enviar Arquivo de Vídeo</label>
-                        <input type="file" id="video-file-input" class="form-control" accept="video/mp4,video/x-m4v,video/*">
-                        <div id="upload-status" style="margin-top: 1rem;"></div>
+            <!-- Área de Conteúdo das Abas -->
+            <div class="content-area">
+                <!-- Painel da Aba "Cadastrar" (CREATE) -->
+                <div id="content-create" class="tab-content active">
+                    <h2>Adicionar Novo Vídeo</h2>
+                    <p>O processo é feito em duas etapas: primeiro envie o arquivo de vídeo e depois preencha seus detalhes.</p>
+                    <form id="create-video-form">
+                        <div class="form-group">
+                            <label for="video-file-input">1. Enviar Arquivo de Vídeo</label>
+                            <input type="file" id="video-file-input" class="form-control" accept="video/mp4,video/x-m4v,video/*">
+                            <div id="upload-status" style="margin-top: 1rem;"></div>
+                        </div>
+                        <fieldset id="metadata-fieldset" disabled>
+                            <legend style="font-size: 1.2rem; font-weight: 600; margin-bottom: 1rem;">2. Detalhes do Vídeo</legend>
+                            <input type="hidden" id="storage-identifier-input">
+                            <div class="form-group">
+                                <label for="video-title">Título do Vídeo</label>
+                                <input type="text" id="video-title" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="video-description">Descrição</label>
+                                <textarea id="video-description" class="form-control" rows="4"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="course-name">Nome do Curso</label>
+                                <input type="text" id="course-name" class="form-control" placeholder="Ex: Curso de C# Web" required>
+                                <small>Se o curso não existir, ele será criado automaticamente.</small>
+                            </div>
+                        </fieldset>
+                        <button type="submit" id="save-video-button" class="btn btn-primary" disabled>Salvar Vídeo</button>
+                    </form>
+                </div>
+
+                <!-- Painel da Aba "Gerenciar" (UPDATE/DELETE) -->
+                <div id="content-manage" class="tab-content">
+                    <h2>Gerenciar Vídeos Existentes</h2>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Título</th>
+                                <th>Curso</th>
+                                <th>Status</th>
+                                <th>Data de Upload</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="videos-table-body">
+                            @* O JS irá popular esta tabela com os dados da API. *@
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Painel da Aba "Assistir Vídeo" (VIEW) -->
+                <div id="content-viewer" class="tab-content">
+                    <h2>Visualizar Vídeos</h2>
+                    <p>Selecione um vídeo da lista para pré-visualizar como o usuário final.</p>
+                    <div class="video-viewer-layout">
+                        <div class="video-playlist" id="viewer-playlist">
+                            <!-- O JS irá popular a lista de vídeos aqui -->
+                        </div>
+                        <div class="video-player-area">
+                            <video id="video-player" controls></video>
+                        </div>
                     </div>
-                    <fieldset id="metadata-fieldset" disabled>
-                        <legend style="font-size: 1.2rem; font-weight: 600; margin-bottom: 1rem;">2. Detalhes do Vídeo</legend>
-                        <input type="hidden" id="storage-identifier-input">
-                        <div class="form-group">
-                            <label for="video-title">Título do Vídeo</label>
-                            <input type="text" id="video-title" class="form-control" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="video-description">Descrição</label>
-                            <textarea id="video-description" class="form-control" rows="4"></textarea>
-                        </div>
-                        <div class="form-group">
-                            <label for="course-name">Nome do Curso</label>
-                            <input type="text" id="course-name" class="form-control" placeholder="Ex: Curso de C# Web" required>
-                            <small>Se o curso não existir, ele será criado automaticamente.</small>
-                        </div>
-                    </fieldset>
-                    <button type="submit" id="save-video-button" class="btn btn-primary" disabled>Salvar Vídeo</button>
-                </form>
-            </div>
-
-            <!-- Conteúdo da Aba "Atualizar / Deletar" -->
-            <div id="content-manage" class="tab-content">
-                <h2>Gerenciar Vídeos Existentes</h2>
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Título</th>
-                            <th>Curso</th>
-                            <th>Status</th>
-                            <th>Data de Upload</th>
-                            <th>Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody id="videos-table-body">
-                        @* O JS irá popular esta tabela com os dados da API. *@
-                    </tbody>
-                </table>
+                </div>
             </div>
         </div>
     </main>
@@ -110,4 +125,4 @@
     </div>
 </div>
 
-<script src="~/js/admin/index.js" asp-append-version="true"></script>
+<script src="~/js/admin/admin-videos.js" asp-append-version="true"></script>

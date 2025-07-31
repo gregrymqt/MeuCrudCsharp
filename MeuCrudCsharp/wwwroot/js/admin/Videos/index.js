@@ -1,6 +1,4 @@
-// =====================================================================
-// Funções Globais (acessíveis via onclick)
-// =====================================================================
+// Funções Globais para a página de Vídeos
 const editModal = document.getElementById('edit-modal');
 const editForm = document.getElementById('edit-video-form');
 const editVideoIdInput = document.getElementById('edit-video-id');
@@ -22,9 +20,8 @@ window.onclick = function (event) {
     if (event.target == editModal) {
         closeEditModal();
     }
-}
+};
 
-// --- NOVA FUNÇÃO PARA DELETAR ---
 async function deleteVideo(videoId) {
     if (!confirm('Você tem certeza que deseja deletar este vídeo? Esta ação não pode ser desfeita.')) {
         return;
@@ -34,19 +31,15 @@ async function deleteVideo(videoId) {
         const result = await response.json();
         if (!response.ok) throw new Error(result.message || 'Falha ao deletar o vídeo.');
         alert(result.message);
-        // Dispara o evento para recarregar a lista do zero
-        document.getElementById('tab-manage').dispatchEvent(new CustomEvent('reload'));
+        document.dispatchEvent(new CustomEvent('reloadAllVideos'));
     } catch (error) {
         console.error('Erro ao deletar:', error);
         alert(`Erro: ${error.message}`);
     }
 }
 
-
 document.addEventListener('DOMContentLoaded', function () {
-    // =====================================================================
-    // Seleção de Elementos DOM
-    // =====================================================================
+    // Seleção de Elementos DOM da página de Vídeos
     const createForm = document.getElementById('create-video-form');
     const fileInput = document.getElementById('video-file-input');
     const uploadStatusDiv = document.getElementById('upload-status');
@@ -56,145 +49,145 @@ document.addEventListener('DOMContentLoaded', function () {
     const titleInput = document.getElementById('video-title');
     const descriptionInput = document.getElementById('video-description');
     const courseNameInput = document.getElementById('course-name');
+    
+    const navCrud = document.getElementById('nav-crud');
+    const navViewer = document.getElementById('nav-viewer');
+    const panelCrud = document.getElementById('panel-crud');
+    const panelViewer = document.getElementById('panel-viewer');
 
-    const tabCreate = document.getElementById('tab-create');
-    const tabManage = document.getElementById('tab-manage');
-    const contentCreate = document.getElementById('content-create');
-    const contentManage = document.getElementById('content-manage');
     const videosTableBody = document.getElementById('videos-table-body');
+    const viewerPlaylist = document.getElementById('viewer-playlist');
+    const videoPlayer = document.getElementById('video-player');
+    let hlsInstance;
 
+    // Estado para Cache e Rolagem Infinita
+    let crudState = { currentPage: 1, isLoading: false, allDataLoaded: false, cache: {} };
+    let viewerState = { currentPage: 1, isLoading: false, allDataLoaded: false, cache: {} };
 
-
-    // =====================================================================
-    // NOVO: Estado para Cache e Rolagem Infinita
-    // =====================================================================
-    let currentPage = 1;
-    let isLoading = false;
-    let allDataLoaded = false;
-    const videoCache = {}; // Cache simples em memória (objeto JS)
-
-
-    // =====================================================================
-    // READ: Lógica de Carregamento Refatorada
-    // =====================================================================
-
-    // Função para renderizar os vídeos na tabela
-    function renderVideos(videos) {
-        if (currentPage === 1 && videos.length === 0) {
-            videosTableBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Nenhum vídeo encontrado.</td></tr>';
-            return;
-        }
-
-        videos.forEach(video => {
-            const safeTitle = video.title.replace(/'/g, "\\'");
-            const safeDescription = (video.description || '').replace(/'/g, "\\'");
-            const row = `
-                    <tr>
-                        <td>${video.title}</td>
-                        <td>${video.courseName}</td>
-                        <td><span class="status-badge status-${video.status.toLowerCase()}">${video.status}</span></td>
-                        <td>${new Date(video.uploadDate).toLocaleDateString()}</td>
-                        <td class="actions">
-                            <button class="btn btn-secondary btn-sm" onclick="openEditModal('${video.id}', '${safeTitle}', '${safeDescription}')">Editar</button>
-                            <button class="btn btn-danger btn-sm" onclick="deleteVideo('${video.id}')">Deletar</button>
-                        </td>
-                    </tr>
-                `;
-            videosTableBody.insertAdjacentHTML('beforeend', row);
-        });
+    // Funções de Renderização
+    function renderCrudTableRow(video) {
+        const safeTitle = video.title.replace(/'/g, "\\'");
+        const safeDescription = (video.description || '').replace(/'/g, "\\'");
+        const row = `
+            <tr>
+                <td>${video.title}</td>
+                <td>${video.courseName}</td>
+                <td><span class="status-badge status-${video.status.toLowerCase()}">${video.status}</span></td>
+                <td>${new Date(video.uploadDate).toLocaleDateString()}</td>
+                <td class="actions">
+                    <button class="btn btn-secondary btn-sm" onclick="openEditModal('${video.id}', '${safeTitle}', '${safeDescription}')">Editar</button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteVideo('${video.id}')">Deletar</button>
+                </td>
+            </tr>`;
+        videosTableBody.insertAdjacentHTML('beforeend', row);
     }
 
-    // Função principal para buscar os vídeos
-    async function loadVideos() {
-        if (isLoading || allDataLoaded) return; // Previne múltiplas chamadas
+    function renderViewerPlaylistItem(video) {
+        const item = document.createElement('div');
+        item.className = 'playlist-item';
+        item.innerHTML = `<h4>${video.title}</h4><p>${video.courseName}</p>`;
+        item.addEventListener('click', () => playVideo(video.storageIdentifier, item));
+        viewerPlaylist.appendChild(item);
+    }
 
-        isLoading = true;
-        // Opcional: Adicionar um ícone de "loading" no final da tabela
-
-        // 1. LÓGICA DE CACHE
-        if (videoCache[currentPage]) {
-            console.log(`Carregando página ${currentPage} do cache.`);
-            renderVideos(videoCache[currentPage]);
-            isLoading = false;
+    // Lógica de Carregamento Genérica
+    async function loadData(state, renderFunction, containerElement) {
+        if (state.isLoading || state.allDataLoaded) return;
+        state.isLoading = true;
+        if (state.cache[state.currentPage]) {
+            state.cache[state.currentPage].forEach(renderFunction);
+            state.isLoading = false;
             return;
         }
-
         try {
-            console.log(`Buscando página ${currentPage} da API.`);
-            const response = await fetch(`/api/admin/videos?page=${currentPage}&pageSize=10`);
+            const response = await fetch(`/api/admin/videos?page=${state.currentPage}&pageSize=15`);
             if (!response.ok) throw new Error('Erro ao buscar vídeos.');
-
             const videos = await response.json();
-
-            // Armazena no cache
-            videoCache[currentPage] = videos;
-
-            if (videos.length < 10) {
-                allDataLoaded = true; // Se a API retorna menos que o tamanho da página, não há mais dados.
+            state.cache[state.currentPage] = videos;
+            if (videos.length < 15) state.allDataLoaded = true;
+            if (state.currentPage === 1 && videos.length === 0) {
+                containerElement.innerHTML = (containerElement.tagName === 'TBODY')
+                    ? '<tr><td colspan="5" style="text-align:center;">Nenhum vídeo encontrado.</td></tr>'
+                    : '<p style="padding:1rem;">Nenhum vídeo disponível.</p>';
+            } else {
+                videos.forEach(renderFunction);
             }
-
-            renderVideos(videos);
-            currentPage++;
-
+            state.currentPage++;
         } catch (error) {
-            console.error('Erro ao carregar vídeos:', error);
-            // Opcional: Mostrar erro no final da tabela
+            console.error('Erro ao carregar dados:', error);
         } finally {
-            isLoading = false;
-            // Opcional: Remover o ícone de "loading"
+            state.isLoading = false;
         }
     }
 
-    // Função para resetar e carregar a lista
-    function resetAndLoadVideos() {
-        currentPage = 1;
-        isLoading = false;
-        allDataLoaded = false;
-        videosTableBody.innerHTML = ''; // Limpa a tabela
-        // Não limpa o cache, para o caso do usuário voltar para a aba
-        loadVideos();
+    // Lógica da Aba "Visualizar Vídeos"
+    function playVideo(storageIdentifier, clickedItem) {
+        document.querySelectorAll('.playlist-item.playing').forEach(el => el.classList.remove('playing'));
+        clickedItem.classList.add('playing');
+        const manifestUrl = `/api/videos/${storageIdentifier}/manifest.m3u8`;
+        if (hlsInstance) hlsInstance.destroy();
+        if (Hls.isSupported()) {
+            hlsInstance = new Hls();
+            hlsInstance.loadSource(manifestUrl);
+            hlsInstance.attachMedia(videoPlayer);
+            hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => videoPlayer.play());
+        } else if (videoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
+            videoPlayer.src = manifestUrl;
+            videoPlayer.play();
+        }
     }
 
-    // =====================================================================
-    // Lógica de Eventos
-    // =====================================================================
+    // Lógica de Eventos e Inicialização
+    function resetAndLoadCrud() {
+        crudState = { currentPage: 1, isLoading: false, allDataLoaded: false, cache: {} };
+        videosTableBody.innerHTML = '';
+        loadData(crudState, renderCrudTableRow, videosTableBody);
+    }
 
-    // Lógica de troca de abas
-    tabCreate.addEventListener('click', () => {
-        tabCreate.classList.add('active');
-        tabManage.classList.remove('active');
-        contentCreate.classList.add('active');
-        contentManage.classList.remove('active');
+    function resetAndLoadViewer() {
+        viewerState = { currentPage: 1, isLoading: false, allDataLoaded: false, cache: {} };
+        viewerPlaylist.innerHTML = '';
+        loadData(viewerState, renderViewerPlaylistItem, viewerPlaylist);
+    }
+
+    navCrud.addEventListener('click', () => {
+        navCrud.classList.add('active');
+        navViewer.classList.remove('active');
+        panelCrud.classList.add('active');
+        panelViewer.classList.remove('active');
+        if (hlsInstance) hlsInstance.destroy();
+        if (videosTableBody.innerHTML === '') resetAndLoadCrud();
     });
 
-    tabManage.addEventListener('click', () => {
-        tabManage.classList.add('active');
-        tabCreate.classList.remove('active');
-        contentManage.classList.add('active');
-        contentCreate.classList.remove('active');
-        // Só carrega se a tabela estiver vazia
-        if (videosTableBody.innerHTML === '') {
-            loadVideos();
+    navViewer.addEventListener('click', () => {
+        navViewer.classList.add('active');
+        navCrud.classList.remove('active');
+        panelViewer.classList.add('active');
+        panelCrud.classList.remove('active');
+        if (viewerPlaylist.innerHTML === '') resetAndLoadViewer();
+    });
+
+    document.addEventListener('reloadAllVideos', () => {
+        resetAndLoadCrud();
+        resetAndLoadViewer();
+    });
+
+    viewerPlaylist.addEventListener('scroll', () => {
+        if (viewerPlaylist.scrollTop + viewerPlaylist.clientHeight >= viewerPlaylist.scrollHeight - 50) {
+            loadData(viewerState, renderViewerPlaylistItem, viewerPlaylist);
         }
     });
 
-    // Evento customizado para forçar o recarregamento (usado após delete/update)
-    tabManage.addEventListener('reload', resetAndLoadVideos);
-
-    // 2. LÓGICA DE ROLAGEM INFINITA
     window.addEventListener('scroll', () => {
-        // Só executa a lógica se a aba de gerenciamento estiver ativa
-        if (!contentManage.classList.contains('active')) return;
-
-        // Verifica se o usuário chegou perto do final da página
+        if (!panelCrud.classList.contains('active')) return;
         if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 200) {
-            loadVideos();
+            loadData(crudState, renderCrudTableRow, videosTableBody);
         }
     });
 
-    // =====================================================================
+    resetAndLoadCrud();
+
     // CREATE: Lógica para Upload e Criação de Metadados
-    // =====================================================================
     fileInput.addEventListener('change', async function (event) {
         const file = event.target.files[0];
         if (!file) return;
@@ -264,9 +257,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    // =====================================================================
     // UPDATE: Lógica para o Formulário de Edição no Modal
-    // =====================================================================
     editForm.addEventListener('submit', async function (event) {
         event.preventDefault();
         const videoId = editVideoIdInput.value;
@@ -290,94 +281,4 @@ document.addEventListener('DOMContentLoaded', function () {
             alert(`Erro: ${error.message}`);
         }
     });
-
-
-    const form = document.getElementById('create-plan-form');
-    const saveplanButton = document.getElementById('save-plan-button');
-    const formStatus = document.getElementById('form-status');
-    const plansTableBody = document.getElementById('plans-table-body');
-
-    // --- Lógica para Criar um Novo Plano ---
-    form.addEventListener('submit', async function (event) {
-        event.preventDefault();
-        saveplanButton.disabled = true;
-        saveplanButton.textContent = 'Criando...';
-        formStatus.innerHTML = '';
-
-        // Coleta os dados do formulário
-        const planData = {
-            reason: document.getElementById('plan-reason').value,
-            auto_recurring: {
-                frequency: parseInt(document.getElementById('plan-frequency').value),
-                frequency_type: document.getElementById('plan-frequency-type').value,
-                transaction_amount: parseFloat(document.getElementById('plan-amount').value),
-                currency_id: document.getElementById('plan-currency').value
-            },
-            back_url: document.getElementById('plan-back-url').value
-        };
-
-        try {
-            // O backend precisa ter um endpoint para receber esta chamada
-            const response = await fetch('/api/admin/plans', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(planData)
-            });
-
-            const result = await response.json();
-
-            if (!response.ok) {
-                throw new Error(result.message || 'Ocorreu um erro ao criar o plano.');
-            }
-
-            formStatus.innerHTML = `<p style="color: var(--success-color);"><strong>Plano criado com sucesso!</strong> ID: ${result.id}</p>`;
-            form.reset();
-            loadPlans(); // Recarrega a lista de planos
-
-        } catch (error) {
-            console.error('Erro ao criar plano:', error);
-            formStatus.innerHTML = `<p style="color: var(--danger-color);"><strong>Erro:</strong> ${error.message}</p>`;
-        } finally {
-            saveplanButton.disabled = false;
-            saveplanButton.textContent = 'Criar Plano';
-        }
-    });
-
-    // --- Lógica para Listar Planos Existentes ---
-    async function loadPlans() {
-        try {
-            // O backend precisa ter um endpoint para listar os planos
-            const response = await fetch('/api/admin/plans');
-            if (!response.ok) throw new Error('Falha ao buscar planos.');
-
-            const plans = await response.json();
-            plansTableBody.innerHTML = '';
-
-            if (plans.length === 0) {
-                plansTableBody.innerHTML = '<tr><td colspan="3" style="text-align: center;">Nenhum plano criado ainda.</td></tr>';
-                return;
-            }
-
-            plans.forEach(plan => {
-                const row = `
-                    <tr>
-                        <td>${plan.id}</td>
-                        <td>${plan.reason}</td>
-                        <td>${plan.auto_recurring.transaction_amount.toFixed(2)} ${plan.auto_recurring.currency_id}</td>
-                    </tr>
-                `;
-                plansTableBody.innerHTML += row;
-            });
-
-        } catch (error) {
-            console.error('Erro ao carregar planos:', error);
-            plansTableBody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: var(--danger-color);">${error.message}</td></tr>`;
-        }
-    }
-
-    // Carrega os planos ao iniciar a página
-    loadPlans();
-
 });
