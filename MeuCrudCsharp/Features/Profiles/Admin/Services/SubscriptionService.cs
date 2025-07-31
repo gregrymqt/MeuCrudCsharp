@@ -1,8 +1,8 @@
-﻿using MeuCrudCsharp.Features.Profiles.Admin.Dtos;
-using MeuCrudCsharp.Features.Profiles.Admin.Interfaces;
-using System.Net.Http.Headers;
+﻿using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using MeuCrudCsharp.Features.Profiles.Admin.Dtos;
+using MeuCrudCsharp.Features.Profiles.Admin.Interfaces;
 
 namespace MeuCrudCsharp.Features.Profiles.Admin.Services
 {
@@ -22,22 +22,32 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Services
         {
             var accessToken = _configuration["MercadoPago:AccessToken"];
             if (string.IsNullOrEmpty(accessToken))
-                throw new InvalidOperationException("Access Token do Mercado Pago não configurado.");
-            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+                throw new InvalidOperationException(
+                    "Access Token do Mercado Pago não configurado."
+                );
+            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+                "Bearer",
+                accessToken
+            );
         }
 
         public async Task<string> SearchSubscriptionAsync(string searchParameter)
         {
             SetAuthorizationHeader();
             // A API do MP permite buscar por vários parâmetros, aqui usamos um genérico
-            var response = await _httpClient.GetAsync($"/preapproval/search?q={Uri.EscapeDataString(searchParameter)}");
+            var response = await _httpClient.GetAsync(
+                $"/preapproval/search?q={Uri.EscapeDataString(searchParameter)}"
+            );
             var content = await response.Content.ReadAsStringAsync();
             if (!response.IsSuccessStatusCode)
                 throw new HttpRequestException($"Erro ao buscar assinatura: {content}");
             return content; // Retorna o JSON bruto da resposta
         }
 
-        public async Task<string> UpdateSubscriptionValueAsync(string id, UpdateSubscriptionValueDto dto)
+        public async Task<string> UpdateSubscriptionValueAsync(
+            string id,
+            UpdateSubscriptionValueDto dto
+        )
         {
             SetAuthorizationHeader();
             var recurringData = new { auto_recurring = dto };
@@ -51,7 +61,10 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Services
             return content;
         }
 
-        public async Task<string> UpdateSubscriptionStatusAsync(string id, UpdateSubscriptionStatusDto dto)
+        public async Task<string> UpdateSubscriptionStatusAsync(
+            string id,
+            UpdateSubscriptionStatusDto dto
+        )
         {
             SetAuthorizationHeader();
             var jsonContent = JsonSerializer.Serialize(dto);

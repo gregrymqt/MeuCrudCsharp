@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Configuration; // Necessário para IConfiguration
 
-
 namespace MeuCrudCsharp.Pages.Payment
 {
     [Authorize] // Garante que apenas usu�rios logados podem acessar esta p�gina
@@ -26,7 +25,6 @@ namespace MeuCrudCsharp.Pages.Payment
 
         public string? PreapprovalPlanId { get; private set; }
 
-
         public CreditCardModel(IPreferencePayment preferencePayment, IConfiguration configuration)
         {
             _preferencePayment = preferencePayment;
@@ -35,26 +33,22 @@ namespace MeuCrudCsharp.Pages.Payment
 
         public async Task<IActionResult> OnGetAsync()
         {
-
             if (string.IsNullOrEmpty(Plano))
             {
                 return RedirectToPage("/Subscription/Index"); // Volta se não houver plano
             }
 
-            var preference = await _preferencePayment.CreatePreferenceAsync(
-                    Valor,
-                    this.User
-                );
-                // Validação simples para garantir que o valor é válido
-                if (Valor <= 0)
-                {
-                    // Redireciona de volta para a página de planos se os dados estiverem incorretos
-                    return RedirectToPage("/Subscription/Index");
-                }
+            var preference = await _preferencePayment.CreatePreferenceAsync(Valor, this.User);
+            // Validação simples para garantir que o valor é válido
+            if (Valor <= 0)
+            {
+                // Redireciona de volta para a página de planos se os dados estiverem incorretos
+                return RedirectToPage("/Subscription/Index");
+            }
 
-                // Carrega as configurações do seu appsettings.json para enviar ao frontend
-                PublicKey = _configuration["MercadoPago:PublicKey"];
-                PreferenceId = preference.Id;
+            // Carrega as configurações do seu appsettings.json para enviar ao frontend
+            PublicKey = _configuration["MercadoPago:PublicKey"];
+            PreferenceId = preference.Id;
 
             PreapprovalPlanId = _configuration[$"MercadoPago:Plans:{Plano}"];
 

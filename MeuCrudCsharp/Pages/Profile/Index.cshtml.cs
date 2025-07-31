@@ -29,18 +29,16 @@ namespace MeuCrudCsharp.Pages.Profile
         {
             var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-            // A verifica��o de Guid ainda � uma boa pr�tica de defesa.
-            if (!Guid.TryParse(userIdString, out Guid userIdAsGuid))
+            if (string.IsNullOrEmpty(userIdString))
             {
-                // Se o usu�rio est� autenticado mas o ID n�o � um Guid, algo est� muito errado.
-                return Unauthorized();
+                return NotFound("Usu��rio n��o encontrado.");
             }
 
             // 2. Buscando o usu�rio e seu pagamento em uma �nica consulta ao banco de dados com .Include()
             // Isso � mais eficiente do que fazer duas chamadas separadas.
             UserProfile = await _context
                 .Users.Include(u => u.Payment_User) // Assumindo que voc� tem uma propriedade de navega��o chamada Payment_User no seu modelo User
-                .FirstOrDefaultAsync(u => u.Id == userIdAsGuid);
+                .FirstOrDefaultAsync(u => u.Id == userIdString);
 
             if (UserProfile == null)
             {

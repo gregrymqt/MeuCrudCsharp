@@ -7,8 +7,6 @@ namespace MeuCrudCsharp.Pages.Payment.Subscription
     [Authorize]
     public class indexModel : PageModel
     {
-        public void OnGet()
-        {
-        }
+        public void OnGet() { }
     }
 }

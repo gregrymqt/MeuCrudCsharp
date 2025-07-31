@@ -102,7 +102,7 @@ builder.Services.AddHttpClient<IMercadoPagoService, MercadoPagoService>(client =
 // 5. Registrando seus serviços customizados da aplicação
 builder.Services.AddScoped<IMercadoPagoService, MercadoPagoService>();
 builder.Services.AddScoped<IAppAuthService, AppAuthService>();
-builder.Services.AddScoped<ICreditCardPayment, CreditCardPaymentService>();
+builder.Services.AddScoped<ICreditCardPayments, CreditCardPaymentService>();
 builder.Services.AddScoped<IPreferencePayment, PreferencePaymentService>();
 builder.Services.AddScoped<IQueueService, BackgroundJobQueueService>();
 builder.Services.AddScoped<IEmailSenderService, SendGridEmailSenderService>();
@@ -113,6 +113,7 @@ builder.Services.AddHttpClient<ISubscriptionService, SubscriptionService>();
 builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
 builder.Services.AddSingleton<TokenMercadoPago>();
 builder.Services.AddTransient<VideoProcessingService>();
+builder.Services.AddHttpContextAccessor();
 
 // 6. Adiciona o servidor Hangfire que processa os jobs na fila
 // Isso deve vir depois que o Hangfire foi configurado (AddHangfire)

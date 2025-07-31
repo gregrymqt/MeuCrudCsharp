@@ -28,15 +28,24 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Controllers
             {
                 var planResponse = await _mercadoPagoService.CreatePlanAsync(createPlanDto);
                 // Retorna 201 Created com o objeto de resposta
-                return CreatedAtAction(nameof(CreatePlan), new { id = planResponse.Id }, planResponse);
+                return CreatedAtAction(
+                    nameof(CreatePlan),
+                    new { id = planResponse.Id },
+                    planResponse
+                );
             }
             catch (Exception ex)
             {
                 // Em caso de erro na comunicação com a API, retorna um erro de servidor
-                return StatusCode(500, new { message = "Ocorreu um erro interno ao se comunicar com o serviço de pagamento.", error = ex.Message });
+                return StatusCode(
+                    500,
+                    new
+                    {
+                        message = "Ocorreu um erro interno ao se comunicar com o serviço de pagamento.",
+                        error = ex.Message,
+                    }
+                );
             }
         }
     }
-
-
 }

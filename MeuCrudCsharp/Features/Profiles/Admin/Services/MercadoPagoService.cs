@@ -1,8 +1,8 @@
-﻿using MeuCrudCsharp.Features.Profiles.Admin.Dtos;
-using MeuCrudCsharp.Features.Profiles.Admin.Interfaces;
-using System.Net.Http.Headers;
+﻿using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using MeuCrudCsharp.Features.Profiles.Admin.Dtos;
+using MeuCrudCsharp.Features.Profiles.Admin.Interfaces;
 
 namespace MeuCrudCsharp.Features.Profiles.Admin.Services
 {
@@ -23,12 +23,16 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Services
             var accessToken = _configuration["MercadoPago:AccessToken"];
             if (string.IsNullOrEmpty(accessToken))
             {
-                throw new InvalidOperationException("Access Token do Mercado Pago não está configurado.");
+                throw new InvalidOperationException(
+                    "Access Token do Mercado Pago não está configurado."
+                );
             }
 
             // Configura o cabeçalho de autorização
-            _httpClient.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Bearer", accessToken);
+            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+                "Bearer",
+                accessToken
+            );
 
             // Serializa o objeto DTO para uma string JSON
             var jsonContent = JsonSerializer.Serialize(planDto);
@@ -42,7 +46,9 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Services
             if (!response.IsSuccessStatusCode)
             {
                 // Se a API retornou um erro, lança uma exceção com os detalhes
-                throw new HttpRequestException($"Erro ao criar plano no Mercado Pago. Status: {response.StatusCode}. Resposta: {responseBody}");
+                throw new HttpRequestException(
+                    $"Erro ao criar plano no Mercado Pago. Status: {response.StatusCode}. Resposta: {responseBody}"
+                );
             }
 
             // Deserializa a resposta JSON para o nosso DTO de resposta
@@ -50,16 +56,22 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Services
             return planResponse;
         }
 
-        public async Task<SubscriptionResponseDto> CreateSubscriptionAsync(CreateSubscriptionDto subscriptionDto)
+        public async Task<SubscriptionResponseDto> CreateSubscriptionAsync(
+            CreateSubscriptionDto subscriptionDto
+        )
         {
             var accessToken = _configuration["MercadoPago:AccessToken"];
             if (string.IsNullOrEmpty(accessToken))
             {
-                throw new InvalidOperationException("Access Token do Mercado Pago não está configurado.");
+                throw new InvalidOperationException(
+                    "Access Token do Mercado Pago não está configurado."
+                );
             }
 
-            _httpClient.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Bearer", accessToken);
+            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+                "Bearer",
+                accessToken
+            );
 
             // O corpo da requisição é o próprio DTO
             var jsonContent = JsonSerializer.Serialize(subscriptionDto);
@@ -73,12 +85,15 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Services
             if (!response.IsSuccessStatusCode)
             {
                 // Lança uma exceção com os detalhes do erro retornado pela API do MP
-                throw new HttpRequestException($"Erro ao criar assinatura no Mercado Pago. Status: {response.StatusCode}. Resposta: {responseBody}");
+                throw new HttpRequestException(
+                    $"Erro ao criar assinatura no Mercado Pago. Status: {response.StatusCode}. Resposta: {responseBody}"
+                );
             }
 
-            var subscriptionResponse = JsonSerializer.Deserialize<SubscriptionResponseDto>(responseBody);
+            var subscriptionResponse = JsonSerializer.Deserialize<SubscriptionResponseDto>(
+                responseBody
+            );
             return subscriptionResponse;
         }
-    
-}
+    }
 }

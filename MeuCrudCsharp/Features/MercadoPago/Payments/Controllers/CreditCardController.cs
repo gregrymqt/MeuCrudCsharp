@@ -19,11 +19,11 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Controllers
         // --- CORREÇÃO 1: Injetamos APENAS a interface ICacheService ---
         // O Program.cs vai decidir se isso é uma instância de MemoryCacheService ou RedisCacheService.
         private readonly ICacheService _cacheService;
-        private readonly ICreditCardPayment _creditCardPaymentService;
+        private readonly ICreditCardPayments _creditCardPaymentService;
 
         public CreditCardController(
             ICacheService cacheService,
-            ICreditCardPayment creditCardPaymentService
+            ICreditCardPayments creditCardPaymentService
         )
         {
             _cacheService = cacheService;
@@ -31,9 +31,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Controllers
         }
 
         [HttpPost("process-payment")]
-        public async Task<IActionResult> ProcessPaymentAsync(
-        [FromBody] PaymentRequestDto request,
-        [FromQuery] decimal amount)
+        public async Task<IActionResult> ProcessPaymentAsync([FromBody] PaymentRequestDto request)
         {
             if (!ModelState.IsValid)
             {
@@ -71,7 +69,9 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Controllers
                 }
 
                 // A lógica de negócio principal permanece a mesma.
-                var result = await _creditCardPaymentService.CreatePaymentAsync(request, amount);
+                var result = await _creditCardPaymentService.CreatePaymentOrSubscriptionAsync(
+                    request
+                );
 
                 // --- CORREÇÃO 3: Armazenamos o resultado PURO no cache ---
                 // O objeto 'result' e o status code 200 são armazenados.

@@ -11,10 +11,12 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Dtos
         public string PayerEmail { get; set; }
 
         [JsonPropertyName("card_token_id")]
-        public string CardTokenId { get; set; } // O token do cartão gerado pelo SDK do MP no frontend
+        public string CardTokenId { get; set; }
 
-        // Opcional: uma referência para ligar esta assinatura a um pedido no seu sistema
-        [JsonPropertyName("external_reference")]
-        public string? ExternalReference { get; set; }
+        [JsonPropertyName("reason")]
+        public string Reason { get; set; } // Removido o aninhamento desnecessário
+
+        [JsonPropertyName("back_url")]
+        public string BackUrl { get; set; } // Removido o aninhamento desnecessário
     }
 }
