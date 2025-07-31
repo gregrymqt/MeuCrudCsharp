@@ -5,5 +5,7 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Interfaces
     public interface IMercadoPagoService
     {
         Task<PlanResponseDto> CreatePlanAsync(CreatePlanDto planDto);
+        Task<SubscriptionResponseDto> CreateSubscriptionAsync(CreateSubscriptionDto subscriptionDto);
+
     }
 }

@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Security.Claims;
-using System.Threading.Tasks;
-using MercadoPago.Client;
+﻿using MercadoPago.Client;
 using MercadoPago.Client.Common;
 using MercadoPago.Client.Payment;
 using MercadoPago.Error;
@@ -11,8 +7,11 @@ using MeuCrudCsharp.Data; // Supondo que seu DbContext e Pagamento estão aqui
 using MeuCrudCsharp.Features.MercadoPago.Payments.Dtos;
 using MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces;
 using MeuCrudCsharp.Features.MercadoPago.Tokens;
+using MeuCrudCsharp.Features.Profiles.Admin.Interfaces;
+using MeuCrudCsharp.Features.Profiles.Admin.Services;
 using MeuCrudCsharp.Models; // Supondo que sua entidade Pagamento está aqui
-using Microsoft.Extensions.Options;
+using System;
+using System.Security.Claims;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
 {
@@ -23,6 +22,8 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
         private readonly PaymentClient _paymentClient;
         private readonly ApiDbContext _context;
         private readonly IConfiguration _configuration;
+        private readonly IMercadoPagoService _subscriptionService;
+
 
         // Dicionário para mapear os status, agora com a sintaxe correta de C#
         private readonly Dictionary<string, string> _statusMap = new()
@@ -40,13 +41,15 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
             TokenMercadoPago tokenMercadoPago,
             PaymentClient paymentClient,
             ApiDbContext context,
-            IConfiguration configuration
+            IConfiguration configuration,
+            IMercadoPagoService subscriptionService
         )
         {
             _tokenMercadoPago = tokenMercadoPago;
             _paymentClient = paymentClient;
             _context = context;
             _configuration = configuration;
+            _subscriptionService = subscriptionService;
         }
 
         public async Task<PaymentResponseDto> CreatePaymentAsync(

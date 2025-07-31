@@ -1,22 +1,40 @@
-// ====================================================================================
-// PASSO 1: DECLARAÇÕES GLOBAIS E INTERFACES
-// ====================================================================================
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
+document.addEventListener('DOMContentLoaded', () => {
+    // PASSO 1: VERIFICAÇÕES INICIAIS
+
+    // Garante que o SDK do Mercado Pago e as configurações globais foram carregadas.
+    if (typeof MercadoPago === 'undefined') {
+        showError('O SDK do Mercado Pago não foi carregado.');
+        return;
+    }
+
+    if (!window.paymentConfig?.publicKey || !window.paymentConfig?.preferenceId) {
+        showError('Erro de configuração: Chave pública ou ID da preferência não encontrados.');
+        return;
+    }
+
+    // PASSO 2: INICIALIZAÇÃO DO SDK E DOS BRICKS
+    const mp = new MercadoPago(window.paymentConfig.publicKey, {
+        locale: 'pt-BR'
     });
-};
-// ====================================================================================
-// PASSO 2: FUNÇÕES AUXILIARES
-// ====================================================================================
+
+    const bricksBuilder = mp.bricks();
+
+    // Inicia o processo de renderização do formulário de pagamento.
+    renderPaymentBrick(bricksBuilder);
+});
+
+
+// FUNÇÕES AUXILIARES
+
+/**
+ * Exibe uma mensagem de erro na tela.
+ * @param {string} message - A mensagem de erro a ser exibida.
+ */
 const showError = (message) => {
     const errorContainer = document.getElementById('error-container');
     const loadingMessage = document.getElementById('loading-message');
     const paymentContainer = document.getElementById('paymentBrick_container');
+
     if (errorContainer) {
         errorContainer.textContent = message;
         errorContainer.style.display = 'block';
@@ -25,30 +43,17 @@ const showError = (message) => {
         loadingMessage.style.display = 'none';
     }
     if (paymentContainer) {
-        paymentContainer.style.display = 'block';
+        paymentContainer.style.display = 'block'; // Garante que o formulário reapareça em caso de erro
     }
     console.error(message);
 };
-// ====================================================================================
-// PASSO 3: LÓGICA PRINCIPAL DOS BRICKS
-// ====================================================================================
-const initializePayment = () => {
-    var _a, _b;
-    if (typeof MercadoPago === 'undefined') {
-        showError('O SDK do Mercado Pago não foi carregado.');
-        return;
-    }
-    if (!((_a = window.paymentConfig) === null || _a === void 0 ? void 0 : _a.publicKey) || !((_b = window.paymentConfig) === null || _b === void 0 ? void 0 : _b.preferenceId)) {
-        showError('Erro de configuração: Chave pública ou ID da preferência não encontrados.');
-        return;
-    }
-    const mp = new MercadoPago(window.paymentConfig.publicKey, {
-        locale: 'pt-BR'
-    });
-    const bricksBuilder = mp.bricks();
-    renderPaymentBrick(bricksBuilder);
-};
-const renderPaymentBrick = (builder) => __awaiter(void 0, void 0, void 0, function* () {
+
+
+/**
+ * Renderiza o Brick de Pagamento na tela.
+ * @param {object} builder - A instância do construtor de bricks do Mercado Pago.
+ */
+async function renderPaymentBrick(builder) {
     const settings = {
         initialization: {
             amount: window.paymentConfig.amount,
@@ -64,60 +69,71 @@ const renderPaymentBrick = (builder) => __awaiter(void 0, void 0, void 0, functi
         callbacks: {
             onReady: () => {
                 console.log("Payment Brick está pronto.");
+                // Esconde a mensagem de "carregando" e mostra o formulário
+                document.getElementById('loading-message').style.display = 'none';
+                document.getElementById('paymentBrick_container').style.display = 'block';
             },
-            onSubmit: (params) => {
+            onSubmit: async (params) => {
+                // Esconde o formulário e mostra a mensagem de "processando"
                 document.getElementById('paymentBrick_container').style.display = 'none';
                 document.getElementById('loading-message').style.display = 'block';
                 document.getElementById('error-container').style.display = 'none';
-                return new Promise((resolve, reject) => {
-                    fetch(window.paymentConfig.processPaymentUrl, {
+
+                try {
+                    // Envia os dados do pagamento para o seu backend
+                    const response = await fetch(window.paymentConfig.processPaymentUrl, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify(params.formData),
-                    })
-                        .then(response => {
-                        if (!response.ok) {
-                            return response.json().then(err => {
-                                throw new Error(err.message || `Erro HTTP: ${response.status}`);
-                            });
-                        }
-                        return response.json();
-                    })
-                        .then(responseData => {
-                        if (!responseData.id || !responseData.status) {
-                            throw new Error(responseData.message || 'Resposta inválida do servidor.');
-                        }
-                        document.getElementById('loading-message').style.display = 'none';
-                        document.getElementById('statusScreenBrick_container').style.display = 'block';
-                        renderStatusScreenBrick(builder, responseData.id);
-                        resolve();
-                    })
-                        .catch(error => {
-                        showError(`Erro ao processar pagamento: ${error.message}`);
-                        reject(error);
                     });
-                });
+
+                    const responseData = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(responseData.message || `Erro HTTP: ${response.status}`);
+                    }
+
+                    if (!responseData.id || !responseData.status) {
+                        throw new Error(responseData.message || 'Resposta inválida do servidor.');
+                    }
+
+                    // Se o pagamento foi processado, esconde a mensagem de "carregando"
+                    // e mostra a tela de status.
+                    document.getElementById('loading-message').style.display = 'none';
+                    document.getElementById('statusScreenBrick_container').style.display = 'block';
+
+                    // Renderiza o Brick de Status do Pagamento
+                    await renderStatusScreenBrick(builder, responseData.id);
+
+                } catch (error) {
+                    showError(`Erro ao processar pagamento: ${error.message}`);
+                    // Rejeita a promessa para o Brick saber que houve um erro
+                    throw error;
+                }
             },
             onError: (error) => {
-                showError('Verifique os dados informados. ' + ((error === null || error === void 0 ? void 0 : error.message) || ''));
+                showError('Verifique os dados informados. ' + (error?.message || ''));
             },
         },
     };
-    window.paymentBrickController = yield builder.create("payment", "paymentBrick_container", settings);
-});
-const renderStatusScreenBrick = (builder, paymentId) => __awaiter(void 0, void 0, void 0, function* () {
+    // Cria e guarda a instância do controller do brick para referência futura, se necessário
+    window.paymentBrickController = await builder.create("payment", "paymentBrick_container", settings);
+}
+
+/**
+ * Renderiza o Brick de Status do Pagamento na tela.
+ * @param {object} builder - A instância do construtor de bricks do Mercado Pago.
+ * @param {string} paymentId - O ID do pagamento retornado pelo seu backend.
+ */
+async function renderStatusScreenBrick(builder, paymentId) {
     const settings = {
-        initialization: { paymentId: paymentId },
+        initialization: {
+            paymentId: paymentId
+        },
         callbacks: {
             onReady: () => console.log('Status Screen Brick pronto.'),
             onError: (error) => showError('Ocorreu um erro ao exibir o status do pagamento: ' + error.message),
         },
     };
-    window.statusScreenBrickController = yield builder.create('statusScreen', 'statusScreenBrick_container', settings);
-});
-// ====================================================================================
-// PASSO 4: INICIALIZAÇÃO
-// ====================================================================================
-document.addEventListener('DOMContentLoaded', initializePayment);
-export {};
-//# sourceMappingURL=credit_card.js.map
+    window.statusScreenBrickController = await builder.create('statusScreen', 'statusScreenBrick_container', settings);
+}

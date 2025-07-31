@@ -1,9 +1,9 @@
-using System.Security.Claims;
-using System.Threading.Tasks; // Necess�rio para Task
 using MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces;
 using Microsoft.AspNetCore.Authorization; // Para proteger a p�gina
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.Extensions.Configuration; // Necessário para IConfiguration
+
 
 namespace MeuCrudCsharp.Pages.Payment
 {
@@ -14,35 +14,58 @@ namespace MeuCrudCsharp.Pages.Payment
         private readonly IPreferencePayment _preferencePayment;
         private readonly IConfiguration _configuration;
 
+        [BindProperty(SupportsGet = true)]
+        public string? Plano { get; set; }
+
+        [BindProperty(SupportsGet = true)]
+        public decimal Valor { get; set; }
+
+        // --- PROPRIEDADES PARA ENVIAR DADOS PARA O JAVASCRIPT ---
+        public string? PublicKey { get; private set; }
+        public string? PreferenceId { get; private set; } // Se você usar preferenceId
+
+        public string? PreapprovalPlanId { get; private set; }
+
+
         public CreditCardModel(IPreferencePayment preferencePayment, IConfiguration configuration)
         {
             _preferencePayment = preferencePayment;
             _configuration = configuration;
         }
 
-        public async Task OnGetAsync()
+        public async Task<IActionResult> OnGetAsync()
         {
-            try
+
+            if (string.IsNullOrEmpty(Plano))
             {
-                var preference = await _preferencePayment.CreatePreferenceAsync(
-                    (decimal)100.00,
+                return RedirectToPage("/Subscription/Index"); // Volta se não houver plano
+            }
+
+            var preference = await _preferencePayment.CreatePreferenceAsync(
+                    Valor,
                     this.User
                 );
+                // Validação simples para garantir que o valor é válido
+                if (Valor <= 0)
+                {
+                    // Redireciona de volta para a página de planos se os dados estiverem incorretos
+                    return RedirectToPage("/Subscription/Index");
+                }
 
-                var publicKeyFromConfig = _configuration["MercadoPago:PublicKey"];
+                // Carrega as configurações do seu appsettings.json para enviar ao frontend
+                PublicKey = _configuration["MercadoPago:PublicKey"];
+                PreferenceId = preference.Id;
 
-                ViewData["PreferenceId"] = preference.Id;
-                ViewData["PublicKey"] = publicKeyFromConfig;
-            }
-            catch (System.Exception ex)
+            PreapprovalPlanId = _configuration[$"MercadoPago:Plans:{Plano}"];
+
+            if (string.IsNullOrEmpty(PreapprovalPlanId))
             {
-                // � uma boa pr�tica tratar poss�veis erros, como falha na comunica��o com a API.
-                // Aqui voc� poderia logar o erro e talvez redirecionar para uma p�gina de erro.
-                // Por enquanto, vamos apenas definir os valores como nulos.
-                ViewData["PreferenceId"] = null;
-                ViewData["PublicKey"] = null;
-                // Log o erro: _logger.LogError(ex, "Falha ao criar prefer�ncia de pagamento.");
+                // Lida com o caso de um plano inválido na URL
+                // Logar erro, redirecionar, etc.
+                return BadRequest("Plano de assinatura inválido.");
             }
+
+            return Page();
         }
     }
 }

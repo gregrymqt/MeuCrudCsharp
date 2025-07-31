@@ -49,5 +49,36 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Services
             var planResponse = JsonSerializer.Deserialize<PlanResponseDto>(responseBody);
             return planResponse;
         }
-    }
+
+        public async Task<SubscriptionResponseDto> CreateSubscriptionAsync(CreateSubscriptionDto subscriptionDto)
+        {
+            var accessToken = _configuration["MercadoPago:AccessToken"];
+            if (string.IsNullOrEmpty(accessToken))
+            {
+                throw new InvalidOperationException("Access Token do Mercado Pago não está configurado.");
+            }
+
+            _httpClient.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Bearer", accessToken);
+
+            // O corpo da requisição é o próprio DTO
+            var jsonContent = JsonSerializer.Serialize(subscriptionDto);
+            var httpContent = new StringContent(jsonContent, Encoding.UTF8, "application/json");
+
+            // Faz a chamada POST para o endpoint /preapproval
+            var response = await _httpClient.PostAsync("/preapproval", httpContent);
+
+            var responseBody = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                // Lança uma exceção com os detalhes do erro retornado pela API do MP
+                throw new HttpRequestException($"Erro ao criar assinatura no Mercado Pago. Status: {response.StatusCode}. Resposta: {responseBody}");
+            }
+
+            var subscriptionResponse = JsonSerializer.Deserialize<SubscriptionResponseDto>(responseBody);
+            return subscriptionResponse;
+        }
+    
+}
 }

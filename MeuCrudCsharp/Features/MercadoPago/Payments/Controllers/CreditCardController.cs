@@ -31,7 +31,9 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Controllers
         }
 
         [HttpPost("process-payment")]
-        public async Task<IActionResult> ProcessPaymentAsync([FromBody] PaymentRequestDto request)
+        public async Task<IActionResult> ProcessPaymentAsync(
+        [FromBody] PaymentRequestDto request,
+        [FromQuery] decimal amount)
         {
             if (!ModelState.IsValid)
             {
@@ -69,7 +71,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Controllers
                 }
 
                 // A lógica de negócio principal permanece a mesma.
-                var result = await _creditCardPaymentService.CreatePaymentAsync(request, 100);
+                var result = await _creditCardPaymentService.CreatePaymentAsync(request, amount);
 
                 // --- CORREÇÃO 3: Armazenamos o resultado PURO no cache ---
                 // O objeto 'result' e o status code 200 são armazenados.
