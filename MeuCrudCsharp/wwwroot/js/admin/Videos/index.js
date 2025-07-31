@@ -244,6 +244,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 throw new Error(errorMessages || 'Ocorreu um erro ao salvar os dados.');
             }
             alert('Vídeo cadastrado com sucesso!');
+            document.dispatchEvent(new CustomEvent('reloadAllVideos'));
             createForm.reset();
             metadataFieldset.disabled = true;
             saveButton.disabled = true;

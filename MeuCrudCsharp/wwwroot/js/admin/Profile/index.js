@@ -36,35 +36,43 @@
     const createPlanStatus = document.getElementById('create-plan-status');
 
     if (createPlanForm) {
-        createPlanForm.addEventListener('submit', async function(e) {
+        createPlanForm.addEventListener('submit', async function (e) {
             e.preventDefault();
             const saveButton = createPlanForm.querySelector('button[type="submit"]');
             saveButton.disabled = true;
             saveButton.textContent = 'Criando...';
             createPlanStatus.innerHTML = '<p>Enviando dados para o Mercado Pago...</p>';
-            
+
+            // Coleta os dados do formulário
             const planData = {
                 reason: document.getElementById('plan-reason').value,
-                auto_recurring: {
+                autoRecurring: {
                     frequency: 1, // Fixo em 1 para simplicidade
-                    frequency_type: document.getElementById('plan-type').value,
-                    transaction_amount: parseFloat(document.getElementById('plan-amount').value),
-                    currency_id: 'BRL' // Fixo em BRL
+                    frequencyType: document.getElementById('plan-type').value,
+                    transactionAmount: parseFloat(document.getElementById('plan-amount').value),
                 },
-                back_url: "https://www.seusite.com/confirmacao" // URL de retorno
+                backUrl: "https://www.seusite.com/confirmacao" // URL de retorno
             };
-            
+
             try {
-                // Você precisará criar este endpoint no backend
-                // const response = await fetch('/api/admin/plans', { method: 'POST', ... });
-                // const result = await response.json();
-                // if(!response.ok) throw new Error(result.message);
-                
-                // Simulação de sucesso para fins de UI
-                await new Promise(resolve => setTimeout(resolve, 1500));
-                const simulatedResult = { id: '2c938084726fca480172750000000000' }; // ID de exemplo
-                
-                createPlanStatus.innerHTML = `<p style="color: var(--success-color);"><strong>Plano criado com sucesso!</strong> ID: ${simulatedResult.id}</p>`;
+                // Faz a chamada real para a sua API de backend
+                const response = await fetch('/api/admin/plans', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(planData)
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    // Se a API retornar um erro, exibe a mensagem
+                    throw new Error(result.message || 'Ocorreu um erro ao criar o plano.');
+                }
+
+                // Exibe a mensagem de sucesso com o ID retornado pela API
+                createPlanStatus.innerHTML = `<p style="color: var(--success-color);"><strong>Plano criado com sucesso!</strong> ID: ${result.id}</p>`;
                 createPlanForm.reset();
 
             } catch (error) {
@@ -76,25 +84,19 @@
         });
     }
 
-    // =====================================================================
     // Lógica do Painel "Alunos"
-    // =====================================================================
     async function loadStudents() {
         const studentsTableBody = document.getElementById('students-table-body');
         studentsTableBody.innerHTML = '<tr><td colspan="4" style="text-align: center;">Carregando alunos...</td></tr>';
-        
-        try {
-            // Você precisará criar este endpoint no backend
-            // const response = await fetch('/api/admin/students');
-            // const students = await response.json();
 
-            // Simulação de dados para fins de UI
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            const students = [
-                { name: 'João da Silva', email: 'joao.silva@email.com', status: 'Ativa', date: new Date() },
-                { name: 'Maria Oliveira', email: 'maria.o@email.com', status: 'Cancelada', date: new Date() },
-                { name: 'Carlos Pereira', email: 'carlos.p@email.com', status: 'Pausada', date: new Date() }
-            ];
+        try {
+            // --- CHAMADA REAL À API ---
+            const response = await fetch('/api/admin/students');
+            if (!response.ok) {
+                throw new Error('Falha ao carregar os dados dos alunos do servidor.');
+            }
+            const students = await response.json();
+            // -------------------------
 
             studentsTableBody.innerHTML = ''; // Limpa a tabela
 
@@ -104,46 +106,117 @@
             }
 
             students.forEach(student => {
-                const statusColor = student.status === 'Ativa' ? 'green' : (student.status === 'Cancelada' ? 'red' : 'orange');
+                // Lógica para definir a cor do status
+                let statusColor = 'grey'; // Padrão
+                if (student.subscriptionStatus.toLowerCase() === 'approved' || student.subscriptionStatus.toLowerCase() === 'ativa') {
+                    statusColor = 'green';
+                } else if (student.subscriptionStatus.toLowerCase() === 'cancelled' || student.subscriptionStatus.toLowerCase() === 'cancelada') {
+                    statusColor = 'red';
+                } else if (student.subscriptionStatus.toLowerCase() === 'paused' || student.subscriptionStatus.toLowerCase() === 'pausada') {
+                    statusColor = 'orange';
+                }
+
                 const row = `
-                    <tr>
-                        <td>${student.name}</td>
-                        <td>${student.email}</td>
-                        <td><span style="color: ${statusColor}; font-weight: 600;">${student.status}</span></td>
-                        <td>${student.date.toLocaleDateString()}</td>
-                    </tr>
-                `;
+                <tr>
+                    <td>${student.name}</td>
+                    <td>${student.email}</td>
+                    <td><span style="color: ${statusColor}; font-weight: 600;">${student.subscriptionStatus}</span></td>
+                    <td>${new Date(student.registrationDate).toLocaleDateString()}</td>
+                </tr>
+            `;
                 studentsTableBody.innerHTML += row;
             });
 
         } catch (error) {
+            console.error('Erro ao carregar alunos:', error);
             studentsTableBody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: red;">${error.message}</td></tr>`;
         }
     }
 
-    // =====================================================================
     // Lógica do Painel "Gerenciar Assinaturas"
-    // =====================================================================
     const actionSelector = document.getElementById('subscription-action-selector');
     const actionForms = document.querySelectorAll('.action-form');
+    const actionResultsDiv = document.getElementById('action-results');
 
-    if (actionSelector) {
-        actionSelector.addEventListener('change', function() {
-            const selectedValue = this.value;
-            actionForms.forEach(form => {
-                // O método toggle com o segundo argumento booleano simplifica a lógica
-                form.classList.toggle('active', form.id === `form-${selectedValue}`);
-            });
-        });
+    actionSelector.addEventListener('change', function () {
+        const selectedValue = this.value;
+        actionForms.forEach(form => form.classList.toggle('active', form.id === `form-${selectedValue}`));
+        actionResultsDiv.innerHTML = ''; // Limpa resultados ao trocar de ação
+    });
 
-        // Adiciona listeners de submit para cada formulário de ação
-        actionForms.forEach(form => {
-            form.addEventListener('submit', function(e) {
-                e.preventDefault();
-                const actionType = this.id.replace('form-', '');
-                alert(`Lógica para a ação "${actionType}" via API aqui.`);
-                // Aqui você faria a chamada fetch para o endpoint correspondente
-            });
-        });
+    // Função genérica para exibir resultados
+    function showResults(data, success = true) {
+        const content = success ? JSON.stringify(data, null, 2) : `<p style="color:red;">${data.message}</p>`;
+        actionResultsDiv.innerHTML = `<pre style="background-color:#f0f0f0; padding:1rem; border-radius:6px;">${content}</pre>`;
     }
+
+    // Adiciona listeners de submit para cada formulário de ação
+    document.getElementById('form-search').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const query = document.getElementById('search-id').value;
+        try {
+            const response = await fetch(`/api/admin/subscriptions/search?query=${encodeURIComponent(query)}`);
+            const result = await response.json();
+            if (!response.ok) throw result;
+            showResults(result);
+        } catch (error) {
+            showResults(error, false);
+        }
+    });
+
+    document.getElementById('form-update-value').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('update-value-id').value;
+        const amount = parseFloat(document.getElementById('update-value-amount').value);
+        try {
+            const response = await fetch(`/api/admin/subscriptions/${id}/value`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ transactionAmount: amount })
+            });
+            const result = await response.json();
+            if (!response.ok) throw result;
+            showResults(result);
+        } catch (error) {
+            showResults(error, false);
+        }
+    });
+
+    // Listener para Pausar/Cancelar
+    document.getElementById('form-pause-cancel').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('pause-cancel-id').value;
+        // Pega o status do botão que foi clicado
+        const status = e.submitter.value;
+        try {
+            const response = await fetch(`/api/admin/subscriptions/${id}/status`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: status })
+            });
+            const result = await response.json();
+            if (!response.ok) throw result;
+            showResults(result);
+        } catch (error) {
+            showResults(error, false);
+        }
+    });
+
+    // Listener para Reativar
+    document.getElementById('form-reactivate').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('reactivate-id').value;
+        try {
+            const response = await fetch(`/api/admin/subscriptions/${id}/status`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: 'authorized' }) // Reativar é mudar o status para 'authorized'
+            });
+            const result = await response.json();
+            if (!response.ok) throw result;
+            showResults(result);
+        } catch (error) {
+            showResults(error, false);
+        }
+    });
 });

@@ -35,4 +35,7 @@
     <PackageReference Include="StackExchange.Redis" Version="2.8.58" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
   </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Features\Profiles\User\" />
+  </ItemGroup>
 </Project>

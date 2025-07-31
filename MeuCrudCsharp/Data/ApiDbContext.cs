@@ -15,6 +15,6 @@ namespace MeuCrudCsharp.Data
         public DbSet<Produto> Produtos { get; set; }
         public DbSet<Payment_User> Payment_User { get; set; }
         public DbSet<Video> Videos { get; set; }
-        public DbSet<Course> Courses { get; set; }
+        public DbSet<Courses> Courses { get; set; }
     }
 }

@@ -7,10 +7,11 @@ using MeuCrudCsharp.Features.MercadoPago.Jobs; // Adicionado para os Jobs
 using MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces;
 using MeuCrudCsharp.Features.MercadoPago.Payments.Services;
 using MeuCrudCsharp.Features.MercadoPago.Tokens;
+using MeuCrudCsharp.Features.Profiles.Admin.Interfaces;
+using MeuCrudCsharp.Features.Profiles.Admin.Services;
 using MeuCrudCsharp.Features.Videos.Interfaces;
 using MeuCrudCsharp.Features.Videos.Service;
 using MeuCrudCsharp.Models;
-using MeuCrudCsharp.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Identity;
@@ -92,8 +93,14 @@ else
     );
 }
 
+// Adiciona o HttpClient para ser injetado no serviço do Mercado Pago
+builder.Services.AddHttpClient<IMercadoPagoService, MercadoPagoService>(client =>
+{
+    client.BaseAddress = new Uri("https://api.mercadopago.com");
+});
+
 // 5. Registrando seus serviços customizados da aplicação
-builder.Services.AddScoped<ProdutoService>();
+builder.Services.AddScoped<IMercadoPagoService, MercadoPagoService>();
 builder.Services.AddScoped<IAppAuthService, AppAuthService>();
 builder.Services.AddScoped<ICreditCardPayment, CreditCardPaymentService>();
 builder.Services.AddScoped<IPreferencePayment, PreferencePaymentService>();
@@ -101,6 +108,9 @@ builder.Services.AddScoped<IQueueService, BackgroundJobQueueService>();
 builder.Services.AddScoped<IEmailSenderService, SendGridEmailSenderService>();
 builder.Services.AddScoped<IRazorViewToStringRenderer, RazorViewToStringRenderer>();
 builder.Services.AddScoped<IAdminVideoService, AdminVideoService>();
+builder.Services.AddScoped<IAdminStudentService, AdminStudentService>();
+builder.Services.AddHttpClient<ISubscriptionService, SubscriptionService>();
+builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
 builder.Services.AddSingleton<TokenMercadoPago>();
 builder.Services.AddTransient<VideoProcessingService>();
 

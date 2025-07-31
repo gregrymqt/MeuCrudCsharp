@@ -61,7 +61,7 @@ namespace MeuCrudCsharp.Features.Videos.Service
             );
             if (course == null)
             {
-                course = new Course { Name = createDto.CourseName };
+                course = new Courses { Name = createDto.CourseName };
                 _context.Courses.Add(course);
             }
 
