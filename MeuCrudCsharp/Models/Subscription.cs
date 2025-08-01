@@ -1,13 +1,29 @@
-﻿namespace MeuCrudCsharp.Models
+﻿// Models/Subscription.cs
+using Microsoft.EntityFrameworkCore;
+using System;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using System.Numerics;
+
+namespace MeuCrudCsharp.Models
 {
-    public class Subscription
+    [Index(nameof(UserId))]
+    public class Subscription : TransactionBase // Herda da classe base
     {
-        public Guid Id { get; set; } = Guid.NewGuid();
-        public Guid UserId { get; set; }
-        public string SubscriptionId { get; set; } // ID do Mercado Pago
-        public string PlanId { get; set; }
-        public string Status { get; set; }
-        public string PayerEmail { get; set; }
-        // Adicione outras colunas se precisar, como Data de Criação, etc.
+        // Propriedades herdadas de TransactionBase:
+        // - Id
+        // - ExternalId (será usado para o SubscriptionId do MP)
+        // - UserId
+        // - User
+        // - Status
+        // - PayerEmail
+        // - CreatedAt, UpdatedAt
+
+        // Propriedades específicas de uma Assinatura
+        [Required]
+        public Guid PlanId { get; set; }
+
+        [ForeignKey("PlanId")]
+        public virtual Plan Plan { get; set; }
     }
 }

@@ -12,10 +12,12 @@ namespace MeuCrudCsharp.Data
             : base(options) { }
 
         // Esta linha cria uma tabela chamada "Produtos" baseada no modelo "Produto"
-        public DbSet<Payment_User> Payment_User { get; set; }
+        public DbSet<Payments> Payments { get; set; }
         public DbSet<Video> Videos { get; set; }
-        public DbSet<Courses> Courses { get; set; }
+        public DbSet<Course> Courses { get; set; }
         public DbSet<Subscription> Subscriptions { get; set; }
+        public DbSet<Plan> Plans { get; set; }
+
 
     }
 }

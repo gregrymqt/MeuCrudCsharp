@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace MeuCrudCsharp.Models
 {
-    public class Courses
+    public class Course
     {
         [Key]
         public Guid Id { get; set; }

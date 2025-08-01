@@ -34,7 +34,7 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Services
             // Busca os dados completos, incluindo o status do pagamento
             var students = await _context
                 .Users.Where(u => studentIds.Contains(u.Id))
-                .Include(u => u.Payment_User) // Inclui os dados de pagamento
+                .Include(u => u.Payments) // Inclui os dados de pagamento
                 .OrderByDescending(u => u.Email) // Ordena por um campo do IdentityUser
                 .Select(u => new StudentDto
                 {
@@ -42,7 +42,7 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Services
                     Name = u.Name, // Sua propriedade customizada
                     Email = u.Email,
                     // Se não houver pagamento, o status é "N/A"
-                    SubscriptionStatus = u.Payment_User != null ? u.Payment_User.Status : "N/A",
+                    SubscriptionStatus = u.Payments != null ? u.Payments.Status : "N/A",
                     RegistrationDate =
                         u.LockoutEnd == null ? DateTime.UtcNow : u.LockoutEnd.Value.DateTime, // Exemplo, use a data de criação real se tiver
                 })

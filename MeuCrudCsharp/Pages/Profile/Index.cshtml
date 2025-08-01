@@ -3,73 +3,176 @@
 @{
     ViewData["Title"] = "Meu Perfil";
 
-    // --- DADOS DE EXEMPLO ---
-    // Você pode remover este bloco quando seu Model estiver populando os dados corretamente.
-    // Usei dados de exemplo para o template funcionar visualmente.
-    var userName = Model.UserProfile?.Name ?? "Nome do Aluno";
-    var userEmail = Model.UserProfile?.Email ?? "email@exemplo.com";
-    var userProfilePic = Model.UserProfile?.AvatarUrl ?? "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=256&q=80";
-    // -------------------------
+    // Os dados agora vêm do ViewModel, que é mais seguro e organizado.
+    var userProfile = Model.ViewModel?.UserProfile;
+    var subscription = Model.ViewModel?.Subscription;
+    var paymentHistory = Model.ViewModel?.PaymentHistory ?? new List<MeuCrudCsharp.Models.Payments>();
+
+    // Valores padrão para evitar erros se o perfil for nulo
+    var userName = userProfile?.Name ?? "Usuário";
+    var userEmail = userProfile?.Email ?? "email@exemplo.com";
+    var userProfilePic = userProfile?.AvatarUrl ?? "/images/default-avatar.png";
+    var userSubscriptionId = subscription?.SubscriptionId ?? "";
 }
 
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+<link rel="stylesheet" href="~/css/profile/index.css" asp-append-version="true" />
+<script src="https://sdk.mercadopago.com/js/v2"></script>
+<div class="profile-container" data-subscription-id="@userSubscriptionId">
+    <aside class="profile-sidebar">
+        <div class="sidebar-header">Minha Conta</div>
+        <nav class="sidebar-nav">
+            <ul>
+                <li>
+                    <a href="#" class="profile-nav-link active" data-target="#profile-content">
+                        <i class="fa-solid fa-user"></i> Meu Perfil
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="profile-nav-link" data-target="#payment-history-content">
+                        <i class="fa-solid fa-file-invoice-dollar"></i> Histórico de Pagamentos
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="profile-nav-link" data-target="#subscription-content">
+                        <i class="fa-solid fa-credit-card"></i> Gerenciar Assinatura
+                    </a>
+                </li>
+            </ul>
+            <ul>
+                <li>
+                    <a href="/logout">
+                        <i class="fa-solid fa-arrow-right-from-bracket"></i> Sair
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    </aside>
 
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-    <link rel="stylesheet" href="~/css/profile/index.css" asp-append-version="true" />
-
-    <div class="profile-container">
-        <aside class="profile-sidebar">
-            <div class="sidebar-header">
-                Minha Conta
+    <main class="profile-main-content">
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <div class="alert alert-danger" role="alert">
+                @TempData["ErrorMessage"]
             </div>
-            <nav class="sidebar-nav">
-                <ul>
-                    <li>
-                        <a href="#" class="active">
-                            <i class="fa-solid fa-user"></i> Meu Perfil
-                        </a>
-                    </li>
-                    <li>
-                        <a href="#">
-                            <i class="fa-solid fa-book-open-reader"></i> Meus Cursos
-                        </a>
-                    </li>
-                    <li>
-                        <a href="#">
-                            <i class="fa-solid fa-certificate"></i> Certificados
-                        </a>
-                    </li>
-                    <li>
-                        <a href="#">
-                            <i class="fa-solid fa-gear"></i> Configurações
-                        </a>
-                    </li>
-                </ul>
-                <ul>
-                    <li>
-                        <a href="/logout">
-                            <i class="fa-solid fa-arrow-right-from-bracket"></i> Sair
-                        </a>
-                    </li>
-                </ul>
-            </nav>
-        </aside>
+        }
 
-        <main class="profile-main-content">
+        <div id="profile-content" class="main-section active">
             <div class="profile-card">
-
                 <img src="@userProfilePic" alt="Foto do Perfil" class="profile-picture">
-
                 <h1 class="profile-name">@userName</h1>
-
                 <p class="profile-email">@userEmail</p>
 
-                <a href="#" class="profile-cta-button">
-                    <i class="fa-solid fa-play"></i>
-                    Assistir ao curso
-                </a>
+                @if (subscription != null)
+                {
+                    <div class="subscription-status-badge status-@subscription.Status?.ToLower()">
+                        Plano: @subscription.PlanName (@subscription.Status)
+                    </div>
+                }
+                else
+                {
+                    <div class="subscription-status-badge status-none">
+                        Você não tem uma assinatura ativa.
+                    </div>
+                    <a href="/planos" class="profile-cta-button">✨ Virar Premium</a>
+                }
             </div>
-        </main>
-    </div>
+        </div>
+
+        <div id="payment-history-content" class="main-section">
+            <h2>Histórico de Pagamentos</h2>
+            @if (paymentHistory.Any())
+            {
+                <table class="payment-history-table">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Descrição</th>
+                            <th>Valor</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var payment in paymentHistory)
+                        {
+                            <tr>
+                                <td>@payment.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
+                                <td>Pagamento Ref. @payment.ExternalId.Substring(0, 8)</td>
+                                <td>@payment.Amount.ToString("C")</td>
+                                <td><span class="status-badge status-@payment.Status">@payment.Status</span></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            else
+            {
+                <p>Nenhum pagamento encontrado no seu histórico.</p>
+            }
+        </div>
+
+        <div id="subscription-content" class="main-section">
+            @if (subscription != null)
+            {
+                <h2>Gerenciar Assinatura</h2>
+                <div class="subscription-details">
+                    <div><strong>Plano:</strong> @subscription.PlanName</div>
+                    <div><strong>Valor:</strong> @subscription.Amount.ToString("C")</div>
+                    <div><strong>Status:</strong> @subscription.Status</div>
+                    <div><strong>Cartão:</strong> **** **** **** @subscription.LastFourCardDigits</div>
+                    <div><strong>Próxima Cobrança:</strong> @subscription.NextBillingDate?.ToString("dd/MM/yyyy")</div>
+                </div>
+
+                <div class="accordion">
+                    <div class="accordion-item">
+                        <button class="accordion-header" data-brick-target="primary-card-brick-container">Alterar cartão de pagamento</button>
+                        <div class="accordion-body">
+                            <p>Para alterar o cartão principal, preencha os dados abaixo.</p>
+                            <div id="primary-card-brick-container"></div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <button class="accordion-header">Pausar ou Reativar Assinatura</button>
+                        <div class="accordion-body">
+                            @if (subscription.Status?.ToLower() == "ativo" || subscription.Status?.ToLower() == "autorizado")
+                            {
+                                <p>Pausar sua assinatura impede cobranças futuras até que você a reative.</p>
+                                <form id="form-pause-subscription" class="subscription-form">
+                                    <button type="submit" class="btn-warning">Pausar Assinatura</button>
+                                </form>
+                            }
+                            else if (subscription.Status?.ToLower() == "pausado")
+                            {
+                                <p>Sua assinatura está pausada. Reative para voltar a ter acesso.</p>
+                                <form id="form-reactivate-subscription" class="subscription-form">
+                                    <button type="submit" class="btn-success">Reativar Assinatura</button>
+                                </form>
+                            }
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <button class="accordion-header">Cancelar Assinatura</button>
+                        <div class="accordion-body">
+                            <p class="text-danger">Atenção: Esta ação não pode ser desfeita. Você perderá o acesso aos benefícios no final do ciclo de faturamento atual.</p>
+                            <form id="form-cancel-subscription" class="subscription-form">
+                                <button type="submit" class="btn-danger">Quero Cancelar Minha Assinatura</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <h3>Gerenciar Assinatura</h3>
+                <p>Você precisa de uma assinatura ativa para usar esta área.</p>
+            }
+        </div>
+    </main>
+</div>
+
+@section Scripts {
+    <script src="~/js/profile/management.js" asp-append-version="true"></script>
+}

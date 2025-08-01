@@ -19,6 +19,6 @@ namespace MeuCrudCsharp.Models
         public string? AvatarUrl { get; set; } // Tornando a URL do avatar opcional
 
         // A propriedade de navegação está correta
-        public virtual Payment_User? Payment_User { get; set; }
+        public virtual Payment? Payment_User { get; set; }
     }
 }

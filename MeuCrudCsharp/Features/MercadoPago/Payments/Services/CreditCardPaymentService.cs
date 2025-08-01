@@ -1,20 +1,20 @@
 ﻿using System;
-using System.Collections.Generic; // Adicionado para Dictionary
+using System.Collections.Generic;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using MercadoPago.Client;
 using MercadoPago.Client.Payment;
 using MercadoPago.Resource.Payment;
-using MercadoPago.Resource.User;
 using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Features.MercadoPago.Payments.Dtos;
 using MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces;
 using MeuCrudCsharp.Features.MercadoPago.Tokens;
 using MeuCrudCsharp.Features.Profiles.Admin.Dtos;
 using MeuCrudCsharp.Features.Profiles.Admin.Interfaces;
-using MeuCrudCsharp.Models; // Garanta que este using exista
-using Microsoft.AspNetCore.Http; // Adicionado para IHttpContextAccessor
+using MeuCrudCsharp.Models; // Garante o acesso a Payment, Subscription, etc.
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
+using Microsoft.EntityFrameworkCore; // Necessário para Include
 
 namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
 {
@@ -62,30 +62,29 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
             {
                 return await CreateSubscriptionInternalAsync(request);
             }
-            else
-            {
-                return await CreateSinglePaymentInternalAsync(request);
-            }
+            return await CreateSinglePaymentInternalAsync(request);
         }
 
-        // Método auxiliar PRIVADO
-        private async Task<PaymentResponseDto> CreateSinglePaymentInternalAsync(
-            PaymentRequestDto paymentData
-        )
+        private async Task<PaymentResponseDto> CreateSinglePaymentInternalAsync(PaymentRequestDto paymentData)
         {
             var userId = GetCurrentUserId();
-            var novoPagamento = new Payment_User
+
+            // Substitua 'Payments' pelo nome correto da classe de modelo de pagamento.
+            // Supondo que o nome correto do modelo seja 'Payment' (singular), conforme o padrão comum em Entity Framework.
+            // Se o nome correto for diferente, substitua por ele.
+
+            var novoPagamento = new Models.Payments
             {
                 UserId = userId,
                 Status = "iniciando",
-                Method = "cartao_credito",
+                PayerEmail = paymentData.Payer.Email,
+                Method = paymentData.PaymentMethodId,
+                CustomerCpf = paymentData.Payer.Identification.Number,
                 Amount = paymentData.Amount,
+                Installments = paymentData.Installments,
             };
 
-            var requestOptions = new RequestOptions
-            {
-                AccessToken = _tokenMercadoPago._access_Token!,
-            };
+            var requestOptions = new RequestOptions { AccessToken = _tokenMercadoPago._access_Token! };
             requestOptions.CustomHeaders.Add("X-Idempotency-Key", Guid.NewGuid().ToString());
 
             var paymentRequest = new PaymentCreateRequest
@@ -97,79 +96,69 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
                 PaymentMethodId = paymentData.PaymentMethodId,
                 Payer = new PaymentPayerRequest { Email = paymentData.Payer.Email },
                 ExternalReference = novoPagamento.Id.ToString(),
-                NotificationUrl = _configuration["Redirect.Url"] + "/webhook/mercadopago",
+                NotificationUrl = _configuration["Redirect.Url"]! + "/webhook/mercadopago",
             };
 
             try
             {
-                _context.Payment_User.Add(novoPagamento);
+                _context.Payment_User.Add(novoPagamento); // Usando _context.Payments
                 await _context.SaveChangesAsync();
+
                 Payment payment = await _paymentClient.CreateAsync(paymentRequest, requestOptions);
-                novoPagamento.PaymentId = payment.Id.ToString();
+
+                // Atualizando o registro com os dados da resposta da API
+                novoPagamento.ExternalId = payment.Id.ToString()!;
                 novoPagamento.Status = MapPaymentStatus(payment.Status);
+                novoPagamento.DateApproved = payment.DateApproved;
+                novoPagamento.LastFourDigits = int.Parse(payment.Card.LastFourDigits);
+                novoPagamento.UpdatedAt = DateTime.UtcNow;
+
                 await _context.SaveChangesAsync();
                 return new PaymentResponseDto { Id = payment.Id, Status = payment.Status };
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 novoPagamento.Status = "falhou";
                 await _context.SaveChangesAsync();
-                throw new Exception("Erro ao processar pagamento único.", ex);
+                throw; // Lança a exceção original para ser tratada no Controller
             }
         }
 
-        // Método auxiliar PRIVADO
-        private async Task<object> CreateSubscriptionInternalAsync(
-            PaymentRequestDto subscriptionData
-        )
+        private async Task<object> CreateSubscriptionInternalAsync(PaymentRequestDto subscriptionData)
         {
             var userId = GetCurrentUserId();
-            if (string.IsNullOrEmpty(subscriptionData.PreapprovalPlanId))
+            var plan = await _context.Plans.FirstOrDefaultAsync(p => p.ExternalPlanId == subscriptionData.PreapprovalPlanId);
+            if (plan == null)
             {
-                throw new ArgumentException("O ID do plano de assinatura é obrigatório.");
+                throw new InvalidOperationException("Plano de assinatura não encontrado no banco de dados.");
             }
-
-            var user = _context.Users.FirstOrDefault(u => u.Id == userId.ToString());
 
             var createSubscriptionDto = new CreateSubscriptionDto
             {
-                PreapprovalPlanId = subscriptionData.PreapprovalPlanId,
+                PreapprovalPlanId = subscriptionData.PreapprovalPlanId!,
                 PayerEmail = subscriptionData.Payer.Email,
                 CardTokenId = subscriptionData.Token,
-                Reason = $"Assinatura plano anual para {subscriptionData.Payer.Email}",
+                Reason = plan.Name, // Usa o nome do plano do banco de dados
                 BackUrl = _configuration["Redirect.Url"]! + "/Subscription/Success",
             };
 
-            try
+            var subscriptionResponse = await _subscriptionService.CreateSubscriptionAsync(createSubscriptionDto);
+
+            // Usando o model refatorado 'Subscription'
+            var novaAssinatura = new Subscription
             {
-                var subscriptionResponse = await _subscriptionService.CreateSubscriptionAsync(
-                    createSubscriptionDto
-                );
+                UserId = userId,
+                PlanId = plan.Id, // Chave estrangeira para o nosso model Plan
+                ExternalId = subscriptionResponse.Id,
+                Status = MapPaymentStatus(subscriptionResponse.Status),
+                PayerEmail = subscriptionData.Payer.Email,
+                UpdatedAt = DateTime.UtcNow
+            };
 
-                // CRIAÇÃO DO MODELO DE ASSINATURA CORRIGIDO
-                var novaAssinatura = new Subscription
-                {
-                    UserId = userId,
-                    SubscriptionId = subscriptionResponse.Id,
-                    PlanId = subscriptionData.PreapprovalPlanId,
-                    Status = subscriptionResponse.Status,
-                    PayerEmail = user?.Email, // CORREÇÃO AQUI
-                };
+            _context.Subscriptions.Add(novaAssinatura);
+            await _context.SaveChangesAsync();
 
-                // ACESSO AO DBCONTEXT CORRIGIDO
-                _context.Subscriptions.Add(novaAssinatura);
-                await _context.SaveChangesAsync();
-
-                return new
-                {
-                    SubscriptionId = subscriptionResponse.Id,
-                    Status = subscriptionResponse.Status,
-                };
-            }
-            catch (Exception ex)
-            {
-                throw new Exception("Erro ao criar a assinatura no Mercado Pago.", ex);
-            }
+            return new { subscriptionResponse.Id, subscriptionResponse.Status };
         }
 
         public string MapPaymentStatus(string mercadopagoStatus)
@@ -179,9 +168,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
 
         private Guid GetCurrentUserId()
         {
-            var userIdString = _httpContextAccessor.HttpContext?.User.FindFirstValue(
-                ClaimTypes.NameIdentifier
-            );
+            var userIdString = _httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (!Guid.TryParse(userIdString, out Guid userIdGuid))
             {
                 throw new InvalidOperationException("ID do usuário inválido ou não encontrado.");

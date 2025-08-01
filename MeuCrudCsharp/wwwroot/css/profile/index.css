@@ -1,167 +1,290 @@
-:root {
-            --brand-color: #4f46e5;
-            --brand-color-light: #e0e7ff;
-            --dark-text: #1f2937;
-            --light-text: #6b7280;
-            --background-color: #f8fafc;
-            --white: #ffffff;
-            --border-color: #e5e7eb;
-        }
+/* ==========================================================================
+   1. Estilos Gerais do Layout do Perfil
+   ========================================================================== */
 
-        /* Reset e Estilos Globais */
-        body {
-            margin: 0;
-            font-family: 'Inter', sans-serif;
-            background-color: var(--background-color);
-            color: var(--dark-text);
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-        }
+/* Esconde as seções de conteúdo por padrão */
+.main-section {
+    display: none;
+    width: 100%;
+}
 
-        /* Layout Principal com Flexbox */
-        .profile-container {
-            display: flex;
-            min-height: 100vh;
-        }
+    /* Mostra a seção que está ativa */
+    .main-section.active {
+        display: block;
+    }
 
-        /* Barra Lateral Esquerda (Abas) */
-        .profile-sidebar {
-            width: 260px;
-            background-color: var(--white);
-            border-right: 1px solid var(--border-color);
-            padding: 2rem 1.5rem;
-            display: flex;
-            flex-direction: column;
-        }
+/* Alerta para mensagens de erro/sucesso */
+.alert {
+    padding: 15px;
+    margin-bottom: 20px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    width: 100%;
+}
 
-        .sidebar-header {
-            font-size: 1.25rem;
-            font-weight: 600;
-            margin-bottom: 2.5rem;
-        }
+    .alert.alert-danger {
+        color: #721c24;
+        background-color: #f8d7da;
+        border-color: #f5c6cb;
+    }
 
-        .sidebar-nav ul {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-            flex-grow: 1; /* Empurra o botão de sair para o final */
-        }
+/* ==========================================================================
+   2. Estilos do Cartão de Perfil e Status da Assinatura
+   ========================================================================== */
 
-        .sidebar-nav li a {
-            display: flex;
-            align-items: center;
-            padding: 0.8rem 1rem;
-            border-radius: 8px;
-            text-decoration: none;
-            color: var(--light-text);
-            font-weight: 500;
-            transition: background-color 0.2s ease, color 0.2s ease;
-        }
+.profile-card .subscription-status-badge {
+    margin-top: 15px;
+    display: inline-block;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 500;
+    color: white;
+    text-transform: capitalize;
+}
 
-        .sidebar-nav li a i {
-            width: 20px;
-            margin-right: 1rem;
-            text-align: center;
-        }
+/* Cores do emblema principal de status */
+.profile-card .status-ativo,
+.profile-card .status-authorized {
+    background-color: #28a745;
+}
 
-        /* Efeito Hover para as abas */
-        .sidebar-nav li a:hover {
-            background-color: var(--background-color);
-            color: var(--dark-text);
-        }
+.profile-card .status-pausado {
+    background-color: #ffc107;
+    color: #212529;
+}
 
-        /* Estilo da Aba Ativa */
-        .sidebar-nav li a.active {
-            background-color: var(--brand-color-light);
-            color: var(--brand-color);
-            font-weight: 600;
-        }
+.profile-card .status-cancelado {
+    background-color: #6c757d;
+}
 
-        /* Conteúdo Principal (Perfil) */
-        .profile-main-content {
-            flex-grow: 1;
-            padding: 2.5rem;
-        }
+.profile-card .status-none {
+    background-color: #17a2b8;
+}
 
-        .profile-card {
-            max-width: 800px;
-            background-color: var(--white);
-            border-radius: 12px;
-            border: 1px solid var(--border-color);
-            padding: 2rem;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-        }
 
-        .profile-picture {
-            width: 128px;
-            height: 128px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 4px solid var(--white);
-            box-shadow: 0 0 0 2px var(--brand-color);
-            margin-bottom: 1.5rem;
-        }
+/* ==========================================================================
+   3. Estilos da Aba "Gerenciar Assinatura"
+   ========================================================================== */
 
-        .profile-name {
-            font-size: 2rem;
-            font-weight: 700;
-            margin: 0;
-            color: var(--dark-text);
-        }
+#subscription-content h2 {
+    color: #333;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
 
-        .profile-email {
-            font-size: 1rem;
-            color: var(--light-text);
-            margin-top: 0.25rem;
-            margin-bottom: 2rem;
-        }
+#subscription-content > p {
+    color: #666;
+    margin-bottom: 24px;
+}
 
-        /* Botão Principal (Call to Action) */
-        .profile-cta-button {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 0.8rem 2rem;
-            border-radius: 8px;
-            background-color: var(--brand-color);
-            color: var(--white);
-            font-size: 1rem;
-            font-weight: 600;
-            text-decoration: none;
-            border: none;
-            cursor: pointer;
-            transition: background-color 0.2s ease, transform 0.1s ease;
-        }
+/* Caixa com detalhes da assinatura */
+.subscription-details {
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 24px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+}
 
-        .profile-cta-button i {
-            margin-right: 0.5rem;
-        }
+    .subscription-details div {
+        font-size: 15px;
+        color: #495057;
+    }
 
-        .profile-cta-button:hover {
-            background-color: #4338ca; /* Um tom mais escuro da cor da marca */
-        }
+    .subscription-details strong {
+        color: #212529;
+        margin-right: 8px;
+    }
 
-        .profile-cta-button:active {
-            transform: scale(0.98);
-        }
+/* Estilos do Acordeão */
+.accordion {
+    width: 100%;
+    max-width: 700px;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid #dee2e6;
+}
 
-        /* Responsividade para telas menores (ex: celulares) */
-        @media (max-width: 768px) {
-            .profile-container {
-                flex-direction: column;
-            }
-            .profile-sidebar {
-                width: 100%;
-                min-height: auto;
-                border-right: none;
-                border-bottom: 1px solid var(--border-color);
-                padding: 1rem;
-            }
-            .profile-main-content {
-                padding: 1.5rem;
-            }
-        }
+.accordion-item {
+    border-bottom: 1px solid #dee2e6;
+}
+
+    .accordion-item:last-child {
+        border-bottom: none;
+    }
+
+.accordion-header {
+    width: 100%;
+    background-color: #f8f9fa;
+    border: none;
+    padding: 15px 20px;
+    font-size: 16px;
+    font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    position: relative;
+    color: #343a40;
+}
+
+    .accordion-header:hover {
+        background-color: #e9ecef;
+    }
+
+    .accordion-header::after {
+        content: '\f078'; /* Ícone de seta para baixo (Font Awesome) */
+        font-family: 'Font Awesome 6 Free';
+        font-weight: 900;
+        position: absolute;
+        right: 20px;
+        top: 50%;
+        transform: translateY(-50%);
+        transition: transform 0.3s ease;
+    }
+
+    .accordion-header.active::after {
+        transform: translateY(-50%) rotate(180deg);
+    }
+
+.accordion-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s ease-out, padding 0.4s ease-out;
+    background-color: #fff;
+    padding: 0 20px;
+}
+
+    .accordion-body.active {
+        padding: 20px;
+        max-height: 500px; /* Altura suficiente para o conteúdo */
+    }
+
+    .accordion-body p {
+        margin-top: 0;
+        color: #666;
+    }
+
+/* Estilos do Formulário dentro do Acordeão */
+.subscription-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+    .subscription-form button {
+        align-self: flex-start;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 6px;
+        color: white;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+
+/* Botões de Ação Específicos */
+.btn-danger {
+    background-color: #dc3545;
+}
+
+    .btn-danger:hover {
+        background-color: #c82333;
+    }
+
+.btn-warning {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+    .btn-warning:hover {
+        background-color: #e0a800;
+    }
+
+.btn-success {
+    background-color: #28a745;
+}
+
+    .btn-success:hover {
+        background-color: #218838;
+    }
+
+.text-danger {
+    color: #c82333;
+    font-weight: 500;
+}
+
+
+/* ==========================================================================
+   4. Estilos da Aba "Histórico de Pagamentos"
+   ========================================================================== */
+
+#payment-history-content h2 {
+    color: #333;
+    font-weight: 600;
+    margin-bottom: 20px;
+}
+
+.payment-history-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 15px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+    .payment-history-table th, .payment-history-table td {
+        border-bottom: 1px solid #dee2e6;
+        padding: 12px 15px;
+        text-align: left;
+    }
+
+    .payment-history-table thead th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+        color: #495057;
+    }
+
+    .payment-history-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    .payment-history-table tbody tr:hover {
+        background-color: #f1f3f5;
+    }
+
+/* Emblemas de Status para a Tabela */
+.status-badge {
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: white;
+    text-transform: capitalize;
+    display: inline-block;
+}
+
+    .status-badge.status-aprovado {
+        background-color: #28a745;
+    }
+
+    .status-badge.status-pendente {
+        background-color: #ffc107;
+        color: #212529;
+    }
+
+    .status-badge.status-recusado {
+        background-color: #dc3545;
+    }
+
+    .status-badge.status-cancelado {
+        background-color: #6c757d;
+    }
+
+    .status-badge.status-reembolsado {
+        background-color: #17a2b8;
+    }

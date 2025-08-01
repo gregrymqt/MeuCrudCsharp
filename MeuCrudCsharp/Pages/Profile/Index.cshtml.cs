@@ -1,61 +1,79 @@
+using System;
 using System.Security.Claims;
-using MeuCrudCsharp.Data;
-using MeuCrudCsharp.Models;
+using System.Threading.Tasks;
+using MeuCrudCsharp.Features.Profiles.UserAccount.Interfaces; // MUDANÇA 1: Usando a interface do serviço
+using MeuCrudCsharp.Features.Profiles.UserAccount.ViewModels; // MUDANÇA 2: Usando o ViewModel
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.EntityFrameworkCore; // Adicione este using para o .Include()
 
 namespace MeuCrudCsharp.Pages.Profile
 {
-    // 1. Usando [Authorize] para garantir que apenas usu�rios logados acessem.
-    // O sistema redirecionar� para a p�gina de login automaticamente se n�o estiver logado.
     [Authorize]
     public class IndexModel : PageModel
     {
-        private readonly ApiDbContext _context;
+        // MUDANÇA 3: Injetando o SERVIÇO, não mais o DbContext diretamente.
+        private readonly IUserAccountService _userAccountService;
 
-        // Propriedades fortemente tipadas para a View. Mais seguro e pr�tico que ViewData.
-        public Users? UserProfile { get; private set; }
-        public string? PaymentStatus { get; private set; }
+        // MUDANÇA 4: A página agora terá uma única propriedade, o ViewModel, que contém todos os dados.
+        public ProfileViewModel? ViewModel { get; private set; }
 
-        public IndexModel(ApiDbContext context)
+        public IndexModel(IUserAccountService userAccountService)
         {
-            _context = context;
+            _userAccountService = userAccountService;
         }
 
-        // Tornando o m�todo ass�ncrono, que � a boa pr�tica para opera��es de I/O (banco de dados)
+        // MUDANÇA 5: Lógica do OnGetAsync totalmente refatorada para usar o serviço.
         public async Task<IActionResult> OnGetAsync()
         {
             var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-            if (string.IsNullOrEmpty(userIdString))
+            if (!Guid.TryParse(userIdString, out var userId))
             {
-                return NotFound("Usu��rio n��o encontrado.");
+                // Este erro indica um problema com o cookie de autenticação.
+                TempData["ErrorMessage"] = "ID de usuário inválido.";
+                return Unauthorized();
             }
 
-            // 2. Buscando o usu�rio e seu pagamento em uma �nica consulta ao banco de dados com .Include()
-            // Isso � mais eficiente do que fazer duas chamadas separadas.
-            UserProfile = await _context
-                .Users.Include(u => u.Payment_User) // Assumindo que voc� tem uma propriedade de navega��o chamada Payment_User no seu modelo User
-                .FirstOrDefaultAsync(u => u.Id == userIdString);
-
-            if (UserProfile == null)
+            try
             {
-                // N�o deveria acontecer se o usu�rio est� logado, mas � uma seguran�a extra.
-                return NotFound("Usu�rio n�o encontrado.");
+                var userProfileDto = await _userAccountService.GetUserProfileAsync(userId);
+                var subscriptionDetailsDto =
+                    await _userAccountService.GetUserSubscriptionDetailsAsync(userId);
+                var paymentHistory = await _userAccountService.GetUserPaymentHistoryAsync(userId); // NOVO
+
+                ViewModel = new ProfileViewModel
+                {
+                    UserProfile = userProfileDto,
+                    Subscription = subscriptionDetailsDto,
+                    PaymentHistory = paymentHistory, // NOVO
+                };
+
+                return Page();
             }
-
-            // 3. L�gica de verifica��o de nulo corrigida e simplificada.
-            PaymentStatus = UserProfile.Payment_User?.Status;
-
-            if (PaymentStatus == "rejected")
+            catch (KeyNotFoundException ex)
             {
-                // Para redirecionar para outra Razor Page, o ideal � usar RedirectToPage.
-                return RedirectToPage("/Payment/CreditCard"); // Ajuste o caminho conforme seu projeto.
+                // Erro caso o serviço não encontre o usuário (ex: foi deletado mas o cookie ainda existe)
+                return NotFound(ex.Message);
             }
+            catch (Exception ex)
+            {
+                // Em um app real, logar o erro `ex` é crucial.
+                // Poderia ser um erro de comunicação com a API do Mercado Pago, por exemplo.
+                // Adiciona uma mensagem de erro para ser exibida na página.
+                TempData["ErrorMessage"] =
+                    "Não foi possível carregar os detalhes da sua assinatura. Tente novamente mais tarde.";
 
-            return Page();
+                // Mesmo com erro na assinatura, ainda tentamos carregar o perfil básico.
+                // Se isso também falhar, o catch acima pegaria.
+                if (ViewModel?.UserProfile == null)
+                {
+                    var userProfileDto = await _userAccountService.GetUserProfileAsync(userId);
+                    ViewModel = new ProfileViewModel { UserProfile = userProfileDto };
+                }
+
+                return Page();
+            }
         }
     }
 }
