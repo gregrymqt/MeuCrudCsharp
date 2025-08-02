@@ -1,11 +1,12 @@
 ﻿using MeuCrudCsharp.Features.Profiles.Admin.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MeuCrudCsharp.Features.Profiles.Admin.Controllers
 {
     [ApiController]
     [Route("api/admin/students")]
-    // [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin")]
     public class AdminStudentsController : ControllerBase
     {
         private readonly IAdminStudentService _studentService;

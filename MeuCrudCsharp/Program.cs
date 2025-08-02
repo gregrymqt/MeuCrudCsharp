@@ -19,6 +19,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using StackExchange.Redis;
 using System.Security.Claims;
+using Microsoft.Extensions.Caching.StackExchangeRedis;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -56,44 +57,39 @@ var redisConnectionString = builder.Configuration.GetConnectionString("Redis");
 
 if (!string.IsNullOrEmpty(redisConnectionString))
 {
-    // --- Configuração para ambiente com REDIS ---
-    Console.WriteLine("--> Usando Redis como serviço de cache e para a fila do Hangfire.");
+    // --- AMBIENTE DE PRODUÇÃO (com Redis) ---
+    Console.WriteLine("--> Usando Redis para Cache Distribuído e Hangfire.");
 
-    // Registra a conexão com o Redis como um Singleton
-    builder.Services.AddSingleton<IConnectionMultiplexer>(
-        ConnectionMultiplexer.Connect(redisConnectionString)
-    );
+    // 1. Registra a implementação do Redis para a abstração IDistributedCache.
+    builder.Services.AddStackExchangeRedisCache(options =>
+    {
+        options.Configuration = redisConnectionString;
+        options.InstanceName = "MeuApp_"; // Prefixo opcional para as chaves no Redis
+    });
 
-    // Registra a implementação de cache com Redis
-    builder.Services.AddScoped<ICacheService, RedisCacheService>();
-
-    // Configura o Hangfire para usar o Redis (MOVEMOS PARA DENTRO DO IF)
-    builder.Services.AddHangfire(config =>
-        config
-            .UseSimpleAssemblyNameTypeSerializer()
-            .UseRecommendedSerializerSettings()
-            .UseRedisStorage(redisConnectionString)
-    );
+    // 2. Configura o Hangfire para usar o Redis.
+    builder.Services.AddHangfire(config => config
+        .UseSimpleAssemblyNameTypeSerializer()
+        .UseRecommendedSerializerSettings()
+        .UseRedisStorage(redisConnectionString));
 }
 else
 {
-    // --- Configuração para ambiente SEM REDIS ---
-    Console.WriteLine(
-        "--> Usando Cache em Memória. AVISO: Hangfire usará armazenamento em memória, não recomendado para produção."
-    );
+    // --- AMBIENTE DE DESENVOLVIMENTO (sem Redis) ---
+    Console.WriteLine("--> Usando Cache em Memória para Cache Distribuído e Hangfire.");
 
-    // Registra a implementação de cache em memória
-    builder.Services.AddScoped<ICacheService, MemoryCacheService>();
+    // 1. Registra a implementação EM MEMÓRIA para a abstração IDistributedCache.
+    //    Isso permite que nosso CacheService funcione sem precisar do Redis.
+    builder.Services.AddDistributedMemoryCache();
 
-    // Configura o Hangfire para usar armazenamento em memória como um fallback
-    // (É preciso instalar o pacote Hangfire.InMemory)
-    builder.Services.AddHangfire(config =>
-        config
-            .UseSimpleAssemblyNameTypeSerializer()
-            .UseRecommendedSerializerSettings()
-            .UseInMemoryStorage()
-    );
+    // 2. Configura o Hangfire para usar armazenamento em memória.
+    builder.Services.AddHangfire(config => config
+        .UseSimpleAssemblyNameTypeSerializer()
+        .UseRecommendedSerializerSettings()
+        .UseInMemoryStorage());
 }
+builder.Services.AddScoped<ICacheService, CacheService>();
+
 
 // Adiciona o HttpClient para ser injetado no serviço do Mercado Pago
 builder.Services.AddHttpClient<IMercadoPagoService, MercadoPagoService>(client =>

@@ -1,24 +1,19 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using MercadoPago.Resource.Payment;
 using Microsoft.AspNetCore.Identity;
+using System.Collections.Generic; // Adicione se não tiver
 
 namespace MeuCrudCsharp.Models
 {
-    // A classe herda todas as propriedades padrão do Identity (Id, Email, UserName, etc.)
     public class Users : IdentityUser
     {
-        // --- Mantenha APENAS as suas propriedades customizadas ---
+        // ... suas propriedades existentes como Name, AvatarUrl, etc.
+        public string Name { get; set; }
+        public string AvatarUrl { get; set; }
+        public DateTime CreatedAt { get; set; } // Recomendado ter uma data de criação
 
-        [Required]
-        public string? GoogleId { get; set; }
+        public virtual Subscription? Subscription { get; set; }
 
-        [Required]
-        [MaxLength(250)]
-        public string? Name { get; set; } // Um nome de exibição, diferente do UserName
-
-        [MaxLength(500)]
-        public string? AvatarUrl { get; set; } // Tornando a URL do avatar opcional
-
-        // A propriedade de navegação está correta
-        public virtual Payment? Payment_User { get; set; }
+        // Um usuário pode ter vários pagamentos avulsos
+        public virtual ICollection<Payments> Payments { get; set; } = new List<Payments>();
     }
 }

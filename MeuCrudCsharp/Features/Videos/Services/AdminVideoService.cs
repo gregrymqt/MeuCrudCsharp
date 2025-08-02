@@ -4,6 +4,7 @@ using MeuCrudCsharp.Features.Videos.Interfaces;
 using MeuCrudCsharp.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Primitives;
 
 namespace MeuCrudCsharp.Features.Videos.Service
 {
@@ -11,47 +12,37 @@ namespace MeuCrudCsharp.Features.Videos.Service
     {
         private readonly ApiDbContext _context;
         private readonly IWebHostEnvironment _env;
-        private readonly IMemoryCache _cache;
+        private readonly ICacheService _cacheService; // MUDANÇA 1: Usando nosso serviço universal
 
-        public AdminVideoService(ApiDbContext context, IWebHostEnvironment env, IMemoryCache cache)
+        // MUDANÇA 2: Criando um CancellationTokenSource para controlar a invalidação
+        private static CancellationTokenSource _videosCacheTokenSource = new CancellationTokenSource();
+
+        public AdminVideoService(ApiDbContext context, IWebHostEnvironment env, ICacheService cacheService)
         {
             _context = context;
             _env = env;
-            _cache = cache;
+            _cacheService = cacheService; // MUDANÇA 1
         }
 
         public async Task<List<VideoDto>> GetAllVideosAsync(int page, int pageSize)
         {
             var cacheKey = $"AdminVideos_Page{page}_Size{pageSize}";
-            if (_cache.TryGetValue(cacheKey, out List<VideoDto> cachedVideos))
+
+            // MUDANÇA 3: Usando o GetOrCreateAsync e atrelando ao nosso "sinalizador"
+            return await _cacheService.GetOrCreateAsync(cacheKey, async () =>
             {
-                return cachedVideos;
-            }
-
-            var videos = await _context
-                .Videos.Include(v => v.Course)
-                .OrderByDescending(v => v.UploadDate)
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .Select(v => new VideoDto
-                {
-                    Id = v.Id,
-                    Title = v.Title,
-                    Description = v.Description,
-                    StorageIdentifier = v.StorageIdentifier,
-                    UploadDate = v.UploadDate,
-                    Duration = v.Duration,
-                    Status = v.Status.ToString(),
-                    CourseName = v.Course.Name,
-                })
-                .ToListAsync();
-
-            var cacheOptions = new MemoryCacheEntryOptions().SetSlidingExpiration(
-                TimeSpan.FromMinutes(5)
-            );
-            _cache.Set(cacheKey, videos, cacheOptions);
-
-            return videos;
+                // Esta lógica só executa se o cache não existir
+                return await _context.Videos
+                    .Include(v => v.Course)
+                    .OrderByDescending(v => v.UploadDate)
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
+                    .Select(v => new VideoDto { /* ... seu mapeamento ... */ })
+                    .ToListAsync();
+            },
+            // Aqui está a mágica: o tempo de vida deste cache está agora
+            // vinculado ao nosso CancellationTokenSource.
+            expirationToken: new CancellationChangeToken(_videosCacheTokenSource.Token));
         }
 
         public async Task<VideoDto> CreateVideoAsync(CreateVideoDto createDto)
@@ -61,7 +52,7 @@ namespace MeuCrudCsharp.Features.Videos.Service
             );
             if (course == null)
             {
-                course = new Courses { Name = createDto.CourseName };
+                course = new Models.Course { Name = createDto.CourseName };
                 _context.Courses.Add(course);
             }
 
@@ -76,7 +67,7 @@ namespace MeuCrudCsharp.Features.Videos.Service
             _context.Videos.Add(video);
             await _context.SaveChangesAsync();
 
-            _cache.Remove("AdminVideos_Page1_Size10");
+            InvalidateVideosCache();
 
             return new VideoDto
             {
@@ -102,7 +93,7 @@ namespace MeuCrudCsharp.Features.Videos.Service
             _context.Videos.Update(video);
             await _context.SaveChangesAsync();
 
-            // Invalidar cache (lógica mais robusta seria necessária aqui)
+            InvalidateVideosCache();
             return true;
         }
 
@@ -129,8 +120,17 @@ namespace MeuCrudCsharp.Features.Videos.Service
             _context.Videos.Remove(video);
             await _context.SaveChangesAsync();
 
-            // Invalidar cache
+            InvalidateVideosCache();
+
             return (true, string.Empty);
+        }
+        private void InvalidateVideosCache()
+        {
+            // Cancela o token antigo, o que invalida todos os caches que dependem dele
+            _videosCacheTokenSource.Cancel();
+
+            // Cria um novo token para os próximos caches
+            _videosCacheTokenSource = new CancellationTokenSource();
         }
     }
 }

@@ -101,7 +101,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
 
             try
             {
-                _context.Payment_User.Add(novoPagamento); // Usando _context.Payments
+                _context.Payments.Add(novoPagamento); // Usando _context.Payments
                 await _context.SaveChangesAsync();
 
                 Payment payment = await _paymentClient.CreateAsync(paymentRequest, requestOptions);

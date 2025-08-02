@@ -1,12 +1,13 @@
 ﻿using MeuCrudCsharp.Features.Profiles.Admin.Dtos;
 using MeuCrudCsharp.Features.Profiles.Admin.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MeuCrudCsharp.Features.Profiles.Admin.Controllers
 {
     [ApiController]
     [Route("api/admin/plans")]
-    // [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin")]
     public class AdminPlansController : ControllerBase
     {
         private readonly IMercadoPagoService _mercadoPagoService;

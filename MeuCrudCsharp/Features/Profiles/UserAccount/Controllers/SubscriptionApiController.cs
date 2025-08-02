@@ -20,10 +20,13 @@ namespace MeuCrudCsharp.Features.UserAccount.Controllers
             _userAccountService = userAccountService;
         }
 
-        [HttpPut("card")] // Rota: PUT api/user/subscription/card
+        [HttpPut("card")]
         public async Task<IActionResult> ChangeCard([FromBody] UpdateCardTokenDto request)
         {
             var userId = GetCurrentUserId();
+
+            // Esta chamada agora é inteligente:
+            // O método do serviço vai alterar os dados e automaticamente limpará o cache.
             var success = await _userAccountService.UpdateSubscriptionCardAsync(userId, request.NewCardToken);
 
             if (!success)

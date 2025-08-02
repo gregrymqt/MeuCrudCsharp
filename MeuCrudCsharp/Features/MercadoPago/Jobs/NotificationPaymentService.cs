@@ -59,8 +59,8 @@ namespace MeuCrudCsharp.Features.MercadoPago.Jobs
         private async Task<string?> SearchForStatusAsync(string paymentId)
         {
             var payment = await _context
-                .Payment_User.AsNoTracking() // Usa AsNoTracking para uma consulta mais rápida de apenas leitura
-                .FirstOrDefaultAsync(p => p.PaymentId == paymentId);
+                .Payments.AsNoTracking() // Usa AsNoTracking para uma consulta mais rápida de apenas leitura
+                .FirstOrDefaultAsync(p => p.Id == Guid.Parse(paymentId));
 
             return payment?.Status;
         }

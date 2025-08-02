@@ -63,7 +63,7 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Services
         public async Task<SubscriptionResponseDto> GetSubscriptionAsync(string subscriptionId)
         {
             var endpoint = $"/preapproval/{subscriptionId}";
-            var responseBody = await SendMercadoPagoRequestAsync(HttpMethod.Get, endpoint, (object)null);
+            var responseBody = await SendMercadoPagoRequestAsync(HttpMethod.Get, endpoint, (object?)null);
             return JsonSerializer.Deserialize<SubscriptionResponseDto>(responseBody);
         }
 

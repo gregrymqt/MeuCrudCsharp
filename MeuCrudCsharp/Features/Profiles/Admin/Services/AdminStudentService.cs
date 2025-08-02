@@ -1,4 +1,8 @@
-﻿using MeuCrudCsharp.Data;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Features.Profiles.Admin.Dtos;
 using MeuCrudCsharp.Features.Profiles.Admin.Interfaces;
 using MeuCrudCsharp.Models;
@@ -10,45 +14,52 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Services
     public class AdminStudentService : IAdminStudentService
     {
         private readonly ApiDbContext _context;
-        private readonly UserManager<Users> _userManager;
+        private readonly ICacheService _cacheService; // 1. Injetamos o serviço de cache
 
-        public AdminStudentService(ApiDbContext context, UserManager<Users> userManager)
+        // 2. Atualizamos o construtor
+        public AdminStudentService(ApiDbContext context, ICacheService cacheService)
         {
             _context = context;
-            _userManager = userManager;
+            _cacheService = cacheService;
         }
 
         public async Task<List<StudentDto>> GetAllStudentsAsync()
         {
-            // Pega todos os usuários que têm a role "User" (ou seja, não são admins)
-            var studentUsers = await _userManager.GetUsersInRoleAsync("User");
+            // 3. Usamos nosso serviço de cache universal
+            const string? cacheKey = "Admin_AllStudentsWithSubscription";
 
-            if (studentUsers == null || !studentUsers.Any())
+            return await _cacheService.GetOrCreateAsync(cacheKey, async () =>
             {
-                return new List<StudentDto>();
-            }
+                // Esta lógica só executa se os dados não estiverem no cache
+                return await _context.Users
+                    .AsNoTracking()
+                    // 4. MUDANÇA NA CONSULTA: Incluindo a Assinatura e o Plano associado
+                    .Include(u => u.Subscription)
+                        .ThenInclude(s => s.Plan)
+                    .OrderBy(u => u.Name)
+                    .Select(u => new StudentDto
+                    {
+                        Id = Guid.Parse(u.Id),
+                        Name = u.Name,
+                        Email = u.Email,
 
-            // Pega os IDs dos usuários para a consulta
-            var studentIds = studentUsers.Select(s => s.Id).ToList();
+                        // 5. MUDANÇA NO MAPEAMENTO: Usando os dados da nova estrutura
+                        SubscriptionStatus = u.Subscription != null ? u.Subscription.Status : "Sem Assinatura",
+                        PlanName = u.Subscription != null ? u.Subscription.Plan.Name : "N/A",
 
-            // Busca os dados completos, incluindo o status do pagamento
-            var students = await _context
-                .Users.Where(u => studentIds.Contains(u.Id))
-                .Include(u => u.Payments) // Inclui os dados de pagamento
-                .OrderByDescending(u => u.Email) // Ordena por um campo do IdentityUser
-                .Select(u => new StudentDto
-                {
-                    Id = Guid.Parse(u.Id),
-                    Name = u.Name, // Sua propriedade customizada
-                    Email = u.Email,
-                    // Se não houver pagamento, o status é "N/A"
-                    SubscriptionStatus = u.Payments != null ? u.Payments.Status : "N/A",
-                    RegistrationDate =
-                        u.LockoutEnd == null ? DateTime.UtcNow : u.LockoutEnd.Value.DateTime, // Exemplo, use a data de criação real se tiver
-                })
-                .ToListAsync();
+                        // 6. MELHORIA: Usando uma data de criação real do usuário
+                        RegistrationDate = u.CreatedAt
+                    })
+                    .ToListAsync();
+            },
+            absoluteExpireTime: TimeSpan.FromMinutes(5)); // Cache de 5 minutos
+        }
 
-            return students;
+        // ... Outros métodos do serviço ...
+        // Lembre-se de invalidar o cache em métodos que alteram a lista de alunos!
+        public async Task InvalidateStudentsCacheAsync()
+        {
+            await _cacheService.RemoveAsync("Admin_AllStudentsWithSubscription");
         }
     }
 }
