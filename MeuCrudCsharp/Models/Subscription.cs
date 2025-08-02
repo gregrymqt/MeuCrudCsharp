@@ -1,9 +1,9 @@
 ﻿// Models/Subscription.cs
-using Microsoft.EntityFrameworkCore;
 using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Numerics;
+using Microsoft.EntityFrameworkCore;
 
 namespace MeuCrudCsharp.Models
 {
@@ -24,6 +24,6 @@ namespace MeuCrudCsharp.Models
         public Guid PlanId { get; set; }
 
         [ForeignKey("PlanId")]
-        public virtual Plan Plan { get; set; }
+        public virtual Plan? Plan { get; set; }
     }
 }

@@ -18,7 +18,11 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Controllers
         private readonly ICacheService _cacheService;
         private readonly ApiDbContext _context;
 
-        public AdminSubscriptionsController(IMercadoPagoService mercadoPagoService, ICacheService cacheService, ApiDbContext context)
+        public AdminSubscriptionsController(
+            IMercadoPagoService mercadoPagoService,
+            ICacheService cacheService,
+            ApiDbContext context
+        )
         {
             _mercadoPagoService = mercadoPagoService;
             _cacheService = cacheService;
@@ -29,7 +33,7 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Controllers
         public async Task<IActionResult> Search([FromQuery] string query)
         {
             try
-            { 
+            {
                 var result = await _mercadoPagoService.GetSubscriptionAsync(query);
                 return Ok(result);
             }
@@ -41,7 +45,10 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Controllers
         }
 
         [HttpPut("{id}/value")]
-        public async Task<IActionResult> UpdateValue(string id, [FromBody] UpdateSubscriptionValueDto dto)
+        public async Task<IActionResult> UpdateValue(
+            string id,
+            [FromBody] UpdateSubscriptionValueDto dto
+        )
         {
             try
             {
@@ -55,12 +62,20 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Controllers
         }
 
         [HttpPut("{id}/status")]
-        public async Task<IActionResult> UpdateStatus(string id, [FromBody] UpdateSubscriptionStatusDto dto)
+        public async Task<IActionResult> UpdateStatus(
+            string id,
+            [FromBody] UpdateSubscriptionStatusDto dto
+        )
         {
             try
             {
-                var result = await _mercadoPagoService.UpdateSubscriptionStatusAsync(id, dto.Status);
-                var subscription = await _context.Subscriptions.FirstOrDefaultAsync(s => s.ExternalId == id);
+                var result = await _mercadoPagoService.UpdateSubscriptionStatusAsync(
+                    id,
+                    dto.Status
+                );
+                var subscription = await _context.Subscriptions.FirstOrDefaultAsync(s =>
+                    s.ExternalId == id
+                );
                 if (subscription != null)
                 {
                     var userCacheKey = $"SubscriptionDetails_{subscription.UserId}";

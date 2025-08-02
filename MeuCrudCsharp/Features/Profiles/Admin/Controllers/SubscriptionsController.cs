@@ -26,7 +26,9 @@ namespace MeuCrudCsharp.Features.UserAccount.Controllers // Namespace corrigido
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateSubscription([FromBody] CreateSubscriptionDto createDto)
+        public async Task<IActionResult> CreateSubscription(
+            [FromBody] CreateSubscriptionDto createDto
+        )
         {
             if (!ModelState.IsValid)
             {
@@ -35,7 +37,9 @@ namespace MeuCrudCsharp.Features.UserAccount.Controllers // Namespace corrigido
 
             try
             {
-                var subscriptionResponse = await _mercadoPagoService.CreateSubscriptionAsync(createDto);
+                var subscriptionResponse = await _mercadoPagoService.CreateSubscriptionAsync(
+                    createDto
+                );
 
                 // --- MUDANÇA PRINCIPAL: SALVANDO A ASSINATURA NO BANCO ---
 
@@ -47,11 +51,15 @@ namespace MeuCrudCsharp.Features.UserAccount.Controllers // Namespace corrigido
                 }
 
                 // 2. Encontrar o nosso 'Plan' local a partir do ID do plano do Mercado Pago
-                var localPlan = await _context.Plans.FirstOrDefaultAsync(p => p.ExternalPlanId == subscriptionResponse.PreapprovalPlanId);
+                var localPlan = await _context.Plans.FirstOrDefaultAsync(p =>
+                    p.ExternalPlanId == subscriptionResponse.PreapprovalPlanId
+                );
                 if (localPlan == null)
                 {
                     // Lançar erro se o plano não existir no nosso banco
-                    throw new InvalidOperationException("Plano correspondente não encontrado no banco de dados.");
+                    throw new InvalidOperationException(
+                        "Plano correspondente não encontrado no banco de dados."
+                    );
                 }
 
                 // 3. Criar a nova entidade de Assinatura
@@ -62,7 +70,7 @@ namespace MeuCrudCsharp.Features.UserAccount.Controllers // Namespace corrigido
                     ExternalId = subscriptionResponse.Id,
                     Status = subscriptionResponse.Status,
                     PayerEmail = subscriptionResponse.PayerEmail,
-                    CreatedAt = DateTime.UtcNow
+                    CreatedAt = DateTime.UtcNow,
                 };
 
                 // 4. Adicionar ao context e salvar
@@ -75,7 +83,14 @@ namespace MeuCrudCsharp.Features.UserAccount.Controllers // Namespace corrigido
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = "Ocorreu um erro ao processar sua assinatura.", error = ex.Message });
+                return StatusCode(
+                    500,
+                    new
+                    {
+                        message = "Ocorreu um erro ao processar sua assinatura.",
+                        error = ex.Message,
+                    }
+                );
             }
         }
     }

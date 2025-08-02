@@ -17,7 +17,6 @@ namespace MeuCrudCsharp.Data
         public DbSet<Course> Courses { get; set; }
         public DbSet<Subscription> Subscriptions { get; set; }
         public DbSet<Plan> Plans { get; set; }
-
-
+        public DbSet<Users> User { get; set; } // Adiciona a tabela de usuários
     }
 }

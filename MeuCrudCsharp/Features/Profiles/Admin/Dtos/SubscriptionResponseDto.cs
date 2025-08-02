@@ -7,25 +7,25 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Dtos
     public class SubscriptionCardDto
     {
         [JsonPropertyName("last_four_digits")]
-        public string LastFourDigits { get; set; }
+        public string? LastFourDigits { get; set; }
     }
 
     public class SubscriptionResponseDto
     {
         [JsonPropertyName("id")]
-        public string Id { get; set; }
+        public string? Id { get; set; }
 
         [JsonPropertyName("status")]
-        public string Status { get; set; }
+        public string? Status { get; set; }
 
         [JsonPropertyName("preapproval_plan_id")]
-        public string PreapprovalPlanId { get; set; }
+        public string? PreapprovalPlanId { get; set; }
 
         [JsonPropertyName("payer_id")]
         public long PayerId { get; set; }
 
         [JsonPropertyName("payer_email")]
-        public string PayerEmail { get; set; }
+        public string? PayerEmail { get; set; }
 
         [JsonPropertyName("date_created")]
         public DateTime DateCreated { get; set; }

@@ -12,22 +12,22 @@ namespace MeuCrudCsharp.Models
 
         // ID externo (do Mercado Pago, por exemplo)
         [Required]
-        public string ExternalId { get; set; }
+        public string? ExternalId { get; set; }
 
         [Required]
         public Guid UserId { get; set; }
 
         [ForeignKey("UserId")]
-        public virtual Users User { get; set; }
+        public virtual Users? User { get; set; }
 
         [Required]
         [MaxLength(20)]
-        public string Status { get; set; }
+        public string? Status { get; set; }
 
         // Adicionando PayerEmail como campo comum
         [Required]
         [MaxLength(255)]
-        public string PayerEmail { get; set; }
+        public string? PayerEmail { get; set; }
 
         [Required]
         public DateTime CreatedAt { get; set; }

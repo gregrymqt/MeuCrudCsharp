@@ -8,13 +8,13 @@ namespace MeuCrudCsharp.Models
     public class MercadoPagoNotification
     {
         [JsonPropertyName("action")]
-        public string Action { get; set; }
+        public string? Action { get; set; }
 
         [JsonPropertyName("api_version")]
-        public string ApiVersion { get; set; }
+        public string? ApiVersion { get; set; }
 
         [JsonPropertyName("data")]
-        public NotificationData Data { get; set; }
+        public NotificationData? Data { get; set; }
 
         [JsonPropertyName("date_created")]
         public DateTime DateCreated { get; set; }
@@ -26,7 +26,7 @@ namespace MeuCrudCsharp.Models
         public bool LiveMode { get; set; }
 
         [JsonPropertyName("type")]
-        public string Type { get; set; }
+        public string? Type { get; set; }
 
         [JsonPropertyName("user_id")]
         public Guid UserId { get; set; }
@@ -35,6 +35,6 @@ namespace MeuCrudCsharp.Models
     public class NotificationData
     {
         [JsonPropertyName("id")]
-        public string Id { get; set; }
+        public string? Id { get; set; }
     }
 }

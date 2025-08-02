@@ -19,24 +19,42 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Services
         {
             _httpClient = httpClient;
             _configuration = configuration;
-            _accessToken = _configuration["MercadoPago:AccessToken"]
-                ?? throw new InvalidOperationException("Access Token do Mercado Pago não está configurado.");
+            _accessToken =
+                _configuration["MercadoPago:AccessToken"]
+                ?? throw new InvalidOperationException(
+                    "Access Token do Mercado Pago não está configurado."
+                );
         }
 
         public async Task<PlanResponseDto> CreatePlanAsync(CreatePlanDto planDto)
         {
-            var responseBody = await SendMercadoPagoRequestAsync(HttpMethod.Post, "/preapproval_plan", planDto);
+            var responseBody = await SendMercadoPagoRequestAsync(
+                HttpMethod.Post,
+                "/preapproval_plan",
+                planDto
+            );
             return JsonSerializer.Deserialize<PlanResponseDto>(responseBody)!;
         }
 
-        public async Task<SubscriptionResponseDto> CreateSubscriptionAsync(CreateSubscriptionDto subscriptionDto)
+        public async Task<SubscriptionResponseDto> CreateSubscriptionAsync(
+            CreateSubscriptionDto subscriptionDto
+        )
         {
-            var responseBody = await SendMercadoPagoRequestAsync(HttpMethod.Post, "/preapproval", subscriptionDto);
+            var responseBody = await SendMercadoPagoRequestAsync(
+                HttpMethod.Post,
+                "/preapproval",
+                subscriptionDto
+            );
             return JsonSerializer.Deserialize<SubscriptionResponseDto>(responseBody)!;
         }
 
         // --- MÉTODO AUXILIAR PRIVADO (DRY) ---
-        private async Task<string> SendMercadoPagoRequestAsync<T>(HttpMethod method, string endpoint, T payload) where T : class
+        private async Task<string> SendMercadoPagoRequestAsync<T>(
+            HttpMethod method,
+            string endpoint,
+            T? payload
+        )
+            where T : class
         {
             var request = new HttpRequestMessage(method, endpoint);
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _accessToken);
@@ -53,43 +71,71 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Services
             if (!response.IsSuccessStatusCode)
             {
                 throw new HttpRequestException(
-                    $"Erro na API do Mercado Pago. Status: {response.StatusCode}. Resposta: {responseBody}");
+                    $"Erro na API do Mercado Pago. Status: {response.StatusCode}. Resposta: {responseBody}"
+                );
             }
 
             return responseBody;
         }
 
-
         public async Task<SubscriptionResponseDto> GetSubscriptionAsync(string subscriptionId)
         {
             var endpoint = $"/preapproval/{subscriptionId}";
-            var responseBody = await SendMercadoPagoRequestAsync(HttpMethod.Get, endpoint, (object?)null);
-            return JsonSerializer.Deserialize<SubscriptionResponseDto>(responseBody);
+            var responseBody = await SendMercadoPagoRequestAsync(
+                HttpMethod.Get,
+                endpoint,
+                (object?)null
+            );
+            return JsonSerializer.Deserialize<SubscriptionResponseDto>(responseBody)
+                ?? throw new InvalidOperationException(
+                    "Erro ao desserializar a resposta da assinatura."
+                );
         }
 
-        public async Task<SubscriptionResponseDto> UpdateSubscriptionCardAsync(string subscriptionId, string cardTokenId)
+        public async Task<SubscriptionResponseDto> UpdateSubscriptionCardAsync(
+            string subscriptionId,
+            string cardTokenId
+        )
         {
             var endpoint = $"/preapproval/{subscriptionId}";
             var payload = new { card_token_id = cardTokenId };
             var responseBody = await SendMercadoPagoRequestAsync(HttpMethod.Put, endpoint, payload);
-            return JsonSerializer.Deserialize<SubscriptionResponseDto>(responseBody);
+            return JsonSerializer.Deserialize<SubscriptionResponseDto>(responseBody)
+                ?? throw new InvalidOperationException(
+                    "Erro ao desserializar a resposta da assinatura."
+                );
         }
 
-        public async Task<SubscriptionResponseDto> UpdateSubscriptionStatusAsync(string subscriptionId, string newStatus)
+        public async Task<SubscriptionResponseDto> UpdateSubscriptionStatusAsync(
+            string subscriptionId,
+            string newStatus
+        )
         {
             var endpoint = $"/preapproval/{subscriptionId}";
             var payload = new { status = newStatus };
             var responseBody = await SendMercadoPagoRequestAsync(HttpMethod.Put, endpoint, payload);
-            return JsonSerializer.Deserialize<SubscriptionResponseDto>(responseBody);
+            return JsonSerializer.Deserialize<SubscriptionResponseDto>(responseBody)
+                ?? throw new InvalidOperationException(
+                    "Erro ao desserializar a resposta da assinatura."
+                );
         }
 
         // MÉTODO NOVO IMPLEMENTADO
-        public async Task<SubscriptionResponseDto> UpdateSubscriptionValueAsync(string subscriptionId, UpdateSubscriptionValueDto dto)
+        public async Task<SubscriptionResponseDto> UpdateSubscriptionValueAsync(
+            string subscriptionId,
+            UpdateSubscriptionValueDto dto
+        )
         {
             var endpoint = $"/preapproval/{subscriptionId}";
-            var payload = new { auto_recurring = new { transaction_amount = dto.TransactionAmount } };
+            var payload = new
+            {
+                auto_recurring = new { transaction_amount = dto.TransactionAmount },
+            };
             var responseBody = await SendMercadoPagoRequestAsync(HttpMethod.Put, endpoint, payload);
-            return JsonSerializer.Deserialize<SubscriptionResponseDto>(responseBody);
+            return JsonSerializer.Deserialize<SubscriptionResponseDto>(responseBody)
+                ?? throw new InvalidOperationException(
+                    "Erro ao desserializar a resposta da assinatura."
+                );
         }
     }
 }

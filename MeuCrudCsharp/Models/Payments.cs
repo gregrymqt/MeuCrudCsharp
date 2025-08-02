@@ -21,7 +21,7 @@ namespace MeuCrudCsharp.Models
         // Propriedades específicas de um Pagamento Único
         [Required]
         [MaxLength(20)]
-        public string Method { get; set; }
+        public string? Method { get; set; }
 
         [Required]
         public int Installments { get; set; }
@@ -33,7 +33,7 @@ namespace MeuCrudCsharp.Models
 
         [Required]
         [MaxLength(15)]
-        public string CustomerCpf { get; set; }
+        public string? CustomerCpf { get; set; }
 
         [Required]
         [Column(TypeName = "decimal(10, 2)")]

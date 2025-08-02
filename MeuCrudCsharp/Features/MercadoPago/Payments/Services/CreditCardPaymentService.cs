@@ -13,8 +13,8 @@ using MeuCrudCsharp.Features.Profiles.Admin.Dtos;
 using MeuCrudCsharp.Features.Profiles.Admin.Interfaces;
 using MeuCrudCsharp.Models; // Garante o acesso a Payment, Subscription, etc.
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Configuration;
 using Microsoft.EntityFrameworkCore; // Necessário para Include
+using Microsoft.Extensions.Configuration;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
 {
@@ -65,7 +65,9 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
             return await CreateSinglePaymentInternalAsync(request);
         }
 
-        private async Task<PaymentResponseDto> CreateSinglePaymentInternalAsync(PaymentRequestDto paymentData)
+        private async Task<PaymentResponseDto> CreateSinglePaymentInternalAsync(
+            PaymentRequestDto paymentData
+        )
         {
             var userId = GetCurrentUserId();
 
@@ -77,14 +79,17 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
             {
                 UserId = userId,
                 Status = "iniciando",
-                PayerEmail = paymentData.Payer.Email,
-                Method = paymentData.PaymentMethodId,
-                CustomerCpf = paymentData.Payer.Identification.Number,
+                PayerEmail = paymentData?.Payer?.Email,
+                Method = paymentData?.PaymentMethodId,
+                CustomerCpf = paymentData?.Payer?.Identification?.Number,
                 Amount = paymentData.Amount,
                 Installments = paymentData.Installments,
             };
 
-            var requestOptions = new RequestOptions { AccessToken = _tokenMercadoPago._access_Token! };
+            var requestOptions = new RequestOptions
+            {
+                AccessToken = _tokenMercadoPago._access_Token!,
+            };
             requestOptions.CustomHeaders.Add("X-Idempotency-Key", Guid.NewGuid().ToString());
 
             var paymentRequest = new PaymentCreateRequest
@@ -124,25 +129,33 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
             }
         }
 
-        private async Task<object> CreateSubscriptionInternalAsync(PaymentRequestDto subscriptionData)
+        private async Task<object> CreateSubscriptionInternalAsync(
+            PaymentRequestDto subscriptionData
+        )
         {
             var userId = GetCurrentUserId();
-            var plan = await _context.Plans.FirstOrDefaultAsync(p => p.ExternalPlanId == subscriptionData.PreapprovalPlanId);
+            var plan = await _context.Plans.FirstOrDefaultAsync(p =>
+                p.ExternalPlanId == subscriptionData.PreapprovalPlanId
+            );
             if (plan == null)
             {
-                throw new InvalidOperationException("Plano de assinatura não encontrado no banco de dados.");
+                throw new InvalidOperationException(
+                    "Plano de assinatura não encontrado no banco de dados."
+                );
             }
 
             var createSubscriptionDto = new CreateSubscriptionDto
             {
                 PreapprovalPlanId = subscriptionData.PreapprovalPlanId!,
-                PayerEmail = subscriptionData.Payer.Email,
-                CardTokenId = subscriptionData.Token,
+                PayerEmail = subscriptionData?.Payer?.Email,
+                CardTokenId = subscriptionData?.Token,
                 Reason = plan.Name, // Usa o nome do plano do banco de dados
                 BackUrl = _configuration["Redirect.Url"]! + "/Subscription/Success",
             };
 
-            var subscriptionResponse = await _subscriptionService.CreateSubscriptionAsync(createSubscriptionDto);
+            var subscriptionResponse = await _subscriptionService.CreateSubscriptionAsync(
+                createSubscriptionDto
+            );
 
             // Usando o model refatorado 'Subscription'
             var novaAssinatura = new Subscription
@@ -152,7 +165,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
                 ExternalId = subscriptionResponse.Id,
                 Status = MapPaymentStatus(subscriptionResponse.Status),
                 PayerEmail = subscriptionData.Payer.Email,
-                UpdatedAt = DateTime.UtcNow
+                UpdatedAt = DateTime.UtcNow,
             };
 
             _context.Subscriptions.Add(novaAssinatura);
@@ -168,7 +181,9 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
 
         private Guid GetCurrentUserId()
         {
-            var userIdString = _httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userIdString = _httpContextAccessor.HttpContext?.User.FindFirstValue(
+                ClaimTypes.NameIdentifier
+            );
             if (!Guid.TryParse(userIdString, out Guid userIdGuid))
             {
                 throw new InvalidOperationException("ID do usuário inválido ou não encontrado.");

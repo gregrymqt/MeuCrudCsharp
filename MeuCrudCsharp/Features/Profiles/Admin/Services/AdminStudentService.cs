@@ -28,31 +28,35 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Services
             // 3. Usamos nosso serviço de cache universal
             const string? cacheKey = "Admin_AllStudentsWithSubscription";
 
-            return await _cacheService.GetOrCreateAsync(cacheKey, async () =>
-            {
-                // Esta lógica só executa se os dados não estiverem no cache
-                return await _context.Users
-                    .AsNoTracking()
-                    // 4. MUDANÇA NA CONSULTA: Incluindo a Assinatura e o Plano associado
-                    .Include(u => u.Subscription)
+            return await _cacheService.GetOrCreateAsync(
+                cacheKey,
+                async () =>
+                {
+                    // Esta lógica só executa se os dados não estiverem no cache
+                    return await _context
+                        .Users.AsNoTracking()
+                        // 4. MUDANÇA NA CONSULTA: Incluindo a Assinatura e o Plano associado
+                        .Include(u => u.Subscription)
                         .ThenInclude(s => s.Plan)
-                    .OrderBy(u => u.Name)
-                    .Select(u => new StudentDto
-                    {
-                        Id = Guid.Parse(u.Id),
-                        Name = u.Name,
-                        Email = u.Email,
+                        .OrderBy(u => u.Name)
+                        .Select(u => new StudentDto
+                        {
+                            Id = Guid.Parse(u.Id),
+                            Name = u.Name,
+                            Email = u.Email,
 
-                        // 5. MUDANÇA NO MAPEAMENTO: Usando os dados da nova estrutura
-                        SubscriptionStatus = u.Subscription != null ? u.Subscription.Status : "Sem Assinatura",
-                        PlanName = u.Subscription != null ? u.Subscription.Plan.Name : "N/A",
+                            // 5. MUDANÇA NO MAPEAMENTO: Usando os dados da nova estrutura
+                            SubscriptionStatus =
+                                u.Subscription != null ? u.Subscription.Status : "Sem Assinatura",
+                            PlanName = u.Subscription != null ? u.Subscription.Plan.Name : "N/A",
 
-                        // 6. MELHORIA: Usando uma data de criação real do usuário
-                        RegistrationDate = u.CreatedAt
-                    })
-                    .ToListAsync();
-            },
-            absoluteExpireTime: TimeSpan.FromMinutes(5)); // Cache de 5 minutos
+                            // 6. MELHORIA: Usando uma data de criação real do usuário
+                            RegistrationDate = u.CreatedAt,
+                        })
+                        .ToListAsync();
+                },
+                absoluteExpireTime: TimeSpan.FromMinutes(5)
+            ); // Cache de 5 minutos
         }
 
         // ... Outros métodos do serviço ...

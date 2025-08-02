@@ -15,9 +15,14 @@ namespace MeuCrudCsharp.Features.Videos.Service
         private readonly ICacheService _cacheService; // MUDANÇA 1: Usando nosso serviço universal
 
         // MUDANÇA 2: Criando um CancellationTokenSource para controlar a invalidação
-        private static CancellationTokenSource _videosCacheTokenSource = new CancellationTokenSource();
+        private static CancellationTokenSource _videosCacheTokenSource =
+            new CancellationTokenSource();
 
-        public AdminVideoService(ApiDbContext context, IWebHostEnvironment env, ICacheService cacheService)
+        public AdminVideoService(
+            ApiDbContext context,
+            IWebHostEnvironment env,
+            ICacheService cacheService
+        )
         {
             _context = context;
             _env = env;
@@ -29,20 +34,25 @@ namespace MeuCrudCsharp.Features.Videos.Service
             var cacheKey = $"AdminVideos_Page{page}_Size{pageSize}";
 
             // MUDANÇA 3: Usando o GetOrCreateAsync e atrelando ao nosso "sinalizador"
-            return await _cacheService.GetOrCreateAsync(cacheKey, async () =>
-            {
-                // Esta lógica só executa se o cache não existir
-                return await _context.Videos
-                    .Include(v => v.Course)
-                    .OrderByDescending(v => v.UploadDate)
-                    .Skip((page - 1) * pageSize)
-                    .Take(pageSize)
-                    .Select(v => new VideoDto { /* ... seu mapeamento ... */ })
-                    .ToListAsync();
-            },
-            // Aqui está a mágica: o tempo de vida deste cache está agora
-            // vinculado ao nosso CancellationTokenSource.
-            expirationToken: new CancellationChangeToken(_videosCacheTokenSource.Token));
+            return await _cacheService.GetOrCreateAsync(
+                    cacheKey,
+                    async () =>
+                    {
+                        // Esta lógica só executa se o cache não existir
+                        return await _context
+                            .Videos.Include(v => v.Course)
+                            .OrderByDescending(v => v.UploadDate)
+                            .Skip((page - 1) * pageSize)
+                            .Take(pageSize)
+                            .Select(v => new VideoDto
+                            { /* ... seu mapeamento ... */
+                            })
+                            .ToListAsync();
+                    },
+                    // Aqui está a mágica: o tempo de vida deste cache está agora
+                    // vinculado ao nosso CancellationTokenSource.
+                    expirationToken: new CancellationChangeToken(_videosCacheTokenSource.Token)
+                ) ?? throw new InvalidOperationException("Erro ao obter os vídeos.");
         }
 
         public async Task<VideoDto> CreateVideoAsync(CreateVideoDto createDto)
@@ -124,6 +134,7 @@ namespace MeuCrudCsharp.Features.Videos.Service
 
             return (true, string.Empty);
         }
+
         private void InvalidateVideosCache()
         {
             // Cancela o token antigo, o que invalida todos os caches que dependem dele

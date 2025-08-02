@@ -13,14 +13,14 @@ namespace MeuCrudCsharp.Models
         // ID do plano no provedor de pagamento (ex: Mercado Pago Pre-approval Plan ID)
         [Required]
         [MaxLength(255)]
-        public string ExternalPlanId { get; set; }
+        public string? ExternalPlanId { get; set; }
 
         [Required]
         [MaxLength(100)]
-        public string Name { get; set; } // Ex: "Plano Anual", "Plano Mensal"
+        public string? Name { get; set; } // Ex: "Plano Anual", "Plano Mensal"
 
         [MaxLength(255)]
-        public string Description { get; set; }
+        public string? Description { get; set; }
 
         [Required]
         [Column(TypeName = "decimal(10, 2)")]
@@ -35,7 +35,7 @@ namespace MeuCrudCsharp.Models
 
         [Required]
         [MaxLength(20)]
-        public string FrequencyType { get; set; } // Ex: "months", "years"
+        public string? FrequencyType { get; set; } // Ex: "months", "years"
 
         [Required]
         public bool IsActive { get; set; } = true;

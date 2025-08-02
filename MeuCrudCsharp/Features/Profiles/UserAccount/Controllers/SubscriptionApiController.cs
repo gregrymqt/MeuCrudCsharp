@@ -21,17 +21,22 @@ namespace MeuCrudCsharp.Features.UserAccount.Controllers
         }
 
         [HttpPut("card")]
-        public async Task<IActionResult> ChangeCard([FromBody] UpdateCardTokenDto request)
+        public async Task<IActionResult> ChangeCard([FromBody] UpdateCardTokenDto? request)
         {
             var userId = GetCurrentUserId();
 
             // Esta chamada agora é inteligente:
             // O método do serviço vai alterar os dados e automaticamente limpará o cache.
-            var success = await _userAccountService.UpdateSubscriptionCardAsync(userId, request.NewCardToken);
+            var success = await _userAccountService.UpdateSubscriptionCardAsync(
+                userId,
+                request?.NewCardToken
+            );
 
             if (!success)
             {
-                return NotFound(new { message = "Assinatura não encontrada ou falha na atualização." });
+                return NotFound(
+                    new { message = "Assinatura não encontrada ou falha na atualização." }
+                );
             }
 
             return Ok(new { message = "Cartão da assinatura atualizado com sucesso." });
@@ -45,7 +50,9 @@ namespace MeuCrudCsharp.Features.UserAccount.Controllers
 
             if (!success)
             {
-                return NotFound(new { message = "Assinatura não encontrada ou já está cancelada." });
+                return NotFound(
+                    new { message = "Assinatura não encontrada ou já está cancelada." }
+                );
             }
 
             return Ok(new { message = "Assinatura cancelada com sucesso." });
@@ -59,7 +66,12 @@ namespace MeuCrudCsharp.Features.UserAccount.Controllers
 
             if (!success)
             {
-                return NotFound(new { message = "Assinatura não encontrada ou não está em um estado que permita reativação." });
+                return NotFound(
+                    new
+                    {
+                        message = "Assinatura não encontrada ou não está em um estado que permita reativação.",
+                    }
+                );
             }
 
             return Ok(new { message = "Assinatura reativada com sucesso." });
@@ -73,7 +85,9 @@ namespace MeuCrudCsharp.Features.UserAccount.Controllers
             {
                 return userId;
             }
-            throw new InvalidOperationException("Não foi possível obter a identificação do usuário.");
+            throw new InvalidOperationException(
+                "Não foi possível obter a identificação do usuário."
+            );
         }
     }
 }

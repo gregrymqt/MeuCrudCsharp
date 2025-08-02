@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Hangfire;
 using Hangfire.Redis.StackExchange;
 using MeuCrudCsharp.Data;
@@ -17,9 +18,8 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using StackExchange.Redis;
-using System.Security.Claims;
 using Microsoft.Extensions.Caching.StackExchangeRedis;
+using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -68,10 +68,12 @@ if (!string.IsNullOrEmpty(redisConnectionString))
     });
 
     // 2. Configura o Hangfire para usar o Redis.
-    builder.Services.AddHangfire(config => config
-        .UseSimpleAssemblyNameTypeSerializer()
-        .UseRecommendedSerializerSettings()
-        .UseRedisStorage(redisConnectionString));
+    builder.Services.AddHangfire(config =>
+        config
+            .UseSimpleAssemblyNameTypeSerializer()
+            .UseRecommendedSerializerSettings()
+            .UseRedisStorage(redisConnectionString)
+    );
 }
 else
 {
@@ -83,13 +85,14 @@ else
     builder.Services.AddDistributedMemoryCache();
 
     // 2. Configura o Hangfire para usar armazenamento em memória.
-    builder.Services.AddHangfire(config => config
-        .UseSimpleAssemblyNameTypeSerializer()
-        .UseRecommendedSerializerSettings()
-        .UseInMemoryStorage());
+    builder.Services.AddHangfire(config =>
+        config
+            .UseSimpleAssemblyNameTypeSerializer()
+            .UseRecommendedSerializerSettings()
+            .UseInMemoryStorage()
+    );
 }
 builder.Services.AddScoped<ICacheService, CacheService>();
-
 
 // Adiciona o HttpClient para ser injetado no serviço do Mercado Pago
 builder.Services.AddHttpClient<IMercadoPagoService, MercadoPagoService>(client =>
@@ -107,8 +110,6 @@ builder.Services.AddScoped<IEmailSenderService, SendGridEmailSenderService>();
 builder.Services.AddScoped<IRazorViewToStringRenderer, RazorViewToStringRenderer>();
 builder.Services.AddScoped<IAdminVideoService, AdminVideoService>();
 builder.Services.AddScoped<IAdminStudentService, AdminStudentService>();
-builder.Services.AddHttpClient<ISubscriptionService, SubscriptionService>();
-builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
 builder.Services.AddSingleton<TokenMercadoPago>();
 builder.Services.AddTransient<VideoProcessingService>();
 builder.Services.AddScoped<IUserAccountService, UserAccountService>();
@@ -166,7 +167,7 @@ builder
                 using (var scope = context.HttpContext.RequestServices.CreateScope())
                 {
                     var dbContext = scope.ServiceProvider.GetRequiredService<ApiDbContext>();
-                    var user = dbContext.Users.FirstOrDefault(u => u.GoogleId == googleId);
+                    var user = dbContext.User.FirstOrDefault(u => u.GoogleId == googleId);
 
                     if (user == null)
                     {
