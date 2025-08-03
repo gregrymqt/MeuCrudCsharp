@@ -1,6 +1,6 @@
 ﻿using MeuCrudCsharp.Features.Emails;
 
-namespace MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces
+namespace MeuCrudCsharp.Features.Emails.Interfaces
 {
     public interface IRazorViewToStringRenderer
     {

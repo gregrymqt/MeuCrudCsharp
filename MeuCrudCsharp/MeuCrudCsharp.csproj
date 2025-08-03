@@ -6,6 +6,13 @@
     <UserSecretsId>44cf1388-7117-4d5a-ac6d-b60ad7b73c25</UserSecretsId>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Remove="Features\Profiles\User\**" />
+    <Content Remove="Features\Profiles\User\**" />
+    <EmbeddedResource Remove="Features\Profiles\User\**" />
+    <None Remove="Features\Profiles\User\**" />
+    <TypeScriptCompile Remove="Features\Profiles\User\**" />
+  </ItemGroup>
+  <ItemGroup>
     <TypeScriptCompile Remove="ClientApp\credit_card.ts" />
     <TypeScriptCompile Remove="ClientApp\site.ts" />
   </ItemGroup>
@@ -35,8 +42,5 @@
     <PackageReference Include="SendGrid" Version="9.29.3" />
     <PackageReference Include="StackExchange.Redis" Version="2.8.58" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Features\Profiles\User\" />
   </ItemGroup>
 </Project>

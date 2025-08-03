@@ -1,7 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Threading.Tasks;
-using MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces;
+using MeuCrudCsharp.Features.Emails.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Mvc.ViewEngines;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 
+namespace MeuCrudCsharp.Features.Emails.Services{
 public class RazorViewToStringRenderer : IRazorViewToStringRenderer
 {
     private readonly IRazorViewEngine _viewEngine;
@@ -82,4 +83,5 @@ public class RazorViewToStringRenderer : IRazorViewToStringRenderer
         var httpContext = new DefaultHttpContext { RequestServices = _serviceProvider };
         return new ActionContext(httpContext, new RouteData(), new ActionDescriptor());
     }
+}
 }

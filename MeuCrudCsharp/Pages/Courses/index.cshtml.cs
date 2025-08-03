@@ -33,12 +33,16 @@ namespace MeuCrudCsharp.Pages.Course
             }
 
             // Busca o usuário e seu status de pagamento em uma única consulta.
+            // Busca o usuário e o status do pagamento aprovado em uma única consulta.
             var userPaymentStatus = await _context
-                .Users.Where(u => u.Id == userIdString)
-                .Select(u => u.Payment_User.Status) // Pega apenas o status
+                .Users
+                .Where(u => u.Id == userIdString)
+                .SelectMany(u => u.Payments)
+                .Where(p => p.Status == "approved")
+                .Select(p => p.Status)
                 .FirstOrDefaultAsync();
 
-            if (userPaymentStatus == "approved")
+            if (!string.IsNullOrEmpty(userPaymentStatus))
             {
                 return Page(); // Se o pagamento está aprovado, permite o acesso.
             }

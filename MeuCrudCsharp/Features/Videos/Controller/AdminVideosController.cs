@@ -83,13 +83,14 @@ namespace MeuCrudCsharp.Features.Videos.Controller
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateVideoMetadata([FromBody] CreateVideoDto createDto)
+        public async Task<IActionResult> CreateVideoMetadata([FromBody] CreateVideoDto createDto, IFormFile? thumbnailFile)
+
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
-            var videoToReturn = await _videoService.CreateVideoAsync(createDto);
+            var videoToReturn = await _videoService.CreateVideoAsync(createDto, thumbnailFile);
             return CreatedAtAction(
                 nameof(GetAllVideos),
                 new { id = videoToReturn.Id },
@@ -98,27 +99,17 @@ namespace MeuCrudCsharp.Features.Videos.Controller
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateVideo(Guid id, [FromBody] UpdateVideoDto updateDto)
+        public async Task<IActionResult> UpdateVideo(Guid id, [FromBody] UpdateVideoDto updateDto, IFormFile? thumbnailFile)
         {
-            var success = await _videoService.UpdateVideoAsync(id, updateDto);
-            if (!success)
-            {
-                return NotFound(new { message = "Vídeo não encontrado." });
-            }
-            return Ok(new { message = "Vídeo atualizado com sucesso." });
+            var updatedVideo = await _videoService.UpdateVideoAsync(id, updateDto, thumbnailFile);
+            return Ok(updatedVideo);
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteVideo(Guid id)
         {
-            var result = await _videoService.DeleteVideoAsync(id);
-            if (!result.Success)
-            {
-                if (result.ErrorMessage.Contains("não encontrado"))
-                    return NotFound(new { message = result.ErrorMessage });
-
-                return StatusCode(500, new { message = result.ErrorMessage });
-            }
+            await _videoService.DeleteVideoAsync(id);
+            
             return Ok(new { message = "Vídeo e arquivos associados foram deletados com sucesso." });
         }
     }

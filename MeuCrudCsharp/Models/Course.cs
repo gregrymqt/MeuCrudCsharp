@@ -11,6 +11,11 @@ namespace MeuCrudCsharp.Models
         [MaxLength(200)]
         public string Name { get; set; } = string.Empty;
 
+        [Required]
+        [MaxLength(200)]
+        public string Description { get; set; } = string.Empty;
+
+
         // Propriedade de navegação para a lista de vídeos que pertencem a este curso
         public virtual ICollection<Video> Videos { get; set; } = new List<Video>();
     }

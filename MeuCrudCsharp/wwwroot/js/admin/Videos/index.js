@@ -4,11 +4,24 @@ const editForm = document.getElementById('edit-video-form');
 const editVideoIdInput = document.getElementById('edit-video-id');
 const editVideoTitleInput = document.getElementById('edit-video-title');
 const editVideoDescriptionInput = document.getElementById('edit-video-description');
+const editThumbnailInput = document.getElementById('edit-video-thumbnail-file');
+const editThumbnailPreview = document.getElementById('edit-thumbnail-preview');
 
-function openEditModal(videoId, title, description) {
-    editVideoIdInput.value = videoId;
-    editVideoTitleInput.value = title;
-    editVideoDescriptionInput.value = description;
+
+// --- Atualize a Função de Abrir o Modal ---
+function openEditModal(video) {
+    editVideoIdInput.value = video.id;
+    editVideoTitleInput.value = video.title;
+    editVideoDescriptionInput.value = video.description;
+
+    // Mostra a imagem atual no preview
+    if (video.thumbnailUrl) {
+        editThumbnailPreview.src = video.thumbnailUrl;
+        editThumbnailPreview.style.display = 'block';
+    } else {
+        editThumbnailPreview.style.display = 'none';
+    }
+
     editModal.style.display = 'block';
 }
 
@@ -49,7 +62,11 @@ document.addEventListener('DOMContentLoaded', function () {
     const titleInput = document.getElementById('video-title');
     const descriptionInput = document.getElementById('video-description');
     const courseNameInput = document.getElementById('course-name');
-    
+    const createThumbnailInput = document.getElementById('video-thumbnail-file');
+    const createThumbnailPreview = document.getElementById('create-thumbnail-preview');
+    const courseSelect = document.getElementById('video-course-select');
+    const newCourseInput = document.getElementById('video-course-new-name');
+
     const navCrud = document.getElementById('nav-crud');
     const navViewer = document.getElementById('nav-viewer');
     const panelCrud = document.getElementById('panel-crud');
@@ -66,20 +83,28 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Funções de Renderização
     function renderCrudTableRow(video) {
-        const safeTitle = video.title.replace(/'/g, "\\'");
-        const safeDescription = (video.description || '').replace(/'/g, "\\'");
-        const row = `
-            <tr>
-                <td>${video.title}</td>
-                <td>${video.courseName}</td>
-                <td><span class="status-badge status-${video.status.toLowerCase()}">${video.status}</span></td>
-                <td>${new Date(video.uploadDate).toLocaleDateString()}</td>
-                <td class="actions">
-                    <button class="btn btn-secondary btn-sm" onclick="openEditModal('${video.id}', '${safeTitle}', '${safeDescription}')">Editar</button>
-                    <button class="btn btn-danger btn-sm" onclick="deleteVideo('${video.id}')">Deletar</button>
-                </td>
-            </tr>`;
-        videosTableBody.insertAdjacentHTML('beforeend', row);
+        const row = document.createElement('tr');
+        row.innerHTML = `
+        <td>${video.title}</td>
+        <td>${video.courseName}</td>
+        <td><span class="status-badge status-${video.status.toLowerCase()}">${video.status}</span></td>
+        <td>${new Date(video.uploadDate).toLocaleDateString()}</td>
+        <td class="actions">
+            <button class="btn btn-secondary btn-sm btn-edit">Editar</button>
+            <button class="btn btn-danger btn-sm btn-delete">Deletar</button>
+        </td>
+    `;
+
+        // Adicionando os event listeners diretamente aqui (mais seguro que 'onclick')
+        row.querySelector('.btn-edit').addEventListener('click', () => {
+            openEditModal(video); // Passando o objeto de vídeo inteiro
+        });
+
+        row.querySelector('.btn-delete').addEventListener('click', () => {
+            deleteVideo(video.id); // Supondo que você tenha uma função deleteVideo(id)
+        });
+
+        videosTableBody.appendChild(row);
     }
 
     function renderViewerPlaylistItem(video) {
@@ -225,18 +250,21 @@ document.addEventListener('DOMContentLoaded', function () {
         saveButton.disabled = true;
         saveButton.textContent = 'Salvando...';
 
-        const videoData = {
-            title: titleInput.value,
-            description: descriptionInput.value,
-            courseName: courseNameInput.value,
-            storageIdentifier: storageIdentifierInput.value
-        };
+        const formData = new FormData();
+        formData.append('Title', titleInput.value);
+        formData.append('Description', descriptionInput.value);
+        formData.append('StorageIdentifier', storageIdentifierInput.value);
+        formData.append('CourseName', courseSelect.value === 'new_course' ? newCourseInput.value : courseSelect.options[courseSelect.selectedIndex].text);
+
+        // Adiciona o arquivo da thumbnail, se um foi selecionado
+        if (createThumbnailInput.files.length > 0) {
+            formData.append('ThumbnailFile', createThumbnailInput.files[0]);
+        }
 
         try {
             const response = await fetch('/api/admin/videos', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(videoData)
+                body: formData
             });
             if (!response.ok) {
                 const errorData = await response.json();
@@ -245,7 +273,11 @@ document.addEventListener('DOMContentLoaded', function () {
             }
             alert('Vídeo cadastrado com sucesso!');
             document.dispatchEvent(new CustomEvent('reloadAllVideos'));
+            if (courseSelect.value === 'new_course') {
+                await loadCoursesIntoSelect();
+            }
             createForm.reset();
+            newCourseInput.style.display = 'none';
             metadataFieldset.disabled = true;
             saveButton.disabled = true;
             uploadStatusDiv.innerHTML = '';
@@ -262,24 +294,47 @@ document.addEventListener('DOMContentLoaded', function () {
     editForm.addEventListener('submit', async function (event) {
         event.preventDefault();
         const videoId = editVideoIdInput.value;
-        const updatedData = {
-            title: editVideoTitleInput.value,
-            description: editVideoDescriptionInput.value
-        };
+
+        // MUDANÇA CRÍTICA: Usando FormData para enviar arquivos
+        const formData = new FormData();
+        formData.append('Title', editVideoTitleInput.value);
+        formData.append('Description', editVideoDescriptionInput.value);
+
+        // Adiciona o arquivo da thumbnail, se um novo foi selecionado
+        if (editThumbnailInput.files.length > 0) {
+            formData.append('ThumbnailFile', editThumbnailInput.files[0]);
+        }
+
         try {
             const response = await fetch(`/api/admin/videos/${videoId}`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(updatedData)
+                body: formData
             });
             if (!response.ok) throw new Error('Falha ao atualizar o vídeo.');
             alert('Vídeo atualizado com sucesso!');
             closeEditModal();
-            // Dispara o evento para recarregar a lista
-            tabManage.dispatchEvent(new CustomEvent('reload'));
+            // Dispara o evento para recarregar as listas
+            document.dispatchEvent(new CustomEvent('reloadAllVideos'));
         } catch (error) {
             console.error('Erro ao atualizar:', error);
             alert(`Erro: ${error.message}`);
         }
     });
+
+    // --- Lógica de Pré-visualização da Imagem ---
+    function setupThumbnailPreview(fileInput, previewImage) {
+        fileInput.addEventListener('change', () => {
+            const file = fileInput.files[0];
+            if (file) {
+                // Cria uma URL temporária para o arquivo selecionado
+                previewImage.src = URL.createObjectURL(file);
+                previewImage.style.display = 'block';
+            } else {
+                previewImage.style.display = 'none';
+            }
+        });
+    }
+    setupThumbnailPreview(createThumbnailInput, createThumbnailPreview);
+    setupThumbnailPreview(editThumbnailInput, editThumbnailPreview);
+
 });

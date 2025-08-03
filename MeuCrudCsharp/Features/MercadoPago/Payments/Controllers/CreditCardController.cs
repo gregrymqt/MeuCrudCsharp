@@ -2,7 +2,7 @@
 using System.Security.Claims;
 using System.Threading.Tasks;
 using MercadoPago.Error;
-using MeuCrudCsharp.Caching;
+using MeuCrudCsharp.Features.Caching;
 using MeuCrudCsharp.Features.MercadoPago.Payments.Dtos;
 using MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces;
 using Microsoft.AspNetCore.Authorization;

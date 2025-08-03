@@ -1,4 +1,4 @@
-﻿namespace MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces
+﻿namespace MeuCrudCsharp.Features.Emails.Interfaces
 {
     public interface IEmailSenderService
     {

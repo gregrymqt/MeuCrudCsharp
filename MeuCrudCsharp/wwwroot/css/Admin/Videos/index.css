@@ -180,6 +180,19 @@ body {
 .table .actions { display: flex; gap: 0.5rem; }
 .actions .btn { padding: 0.4rem 0.8rem; font-size: 0.9rem; }
 
+/* 4.1 Estilos Específicos para a Aba "preview da thumbnail" */
+.thumbnail-preview-container {
+    margin-top: 15px;
+}
+
+.thumbnail-preview {
+    max-width: 250px;
+    max-height: 150px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    display: none; /* Escondido por padrão */
+}
+
 /* 5. Estilos da Aba "Assistir Vídeo" */
 .video-viewer-layout {
     display: flex;

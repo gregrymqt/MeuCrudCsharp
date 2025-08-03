@@ -15,32 +15,18 @@ namespace MeuCrudCsharp.Models
     {
         [Key]
         public Guid Id { get; set; }
-
-        [Required]
-        public string Title { get; set; } = string.Empty;
-
-        public string? Description { get; set; }
-
-        // 1. Armazena apenas o nome da pasta (GUID). Muito mais robusto.
-        [Required]
-        public string StorageIdentifier { get; set; } = string.Empty;
-
-        [Required]
+        public string Title { get; set; }
+        public string Description { get; set; }
+        public string StorageIdentifier { get; set; }
         public DateTime UploadDate { get; set; }
-
-        // Duração do vídeo. Pode ser preenchida após o processamento com FFmpeg.
         public TimeSpan Duration { get; set; }
-
-        // 2. Campo para saber o estado do vídeo.
-        [Required]
         public VideoStatus Status { get; set; }
-
-        // 3. Exemplo de relacionamento: Este vídeo pertence a um curso.
-        [Required]
         public Guid CourseId { get; set; }
+        public virtual Course Course { get; set; }
 
-        [ForeignKey("CourseId")]
-        public virtual Course? Course { get; set; }
+        // NOVO: Adicione este campo
+        [MaxLength(2048)] // Um bom tamanho para URLs
+        public string? ThumbnailUrl { get; set; }
 
         public Video()
         {

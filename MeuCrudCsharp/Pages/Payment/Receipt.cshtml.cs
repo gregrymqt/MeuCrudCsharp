@@ -1,7 +1,7 @@
 using System.Security.Claims;
 using System.Threading.Tasks;
 using MeuCrudCsharp.Data;
-using MeuCrudCsharp.Features.Payments.ViewModels; // Supondo o novo namespace
+using MeuCrudCsharp.Features.MercadoPago.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;

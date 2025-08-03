@@ -1,11 +1,11 @@
-﻿// Em Jobs/ProcessPaymentNotificationJob.cs
-
-using System.Security.Claims;
+﻿using System;
+using System.Linq; // Adicionado para usar .Any()
 using System.Threading.Tasks;
 using Hangfire;
 using MeuCrudCsharp.Data;
-using Microsoft.AspNetCore.Authorization;
+using MeuCrudCsharp.Features.Exceptions; // Nossas exceções
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Jobs
 {
@@ -26,79 +26,60 @@ namespace MeuCrudCsharp.Features.MercadoPago.Jobs
             _notificationPaymentService = notificationPaymentService;
         }
 
-        /// <summary>
-        /// Executa o job. Este método seria chamado pelo seu sistema de filas.
-        /// O atributo [AutomaticRetry] é um exemplo de como o Hangfire lida com retentativas.
-        /// </summary>
-        [AutomaticRetry(Attempts = 3, DelaysInSeconds = new int[] { 10 })]
+        [AutomaticRetry(Attempts = 3, DelaysInSeconds = new int[] { 60 })] // Aumentando o delay para 1 minuto
         public async Task ExecuteAsync(string paymentId)
         {
-            _logger.LogInformation(
-                "Iniciando processamento do job para o Payment ID: {PaymentId}",
-                paymentId
-            );
+            // MUDANÇA 1: Validação "Fail-Fast" antes de qualquer outra coisa.
+            // Se o ID for inválido, o job falha imediatamente sem consumir recursos.
+            if (string.IsNullOrEmpty(paymentId))
+            {
+                _logger.LogError("Job de notificação de pagamento recebido com um PaymentId nulo ou vazio. O job será descartado.");
+                // Lançar exceção evita que o Hangfire tente reprocessar um job inválido.
+                throw new ArgumentNullException(nameof(paymentId), "O ID do pagamento não pode ser nulo.");
+            }
 
-            // Inicia uma transação no banco de dados.
-            // Se algo der errado aqui dentro, tudo é revertido (rollback).
-            await using var transaction = await _context.Database.BeginTransactionAsync(
-                System.Data.IsolationLevel.Serializable
-            );
+            _logger.LogInformation("Iniciando processamento do job para o Payment ID: {PaymentId}", paymentId);
+
+            // A transação é a melhor forma de garantir a consistência dos dados.
+            await using var transaction = await _context.Database.BeginTransactionAsync();
 
             try
             {
-                // Busca o pagamento no seu banco de dados E TRAVA A LINHA.
-                // Esta é a tradução de ->lockForUpdate().
-                // A sintaxe exata do SQL pode variar (ex: "WITH (UPDLOCK)" para SQL Server).
-                // Este exemplo usa a sintaxe do PostgreSQL.
+                // MUDANÇA 2: Corrigindo o nome da tabela na consulta SQL
+                // E simplificando a busca com .FirstOrDefault() que pode ser nulo.
                 var pagamentoLocal = await _context
-                    .Payment_User.FromSqlRaw(
-                        @"SELECT * FROM ""Payment_User"" WHERE ""PaymentId"" = {0} FOR UPDATE",
-                        paymentId
-                    )
+                    .Payments
+                    .FromSqlRaw(@"SELECT * FROM ""Payments"" WHERE ""ExternalId"" = {0} FOR UPDATE", paymentId)
                     .FirstOrDefaultAsync();
 
                 if (pagamentoLocal == null)
                 {
-                    _logger.LogWarning(
-                        "Pagamento com ID {PaymentId} não encontrado no banco de dados. O job será descartado.",
-                        paymentId
-                    );
-                    await transaction.CommitAsync(); // Comita a transação vazia e encerra.
-                    return;
+                    // MUDANÇA 3: Lançar uma exceção específica em vez de retornar vazio.
+                    // Isso informa ao Hangfire que algo está errado (ex: o webhook chegou antes do pagamento ser salvo).
+                    // O retry do Hangfire pode resolver isso na próxima tentativa.
+                    throw new ResourceNotFoundException($"Pagamento com ID externo {paymentId} não encontrado no banco. Tentando novamente mais tarde.");
                 }
 
-                // Se o pagamento já foi processado (status não é mais 'pendente'), não faz nada.
-                // Esta verificação previne o reprocessamento.
-                if (pagamentoLocal.Status != "pendente" && pagamentoLocal.Status != "iniciando")
+                // A verificação de reprocessamento está ótima.
+                var statusProcessaveis = new[] { "pendente", "iniciando" };
+                if (!statusProcessaveis.Contains(pagamentoLocal.Status))
                 {
                     _logger.LogInformation(
-                        "Pagamento {PaymentId} já foi processado (Status: {Status}). Pulando job.",
+                        "Pagamento {PaymentId} já foi processado (Status: {Status}). Finalizando job com sucesso.",
                         paymentId,
                         pagamentoLocal.Status
                     );
-                    await transaction.CommitAsync(); // Libera o "cadeado" e termina o job.
-                    return;
+                    await transaction.CommitAsync();
+                    return; // Encerra o job com sucesso, sem erros.
                 }
 
-                string userIdString = pagamentoLocal.UserId.ToString();
-
-                if (
-                    string.IsNullOrEmpty(userIdString)
-                    || !Guid.TryParse(userIdString, out Guid userIdAsGuid)
-                )
-                {
-                    return;
-                }
-
-                // Se chegou até aqui, o pagamento é novo ou ainda está pendente.
-                // Chama seu serviço que vai verificar na API do MP e atualizar o banco.
                 await _notificationPaymentService.VerifyAndProcessNotificationAsync(
-                    userIdAsGuid,
-                    paymentId
+                    pagamentoLocal.UserId,
+                    pagamentoLocal.Id.ToString() // Passando o ID interno
                 );
 
-                // A transação é concluída aqui (commit) e o "cadeado" é liberado.
                 await transaction.CommitAsync();
+
                 _logger.LogInformation(
                     "Processamento do Payment ID: {PaymentId} concluído com sucesso.",
                     paymentId
@@ -112,11 +93,10 @@ namespace MeuCrudCsharp.Features.MercadoPago.Jobs
                     paymentId
                 );
 
-                // Reverte todas as alterações no banco de dados.
                 await transaction.RollbackAsync();
 
-                // Lança a exceção novamente para que o sistema de filas (Hangfire, etc.)
-                // saiba que o job falhou e possa tentar novamente.
+                // Relançar a exceção é crucial para que o Hangfire saiba que o job falhou
+                // e possa aplicar a política de retentativas.
                 throw;
             }
         }

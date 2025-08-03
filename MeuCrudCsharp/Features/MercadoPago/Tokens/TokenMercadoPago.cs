@@ -7,8 +7,8 @@ namespace MeuCrudCsharp.Features.MercadoPago.Tokens
 {
     public class TokenMercadoPago
     {
-        public string _access_Token { get; }
-        public string _webhook_Secret { get; }
+        public string? _access_Token { get; }
+        public string? _webhook_Secret { get; }
 
         public TokenMercadoPago(IConfiguration configuration)
         {

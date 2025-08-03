@@ -12,34 +12,27 @@
 
 <!-- 2. Estrutura HTML Principal -->
 <div class="admin-layout">
-    <!-- Sidebar Principal (Focada em Vídeos) -->
     <aside class="admin-sidebar">
         <div class="sidebar-header">Admin</div>
         <ul class="sidebar-nav">
-            <li>
-                <a href="/Admin/Videos" class="active"><i class="fas fa-video"></i> Vídeos</a>
-            </li>
-            @* Links para Planos e Alunos foram removidos desta página *@
+            <li><a href="/Admin/Videos" class="active"><i class="fas fa-video"></i> Conteúdo</a></li>
         </ul>
     </aside>
 
-    <!-- Conteúdo Principal -->
     <main class="admin-main-content">
         <div class="admin-container">
-            <!-- Abas de Navegação (Agora com 3 abas) -->
             <div class="nav-tabs">
-                <div id="tab-create" class="nav-tab active">Cadastrar</div>
+                <div id="tab-create-video" class="nav-tab active">Cadastrar Vídeo</div>
+                <div id="tab-create-course" class="nav-tab">Criar Curso</div>
                 <div id="tab-manage" class="nav-tab">Gerenciar</div>
                 <div id="tab-viewer" class="nav-tab">Assistir Vídeo</div>
             </div>
 
-            <!-- Área de Conteúdo das Abas -->
             <div class="content-area">
-                <!-- Painel da Aba "Cadastrar" (CREATE) -->
-                <div id="content-create" class="tab-content active">
+                <div id="content-create-video" class="tab-content active">
                     <h2>Adicionar Novo Vídeo</h2>
                     <p>O processo é feito em duas etapas: primeiro envie o arquivo de vídeo e depois preencha seus detalhes.</p>
-                    <form id="create-video-form">
+                    <form id="create-video-form" enctype="multipart/form-data">
                         <div class="form-group">
                             <label for="video-file-input">1. Enviar Arquivo de Vídeo</label>
                             <input type="file" id="video-file-input" class="form-control" accept="video/mp4,video/x-m4v,video/*">
@@ -47,7 +40,7 @@
                         </div>
                         <fieldset id="metadata-fieldset" disabled>
                             <legend style="font-size: 1.2rem; font-weight: 600; margin-bottom: 1rem;">2. Detalhes do Vídeo</legend>
-                            <input type="hidden" id="storage-identifier-input">
+                            <input type="hidden" id="rageage-identifier-input">
                             <div class="form-group">
                                 <label for="video-title">Título do Vídeo</label>
                                 <input type="text" id="video-title" class="form-control" required>
@@ -56,13 +49,42 @@
                                 <label for="video-description">Descrição</label>
                                 <textarea id="video-description" class="form-control" rows="4"></textarea>
                             </div>
+
                             <div class="form-group">
-                                <label for="course-name">Nome do Curso</label>
-                                <input type="text" id="course-name" class="form-control" placeholder="Ex: Curso de C# Web" required>
-                                <small>Se o curso não existir, ele será criado automaticamente.</small>
+                                <label for="video-thumbnail-file">Thumbnail (Capa do Vídeo)</label>
+                                <input type="file" id="video-thumbnail-file" class="form-control" accept="image/jpeg, image/png">
+
+                                <div class="thumbnail-preview-container">
+                                    <img id="create-thumbnail-preview" class="thumbnail-preview" alt="Pré-visualização da Thumbnail">
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="video-course-select">Associar ao Curso</label>
+                                <select id="video-course-select" class="form-control" required>
+                                    <option value="" disabled selected>Carregando cursos...</option>
+                                    <option value="new_course" style="font-weight: bold;">-- Criar Novo Curso --</option>
+                                </select>
+                                <input type="text" id="video-course-new-name" class="form-control" style="display:none; margin-top:10px;" placeholder="Nome do Novo Curso">
                             </div>
                         </fieldset>
                         <button type="submit" id="save-video-button" class="btn btn-primary" disabled>Salvar Vídeo</button>
+                    </form>
+                </div>
+
+                <div id="content-create-course" class="tab-content">
+                    <h2>Criar Novo Curso</h2>
+                    <p>Use este formulário para criar um novo curso. Após a criação, ele aparecerá na lista da aba "Cadastrar Vídeo".</p>
+                    <form id="create-course-form">
+                        <div class="form-group">
+                            <label for="course-name-new">Nome do Curso</label>
+                            <input type="text" id="course-name-new" class="form-control" required placeholder="Ex: Dominando C#">
+                        </div>
+                        <div class="form-group">
+                            <label for="course-description-new">Descrição do Curso</label>
+                            <textarea id="course-description-new" class="form-control" rows="4"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Salvar Curso</button>
                     </form>
                 </div>
 
@@ -120,9 +142,19 @@
                 <label for="edit-video-description">Descrição</label>
                 <textarea id="edit-video-description" class="form-control" rows="4"></textarea>
             </div>
+
+            <div class="form-group">
+                <label for="edit-video-thumbnail-file">Alterar Thumbnail (Capa do Vídeo)</label>
+                <input type="file" id="edit-video-thumbnail-file" class="form-control" accept="image/jpeg, image/png">
+
+                <div class="thumbnail-preview-container">
+                    <img id="edit-thumbnail-preview" class="thumbnail-preview" alt="Thumbnail Atual">
+                </div>
+            </div>
+
             <button type="submit" class="btn btn-primary">Salvar Alterações</button>
         </form>
     </div>
 </div>
 
-<script src="~/js/admin/admin-videos.js" asp-append-version="true"></script>
+<script src="~/js/admin/videos/index.js" asp-append-version="true"></script>

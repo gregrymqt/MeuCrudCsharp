@@ -1,66 +1,75 @@
-﻿using System.Security.Claims;
+﻿using System;
+using System.Collections.Generic;
+using System.Security.Claims;
+using System.Threading.Tasks;
 using MercadoPago.Client;
 using MercadoPago.Client.Preference;
 using MercadoPago.Error;
 using MercadoPago.Resource.Preference;
-using MercadoPago.Resource.User;
-using MeuCrudCsharp.Data;
-using MeuCrudCsharp.Features.MercadoPago.Payments.Dtos;
+using MeuCrudCsharp.Features.Exceptions; // Nossas exceções
 using MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces;
 using MeuCrudCsharp.Features.MercadoPago.Tokens;
-using MeuCrudCsharp.Models;
-using Microsoft.AspNetCore.Http.HttpResults;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Configuration.UserSecrets;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging; // Injetando o Logger
 
 namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
 {
     public class PreferencePaymentService : IPreferencePayment
     {
-        protected readonly TokenMercadoPago _tokenMercadoPago;
-        private readonly ApiDbContext _context;
+        private readonly TokenMercadoPago _tokenMercadoPago;
         private readonly IConfiguration _configuration;
-        protected readonly PreferenceClient _preferenceClient;
+        private readonly PreferenceClient _preferenceClient;
+        private readonly ILogger<PreferencePaymentService> _logger;
 
         public PreferencePaymentService(
             TokenMercadoPago tokenMercadoPago,
-            ApiDbContext apiDbContext,
             IConfiguration configuration,
-            PreferenceClient preferenceClient
-        )
+            PreferenceClient preferenceClient,
+            ILogger<PreferencePaymentService> logger
+        ) // Adicionando ILogger
         {
             _tokenMercadoPago = tokenMercadoPago;
-            _context = apiDbContext;
             _configuration = configuration;
             _preferenceClient = preferenceClient;
+            _logger = logger;
         }
 
         public async Task<Preference> CreatePreferenceAsync(decimal amount, ClaimsPrincipal user)
         {
+            // Validação "Fail-Fast"
+            if (user?.Identity?.IsAuthenticated != true)
+                throw new ArgumentException("Usuário não autenticado.", nameof(user));
+
+            var userEmail = user.FindFirstValue(ClaimTypes.Email);
+            if (string.IsNullOrEmpty(userEmail))
+                throw new ArgumentException("O e-mail do usuário é obrigatório.", nameof(user));
+
+            var userName = user.FindFirstValue(ClaimTypes.Name);
+            if (string.IsNullOrEmpty(userName))
+                throw new ArgumentException("O userName do usuário é obrigatório.", nameof(user));
+
+            if (amount <= 0)
+                throw new ArgumentOutOfRangeException(
+                    nameof(amount),
+                    "O valor deve ser maior que zero."
+                );
+
             try
             {
-                var requestOptions = new RequestOptions();
-                requestOptions.AccessToken = _tokenMercadoPago._access_Token;
+                var requestOptions = new RequestOptions
+                {
+                    AccessToken = _tokenMercadoPago._access_Token,
+                };
                 requestOptions.CustomHeaders.Add("x-idempotency-key", Guid.NewGuid().ToString());
 
-                var profileData = new
-                {
-                    userId = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty,
-                    name = user.FindFirstValue(ClaimTypes.Name) ?? string.Empty,
-                    email = user.FindFirstValue(ClaimTypes.Email) ?? string.Empty,
-                };
-
-                // Validação para garantir que temos os dados essenciais do pagador.
-                if (string.IsNullOrEmpty(profileData.email))
-                {
-                    throw new InvalidOperationException(
-                        "O email do usuário é obrigatório para criar a preferência."
+                var baseUrl =
+                    _configuration["Redirect:Url"]
+                    ?? throw new InvalidOperationException(
+                        "A URL de redirecionamento não está configurada."
                     );
-                }
 
                 var externalReference = Guid.NewGuid().ToString();
 
-                var baseUrl = _configuration["Redirect:Url"];
                 var successUrl = $"{baseUrl}/pagamento/success";
                 var failureUrl = $"{baseUrl}/pagamento/error";
                 var pendingUrl = $"{baseUrl}/pagamento/pending";
@@ -82,11 +91,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
                             CurrencyId = "BRL",
                         },
                     },
-                    Payer = new PreferencePayerRequest
-                    {
-                        Name = profileData.name,
-                        Email = profileData.email,
-                    },
+                    Payer = new PreferencePayerRequest { Name = userName, Email = userEmail },
                     Purpose = "wallet_purchase",
                     ExternalReference = externalReference,
                     NotificationUrl = notificationUrl,
@@ -98,33 +103,51 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
                     },
                 };
 
-                var preference = await _preferenceClient.CreateAsync(
+                _logger.LogInformation(
+                    "Criando preferência de pagamento para o usuário {UserEmail} no valor de {Amount}",
+                    userEmail,
+                    amount
+                );
+
+                Preference preference = await _preferenceClient.CreateAsync(
                     preferenceRequest,
                     requestOptions
                 );
 
                 if (preference == null || string.IsNullOrEmpty(preference.Id))
                 {
-                    throw new InvalidOperationException(
-                        "A preferência de pagamento não pôde ser criada. A resposta da API foi nula."
+                    throw new AppServiceException(
+                        "A resposta da API do gateway de pagamento foi inválida ao criar a preferência."
                     );
                 }
 
-                // Em caso de sucesso, retorna o objeto de preferência completo.
-                // A responsabilidade de retornar um Ok() é do Controller.
+                _logger.LogInformation(
+                    "Preferência {PreferenceId} criada com sucesso.",
+                    preference.Id
+                );
                 return preference;
             }
             catch (MercadoPagoApiException mpex)
             {
-                // Em caso de erro da API do Mercado Pago, logue o erro (opcional) e relance a exceção.
-                // Exemplo de log: _logger.LogError(mpex, "Erro na API do Mercado Pago: {Message}", mpex.ApiError.Message);
-                throw; // Relança a exceção para a camada superior (Controller) tratar.
+                _logger.LogError(
+                    mpex,
+                    "Erro na API do Mercado Pago ao criar preferência para {UserEmail}. Erro: {ApiError}",
+                    userEmail,
+                    mpex.ApiError.Message
+                );
+                throw new ExternalApiException(
+                    "Ocorreu um erro ao comunicar com o gateway de pagamento.",
+                    mpex
+                );
             }
             catch (Exception ex)
             {
-                // Em caso de erro inesperado, logue e relance.
-                // Exemplo de log: _logger.LogError(ex, "Erro inesperado ao criar preferência de pagamento.");
-                throw;
+                _logger.LogError(
+                    ex,
+                    "Erro inesperado ao criar preferência para {UserEmail}.",
+                    userEmail
+                );
+                throw new AppServiceException("Ocorreu um erro inesperado em nosso sistema.", ex);
             }
         }
     }

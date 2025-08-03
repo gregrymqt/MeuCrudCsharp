@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace MeuCrudCsharp.Features.Payments.ViewModels
+namespace MeuCrudCsharp.Features.MercadoPago.ViewModels
 {
     public class ReceiptViewModel
     {
