@@ -2,10 +2,97 @@
 @model MeuCrudCsharp.Pages.IndexModel
 @{
     ViewData["Title"] = "Página Inicial";
-
 }
 
-<div class="text-center">
-    <h1 class="display-4">@Model.Mensagem</h1>
-    <p>Aprenda a construir apps web com ASP.NET Core.</p>
-</div>  
+<!-- Dependências -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+<link rel="stylesheet" href="~/css/index.css" asp-append-version="true" />
+
+<!-- Seção 1: Carrossel de Herói -->
+<section class="hero-section">
+    <div class="swiper">
+        <div class="swiper-wrapper">
+            <!-- Slide 1 -->
+            <div class="swiper-slide" style="background-image: url('https://placehold.co/1920x1080/007BFF/FFFFFF?text=Aprenda+a+Qualquer+Hora');">
+                <div class="slide-content">
+                    <h1>Conhecimento Sem Limites</h1>
+                    <p>Acesse centenas de cursos e aprenda no seu próprio ritmo, onde quer que esteja.</p>
+                    <a href="/Payment/Subscription" class="btn btn-primary">Ver Planos</a>
+                </div>
+            </div>
+            <!-- Slide 2 -->
+            <div class="swiper-slide" style="background-image: url('https://placehold.co/1920x1080/28A745/FFFFFF?text=Especialize-se');">
+                <div class="slide-content">
+                    <h1>Torne-se um Especialista</h1>
+                    <p>Cursos ministrados pelos melhores profissionais do mercado para alavancar sua carreira.</p>
+                    <a href="/Course/Index" class="btn btn-primary">Explorar Cursos</a>
+                </div>
+            </div>
+            <!-- Slide 3 -->
+            <div class="swiper-slide" style="background-image: url('https://placehold.co/1920x1080/6F42C1/FFFFFF?text=Comunidade+Ativa');">
+                <div class="slide-content">
+                    <h1>Junte-se à Nossa Comunidade</h1>
+                    <p>Troque experiências, tire dúvidas e conecte-se com outros alunos e instrutores.</p>
+                    <a href="/Auth/GoogleLogin" class="btn btn-primary">Comece Agora</a>
+                </div>
+            </div>
+        </div>
+        <!-- Navegação do Swiper -->
+        <div class="swiper-button-next"></div>
+        <div class="swiper-button-prev"></div>
+        <div class="swiper-pagination"></div>
+    </div>
+</section>
+
+<!-- Seção 2: Cards de Benefícios -->
+<section class="features-section">
+    <div class="container">
+        <h2 class="section-title">Por que escolher nossa plataforma?</h2>
+        <div class="features-grid">
+            <!-- Card 1 -->
+            <div class="feature-card">
+                <i class="fas fa-infinity"></i>
+                <h3>Acesso Vitalício</h3>
+                <p>Compre um curso uma vez e tenha acesso para sempre, incluindo todas as futuras atualizações.</p>
+                <a href="/Auth/GoogleLogin" class="btn btn-secondary">Criar Conta</a>
+            </div>
+            <!-- Card 2 -->
+            <div class="feature-card">
+                <i class="fas fa-certificate"></i>
+                <h3>Certificado de Conclusão</h3>
+                <p>Receba um certificado reconhecido ao final de cada curso para valorizar seu currículo.</p>
+                <a href="/Auth/GoogleLogin" class="btn btn-secondary">Ver Modelos</a>
+            </div>
+            <!-- Card 3 -->
+            <div class="feature-card">
+                <i class="fas fa-headset"></i>
+                <h3>Suporte Dedicado</h3>
+                <p>Nossa equipe de suporte está sempre disponível para ajudar você a ter a melhor experiência.</p>
+                <a href="/Auth/GoogleLogin" class="btn btn-secondary">Fale Conosco</a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Seção 3: Sobre Nós -->
+<section class="about-section">
+    <div class="container about-grid">
+        <div class="about-image">
+            <img src="https://placehold.co/600x600/E9ECEF/343A40?text=Nossa+Missão" alt="Equipe da plataforma de cursos">
+        </div>
+        <div class="about-text">
+            <h2 class="section-title">Nossa Missão é o seu Sucesso</h2>
+            <p>Acreditamos que a educação de qualidade tem o poder de transformar vidas. Nossa plataforma foi criada com o objetivo de democratizar o acesso ao conhecimento, oferecendo cursos práticos e atualizados que preparam você para os desafios reais do mercado de trabalho.</p>
+            <ul>
+                <li><i class="fas fa-check-circle"></i> Conteúdo criado por especialistas.</li>
+                <li><i class="fas fa-check-circle"></i> Metodologia focada na prática.</li>
+                <li><i class="fas fa-check-circle"></i> Flexibilidade para estudar como e quando quiser.</li>
+            </ul>
+        </div>
+    </div>
+</section>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+<script src="~/js/index.js" asp-append-version="true"></script>

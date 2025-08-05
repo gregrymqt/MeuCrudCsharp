@@ -3,67 +3,118 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - MeuCrudCsharp</title>
+    <title>@ViewData["Title"] - Seu Nome ou Marca</title>
 
     <link rel="icon" type="image/x-icon" href="~/favicon.ico">
+    
+    <!-- Fontes e Ícones -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 
-    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <!-- CSS -->
+    <link rel="stylesheet" href="~/css/layout/index.css" asp-append-version="true" />
 </head>
 <body>
-    <header>
-        <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom box-shadow mb-3">
-            <div class="container-fluid">
-                <a class="navbar-brand" asp-page="/Index">MeuCrudCsharp</a>
+    <!-- =================================================================
+         NOVA NAVBAR (HEADER)
+    ================================================================== -->
+    <header class="site-header">
+        <nav class="main-nav container">
+            <a class="nav-logo" asp-page="/Index">
+                <!-- Coloque seu logo aqui -->
+                <i class="fas fa-graduation-cap"></i>
+                <span>SeuCurso</span>
+            </a>
 
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
+            <ul class="nav-links">
+                <li><a class="nav-link" asp-page="/Index">Home</a></li>
+                <li><a class="nav-link" asp-page="/Course/Index">Cursos</a></li>
+                <li><a class="nav-link" asp-page="/About">Sobre</a></li>
+                <li><a class="nav-link" asp-page="/Contact">Contato</a></li>
+            </ul>
 
-                <div class="navbar-collapse collapse d-lg-inline-flex">
-                    <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-page="/Index">Home</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-page="/Privacy">Privacidade</a>
-                        </li>
-                    </ul>
-
-                    <ul class="navbar-nav ms-auto">
-                        @if (User.Identity.IsAuthenticated)
-                        {
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-controller="Account" asp-action="Logout">Sair</a>
-                            </li>
-                        }
-                        else
-                        {
-                            <li class="nav-item">
-                                <a class="nav-link btn btn-primary text-white px-3" asp-page="/auth/googleLogin">Login</a>
-                            </li>
-                        }
-                    </ul>
-                </div>
+            <div class="nav-user">
+                @if (User.Identity != null && User.Identity.IsAuthenticated)
+                {
+                    <div class="user-dropdown">
+                        <a asp-page="/Profile/Index" class="user-info">
+                            <img src="@(User.FindFirst("AvatarUrl")?.Value ?? "/images/default-avatar.png")" alt="Avatar" class="user-avatar" />
+                            <span>@User.Identity.Name</span>
+                        </a>
+                        <!-- Dropdown content (opcional) -->
+                    </div>
+                    <a class="btn btn-secondary" asp-page="/Auth/Logout">Sair</a>
+                }
+                else
+                {
+                    <a class="btn btn-primary" asp-page="/Auth/GoogleLogin">Entrar com Google</a>
+                }
             </div>
+            
+            <!-- Botão para menu mobile -->
+            <button class="nav-toggle" aria-label="Toggle navigation">
+                <i class="fas fa-bars"></i>
+            </button>
         </nav>
     </header>
 
-    <div class="container">
+    <div class="container main-container">
         <main role="main" class="pb-3">
             @RenderBody()
         </main>
     </div>
 
-    <footer class="border-top footer text-muted">
-        <div class="container">
-            &copy; 2025 - MeuCrudCsharp - <a asp-page="/Privacy">Política de Privacidade</a>
+    <!-- =================================================================
+         NOVO FOOTER
+    ================================================================== -->
+    <footer class="site-footer">
+        <div class="container footer-grid">
+            <div class="footer-about">
+                <h3 class="footer-logo">
+                    <i class="fas fa-graduation-cap"></i>
+                    <span>SeuCurso</span>
+                </h3>
+                <p>Transformando conhecimento em sucesso. A melhor plataforma para você aprender e crescer profissionalmente.</p>
+            </div>
+
+            <div class="footer-links">
+                <h4>Navegação</h4>
+                <ul>
+                    <li><a asp-page="/Course/Index">Cursos</a></li>
+                    <li><a asp-page="/About">Sobre Nós</a></li>
+                    <li><a asp-page="/Contact">Contato</a></li>
+                    <li><a asp-page="/Faq">FAQ</a></li>
+                </ul>
+            </div>
+
+            <div class="footer-links">
+                <h4>Legal</h4>
+                <ul>
+                    <li><a asp-page="/Privacy">Política de Privacidade</a></li>
+                    <li><a asp-page="/Terms">Termos de Uso</a></li>
+                </ul>
+            </div>
+
+            <div class="footer-social">
+                <h4>Siga-nos</h4>
+                <div class="social-icons">
+                    <a href="#" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+                    <a href="#" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+                    <a href="#" aria-label="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+                    <a href="#" aria-label="YouTube"><i class="fab fa-youtube"></i></a>
+                </div>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <div class="container">
+                &copy; @DateTime.Now.Year - SeuCurso. Todos os direitos reservados.
+            </div>
         </div>
     </footer>
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
 
     @await RenderSectionAsync("Scripts", required: false)
