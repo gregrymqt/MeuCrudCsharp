@@ -3,8 +3,9 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
-using MeuCrudCsharp.Features.Profiles.Admin.Dtos;
+using MeuCrudCsharp.Features.Plans.DTOs;
 using MeuCrudCsharp.Features.Profiles.Admin.Interfaces;
+using MeuCrudCsharp.Features.Subscriptions.DTOs;
 using Microsoft.Extensions.Configuration;
 
 namespace MeuCrudCsharp.Features.Profiles.Admin.Services
@@ -92,6 +93,17 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Services
                 );
         }
 
+        public async Task<PlanSearchResponseDto> SearchPlansAsync()
+        {
+            // Este método chama o endpoint de busca e desserializa para o novo DTO
+            var responseBody = await SendMercadoPagoRequestAsync(
+                HttpMethod.Get,
+                "/preapproval_plan/search",
+                (object?)null
+            );
+            return JsonSerializer.Deserialize<PlanSearchResponseDto>(responseBody)!;
+        }
+
         public async Task<SubscriptionResponseDto> UpdateSubscriptionCardAsync(
             string subscriptionId,
             string cardTokenId
@@ -135,6 +147,26 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Services
             return JsonSerializer.Deserialize<SubscriptionResponseDto>(responseBody)
                 ?? throw new InvalidOperationException(
                     "Erro ao desserializar a resposta da assinatura."
+                );
+        }
+
+        public async Task<PlanResponseDto> UpdatePlanAsync(string externalPlanId, UpdatePlanDto dto)
+        {
+            var endpoint = $"/preapproval_plan/{externalPlanId}";
+
+            // O payload agora inclui todos os campos do DTO
+            var payload = new
+            {
+                reason = dto.Reason,
+                back_url = dto.BackUrl,
+                auto_recurring = new { transaction_amount = dto.TransactionAmount },
+            };
+
+            var responseBody = await SendMercadoPagoRequestAsync(HttpMethod.Put, endpoint, payload);
+
+            return JsonSerializer.Deserialize<PlanResponseDto>(responseBody)
+                ?? throw new InvalidOperationException(
+                    "Erro ao desserializar a resposta da atualização do plano."
                 );
         }
     }

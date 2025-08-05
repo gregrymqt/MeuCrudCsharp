@@ -4,10 +4,9 @@
     ViewData["Title"] = "Nossos Planos";
 }
 
-<!-- 1. Dependência (Font Awesome para ícones) -->
+<!-- Dependências -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 <link rel="stylesheet" href="~/css/subscription/index.css" asp-append-version="true" />
-
 
 <div class="plans-container">
     <div class="plans-header">
@@ -15,38 +14,14 @@
         <p>Acesso ilimitado a todos os cursos, com novos vídeos toda semana.</p>
     </div>
 
-    <div class="plans-grid">
-
-        <!-- Card do Plano Mensal -->
-        <div class="plan-card">
-            <h2 class="plan-title">Plano Mensal</h2>
-            <div class="plan-price">R$ 49<span>,90/mês</span></div>
-            <p class="plan-billing-info">&nbsp;</p> <!-- Espaço para alinhar com o outro card -->
-            <ul class="plan-features">
-                <li><i class="fas fa-check-circle"></i> Acesso a todos os cursos</li>
-                <li><i class="fas fa-check-circle"></i> Vídeos novos toda semana</li>
-                <li><i class="fas fa-check-circle"></i> Suporte via comunidade</li>
-                <li><i class="fas fa-check-circle"></i> Cancele quando quiser</li>
-            </ul>
-            <!-- O link leva para a página de pagamento, passando o plano e o valor -->
-            <a href="/Payment/CreditCard?plano=mensal&valor=49.90" class="btn-choose-plan">Assinar Agora</a>
+    <!-- MUDANÇA: O contêiner agora está vazio e tem um ID -->
+    <div class="plans-grid" id="plans-grid-container">
+        <!-- O JavaScript irá inserir os cards dos planos aqui -->
+        <div class="loader" id="plans-loader">
+            <i class="fas fa-spinner fa-spin"></i> Carregando planos...
         </div>
-
-        <!-- Card do Plano Anual (Recomendado) -->
-        <div class="plan-card recommended">
-            <div class="recommendation-badge">MAIS POPULAR</div>
-            <h2 class="plan-title">Plano Anual</h2>
-            <div class="plan-price">R$ 41<span>,58/mês</span></div>
-            <p class="plan-billing-info">Cobrado R$ 499,00 anualmente</p>
-            <ul class="plan-features">
-                <li><i class="fas fa-check-circle"></i> Acesso a todos os cursos</li>
-                <li><i class="fas fa-check-circle"></i> Vídeos novos toda semana</li>
-                <li><i class="fas fa-check-circle"></i> Suporte via comunidade</li>
-                <li><i class="fas fa-check-circle"></i> Cancele quando quiser</li>
-            </ul>
-            <!-- O link leva para a página de pagamento, passando o plano e o valor -->
-            <a href="/Payment/CreditCard?plano=anual&valor=499.00" class="btn-choose-plan">Economize com o Anual</a>
-        </div>
-
     </div>
 </div>
+
+<!-- MUDANÇA: Adicionando o script JS no final da página -->
+<script src="~/js/subscription/index.js" asp-append-version="true"></script>

@@ -1,4 +1,5 @@
-﻿using MeuCrudCsharp.Features.Profiles.Admin.Dtos;
+﻿using MeuCrudCsharp.Features.Plans.DTOs;
+using MeuCrudCsharp.Features.Subscriptions.DTOs;
 
 namespace MeuCrudCsharp.Features.Profiles.Admin.Interfaces
 {
@@ -7,7 +8,9 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Interfaces
     {
         // --- Métodos de Criação (usados pelo Admin e no checkout do usuário) ---
         Task<PlanResponseDto> CreatePlanAsync(CreatePlanDto planDto);
-        Task<SubscriptionResponseDto> CreateSubscriptionAsync(CreateSubscriptionDto subscriptionDto);
+        Task<SubscriptionResponseDto> CreateSubscriptionAsync(
+            CreateSubscriptionDto subscriptionDto
+        );
 
         // --- MÉTODOS ADICIONADOS QUE ESTAVAM FALTANDO ---
 
@@ -16,19 +19,32 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Interfaces
         /// </summary>
         Task<SubscriptionResponseDto> GetSubscriptionAsync(string subscriptionId);
 
+        Task<PlanSearchResponseDto> SearchPlansAsync();
+
         /// <summary>
         /// Atualiza o cartão de crédito de uma assinatura.
         /// </summary>
-        Task<SubscriptionResponseDto> UpdateSubscriptionCardAsync(string subscriptionId, string cardTokenId);
+        Task<SubscriptionResponseDto> UpdateSubscriptionCardAsync(
+            string subscriptionId,
+            string cardTokenId
+        );
 
         /// <summary>
         /// Atualiza o status de uma assinatura (ex: para 'cancelled' ou 'authorized').
         /// </summary>
-        Task<SubscriptionResponseDto> UpdateSubscriptionStatusAsync(string subscriptionId, string newStatus);
+        Task<SubscriptionResponseDto> UpdateSubscriptionStatusAsync(
+            string subscriptionId,
+            string newStatus
+        );
 
         /// <summary>
         /// Atualiza o valor de uma assinatura (geralmente usado por Admins).
         /// </summary>
-        Task<SubscriptionResponseDto> UpdateSubscriptionValueAsync(string subscriptionId, UpdateSubscriptionValueDto dto);
+        Task<SubscriptionResponseDto> UpdateSubscriptionValueAsync(
+            string subscriptionId,
+            UpdateSubscriptionValueDto dto
+        );
+
+        Task<PlanResponseDto> UpdatePlanAsync(string externalPlanId, UpdatePlanDto updateDto);
     }
 }

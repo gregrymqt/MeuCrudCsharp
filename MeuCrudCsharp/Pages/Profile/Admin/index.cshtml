@@ -13,7 +13,7 @@
     <aside class="admin-sidebar">
         <div class="sidebar-header">Gerenciamento</div>
         <ul class="sidebar-nav">
-            <li><a href="#" id="nav-plans" class="sidebar-link active"><i class="fas fa-tags"></i> Cadastrar Planos</a></li>
+            <li><a href="#" id="nav-plans" class="sidebar-link active"><i class="fas fa-tags"></i> Gerenciar Planos</a></li>
             <li><a href="#" id="nav-students" class="sidebar-link"><i class="fas fa-users"></i> Alunos</a></li>
             <li><a href="#" id="nav-subscriptions" class="sidebar-link"><i class="fas fa-cogs"></i> Gerenciar Assinaturas</a></li>
         </ul>
@@ -23,28 +23,58 @@
     <main class="admin-main-content">
         <div class="admin-container">
             <!-- Painel "Criar Plano" -->
+
             <div id="content-plans" class="content-panel active">
-                <h2>Criar Novo Plano de Assinatura</h2>
-                <form id="create-plan-form" class="form-section">
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label for="plan-reason">Nome do Plano (Motivo)</label>
-                            <input type="text" id="plan-reason" class="form-control" placeholder="Ex: Acesso Mensal Premium" required>
+
+                <!-- Seção 1: Criar Novo Plano (Seu formulário existente) -->
+                <div class="form-section">
+                    <h2>Criar Novo Plano de Assinatura</h2>
+                    <form id="create-plan-form">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="plan-reason">Nome do Plano (Motivo)</label>
+                                <input type="text" id="plan-reason" class="form-control" placeholder="Ex: Acesso Mensal Premium" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="plan-type">Tipo de Plano</label>
+                                <select id="plan-type" class="form-select">
+                                    <option value="months" selected>Mensal</option>
+                                    <option value="years">Anual</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="plan-amount">Valor (R$)</label>
+                                <input type="number" id="plan-amount" class="form-control" step="0.01" placeholder="Ex: 49.90" required>
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label for="plan-type">Tipo de Plano</label>
-                            <select id="plan-type" class="form-select">
-                                <option value="months" selected>Mensal</option>
-                                <option value="years">Anual</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="plan-amount">Valor (R$)</label>
-                            <input type="number" id="plan-amount" class="form-control" step="0.01" placeholder="Ex: 49.90" required>
-                        </div>
-                    </div>
-                    <button type="submit" class="btn btn-primary">Criar Plano</button>
-                </form>
+                        <button type="submit" class="btn btn-primary">Criar Plano no Mercado Pago</button>
+                    </form>
+                </div>
+
+                <!-- Divisor visual entre as seções -->
+                <hr class="section-divider">
+
+                <!-- NOVO: Seção 2: Gerenciar Planos Existentes (Read, Update, Delete) -->
+                <div class="list-section">
+                    <h2>Planos Existentes</h2>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Nome do Plano</th>
+                                <th>Tipo</th>
+                                <th>Valor</th>
+                                <th>Status</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="plans-table-body">
+                            <!-- O JavaScript irá popular esta tabela com os dados da API -->
+                            <tr>
+                                <td colspan="5" class="text-center">Carregando planos...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
             <!-- Painel "Alunos" -->
@@ -73,6 +103,7 @@
                         <option value="reactivate">Reativar Assinatura</option>
                     </select>
                 </div>
+
                 <div id="subscription-actions-container">
                     <form id="form-search" class="action-form">
                         <div class="form-group">
@@ -98,10 +129,45 @@
                         <button type="submit" class="btn btn-success">Reativar Assinatura</button>
                     </form>
                 </div>
+
                 <div id="action-results" style="margin-top: 1.5rem;"></div>
             </div>
         </div>
     </main>
+</div>
+
+<div id="edit-plan-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title">Editar Plano</h3>
+            <span class="close-button" id="close-edit-plan-modal">&times;</span>
+        </div>
+        <form id="edit-plan-form">
+            <input type="hidden" id="edit-plan-id">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="edit-plan-reason">Nome do Plano (Motivo)</label>
+                    <input type="text" id="edit-plan-reason" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-plan-amount">Valor da Transação (R$)</label>
+                    <input type="number" id="edit-plan-amount" class="form-control" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-plan-frequency-type">Tipo de Frequência</label>
+                    <select id="edit-plan-frequency-type" class="form-select" disabled>
+                        <option value="months">Mensal</option>
+                        <option value="years">Anual</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="edit-plan-back-url">URL de Retorno</label>
+                    <input type="url" id="edit-plan-back-url" class="form-control" placeholder="https://seusite.com/retorno">
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+        </form>
+    </div>
 </div>
 
 <!-- 4. JavaScript para interagir com a API -->

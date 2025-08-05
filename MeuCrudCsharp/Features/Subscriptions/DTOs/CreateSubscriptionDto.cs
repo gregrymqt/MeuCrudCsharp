@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace MeuCrudCsharp.Features.Profiles.Admin.Dtos
+namespace MeuCrudCsharp.Features.Subscriptions.DTOs
 {
     public class CreateSubscriptionDto
     {

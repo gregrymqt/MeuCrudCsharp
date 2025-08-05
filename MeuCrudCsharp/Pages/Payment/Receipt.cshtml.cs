@@ -1,60 +1,85 @@
+using System;
 using System.Security.Claims;
 using System.Threading.Tasks;
-using MeuCrudCsharp.Data;
+using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.MercadoPago.ViewModels;
+using MeuCrudCsharp.Features.Profiles.UserAccount.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 [Authorize]
 public class ReceiptModel : PageModel
 {
-    private readonly ApiDbContext _context;
+    // MUDANÇA 1: Injetando as dependências corretas
+    private readonly IUserAccountService _userAccountService;
+    private readonly ILogger<ReceiptModel> _logger;
 
-    public ReceiptModel(ApiDbContext context)
+    public ReceiptModel(IUserAccountService userAccountService, ILogger<ReceiptModel> logger)
     {
-        _context = context;
+        _userAccountService = userAccountService;
+        _logger = logger;
     }
 
-    // A propriedade para guardar os dados que ser�o exibidos na p�gina
-    [BindProperty]
-    public ReceiptViewModel Receipt { get; set; }
+    public ReceiptViewModel Receipt { get; set; } = new();
 
     public async Task<IActionResult> OnGetAsync(string paymentId)
     {
-        if (string.IsNullOrEmpty(paymentId))
+        // MUDANÇA 2: Bloco try-catch para lidar com todas as possíveis falhas
+        try
         {
-            return NotFound();
+            // Validação "Fail-Fast"
+            if (!Guid.TryParse(paymentId, out var paymentGuid))
+            {
+                _logger.LogWarning("Tentativa de acesso ao recibo com um paymentId inválido: {PaymentId}", paymentId);
+                return BadRequest("O ID do pagamento é inválido.");
+            }
+
+            var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdString, out var userId))
+            {
+  
+                return Unauthorized();
+            }
+
+            // MUDANÇA 3: Chamando o serviço para buscar os dados
+            var payment = await _userAccountService.GetPaymentForReceiptAsync(userId, paymentGuid);
+
+            // Regra de negócio: apenas recibos de pagamentos aprovados podem ser vistos.
+            if (payment.Status != "aprovado")
+            {
+                _logger.LogWarning("Tentativa de acesso a recibo de pagamento não aprovado. User: {UserId}, Payment: {PaymentId}, Status: {Status}", userId, paymentId, payment.Status);
+                // Forbid é o resultado correto para acesso não autorizado a um recurso válido.
+                return Forbid();
+            }
+
+            // Mapeamento para o ViewModel (lógica de apresentação)
+            Receipt = new ReceiptViewModel
+            {
+                CompanyName = "Nome da Sua Empresa",
+                CompanyCnpj = "XX.XXX.XXX/0001-XX",
+                PaymentId = payment.Id.ToString(),
+                PaymentDate = payment.DateApproved ?? DateTime.Now,
+                CustomerName = payment.User.Name,
+                CustomerCpf = payment.CustomerCpf,
+                Amount = payment.Amount,
+                PaymentMethod = $"Cartão de Crédito final {payment.LastFourDigits}",
+            };
+
+            return Page();
         }
-
-        // Pega o ID do usu�rio logado para seguran�a
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-
-        // Busca o pagamento no banco de dados, garantindo que ele pertence ao usu�rio logado
-        var payment = await _context
-            .Payment_User.Include(p => p.User) // Inclui os dados do usu�rio na consulta
-            .FirstOrDefaultAsync(p => p.PaymentId == paymentId && p.UserId.ToString() == userId);
-
-        if (payment == null || payment.Status != "approved")
+        catch (ResourceNotFoundException ex)
         {
-            // Se o pagamento n�o existe, n�o pertence ao usu�rio ou n�o foi aprovado, n�o mostra.
-            return Forbid();
+            _logger.LogWarning(ex, "Recurso de pagamento não encontrado.");
+            // Se o serviço não encontrou o pagamento, retorna 404 Not Found.
+            return NotFound(ex.Message);
         }
-
-        // Preenche o ViewModel com os dados do banco
-        Receipt = new ReceiptViewModel
+        catch (Exception ex)
         {
-            CompanyName = "Nome da Sua Empresa",
-            CompanyCnpj = "XX.XXX.XXX/0001-XX",
-            PaymentId = payment.PaymentId,
-            PaymentDate = payment.DateApproved ?? System.DateTime.Now, // Usa a data de aprova��o
-            CustomerName = payment.User.Name,
-            CustomerCpf = payment.CustomerCpf, // Voc� buscaria isso do objeto do MP que salvou no DB
-            Amount = payment.Amount,
-            PaymentMethod = $"Cart�o de Cr�dito final {payment.LastFourDigits}",
-        };
-
-        return Page();
+            _logger.LogError(ex, "Erro inesperado ao gerar o recibo para o pagamento {PaymentId}", paymentId);
+            TempData["ErrorMessage"] = "Não foi possível gerar seu recibo no momento. Tente novamente mais tarde.";
+            return RedirectToPage("/Profile/Index"); // Redireciona para uma página segura
+        }
     }
 }

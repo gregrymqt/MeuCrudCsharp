@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Hangfire;
 using Hangfire.Redis.StackExchange;
 using MeuCrudCsharp.Data;
@@ -10,6 +11,7 @@ using MeuCrudCsharp.Features.MercadoPago.Jobs; // Adicionado para os Jobs
 using MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces;
 using MeuCrudCsharp.Features.MercadoPago.Payments.Services;
 using MeuCrudCsharp.Features.MercadoPago.Tokens;
+using MeuCrudCsharp.Features.Plans.Interfaces;
 using MeuCrudCsharp.Features.Profiles.Admin.Interfaces;
 using MeuCrudCsharp.Features.Profiles.Admin.Services;
 using MeuCrudCsharp.Features.Profiles.UserAccount.Interfaces;
@@ -23,7 +25,6 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.StackExchangeRedis;
 using StackExchange.Redis;
-using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -119,6 +120,7 @@ builder.Services.AddTransient<VideoProcessingService>();
 builder.Services.AddScoped<IUserAccountService, UserAccountService>();
 builder.Services.AddScoped<IVideoProcessingService, VideoProcessingService>();
 builder.Services.AddScoped<ICourseService, CourseService>();
+builder.Services.AddScoped<IPlanService, IPlanService>();
 builder.Services.AddHttpContextAccessor();
 
 // 6. Adiciona o servidor Hangfire que processa os jobs na fila

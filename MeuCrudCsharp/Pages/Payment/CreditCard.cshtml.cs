@@ -1,65 +1,95 @@
+using System;
+using System.Security.Claims;
+using System.Threading.Tasks;
 using MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces;
-using Microsoft.AspNetCore.Authorization; // Para proteger a p�gina
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.Extensions.Configuration; // Necessário para IConfiguration
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace MeuCrudCsharp.Pages.Payment
 {
-    [Authorize] // Garante que apenas usu�rios logados podem acessar esta p�gina
+    [Authorize]
     public class CreditCardModel : PageModel
     {
-        // Inje��es de depend�ncia corretas
         private readonly IPreferencePayment _preferencePayment;
         private readonly IConfiguration _configuration;
+        private readonly ILogger<CreditCardModel> _logger; // MUDANÇA 1: Adicionando Logger
 
+        // Apenas o 'Plano' vem da URL. O 'Valor' será definido no backend.
         [BindProperty(SupportsGet = true)]
         public string? Plano { get; set; }
 
-        [BindProperty(SupportsGet = true)]
-        public decimal Valor { get; set; }
-
-        // --- PROPRIEDADES PARA ENVIAR DADOS PARA O JAVASCRIPT ---
+        public decimal Valor { get; private set; } // Não é mais um BindProperty
         public string? PublicKey { get; private set; }
-        public string? PreferenceId { get; private set; } // Se você usar preferenceId
-
+        public string? PreferenceId { get; private set; }
         public string? PreapprovalPlanId { get; private set; }
 
-        public CreditCardModel(IPreferencePayment preferencePayment, IConfiguration configuration)
+        public CreditCardModel(
+            IPreferencePayment preferencePayment,
+            IConfiguration configuration,
+            ILogger<CreditCardModel> logger) // MUDANÇA 1
         {
             _preferencePayment = preferencePayment;
             _configuration = configuration;
+            _logger = logger;
         }
 
         public async Task<IActionResult> OnGetAsync()
         {
-            if (string.IsNullOrEmpty(Plano))
+            // MUDANÇA 2: Validação robusta do plano
+            if (string.IsNullOrEmpty(Plano) || (Plano.ToLower() != "mensal" && Plano.ToLower() != "anual"))
             {
-                return RedirectToPage("/Subscription/Index"); // Volta se não houver plano
+                _logger.LogWarning("Tentativa de acesso à página de pagamento com plano inválido: {Plano}", Plano);
+                return RedirectToPage("/Subscription/Index"); // Volta para a página de planos
             }
 
-            var preference = await _preferencePayment.CreatePreferenceAsync(Valor, this.User);
-            // Validação simples para garantir que o valor é válido
-            if (Valor <= 0)
+            // MUDANÇA 3: Lógica para buscar o valor e o ID da configuração
+            try
             {
-                // Redireciona de volta para a página de planos se os dados estiverem incorretos
+                // Usamos a capitalização correta para buscar no appsettings (Mensal, Anual)
+                var planConfigKey = $"MercadoPago:Plans:{Plano.Capitalize()}";
+
+                Valor = _configuration.GetValue<decimal>($"{planConfigKey}:Price");
+                PreapprovalPlanId = _configuration.GetValue<string>($"{planConfigKey}:Id");
+
+                // Validação para garantir que a configuração foi encontrada
+                if (Valor <= 0)
+                {
+                    throw new InvalidOperationException($"O preço para o plano '{Plano}' não está configurado ou é inválido.");
+                }
+                if (Plano.ToLower() == "anual" && string.IsNullOrEmpty(PreapprovalPlanId))
+                {
+                    throw new InvalidOperationException($"O PreapprovalPlanId para o plano '{Plano}' não está configurado.");
+                }
+
+                // Carrega a chave pública para o frontend
+                PublicKey = _configuration["MercadoPago:PUBLIC_KEY"];
+
+                // Cria a preferência de pagamento com o VALOR SEGURO
+                var preference = await _preferencePayment.CreatePreferenceAsync(Valor, User);
+                PreferenceId = preference.Id;
+
+                return Page();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao configurar a página de pagamento para o plano {Plano}", Plano);
+                // Adicione uma mensagem de erro para o usuário, se desejar
+                TempData["ErrorMessage"] = "Não foi possível preparar seu pagamento. Tente novamente mais tarde.";
                 return RedirectToPage("/Subscription/Index");
             }
+        }
+    }
 
-            // Carrega as configurações do seu appsettings.json para enviar ao frontend
-            PublicKey = _configuration["MercadoPago:PublicKey"];
-            PreferenceId = preference.Id;
-
-            PreapprovalPlanId = _configuration[$"MercadoPago:Plans:{Plano}"];
-
-            if (string.IsNullOrEmpty(PreapprovalPlanId))
-            {
-                // Lida com o caso de um plano inválido na URL
-                // Logar erro, redirecionar, etc.
-                return BadRequest("Plano de assinatura inválido.");
-            }
-
-            return Page();
+    // Pequena extensão para facilitar a capitalização (pode ir em um arquivo separado)
+    public static class StringExtensions
+    {
+        public static string Capitalize(this string input)
+        {
+            if (string.IsNullOrEmpty(input)) return string.Empty;
+            return char.ToUpper(input[0]) + input.Substring(1).ToLower();
         }
     }
 }

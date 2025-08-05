@@ -84,53 +84,227 @@
         });
     }
 
-    // Lógica do Painel "Alunos"
-    async function loadStudents() {
-        const studentsTableBody = document.getElementById('students-table-body');
-        studentsTableBody.innerHTML = '<tr><td colspan="4" style="text-align: center;">Carregando alunos...</td></tr>';
+    const plansTableBody = document.getElementById('plans-table-body');
+    const editModal = document.getElementById('edit-plan-modal');
+    const editForm = document.getElementById('edit-plan-form');
+    const closeEditModalButton = document.getElementById('close-edit-plan-modal');
 
+    // Campos do formulário de edição
+    const editPlanId = document.getElementById('edit-plan-id');
+    const editPlanReason = document.getElementById('edit-plan-reason');
+    const editPlanAmount = document.getElementById('edit-plan-amount');
+    const editPlanFrequencyType = document.getElementById('edit-plan-frequency-type');
+    const editPlanBackUrl = document.getElementById('edit-plan-back-url');
+
+    const API_BASE_URL = '/api/admin/plans'; // Endpoint base para os planos
+    const sessionCache = {};
+
+    // =====================================================================
+    // READ: Buscar e Renderizar os Planos
+    // =====================================================================
+    async function fetchAndCache(cacheKey, apiUrl, renderFunction, tableBody) {
+        // 1. Tenta carregar do cache primeiro
+        if (sessionCache[cacheKey]) {
+            console.log(`Carregando '${cacheKey}' do cache da sessão.`);
+            renderFunction(sessionCache[cacheKey]);
+            return;
+        }
+
+        // 2. Se não estiver no cache, busca na API
         try {
-            // --- CHAMADA REAL À API ---
-            const response = await fetch('/api/admin/students');
+            tableBody.innerHTML = `<tr><td colspan="5" class="text-center">Carregando...</td></tr>`;
+            const response = await fetch(apiUrl);
             if (!response.ok) {
-                throw new Error('Falha ao carregar os dados dos alunos do servidor.');
+                throw new Error('Falha ao buscar os dados do servidor.');
             }
-            const students = await response.json();
-            // -------------------------
+            const data = await response.json();
 
-            studentsTableBody.innerHTML = ''; // Limpa a tabela
-
-            if (students.length === 0) {
-                studentsTableBody.innerHTML = '<tr><td colspan="4" style="text-align: center;">Nenhum aluno encontrado.</td></tr>';
-                return;
-            }
-
-            students.forEach(student => {
-                // Lógica para definir a cor do status
-                let statusColor = 'grey'; // Padrão
-                if (student.subscriptionStatus.toLowerCase() === 'approved' || student.subscriptionStatus.toLowerCase() === 'ativa') {
-                    statusColor = 'green';
-                } else if (student.subscriptionStatus.toLowerCase() === 'cancelled' || student.subscriptionStatus.toLowerCase() === 'cancelada') {
-                    statusColor = 'red';
-                } else if (student.subscriptionStatus.toLowerCase() === 'paused' || student.subscriptionStatus.toLowerCase() === 'pausada') {
-                    statusColor = 'orange';
-                }
-
-                const row = `
-                <tr>
-                    <td>${student.name}</td>
-                    <td>${student.email}</td>
-                    <td><span style="color: ${statusColor}; font-weight: 600;">${student.subscriptionStatus}</span></td>
-                    <td>${new Date(student.registrationDate).toLocaleDateString()}</td>
-                </tr>
-            `;
-                studentsTableBody.innerHTML += row;
-            });
+            // 3. Armazena no cache e renderiza
+            sessionCache[cacheKey] = data;
+            renderFunction(data);
 
         } catch (error) {
-            console.error('Erro ao carregar alunos:', error);
-            studentsTableBody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: red;">${error.message}</td></tr>`;
+            console.error(`Erro ao carregar '${cacheKey}':`, error);
+            tableBody.innerHTML = `<tr><td colspan="5" class="text-center text-danger">${error.message}</td></tr>`;
         }
+    }
+
+    // =====================================================================
+    // READ: Buscar e Renderizar os Planos
+    // =====================================================================
+    async function loadPlans() {
+        await fetchAndCache('allPlans', API_BASE_URL, renderPlansTable, plansTableBody);
+    }
+
+    function renderPlansTable(plans) {
+        plansTableBody.innerHTML = ''; // Limpa a tabela
+        if (!plans || plans.length === 0) {
+            plansTableBody.innerHTML = '<tr><td colspan="5" class="text-center">Nenhum plano encontrado.</td></tr>';
+            return;
+        }
+
+        plans.forEach(plan => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${plan.reason || 'N/A'}</td>
+                <td>${plan.autoRecurring?.frequencyType === 'years' ? 'Anual' : 'Mensal'}</td>
+                <td>R$ ${plan.autoRecurring?.transactionAmount.toFixed(2).replace('.', ',')}</td>
+                <td><span class="status-badge status-${plan.status?.toLowerCase()}">${plan.status || 'N/A'}</span></td>
+                <td class="actions">
+                    <button class="btn btn-secondary btn-sm btn-edit" data-plan-id="${plan.id}">Editar</button>
+                    <button class="btn btn-danger btn-sm btn-delete" data-plan-id="${plan.id}">Excluir</button>
+                </td>
+            `;
+            plansTableBody.appendChild(row);
+        });
+    }
+
+    // =====================================================================
+    // UPDATE: Abrir e Submeter o Modal de Edição
+    // =====================================================================
+    function openEditModal(plan) {
+        editPlanId.value = plan.id;
+        editPlanReason.value = plan.reason;
+        editPlanAmount.value = plan.autoRecurring.transactionAmount;
+        editPlanFrequencyType.value = plan.autoRecurring.frequencyType;
+        editPlanBackUrl.value = plan.back_url || ''; // Opcional
+        editModal.style.display = 'block';
+    }
+
+    function closeEditModal() {
+        editModal.style.display = 'none';
+        editForm.reset();
+    }
+
+    editForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const planId = editPlanId.value;
+        const submitButton = editForm.querySelector('button[type="submit"]');
+        submitButton.disabled = true;
+        submitButton.textContent = 'Salvando...';
+
+        const updatedData = {
+            reason: editPlanReason.value,
+            back_url: editPlanBackUrl.value,
+            auto_recurring: {
+                transaction_amount: parseFloat(editPlanAmount.value)
+            }
+        };
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/${planId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updatedData)
+            });
+
+            if (!response.ok) throw new Error('Falha ao atualizar o plano.');
+
+            alert('Plano atualizado com sucesso!');
+            closeEditModal();
+            await loadPlans(); // Recarrega a lista
+
+        } catch (error) {
+            console.error('Erro ao atualizar plano:', error);
+            alert('Erro ao atualizar o plano.');
+        } finally {
+            submitButton.disabled = false;
+            submitButton.textContent = 'Salvar Alterações';
+        }
+    });
+
+    // =====================================================================
+    // DELETE: Excluir um Plano
+    // =====================================================================
+    async function deletePlan(planId) {
+        // Confirmação para evitar exclusão acidental
+        if (!confirm('Você tem certeza que deseja excluir este plano? Esta ação não pode ser desfeita.')) {
+            return;
+        }
+
+        try {
+            // Supondo que você tenha um endpoint DELETE /api/admin/plans/{id}
+            const response = await fetch(`${API_BASE_URL}/${planId}`, {
+                method: 'DELETE'
+            });
+
+            if (!response.ok) throw new Error('Falha ao excluir o plano.');
+
+            alert('Plano excluído com sucesso!');
+            await loadPlans(); // Recarrega a lista
+
+        } catch (error) {
+            console.error('Erro ao excluir plano:', error);
+            alert('Erro ao excluir o plano.');
+        }
+    }
+
+    // =====================================================================
+    // Event Listeners
+    // =====================================================================
+    closeEditModalButton.addEventListener('click', closeEditModal);
+
+    // Delegação de eventos para os botões de editar e excluir
+    plansTableBody.addEventListener('click', async (e) => {
+        const target = e.target;
+        if (target.classList.contains('btn-edit')) {
+            const planId = target.dataset.planId;
+            // Busca os dados completos do plano para preencher o modal
+            const response = await fetch(`${API_BASE_URL}/${planId}`);
+            const plan = await response.json();
+            openEditModal(plan);
+        }
+        if (target.classList.contains('btn-delete')) {
+            const planId = target.dataset.planId;
+            await deletePlan(planId);
+        }
+    });
+
+    // Ponto de Entrada: Carrega os planos ao iniciar a página
+    loadPlans();
+
+    // Lógica do Painel "Alunos"
+    function renderStudentsTable(students) {
+        const studentsTableBody = document.getElementById('students-table-body');
+        studentsTableBody.innerHTML = ''; // Limpa a tabela
+
+        if (!students || students.length === 0) {
+            studentsTableBody.innerHTML = '<tr><td colspan="4" style="text-align: center;">Nenhum aluno encontrado.</td></tr>';
+            return;
+        }
+
+        students.forEach(student => {
+            // Lógica para definir a cor do status
+            let statusColor = 'grey'; // Padrão
+            const status = student.subscriptionStatus?.toLowerCase() || '';
+
+            if (status === 'approved' || status === 'ativa') {
+                statusColor = 'green';
+            } else if (status === 'cancelled' || status === 'cancelada') {
+                statusColor = 'red';
+            } else if (status === 'paused' || status === 'pausada') {
+                statusColor = 'orange';
+            }
+
+            const row = `
+            <tr>
+                <td>${student.name}</td>
+                <td>${student.email}</td>
+                <td><span style="color: ${statusColor}; font-weight: 600;">${student.subscriptionStatus}</span></td>
+                <td>${new Date(student.registrationDate).toLocaleDateString()}</td>
+            </tr>
+        `;
+            studentsTableBody.innerHTML += row;
+        });
+    }
+
+    /**
+     * Busca os dados dos alunos, utilizando a função de cache.
+     */
+    async function loadStudents() {
+        const studentsTableBody = document.getElementById('students-table-body');
+        // Reutiliza a função fetchAndCache para buscar e cachear os dados dos alunos
+        await fetchAndCache('allStudents', '/api/admin/students', renderStudentsTable, studentsTableBody);
     }
 
     // Lógica do Painel "Gerenciar Assinaturas"
@@ -219,4 +393,8 @@
             showResults(error, false);
         }
     });
+
+
+
+    loadPlans();
 });

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Text.Json.Serialization;
 
-namespace MeuCrudCsharp.Features.Profiles.Admin.Dtos
+namespace MeuCrudCsharp.Features.Subscriptions.DTOs
 {
     // DTO auxiliar para os dados do cartão aninhados
     public class SubscriptionCardDto

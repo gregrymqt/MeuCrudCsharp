@@ -1,6 +1,7 @@
 ﻿using System.Text.Json.Serialization;
+using MeuCrudCsharp.Features.Profiles.Admin.Dtos;
 
-namespace MeuCrudCsharp.Features.Profiles.Admin.Dtos
+namespace MeuCrudCsharp.Features.Plans.DTOs
 {
     public class PlanResponseDto
     {
@@ -15,5 +16,9 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Dtos
 
         [JsonPropertyName("date_created")]
         public DateTime DateCreated { get; set; }
+
+        [JsonPropertyName("ExternalPlanId")]
+        public string ExternalPlanId { get; set; }
+        public AutoRecurringDto? AutoRecurring { get; set; }
     }
 }

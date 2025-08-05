@@ -9,6 +9,7 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Interfaces
         Task<UserProfileDto> GetUserProfileAsync(Guid userId);
         Task<SubscriptionDetailsDto?> GetUserSubscriptionDetailsAsync(Guid userId);
         Task<IEnumerable<Models.Payments>> GetUserPaymentHistoryAsync(Guid userId);
+        Task<Models.Payments> GetPaymentForReceiptAsync(Guid userId, Guid paymentId);
 
         // Métodos para realizar ações
         Task<bool> UpdateSubscriptionCardAsync(Guid userId, string newCardToken);

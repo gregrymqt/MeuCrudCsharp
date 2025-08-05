@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using MercadoPago.Resource.Payment;
 using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.Profiles.Admin.Interfaces;
@@ -23,7 +24,8 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
             ApiDbContext context,
             IMercadoPagoService mercadoPagoService,
             ICacheService cacheService,
-            ILogger<UserAccountService> logger) // MUDANÇA 1
+            ILogger<UserAccountService> logger
+        ) // MUDANÇA 1
         {
             _context = context;
             _mercadoPagoService = mercadoPagoService;
@@ -34,73 +36,112 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
         public async Task<UserProfileDto> GetUserProfileAsync(Guid userId)
         {
             string cacheKey = $"UserProfile_{userId}";
-            return await _cacheService.GetOrCreateAsync(cacheKey, async () =>
-            {
-                try
+            return await _cacheService.GetOrCreateAsync(
+                cacheKey,
+                async () =>
                 {
-                    var user = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId.ToString());
-                    if (user == null)
-                        throw new ResourceNotFoundException($"Usuário com ID {userId} não encontrado.");
+                    try
+                    {
+                        var user = await _context
+                            .Users.AsNoTracking()
+                            .FirstOrDefaultAsync(u => u.Id == userId.ToString());
+                        if (user == null)
+                            throw new ResourceNotFoundException(
+                                $"Usuário com ID {userId} não encontrado."
+                            );
 
-                    return new UserProfileDto {
-                        Name = user.Name,
-                        Email = user.Email,
-                        AvatarUrl = user.AvatarUrl,
-                    };
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Erro ao buscar perfil do usuário {UserId} no banco de dados.", userId);
-                    throw new AppServiceException("Ocorreu um erro ao buscar os dados do perfil.", ex);
-                }
-            }, TimeSpan.FromMinutes(15));
+                        return new UserProfileDto
+                        {
+                            Name = user.Name,
+                            Email = user.Email,
+                            AvatarUrl = user.AvatarUrl,
+                        };
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(
+                            ex,
+                            "Erro ao buscar perfil do usuário {UserId} no banco de dados.",
+                            userId
+                        );
+                        throw new AppServiceException(
+                            "Ocorreu um erro ao buscar os dados do perfil.",
+                            ex
+                        );
+                    }
+                },
+                TimeSpan.FromMinutes(15)
+            );
         }
 
         public async Task<SubscriptionDetailsDto?> GetUserSubscriptionDetailsAsync(Guid userId)
         {
             string cacheKey = $"SubscriptionDetails_{userId}";
-            return await _cacheService.GetOrCreateAsync(cacheKey, async () =>
-            {
-                try
+            return await _cacheService.GetOrCreateAsync(
+                cacheKey,
+                async () =>
                 {
-                    var subscription = await _context.Subscriptions.AsNoTracking()
-                        .Include(s => s.Plan)
-                        .FirstOrDefaultAsync(s => s.UserId == userId && s.Status != "cancelado");
-
-                    if (subscription?.Plan == null) return null;
-
-                    var mpSubscription = await _mercadoPagoService.GetSubscriptionAsync(subscription.ExternalId);
-
-                    return new SubscriptionDetailsDto
+                    try
                     {
-                        SubscriptionId = subscription.ExternalId,
-                        PlanName = subscription.Plan.Name,
-                        Status = mpSubscription.Status,
-                        Amount = subscription.Plan.TransactionAmount,
-                        NextBillingDate = mpSubscription.NextBillingDate,
-                        LastFourCardDigits = mpSubscription.Card?.LastFourDigits,
-                    };
-                }
-                // Captura exceções específicas da comunicação com a API externa
-                catch (ExternalApiException ex)
-                {
-                    _logger.LogError(ex, "Falha ao buscar detalhes da assinatura {SubscriptionId} no Mercado Pago para o usuário {UserId}.", "ID_EXTERNO_AQUI", userId);
-                    throw; // Relança para o controller tratar
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Erro ao buscar detalhes da assinatura para o usuário {UserId}.", userId);
-                    throw new AppServiceException("Ocorreu um erro ao buscar os detalhes da sua assinatura.", ex);
-                }
-            }, TimeSpan.FromMinutes(5));
+                        var subscription = await _context
+                            .Subscriptions.AsNoTracking()
+                            .Include(s => s.Plan)
+                            .FirstOrDefaultAsync(s =>
+                                s.UserId == userId && s.Status != "cancelado"
+                            );
+
+                        if (subscription?.Plan == null)
+                            return null;
+
+                        var mpSubscription = await _mercadoPagoService.GetSubscriptionAsync(
+                            subscription.ExternalId
+                        );
+
+                        return new SubscriptionDetailsDto
+                        {
+                            SubscriptionId = subscription.ExternalId,
+                            PlanName = subscription.Plan.Name,
+                            Status = mpSubscription.Status,
+                            Amount = subscription.Plan.TransactionAmount,
+                            NextBillingDate = mpSubscription.NextBillingDate,
+                            LastFourCardDigits = mpSubscription.Card?.LastFourDigits,
+                        };
+                    }
+                    // Captura exceções específicas da comunicação com a API externa
+                    catch (ExternalApiException ex)
+                    {
+                        _logger.LogError(
+                            ex,
+                            "Falha ao buscar detalhes da assinatura {SubscriptionId} no Mercado Pago para o usuário {UserId}.",
+                            "ID_EXTERNO_AQUI",
+                            userId
+                        );
+                        throw; // Relança para o controller tratar
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(
+                            ex,
+                            "Erro ao buscar detalhes da assinatura para o usuário {UserId}.",
+                            userId
+                        );
+                        throw new AppServiceException(
+                            "Ocorreu um erro ao buscar os detalhes da sua assinatura.",
+                            ex
+                        );
+                    }
+                },
+                TimeSpan.FromMinutes(5)
+            );
         }
 
-    public async Task<IEnumerable<Models.Payments>> GetUserPaymentHistoryAsync(Guid userId)
+        public async Task<IEnumerable<Models.Payments>> GetUserPaymentHistoryAsync(Guid userId)
         {
-            try { 
-            // Opcional: Cache para o histórico de pagamentos
-            string? cacheKey = $"PaymentHistory_{userId}";
-            return await _cacheService.GetOrCreateAsync(
+            try
+            {
+                // Opcional: Cache para o histórico de pagamentos
+                string? cacheKey = $"PaymentHistory_{userId}";
+                return await _cacheService.GetOrCreateAsync(
                     cacheKey,
                     async () =>
                     {
@@ -112,11 +153,18 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
                     },
                     TimeSpan.FromMinutes(10)
                 );
-        }
+            }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erro ao buscar histórico de pagamentos para o usuário {UserId}.", userId);
-                throw new ResourceNotFoundException("Ocorreu um erro ao buscar seu histórico de pagamentos.", ex);
+                _logger.LogError(
+                    ex,
+                    "Erro ao buscar histórico de pagamentos para o usuário {UserId}.",
+                    userId
+                );
+                throw new ResourceNotFoundException(
+                    "Ocorreu um erro ao buscar seu histórico de pagamentos.",
+                    ex
+                );
             }
         }
 
@@ -124,24 +172,43 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
         {
             try
             {
-                var subscription = await _context.Subscriptions.FirstOrDefaultAsync(s => s.UserId == userId && s.Status != "cancelado");
+                var subscription = await _context.Subscriptions.FirstOrDefaultAsync(s =>
+                    s.UserId == userId && s.Status != "cancelado"
+                );
                 if (subscription == null)
-                    throw new ResourceNotFoundException("Assinatura ativa não encontrada para atualização.");
+                    throw new ResourceNotFoundException(
+                        "Assinatura ativa não encontrada para atualização."
+                    );
 
-                await _mercadoPagoService.UpdateSubscriptionCardAsync(subscription.ExternalId, newCardToken);
+                await _mercadoPagoService.UpdateSubscriptionCardAsync(
+                    subscription.ExternalId,
+                    newCardToken
+                );
                 await _cacheService.RemoveAsync($"SubscriptionDetails_{userId}");
 
-                _logger.LogInformation("Cartão da assinatura {SubscriptionId} do usuário {UserId} foi atualizado.", subscription.ExternalId, userId);
+                _logger.LogInformation(
+                    "Cartão da assinatura {SubscriptionId} do usuário {UserId} foi atualizado.",
+                    subscription.ExternalId,
+                    userId
+                );
                 return true;
             }
             catch (ExternalApiException ex)
             {
-                _logger.LogError(ex, "Erro da API externa ao tentar atualizar o cartão para o usuário {UserId}.", userId);
+                _logger.LogError(
+                    ex,
+                    "Erro da API externa ao tentar atualizar o cartão para o usuário {UserId}.",
+                    userId
+                );
                 throw;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erro inesperado ao atualizar o cartão para o usuário {UserId}.", userId);
+                _logger.LogError(
+                    ex,
+                    "Erro inesperado ao atualizar o cartão para o usuário {UserId}.",
+                    userId
+                );
                 throw new AppServiceException("Ocorreu um erro ao atualizar seu cartão.", ex);
             }
         }
@@ -150,11 +217,18 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
         {
             try
             {
-                var subscription = await _context.Subscriptions.FirstOrDefaultAsync(s => s.UserId == userId && s.Status != "cancelado");
+                var subscription = await _context.Subscriptions.FirstOrDefaultAsync(s =>
+                    s.UserId == userId && s.Status != "cancelado"
+                );
                 if (subscription == null)
-                    throw new ResourceNotFoundException("Assinatura ativa não encontrada para cancelamento.");
+                    throw new ResourceNotFoundException(
+                        "Assinatura ativa não encontrada para cancelamento."
+                    );
 
-                var result = await _mercadoPagoService.UpdateSubscriptionStatusAsync(subscription.ExternalId, "cancelled");
+                var result = await _mercadoPagoService.UpdateSubscriptionStatusAsync(
+                    subscription.ExternalId,
+                    "cancelled"
+                );
 
                 if (result.Status == "cancelled")
                 {
@@ -162,14 +236,22 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
                     subscription.UpdatedAt = DateTime.UtcNow;
                     await _context.SaveChangesAsync();
                     await _cacheService.RemoveAsync($"SubscriptionDetails_{userId}");
-                    _logger.LogInformation("Assinatura {SubscriptionId} do usuário {UserId} foi cancelada.", subscription.ExternalId, userId);
+                    _logger.LogInformation(
+                        "Assinatura {SubscriptionId} do usuário {UserId} foi cancelada.",
+                        subscription.ExternalId,
+                        userId
+                    );
                     return true;
                 }
                 return false;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erro inesperado ao cancelar a assinatura para o usuário {UserId}.", userId);
+                _logger.LogError(
+                    ex,
+                    "Erro inesperado ao cancelar a assinatura para o usuário {UserId}.",
+                    userId
+                );
                 throw new AppServiceException("Ocorreu um erro ao cancelar sua assinatura.", ex);
             }
         }
@@ -179,8 +261,8 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
             try
             {
                 var subscription = await _context.Subscriptions.FirstOrDefaultAsync(s =>
-                s.UserId == userId && s.Status == "pausado"
-            );
+                    s.UserId == userId && s.Status == "pausado"
+                );
                 if (subscription == null)
                     return false;
 
@@ -202,10 +284,55 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
                 }
                 return false;
             }
-             catch (Exception ex)
+            catch (Exception ex)
             {
-                _logger.LogError(ex, "Erro inesperado ao reativar a assinatura para o usuário {UserId}.", userId);
+                _logger.LogError(
+                    ex,
+                    "Erro inesperado ao reativar a assinatura para o usuário {UserId}.",
+                    userId
+                );
                 throw new AppServiceException("Ocorreu um erro ao reativar sua assinatura.", ex);
+            }
+        }
+
+        // Dentro da classe UserAccountService
+
+        public async Task<Payments> GetPaymentForReceiptAsync(Guid userId, Guid paymentId)
+        {
+            try
+            {
+                _logger.LogInformation(
+                    "Buscando pagamento {PaymentId} para o usuário {UserId}.",
+                    paymentId,
+                    userId
+                );
+
+                var payment = await _context
+                    .Payments.AsNoTracking()
+                    .Include(p => p.User)
+                    .FirstOrDefaultAsync(p => p.Id == paymentId && p.UserId == userId);
+
+                // Lança uma exceção se o pagamento não for encontrado ou não pertencer ao usuário
+                if (payment == null)
+                {
+                    throw new ResourceNotFoundException(
+                        $"Pagamento com ID {paymentId} não encontrado ou não pertence ao usuário {userId}."
+                    );
+                }
+
+                return payment;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Erro ao buscar o pagamento {PaymentId} no banco de dados.",
+                    paymentId
+                );
+                throw new AppServiceException(
+                    "Ocorreu um erro ao buscar os dados do seu pagamento.",
+                    ex
+                );
             }
         }
     }

@@ -32,10 +32,10 @@ namespace MeuCrudCsharp.Pages.Videos.Player
             var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
             UserProfile = await _context
-                .Users.Include(u => u.Payment_User)
+                .Users.Include(u => u.Payments)
                 .FirstOrDefaultAsync(u => u.Id == userIdString);
 
-            if (UserProfile == null || UserProfile.Payment_User?.Status == "rejected")
+            if (UserProfile == null || UserProfile.Payments.Any(p => p.Status == "rejected"))
             {
                 // Se não encontrar o usuário ou o pagamento foi rejeitado, nega o acesso.
                 // Você pode redirecionar para a página de pagamento aqui.
