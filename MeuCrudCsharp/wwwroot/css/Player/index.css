@@ -37,3 +37,57 @@ h1 {
     border-radius: 8px;
     text-align: center;
 }
+
+
+.video-details {
+    width: 100%;
+    max-width: 900px; /* Mantém a mesma largura do player */
+    margin-top: 2rem;
+    padding: 2rem;
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e9ecef;
+}
+
+.video-details h2 {
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: #212529;
+    margin: 0 0 1rem 0;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.video-details p {
+    font-size: 1rem;
+    line-height: 1.6;
+    color: #495057;
+    margin: 0 0 1.5rem 0;
+}
+
+.video-meta {
+    display: flex;
+    flex-wrap: wrap; /* Garante que quebre a linha em telas pequenas */
+    gap: 1.5rem; /* Espaçamento entre os itens */
+    padding-top: 1rem;
+    border-top: 1px solid #dee2e6;
+}
+
+.video-meta span {
+    display: flex;
+    align-items: center;
+    font-size: 0.9rem;
+    color: #6c757d;
+}
+
+.video-meta .fas { /* Estilo para os ícones */
+    margin-right: 0.5rem;
+    color: #007bff; /* Cor de destaque para os ícones */
+    font-size: 1rem;
+}
+
+.video-meta strong {
+    color: #343a40;
+    margin-right: 0.4rem;
+}
