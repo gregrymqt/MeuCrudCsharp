@@ -6,7 +6,7 @@ namespace MeuCrudCsharp.Features.Subscriptions.Interfaces
     public interface ISubscriptionService
     {
         // Ação do Usuário
-        Task<SubscriptionResponseDto> CreateSubscriptionAsync(
+        Task<SubscriptionResponseDto> CreateSubscriptionAndCustomerIfNeededAsync(
             CreateSubscriptionDto createDto,
             ClaimsPrincipal user
         );

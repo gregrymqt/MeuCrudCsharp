@@ -1,23 +1,18 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Security.Claims;
-using System.Threading.Tasks;
-using MercadoPago.Client;
-using MercadoPago.Client.Payment;
-using MercadoPago.Error;
+﻿using MercadoPago.Client.Payment;
+using MercadoPago.Client.Common;
 using MercadoPago.Resource.Payment;
+using MercadoPago.Client;
 using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Features.Exceptions; // Nossas exceções
 using MeuCrudCsharp.Features.MercadoPago.Payments.Dtos;
 using MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces;
 using MeuCrudCsharp.Features.MercadoPago.Tokens;
-using MeuCrudCsharp.Features.Profiles.Admin.Dtos;
 using MeuCrudCsharp.Features.Profiles.Admin.Interfaces;
+using MeuCrudCsharp.Features.Subscriptions.DTOs;
 using MeuCrudCsharp.Models;
-using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging; // MUDANÇA 1: Adicionando o Logger
+using System.Security.Claims;
+using MercadoPago.Error;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
 {
@@ -71,7 +66,14 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
         private async Task<PaymentResponseDto> CreateSinglePaymentInternalAsync(PaymentRequestDto paymentData)
         {
             var userId = GetCurrentUserId();
-            var novoPagamento = new Models.Payments // Usando o nome correto do modelo
+
+            // É uma boa prática validar os dados recebidos antes de prosseguir.
+            if (paymentData.Payer?.Email is null || paymentData.Payer.Identification?.Number is null)
+            {
+                throw new ArgumentException("Dados do pagador (email, CPF) são obrigatórios.");
+            }
+
+            var novoPagamento = new Models.Payments
             {
                 UserId = userId,
                 Status = "iniciando",
@@ -80,39 +82,74 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
                 CustomerCpf = paymentData.Payer.Identification.Number,
                 Amount = paymentData.Amount,
                 Installments = paymentData.Installments,
+                ExternalId = Guid.NewGuid().ToString(), // Usando um ID externo único para idempotência
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
             };
 
-            // MUDANÇA 3: Bloco try-catch robusto
+            // Salva o registro inicial no banco
+            _context.Payments.Add(novoPagamento);
+            await _context.SaveChangesAsync();
+            _logger.LogInformation("Registro de pagamento inicial criado no banco com ID: {PaymentId}", novoPagamento.Id);
+
             try
             {
                 var requestOptions = new RequestOptions { AccessToken = _tokenMercadoPago._access_Token! };
-                requestOptions.CustomHeaders.Add("X-Idempotency-Key", Guid.NewGuid().ToString());
+                // A chave de idempotência garante que, se a mesma requisição for feita múltiplas vezes
+                // (ex: por um problema de rede), o pagamento não será processado duas vezes.
+                requestOptions.CustomHeaders.Add("X-Idempotency-Key", novoPagamento.ExternalId);
 
-                var paymentRequest = new PaymentCreateRequest { /* ... seu mapeamento ... */ };
-
-                _context.Payments.Add(novoPagamento);
-                await _context.SaveChangesAsync();
-                _logger.LogInformation("Registro de pagamento inicial criado no banco com ID: {PaymentId}", novoPagamento.Id);
+                // =======================================================
+                //  INÍCIO DA CORREÇÃO PRINCIPAL
+                // =======================================================
+                var paymentRequest = new PaymentCreateRequest
+                {
+                    TransactionAmount = paymentData.Amount,
+                    Token = paymentData.Token,
+                    Description = "Pagamento do curso - " + userId, // Descrição clara para o cliente
+                    Installments = paymentData.Installments,
+                    PaymentMethodId = paymentData.PaymentMethodId,
+                    IssuerId = paymentData.IssuerId,
+                    Payer = new PaymentPayerRequest
+                    {
+                        Email = paymentData.Payer.Email,
+                        Identification = new IdentificationRequest
+                        {
+                            Type = paymentData.Payer.Identification.Type,
+                            Number = paymentData.Payer.Identification.Number
+                        }
+                    }
+                };
+                // =======================================================
+                //  FIM DA CORREÇÃO PRINCIPAL
+                // =======================================================
 
                 Payment payment = await _paymentClient.CreateAsync(paymentRequest, requestOptions);
 
-                novoPagamento.ExternalId = payment.Id.ToString()!;
-                novoPagamento.Status = MapPaymentStatus(payment.Status);
+                // Atualiza o registro no banco com os dados retornados pela API
+                novoPagamento.PaymentId = payment.Id.ToString();
+                novoPagamento.Status = MapPaymentStatus(payment.Status); // Supondo que você tenha este método de mapeamento
                 novoPagamento.DateApproved = payment.DateApproved;
-                novoPagamento.LastFourDigits = int.Parse(payment.Card.LastFourDigits);
                 novoPagamento.UpdatedAt = DateTime.UtcNow;
 
-                await _context.SaveChangesAsync();
-                _logger.LogInformation("Pagamento {PaymentId} processado e atualizado no banco. Status: {Status}", novoPagamento.Id, novoPagamento.Status);
+                // **MELHORIA DE SEGURANÇA**: Evita erro se 'Card' ou 'LastFourDigits' for nulo.
+                if (int.TryParse(payment.Card?.LastFourDigits, out int lastFourDigits))
+                {
+                    novoPagamento.LastFourDigits = lastFourDigits;
+                }
 
-                return new PaymentResponseDto { Id = payment.Id, Status = payment.Status };
+                await _context.SaveChangesAsync();
+                _logger.LogInformation("Pagamento {PaymentId} processado e atualizado no banco. Status: {Status}", novoPagamento.PaymentId, novoPagamento.Status);
+
+                return new PaymentResponseDto { Id = payment.Id, Status = payment.Status, Message = "Pagamento processado com sucesso." };
             }
             catch (MercadoPagoApiException mpex)
             {
                 novoPagamento.Status = "falhou";
                 await _context.SaveChangesAsync();
                 _logger.LogError(mpex, "Erro da API do Mercado Pago ao processar pagamento para o usuário {UserId}. Erro: {ApiError}", userId, mpex.ApiError.Message);
-                throw new ExternalApiException("Ocorreu um erro ao processar seu pagamento com nosso provedor.", mpex);
+                // Retorna uma mensagem de erro mais amigável para o frontend
+                throw new ExternalApiException(mpex.ApiError?.Message ?? "Ocorreu um erro ao processar seu pagamento com nosso provedor.", mpex);
             }
             catch (Exception ex)
             {
@@ -154,7 +191,8 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
                     ExternalId = subscriptionResponse.Id,
                     Status = MapPaymentStatus(subscriptionResponse.Status),
                     PayerEmail = subscriptionData.Payer.Email,
-                    UpdatedAt = DateTime.UtcNow
+                    UpdatedAt = DateTime.UtcNow,
+                    PaymentId = subscriptionResponse.Id,
                 };
 
                 _context.Subscriptions.Add(novaAssinatura);

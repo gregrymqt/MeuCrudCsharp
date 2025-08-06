@@ -1,15 +1,10 @@
-﻿using System;
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace MeuCrudCsharp.Features.Subscriptions.DTOs
 {
-    // DTO auxiliar para os dados do cartão aninhados
-    public class SubscriptionCardDto
-    {
-        [JsonPropertyName("last_four_digits")]
-        public string? LastFourDigits { get; set; }
-    }
-
+    /// <summary>
+    /// DTO para REPRESENTAR a resposta da API do Mercado Pago sobre a assinatura.
+    /// </summary>
     public class SubscriptionResponseDto
     {
         [JsonPropertyName("id")]
@@ -30,12 +25,24 @@ namespace MeuCrudCsharp.Features.Subscriptions.DTOs
         [JsonPropertyName("date_created")]
         public DateTime DateCreated { get; set; }
 
-        // --- PROPRIEDADES ADICIONADAS ---
-
         [JsonPropertyName("next_invoice_date")]
-        public DateTime? NextBillingDate { get; set; } // Data da próxima fatura
+        public DateTime? NextBillingDate { get; set; }
 
         [JsonPropertyName("card")]
-        public SubscriptionCardDto? Card { get; set; } // Objeto aninhado para o cartão
+        public SubscriptionCardDto? Card { get; set; }
+    }
+
+    /// <summary>
+    /// DTO auxiliar para os dados do cartão aninhados na resposta.
+    /// </summary>
+    public class SubscriptionCardDto
+    {
+        [JsonPropertyName("last_four_digits")]
+        public string? LastFourDigits { get; set; }
+
+        [JsonPropertyName("brand")]
+        public string? Brand { get; set; }
+
+        // A LINHA PROBLEMÁTICA FOI REMOVIDA DAQUI
     }
 }

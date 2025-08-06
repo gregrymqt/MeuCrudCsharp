@@ -19,64 +19,47 @@
     }
 
     /* --- Estilos do Carrossel (Swiper.js) --- */
-    .swiper {
-        width: 100%;
-        height: 60vh; /* Ocupa 60% da altura da tela */
-        max-height: 500px;
-    }
+/* Estilos para os slides do carrossel */
+.swiper-slide {
+    position: relative; /* Necessário para posicionar o texto sobre a imagem */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-decoration: none;
+    color: white;
+}
 
-    .swiper-slide {
-        text-align: center;
-        font-size: 18px;
-        background: #fff;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        background-size: cover;
-        background-position: center;
-        position: relative;
-    }
-    
-    /* Overlay para escurecer a imagem e dar contraste ao texto */
-    .swiper-slide::after {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: linear-gradient(to top, rgba(20, 20, 20, 0.9) 0%, rgba(20, 20, 20, 0) 50%);
-    }
+.carousel-image {
+    width: 100%;
+    height: 100%; /* Ajuste a altura conforme necessário */
+    object-fit: cover; /* Garante que a imagem cubra todo o slide sem distorcer */
+    filter: brightness(60%); /* Escurece a imagem para o texto ficar mais legível */
+}
 
-    .slide-content {
-        position: relative;
-        z-index: 10;
-        color: var(--text-primary);
-        max-width: 600px;
-        margin-top: 15vh; /* Empurra o conteúdo para baixo */
-    }
+.carousel-caption {
+    position: absolute;
+    bottom: 10%; /* Posiciona o texto na parte inferior do slide */
+    left: 5%;
+    max-width: 50%; /* Evita que o texto ocupe a tela inteira */
+    text-align: left;
+    padding: 20px;
+}
 
-    .slide-content h2 {
-        font-size: 3rem;
-        font-weight: 700;
-        margin: 0;
-        text-shadow: 2px 2px 8px rgba(0,0,0,0.7);
-    }
+.carousel-title {
+    font-size: 2.5rem;
+    font-weight: bold;
+    text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.8);
+}
 
-    .slide-content .btn {
-        background-color: var(--accent-color);
-        color: var(--text-primary);
-        padding: 0.8rem 2rem;
-        text-decoration: none;
-        font-weight: 600;
-        border-radius: 5px;
-        margin-top: 1.5rem;
-        display: inline-block;
-        transition: transform 0.2s ease;
-    }
-    .slide-content .btn:hover {
-        transform: scale(1.05);
-    }
+.carousel-description {
+    font-size: 1.2rem;
+    text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.8);
+}
+
+/* Melhora a visibilidade dos botões de navegação */
+.swiper-button-next, .swiper-button-prev {
+    color: #fff;
+}
 
     /* --- Estilos das Fileiras de Cursos --- */
     .courses-section {

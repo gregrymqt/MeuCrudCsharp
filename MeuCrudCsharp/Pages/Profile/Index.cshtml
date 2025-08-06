@@ -164,6 +164,35 @@
                             </form>
                         </div>
                     </div>
+
+                    <div class="accordion-item">
+                        <button class="accordion-header">Solicitar Reembolso</button>
+                        <div class="accordion-body">
+
+                            <div id="refund-step-1">
+                                <p>
+                                    Você pode solicitar o reembolso total da sua compra em até 7 dias, conforme o Direito de Arrependimento.
+                                    Ao prosseguir, seu acesso ao conteúdo premium será revogado após a confirmação do estorno.
+                                </p>
+                                <form id="form-request-refund" class="subscription-form">
+                                    <button type="submit" class="btn-danger">Entendo e Quero Solicitar o Reembolso</button>
+                                </form>
+                            </div>
+
+                            <div id="refund-step-2" style="display: none;">
+                                <div class="refund-confirmation-message">
+                                    <i class="fa-solid fa-circle-check"></i>
+                                    <h4>Solicitação Recebida!</h4>
+                                    <p>
+                                        Fique tranquilo, já recebemos seu pedido e estamos processando seu reembolso. O valor será estornado em sua fatura do cartão de crédito em um prazo de 5 a 10 dias úteis, dependendo da operadora.
+                                        <br><br>
+                                        Você receberá um e-mail de confirmação em breve.
+                                    </p>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
                 </div>
             }
             else

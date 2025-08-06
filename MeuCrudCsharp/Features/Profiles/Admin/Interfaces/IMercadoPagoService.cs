@@ -1,5 +1,8 @@
-﻿using MeuCrudCsharp.Features.Plans.DTOs;
+﻿using MercadoPago.Resource.Customer;
+using MeuCrudCsharp.Features.Clients.DTOs;
+using MeuCrudCsharp.Features.Plans.DTOs;
 using MeuCrudCsharp.Features.Subscriptions.DTOs;
+using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace MeuCrudCsharp.Features.Profiles.Admin.Interfaces
 {
@@ -8,9 +11,7 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Interfaces
     {
         // --- Métodos de Criação (usados pelo Admin e no checkout do usuário) ---
         Task<PlanResponseDto> CreatePlanAsync(CreatePlanDto planDto);
-        Task<SubscriptionResponseDto> CreateSubscriptionAsync(
-            CreateSubscriptionDto subscriptionDto
-        );
+        Task<SubscriptionResponseDto> CreateSubscriptionAsync(string preapprovalPlanId, string cardId, string payerEmail);
 
         // --- MÉTODOS ADICIONADOS QUE ESTAVAM FALTANDO ---
 
@@ -46,5 +47,9 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Interfaces
         );
 
         Task<PlanResponseDto> UpdatePlanAsync(string externalPlanId, UpdatePlanDto updateDto);
+
+        Task<CustomerResponseDto> CreateCustomerAsync(string email, string firstName);
+        Task<CardResponseDto> SaveCardToCustomerAsync(string customerId, string cardToken);
+
     }
 }

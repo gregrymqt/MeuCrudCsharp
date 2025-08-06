@@ -35,6 +35,8 @@ namespace MeuCrudCsharp.Models
 
         public DateTime? UpdatedAt { get; set; }
 
+        public string? PaymentId { get; set; } // ID do pagamento no Mercado Pago
+
         protected TransactionBase()
         {
             Id = Guid.NewGuid();

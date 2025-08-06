@@ -22,6 +22,7 @@ namespace MeuCrudCsharp.Models
         // - Status
         // - PayerEmail
         // - CreatedAt, UpdatedAt
+        // - PaymentID 
 
         // Propriedades específicas de um Pagamento Único
         [Required]

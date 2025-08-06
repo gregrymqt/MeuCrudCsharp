@@ -151,4 +151,97 @@
         document.getElementById(containerId).innerHTML = '';
         return await bricksBuilder.create('cardPayment', containerId, settings);
     }
+
+    // =======================================================
+    // LÓGICA DE REEMBOLSO
+    // =======================================================
+
+    const refundForm = document.getElementById('form-request-refund');
+
+    // Se o formulário de reembolso não existir na página, não faz nada.
+    if (!refundForm) {
+        return;
+    }
+
+    const refundStep1 = document.getElementById('refund-step-1');
+    const refundStep2 = document.getElementById('refund-step-2');
+    const submitButton = refundForm.querySelector('button[type="submit"]');
+    const originalButtonText = submitButton.textContent;
+
+    // Adiciona o listener para o envio do formulário de reembolso
+    refundForm.addEventListener('submit', async function (event) {
+        event.preventDefault(); // Impede o envio tradicional do formulário
+
+        // Pede uma confirmação final ao usuário, pois é uma ação destrutiva
+        if (!confirm('Você tem certeza que deseja solicitar o reembolso? Esta ação não pode ser desfeita.')) {
+            return;
+        }
+
+        // --- Feedback visual para o usuário ---
+        submitButton.disabled = true;
+        submitButton.textContent = 'Processando...';
+        removeExistingErrors();
+
+        try {
+            // --- A requisição para o seu backend ---
+            // Nota: O seu backend irá conter a lógica para chamar a API do Mercado Pago.
+            const response = await fetch('/api/profile/request-refund', {
+                method: 'POST',
+                headers: {
+                    // O backend já sabe qual usuário está logado, então não precisamos enviar um corpo (body).
+                    'Content-Type': 'application/json',
+                    // Adicionar headers de segurança como Anti-Forgery Token se necessário
+                }
+            });
+
+            // --- Tratamento da resposta do backend ---
+            if (response.ok) {
+                // SUCESSO: Esconde o passo 1 e mostra o passo 2 (mensagem calmante)
+                refundStep1.style.display = 'none';
+                refundStep2.style.display = 'block';
+            } else {
+                // ERRO: O servidor respondeu com um erro (ex: fora do prazo, pagamento já reembolsado)
+                const errorData = await response.json();
+                showRefundError(errorData.message || 'Não foi possível processar sua solicitação. Tente novamente.');
+
+                // Restaura o botão em caso de erro
+                submitButton.disabled = false;
+                submitButton.textContent = originalButtonText;
+            }
+
+        } catch (error) {
+            // ERRO DE REDE: O servidor não pôde ser contatado
+            console.error('Erro de rede ao solicitar reembolso:', error);
+            showRefundError('Ocorreu um erro de conexão. Verifique sua internet e tente novamente.');
+
+            // Restaura o botão em caso de erro
+            submitButton.disabled = false;
+            submitButton.textContent = originalButtonText;
+        }
+    });
+
+    /**
+     * Exibe uma mensagem de erro dentro da seção de reembolso.
+     * @param {string} message A mensagem de erro a ser exibida.
+     */
+    function showRefundError(message) {
+        removeExistingErrors();
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'refund-error-message';
+        errorDiv.textContent = message;
+
+        // Insere a mensagem de erro antes do formulário
+        refundForm.parentNode.insertBefore(errorDiv, refundForm);
+    }
+
+    /**
+     * Remove mensagens de erro anteriores.
+     */
+    function removeExistingErrors() {
+        const existingError = document.querySelector('.refund-error-message');
+        if (existingError) {
+            existingError.remove();
+        }
+    }
+
 });

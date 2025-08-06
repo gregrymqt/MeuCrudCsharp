@@ -122,6 +122,8 @@ builder.Services.AddScoped<IVideoProcessingService, VideoProcessingService>();
 builder.Services.AddScoped<ICourseService, CourseService>();
 builder.Services.AddScoped<IPlanService, IPlanService>();
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddHttpClient<MercadoPagoService>();
+builder.Services.AddScoped<RefundService>();
 
 // 6. Adiciona o servidor Hangfire que processa os jobs na fila
 // Isso deve vir depois que o Hangfire foi configurado (AddHangfire)

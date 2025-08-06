@@ -1,12 +1,18 @@
-﻿using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Text;
-using System.Text.Json;
-using System.Threading.Tasks;
+﻿using MercadoPago.Resource.Customer;
+using MeuCrudCsharp.Features.Clients.DTOs;
+using MeuCrudCsharp.Features.MercadoPago.Dtos;
+using MeuCrudCsharp.Features.MercadoPago.Payments.Dtos;
 using MeuCrudCsharp.Features.Plans.DTOs;
 using MeuCrudCsharp.Features.Profiles.Admin.Interfaces;
 using MeuCrudCsharp.Features.Subscriptions.DTOs;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.Extensions.Configuration;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Threading.Tasks;
 
 namespace MeuCrudCsharp.Features.Profiles.Admin.Services
 {
@@ -37,32 +43,83 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Services
             return JsonSerializer.Deserialize<PlanResponseDto>(responseBody)!;
         }
 
-        public async Task<SubscriptionResponseDto> CreateSubscriptionAsync(
-            CreateSubscriptionDto subscriptionDto
-        )
+        public async Task<SubscriptionResponseDto> CreateSubscriptionAsync(string preapprovalPlanId, string cardId, string payerEmail)
         {
-            var responseBody = await SendMercadoPagoRequestAsync(
-                HttpMethod.Post,
-                "/preapproval",
-                subscriptionDto
-            );
-            return JsonSerializer.Deserialize<SubscriptionResponseDto>(responseBody)!;
+            const string endpoint = "/preapproval";
+
+            // 1. Criar o payload com a estrutura correta (aninhando o payer)
+            var payload = new SubscriptionWithCardRequestDto
+            {
+                PreapprovalPlanId = preapprovalPlanId,
+                CardId = cardId,
+                Payer = new PayerRequestDto // Criando o objeto 'payer' aninhado
+                {
+                    Email = payerEmail
+                }
+            };
+
+            // 2. Enviar a requisição para a API do Mercado Pago (esta parte não muda)
+            var responseBody = await SendMercadoPagoRequestAsync(HttpMethod.Post, endpoint, payload);
+
+            // 3. Desserializar e retornar a resposta (esta parte não muda)
+            return JsonSerializer.Deserialize<SubscriptionResponseDto>(responseBody)
+                ?? throw new InvalidOperationException("Erro ao desserializar a resposta da criação da assinatura.");
+        }
+
+
+        public async Task<RefundResponseDto> RefundPaymentAsync(string paymentId, decimal? amount = null)
+        {
+            var endpoint = $"/v1/payments/{paymentId}/refunds";
+            var payload = new RefundRequestDto { Amount = amount };
+
+            var responseBody = await SendMercadoPagoRequestAsync(HttpMethod.Post, endpoint, payload);
+
+            return JsonSerializer.Deserialize<RefundResponseDto>(responseBody)
+                ?? throw new InvalidOperationException("Erro ao desserializar a resposta do reembolso.");
+        }
+
+        public async Task<CustomerResponseDto> CreateCustomerAsync(string email, string firstName)
+        {
+            const string endpoint = "/v1/customers";
+            var payload = new CustomerRequestDto
+            {
+                Email = email,
+                FirstName = firstName
+            };
+
+            var responseBody = await SendMercadoPagoRequestAsync(HttpMethod.Post, endpoint, payload);
+
+            return JsonSerializer.Deserialize<CustomerResponseDto>(responseBody)
+                ?? throw new InvalidOperationException("Erro ao desserializar a resposta da criação do cliente.");
+        }
+
+        // =======================================================
+        // MÉTODO PARA SALVAR UM CARTÃO NO COFRE DO CLIENTE
+        // =======================================================
+        public async Task<CardResponseDto> SaveCardToCustomerAsync(string customerId, string cardToken)
+        {
+            var endpoint = $"/v1/customers/{customerId}/cards";
+            var payload = new CardRequestDto { Token = cardToken };
+
+            var responseBody = await SendMercadoPagoRequestAsync(HttpMethod.Post, endpoint, payload);
+
+            return JsonSerializer.Deserialize<CardResponseDto>(responseBody)
+                ?? throw new InvalidOperationException("Erro ao desserializar a resposta ao salvar o cartão.");
         }
 
         // --- MÉTODO AUXILIAR PRIVADO (DRY) ---
-        private async Task<string> SendMercadoPagoRequestAsync<T>(
-            HttpMethod method,
-            string endpoint,
-            T? payload
-        )
-            where T : class
+        private async Task<string> SendMercadoPagoRequestAsync<T>(HttpMethod method, string endpoint, T? payload) where T : class
         {
-            var request = new HttpRequestMessage(method, endpoint);
+            var request = new HttpRequestMessage(method, new Uri($"https://api.mercadopago.com{endpoint}"));
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _accessToken);
+            request.Headers.Add("X-Idempotency-Key", Guid.NewGuid().ToString());
 
             if (payload != null)
             {
-                var jsonContent = JsonSerializer.Serialize(payload);
+                var jsonContent = JsonSerializer.Serialize(payload, new JsonSerializerOptions
+                {
+                    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull // Ignora propriedades nulas
+                });
                 request.Content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
             }
 
@@ -71,9 +128,8 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Services
 
             if (!response.IsSuccessStatusCode)
             {
-                throw new HttpRequestException(
-                    $"Erro na API do Mercado Pago. Status: {response.StatusCode}. Resposta: {responseBody}"
-                );
+                // Idealmente, aqui você faria o log do 'responseBody' para depuração
+                throw new HttpRequestException($"Erro na API do Mercado Pago. Status: {response.StatusCode}. Resposta: {responseBody}");
             }
 
             return responseBody;
@@ -169,5 +225,7 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Services
                     "Erro ao desserializar a resposta da atualização do plano."
                 );
         }
+
+
     }
 }

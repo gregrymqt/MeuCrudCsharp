@@ -71,7 +71,7 @@ async function renderPaymentBrick(builder) {
                 // --- ALTERAÇÃO PRINCIPAL ---
                 // Adicionamos os dados do plano ao corpo da requisição
                 const requestData = {
-                    ...formData,
+                    formData,
                     plano: window.paymentConfig.plano, // Envia o nome do plano
                     preapprovalPlanId: window.paymentConfig.preapprovalPlanId // Envia o ID do plano de assinatura
                 };

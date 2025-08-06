@@ -5,5 +5,6 @@
         public string? Status { get; set; }
         public long? Id { get; set; }
         public string? PaymentTypeId { get; set; }
+        public string Message { get; internal set; }
     }
 }

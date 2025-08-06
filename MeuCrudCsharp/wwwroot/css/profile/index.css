@@ -288,3 +288,53 @@
     .status-badge.status-reembolsado {
         background-color: #17a2b8;
     }
+
+
+/* ======================================================= */
+/* CSS PARA A SEÇÃO DE REEMBOLSO                           */
+/* ======================================================= */
+
+.refund-confirmation-message {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 25px 20px;
+    background-color: #f0fdf4; /* Verde bem claro */
+    border: 1px solid #bbf7d0; /* Borda verde clara */
+    border-radius: 8px;
+    margin-top: 15px;
+}
+
+    .refund-confirmation-message .fa-circle-check {
+        font-size: 48px;
+        color: #22c55e; /* Verde vibrante */
+        margin-bottom: 15px;
+    }
+
+    .refund-confirmation-message h4 {
+        font-family: 'Inter', sans-serif;
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #166534; /* Verde escuro */
+        margin: 0 0 10px 0;
+    }
+
+    .refund-confirmation-message p {
+        font-family: 'Inter', sans-serif;
+        font-size: 0.95rem;
+        color: #1f2937; /* Cinza escuro, para boa legibilidade */
+        line-height: 1.6;
+        max-width: 500px; /* Evita que o texto fique muito largo em telas grandes */
+    }
+
+.refund-error-message {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+    border-radius: 4px;
+    padding: 10px 15px;
+    margin-bottom: 15px;
+    text-align: center;
+    font-size: 0.9rem;
+}
