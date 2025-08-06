@@ -22,6 +22,49 @@
     <!-- Conteúdo Principal -->
     <main class="admin-main-content">
         <div class="admin-container">
+
+            <div id="content-courses" class="content-panel">
+                <!-- Seção 1: Criar Novo Curso -->
+                <div class="form-section">
+                    <h2>Criar Novo Curso</h2>
+                    <form id="create-course-form">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="course-name-new">Nome do Curso</label>
+                                <input type="text" id="course-name-new" class="form-control" required placeholder="Ex: Dominando C#">
+                            </div>
+                            <div class="form-group">
+                                <label for="course-description-new">Descrição do Curso</label>
+                                <textarea id="course-description-new" class="form-control" rows="3"></textarea>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Salvar Curso</button>
+                    </form>
+                </div>
+
+                <hr class="section-divider">
+
+                <!-- Seção 2: Cursos Existentes (READ, UPDATE, DELETE) -->
+                <div class="list-section">
+                    <h2>Cursos Existentes</h2>
+                    <div class="form-group">
+                        <input type="text" id="search-course-input" class="form-control" placeholder="Buscar curso por nome ou ID...">
+                    </div>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Nome do Curso</th>
+                                <th>Descrição</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="courses-table-body">
+                            <!-- O JavaScript irá popular esta tabela -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
             <!-- Painel "Criar Plano" -->
 
             <div id="content-plans" class="content-panel active">
@@ -134,6 +177,27 @@
             </div>
         </div>
     </main>
+</div>
+
+<div id="edit-course-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title">Editar Curso</h3>
+            <span class="close-button" id="close-edit-course-modal">&times;</span>
+        </div>
+        <form id="edit-course-form">
+            <input type="hidden" id="edit-course-id">
+            <div class="form-group">
+                <label for="edit-course-name">Nome do Curso</label>
+                <input type="text" id="edit-course-name" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label for="edit-course-description">Descrição</label>
+                <textarea id="edit-course-description" class="form-control" rows="4"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+        </form>
+    </div>
 </div>
 
 <div id="edit-plan-modal" class="modal">

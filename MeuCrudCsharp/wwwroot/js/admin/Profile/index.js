@@ -7,13 +7,13 @@
 
     sidebarLinks.forEach(link => {
         link.addEventListener('click', (e) => {
-            e.preventDefault(); // Impede a navegação padrão do link
+            e.preventDefault();
 
-            // Remove a classe 'active' de todos os links e painéis
+            // Remove a classe 'active' de todos
             sidebarLinks.forEach(l => l.classList.remove('active'));
             contentPanels.forEach(c => c.classList.remove('active'));
 
-            // Adiciona a classe 'active' ao link clicado e ao painel correspondente
+            // Adiciona 'active' ao link e ao painel correspondente
             link.classList.add('active');
             const contentId = link.id.replace('nav-', 'content-');
             const activePanel = document.getElementById(contentId);
@@ -21,86 +21,55 @@
                 activePanel.classList.add('active');
             }
 
-            // Carrega os dados da aba clicada, se necessário
-            if (link.id === 'nav-students' && !activePanel.dataset.loaded) {
-                loadStudents();
-                activePanel.dataset.loaded = 'true'; // Marca como carregado
+            // Lógica para carregar os dados da aba clicada (apenas uma vez)
+            if (activePanel && !activePanel.dataset.loaded) {
+                switch (link.id) {
+                    case 'nav-plans':
+                        loadPlans();
+                        break;
+                    case 'nav-courses':
+                        loadCourses();
+                        break;
+                    case 'nav-students':
+                        loadStudents();
+                        break;
+                }
+                activePanel.dataset.loaded = 'true'; // Marca o painel como carregado
             }
         });
     });
 
-    // =====================================================================
-    // Lógica do Painel "Criar Plano"
-    // =====================================================================
-    const createPlanForm = document.getElementById('create-plan-form');
-    const createPlanStatus = document.getElementById('create-plan-status');
-
-    if (createPlanForm) {
-        createPlanForm.addEventListener('submit', async function (e) {
-            e.preventDefault();
-            const saveButton = createPlanForm.querySelector('button[type="submit"]');
-            saveButton.disabled = true;
-            saveButton.textContent = 'Criando...';
-            createPlanStatus.innerHTML = '<p>Enviando dados para o Mercado Pago...</p>';
-
-            // Coleta os dados do formulário
-            const planData = {
-                reason: document.getElementById('plan-reason').value,
-                autoRecurring: {
-                    frequency: 1, // Fixo em 1 para simplicidade
-                    frequencyType: document.getElementById('plan-type').value,
-                    transactionAmount: parseFloat(document.getElementById('plan-amount').value),
-                },
-                backUrl: "https://www.seusite.com/confirmacao" // URL de retorno
-            };
-
-            try {
-                // Faz a chamada real para a sua API de backend
-                const response = await fetch('/api/admin/plans', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(planData)
-                });
-
-                const result = await response.json();
-
-                if (!response.ok) {
-                    // Se a API retornar um erro, exibe a mensagem
-                    throw new Error(result.message || 'Ocorreu um erro ao criar o plano.');
-                }
-
-                // Exibe a mensagem de sucesso com o ID retornado pela API
-                createPlanStatus.innerHTML = `<p style="color: var(--success-color);"><strong>Plano criado com sucesso!</strong> ID: ${result.id}</p>`;
-                createPlanForm.reset();
-
-            } catch (error) {
-                createPlanStatus.innerHTML = `<p style="color: var(--danger-color);">Erro: ${error.message}</p>`;
-            } finally {
-                saveButton.disabled = false;
-                saveButton.textContent = 'Criar Plano';
-            }
-        });
-    }
-
-    const plansTableBody = document.getElementById('plans-table-body');
     const editModal = document.getElementById('edit-plan-modal');
     const editForm = document.getElementById('edit-plan-form');
     const closeEditModalButton = document.getElementById('close-edit-plan-modal');
 
-    // Campos do formulário de edição
+    // Campos do formulário de edição do planos
     const editPlanId = document.getElementById('edit-plan-id');
     const editPlanReason = document.getElementById('edit-plan-reason');
     const editPlanAmount = document.getElementById('edit-plan-amount');
     const editPlanFrequencyType = document.getElementById('edit-plan-frequency-type');
     const editPlanBackUrl = document.getElementById('edit-plan-back-url');
 
-    const API_BASE_URL = '/api/admin/plans'; // Endpoint base para os planos
+    // Modal de Edição de Curso
+    const editCourseModal = document.getElementById('edit-course-modal');
+    const editCourseForm = document.getElementById('edit-course-form');
+    const closeEditCourseModalButton = document.getElementById('close-edit-course-modal');
+    const editCourseId = document.getElementById('edit-course-id');
+    const editCourseName = document.getElementById('edit-course-name');
+    const editCourseDescription = document.getElementById('edit-course-description');
+
+
+    // --- Seleção de Elementos DOM para Cursos ---
+    const coursesTableBody = document.getElementById('courses-table-body');
+    const searchCourseInput = document.getElementById('search-course-input');
+    const createCourseForm = document.getElementById('create-course-form'); // Adicionado para o CREATE
+
+
+     // Endpoint base para os planos
     const sessionCache = {};
 
     // =====================================================================
-    // READ: Buscar e Renderizar os Planos
+    // READ: Buscar e Renderizar os Planos e Cursos
     // =====================================================================
     async function fetchAndCache(cacheKey, apiUrl, renderFunction, tableBody) {
         // 1. Tenta carregar do cache primeiro
@@ -129,11 +98,162 @@
         }
     }
 
+    const API_COURSES_URL = '/api/admin/courses';
+
+    async function loadCourses() {await fetchAndCache('allCourses', API_COURSES_URL, renderCoursesTable, coursesTableBody);}
+
+    function renderCoursesTable(courses) {
+        coursesTableBody.innerHTML = '';
+        if (!courses || courses.length === 0) {
+            coursesTableBody.innerHTML = '<tr><td colspan="3" class="text-center">Nenhum curso encontrado.</td></tr>';
+            return;
+        }
+
+        courses.forEach(course => {
+            const row = document.createElement('tr');
+            // Adicionamos data attributes para facilitar a seleção dos botões
+            row.innerHTML = `
+                <td>${course.name}</td>
+                <td>${course.description || 'Sem descrição'}</td>
+                <td class="actions">
+                    <button class="btn btn-secondary btn-sm btn-edit-course" data-course-id="${course.id}">Editar</button>
+                    <button class="btn btn-danger btn-sm btn-delete-course" data-course-id="${course.id}">Excluir</button>
+                </td>
+            `;
+            coursesTableBody.appendChild(row);
+        });
+    }
+
+    // =====================================================================
+    // CREATE: Criar um Novo Curso
+    // =====================================================================
+    if (createCourseForm) {
+        createCourseForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const submitButton = createCourseForm.querySelector('button[type="submit"]');
+            submitButton.disabled = true;
+            submitButton.textContent = 'Salvando...';
+
+            const courseData = {
+                name: document.getElementById('course-name-new').value,
+                description: document.getElementById('course-description-new').value
+            };
+
+            try {
+                const response = await fetch(API_COURSES_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(courseData)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Falha ao criar o curso.');
+                }
+
+                alert('Curso criado com sucesso!');
+                createCourseForm.reset();
+                await loadCourses(); // Recarrega a lista para mostrar o novo curso
+
+            } catch (error) {
+                console.error('Erro ao criar curso:', error);
+                alert(`Erro: ${error.message}`);
+            } finally {
+                submitButton.disabled = false;
+                submitButton.textContent = 'Salvar Curso';
+            }
+        });
+    }
+
+    // =====================================================================
+    // UPDATE: Abrir e Submeter o Modal de Edição
+    // =====================================================================
+    function openEditCourseModal(course) {
+        editCourseId.value = course.id;
+        editCourseName.value = course.name;
+        editCourseDescription.value = course.description || '';
+        editCourseModal.style.display = 'block';
+    }
+
+    function closeEditCourseModal() {
+        editCourseModal.style.display = 'none';
+        editCourseForm.reset();
+    }
+
+    editCourseForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const courseId = editCourseId.value;
+        const submitButton = editCourseForm.querySelector('button[type="submit"]');
+        submitButton.disabled = true;
+        submitButton.textContent = 'Salvando...';
+
+        const updatedData = {
+            name: editCourseName.value,
+            description: editCourseDescription.value
+        };
+
+        try {
+            const response = await fetch(`${API_COURSES_URL}/${courseId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updatedData)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Falha ao atualizar o curso.');
+            }
+
+            alert('Curso atualizado com sucesso!');
+            closeEditCourseModal();
+            await loadCourses(); // Recarrega a lista
+
+        } catch (error) {
+            console.error('Erro ao atualizar curso:', error);
+            alert(`Erro: ${error.message}`);
+        } finally {
+            submitButton.disabled = false;
+            submitButton.textContent = 'Salvar Alterações';
+        }
+    });
+
+    // =====================================================================
+    // DELETE: Excluir um Curso
+    // =====================================================================
+    async function deleteCourse(courseId) {
+        if (!confirm('Você tem certeza que deseja excluir este curso? Esta ação pode falhar se houver vídeos associados a ele.')) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`${API_COURSES_URL}/${courseId}`, {
+                method: 'DELETE'
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Falha ao excluir o curso.');
+            }
+
+            alert('Curso excluído com sucesso!');
+            await loadCourses(); // Recarrega a lista
+
+        } catch (error) {
+            console.error('Erro ao excluir curso:', error);
+            alert(`Erro: ${error.message}`);
+        }
+    }
+
     // =====================================================================
     // READ: Buscar e Renderizar os Planos
     // =====================================================================
+
+    const API_PLANS_URL = '/api/admin/plans';
+    const createPlanForm = document.getElementById('create-plan-form');
+    const plansTableBody = document.getElementById('plans-table-body');
+
     async function loadPlans() {
-        await fetchAndCache('allPlans', API_BASE_URL, renderPlansTable, plansTableBody);
+        await fetchAndCache('allPlans', API_PLANS_URL, renderPlansTable, plansTableBody);
     }
 
     function renderPlansTable(plans) {
@@ -160,7 +280,55 @@
     }
 
     // =====================================================================
-    // UPDATE: Abrir e Submeter o Modal de Edição
+    // Lógica do Painel "Criar Plano"
+    // =====================================================================
+   
+    const createPlanStatus = document.getElementById('create-plan-status');
+    if (createPlanForm) {
+        createPlanForm.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const saveButton = createPlanForm.querySelector('button[type="submit"]');
+            saveButton.disabled = true;
+            saveButton.textContent = 'Criando...';
+            createPlanStatus.innerHTML = '<p>Enviando dados para o Mercado Pago...</p>';
+            // Coleta os dados do formulário
+            const planData = {
+                reason: document.getElementById('plan-reason').value,
+                autoRecurring: {
+                    frequency: 1, // Fixo em 1 para simplicidade
+                    frequencyType: document.getElementById('plan-type').value,
+                    transactionAmount: parseFloat(document.getElementById('plan-amount').value),
+                },
+                backUrl: "https://www.seusite.com/confirmacao" // URL de retorno
+            };
+            try {
+                // Faz a chamada real para a sua API de backend
+                const response = await fetch('/api/admin/plans', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(planData)
+                });
+                const result = await response.json();
+                if (!response.ok) {
+                    // Se a API retornar um erro, exibe a mensagem
+                    throw new Error(result.message || 'Ocorreu um erro ao criar o plano.');
+                }
+                // Exibe a mensagem de sucesso com o ID retornado pela API
+                createPlanStatus.innerHTML = `<p style="color: var(--success-color);"><strong>Plano criado com sucesso!</strong> ID: ${result.id}</p>`;
+                createPlanForm.reset();
+            } catch (error) {
+                createPlanStatus.innerHTML = `<p style="color: var(--danger-color);">Erro: ${error.message}</p>`;
+            } finally {
+                saveButton.disabled = false;
+                saveButton.textContent = 'Criar Plano';
+            }
+        });
+    }
+
+    // =====================================================================
+    // UPDATE: Abrir e Submeter o Modal de Edição do Plano
     // =====================================================================
     function openEditModal(plan) {
         editPlanId.value = plan.id;
@@ -240,9 +408,22 @@
     }
 
     // =====================================================================
+    // SEARCH: Filtrar a tabela de cursos
+    // =====================================================================
+    searchCourseInput.addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase();
+        const filteredCourses = allCoursesCache.filter(course =>
+            course.name.toLowerCase().includes(searchTerm) ||
+            (course.description && course.description.toLowerCase().includes(searchTerm))
+        );
+        renderCoursesTable(filteredCourses);
+    });
+
+    // =====================================================================
     // Event Listeners
     // =====================================================================
     closeEditModalButton.addEventListener('click', closeEditModal);
+    closeEditCourseModalButton.addEventListener('click', closeEditCourseModal);
 
     // Delegação de eventos para os botões de editar e excluir
     plansTableBody.addEventListener('click', async (e) => {
@@ -260,8 +441,21 @@
         }
     });
 
-    // Ponto de Entrada: Carrega os planos ao iniciar a página
-    loadPlans();
+    // Delegação de eventos para os botões na tabela de cursos
+    coursesTableBody.addEventListener('click', (e) => {
+        const target = e.target;
+        const courseId = target.dataset.courseId;
+
+        if (target.classList.contains('btn-edit-course')) {
+            const course = allCoursesCache.find(c => c.id === courseId);
+            if (course) {
+                openEditCourseModal(course);
+            }
+        }
+        if (target.classList.contains('btn-delete-course')) {
+            deleteCourse(courseId);
+        }
+    });
 
     // Lógica do Painel "Alunos"
     function renderStudentsTable(students) {
@@ -394,7 +588,4 @@
         }
     });
 
-
-
-    loadPlans();
 });

@@ -20,6 +20,21 @@ namespace MeuCrudCsharp.Features.Courses.Controllers
             _courseService = courseService;
         }
 
+        [HttpGet] // Responde a GET /api/admin/courses
+        public async Task<IActionResult> GetAllCourses()
+        {
+            try
+            {
+                // Reutiliza o mesmo método de serviço que a página pública usa
+                var courses = await _courseService.GetAllCoursesWithVideosAsync();
+                return Ok(courses);
+            }
+            catch (AppServiceException ex)
+            {
+                return StatusCode(500, new { message = ex.Message });
+            }
+        }
+
         [HttpGet("{id:guid}")]
         public async Task<IActionResult> GetCourseById(Guid id)
         {

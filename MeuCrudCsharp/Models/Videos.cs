@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore;
 
 namespace MeuCrudCsharp.Models
 {
@@ -11,6 +12,7 @@ namespace MeuCrudCsharp.Models
         Error, // 2 - Ocorreu um erro no processamento
     }
 
+    [Index(nameof(CourseId))]
     public class Video
     {
         [Key]

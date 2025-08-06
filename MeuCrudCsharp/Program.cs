@@ -175,7 +175,7 @@ builder
                 using (var scope = context.HttpContext.RequestServices.CreateScope())
                 {
                     var dbContext = scope.ServiceProvider.GetRequiredService<ApiDbContext>();
-                    var user = dbContext.User.FirstOrDefault(u => u.GoogleId == googleId);
+                    var user = dbContext.Users.FirstOrDefault(u => u.GoogleId == googleId);
 
                     if (user == null)
                     {

@@ -8,6 +8,11 @@ using Microsoft.EntityFrameworkCore;
 namespace MeuCrudCsharp.Models
 {
     [Index(nameof(UserId))]
+    [Index(nameof(PlanId))]
+    [Index(nameof(ExternalId), IsUnique = true)]
+    [Index(nameof(Status))]
+    [Index(nameof(PayerEmail))]
+    [Index(nameof(CreatedAt))]
     public class Subscription : TransactionBase // Herda da classe base
     {
         // Propriedades herdadas de TransactionBase:

@@ -1,9 +1,11 @@
 ﻿using System.Collections.Generic; // Adicione se não tiver
 using MercadoPago.Resource.Payment;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 namespace MeuCrudCsharp.Models
 {
+    [Index(nameof(GoogleId), IsUnique = true, Name = "IX_Users_GoogleId")]
     public class Users : IdentityUser
     {
         // ... suas propriedades existentes como Name, AvatarUrl, etc.

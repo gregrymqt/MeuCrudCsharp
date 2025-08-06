@@ -7,6 +7,11 @@ using Microsoft.EntityFrameworkCore;
 namespace MeuCrudCsharp.Models
 {
     [Index(nameof(UserId))]
+    [Index(nameof(subscription_id))]
+    [Index(nameof(ExternalId), IsUnique = true)]
+    [Index(nameof(Status))]
+    [Index(nameof(PayerEmail))]
+    [Index(nameof(CreatedAt))]
     public class Payments : TransactionBase // Herda da classe base
     {
         // Propriedades herdadas de TransactionBase:
@@ -38,5 +43,11 @@ namespace MeuCrudCsharp.Models
         [Required]
         [Column(TypeName = "decimal(10, 2)")]
         public decimal Amount { get; set; }
+
+        [Required]
+        public Guid subscription_id { get; set; }
+
+        [ForeignKey("subscription_id")]
+        public virtual Subscription? Subscription { get; set; }
     }
 }

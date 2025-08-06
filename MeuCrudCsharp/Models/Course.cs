@@ -1,7 +1,9 @@
 using System.ComponentModel.DataAnnotations;
+using Microsoft.EntityFrameworkCore;
 
 namespace MeuCrudCsharp.Models
 {
+    [Index(nameof(Name), IsUnique = true)]
     public class Course
     {
         [Key]
@@ -14,7 +16,6 @@ namespace MeuCrudCsharp.Models
         [Required]
         [MaxLength(200)]
         public string Description { get; set; } = string.Empty;
-
 
         // Propriedade de navegação para a lista de vídeos que pertencem a este curso
         public virtual ICollection<Video> Videos { get; set; } = new List<Video>();
