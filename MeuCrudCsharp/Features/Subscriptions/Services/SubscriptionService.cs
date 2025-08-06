@@ -1,4 +1,7 @@
-﻿using MercadoPago.Resource.Payment;
+﻿using System;
+using System.Security.Claims;
+using System.Threading.Tasks;
+using MercadoPago.Resource.Payment;
 using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.Profiles.Admin.Interfaces;
@@ -7,9 +10,6 @@ using MeuCrudCsharp.Features.Subscriptions.Interfaces;
 using MeuCrudCsharp.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Security.Claims;
-using System.Threading.Tasks;
 
 namespace MeuCrudCsharp.Features.Subscriptions.Services
 {
@@ -34,9 +34,9 @@ namespace MeuCrudCsharp.Features.Subscriptions.Services
         }
 
         public async Task<SubscriptionResponseDto> CreateSubscriptionAndCustomerIfNeededAsync(
-    CreateSubscriptionDto createDto,
-    ClaimsPrincipal users
-)
+            CreateSubscriptionDto createDto,
+            ClaimsPrincipal users
+        )
         {
             var userIdString = users.FindFirstValue(ClaimTypes.NameIdentifier);
             // Nota: É mais seguro buscar o usuário com AsNoTracking() apenas se você não for alterá-lo.
@@ -53,10 +53,16 @@ namespace MeuCrudCsharp.Features.Subscriptions.Services
             // 2. VERIFICAR e, se necessário, CRIAR o cliente no Mercado Pago
             if (string.IsNullOrEmpty(customerId))
             {
-                _logger.LogInformation("Usuário {UserId} não possui um cliente no MP. Criando agora...", userIdString);
+                _logger.LogInformation(
+                    "Usuário {UserId} não possui um cliente no MP. Criando agora...",
+                    userIdString
+                );
 
                 // **CHAMADA CORRETA DO NOVO MÉTODO**
-                var newCustomer = await _mercadoPagoService.CreateCustomerAsync(user.Email, user.Name);
+                var newCustomer = await _mercadoPagoService.CreateCustomerAsync(
+                    user.Email,
+                    user.Name
+                );
                 customerId = newCustomer.Id;
 
                 // SALVAR o novo ID no seu banco de dados para não criar de novo no futuro!
@@ -67,7 +73,10 @@ namespace MeuCrudCsharp.Features.Subscriptions.Services
             // **CHAMADA CORRETA DO NOVO MÉTODO**
             // Este passo agora é feito ANTES de criar a assinatura.
             // Nota: O token do cartão ('createDto.CardTokenId') é usado aqui e não mais na criação da assinatura.
-            var savedCard = await _mercadoPagoService.SaveCardToCustomerAsync(customerId, createDto.CardTokenId);
+            var savedCard = await _mercadoPagoService.SaveCardToCustomerAsync(
+                customerId,
+                createDto.CardTokenId
+            );
 
             try
             {
@@ -75,17 +84,21 @@ namespace MeuCrudCsharp.Features.Subscriptions.Services
                 // O método CreateSubscriptionAsync precisará ser ajustado para receber esses parâmetros.
                 var subscriptionResponse = await _mercadoPagoService.CreateSubscriptionAsync(
                     createDto.PreapprovalPlanId, // ID do plano
-                    customerId,                  // ID do cliente
-                    savedCard.Id                 // ID do cartão salvo
+                    customerId, // ID do cliente
+                    savedCard.Id // ID do cartão salvo
                 );
 
-                var localPlan = await _context.Plans
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(p => p.ExternalPlanId == subscriptionResponse.PreapprovalPlanId);
+                var localPlan = await _context
+                    .Plans.AsNoTracking()
+                    .FirstOrDefaultAsync(p =>
+                        p.ExternalPlanId == subscriptionResponse.PreapprovalPlanId
+                    );
 
                 if (localPlan == null)
                 {
-                    throw new ResourceNotFoundException($"Plano com ID externo '{subscriptionResponse.PreapprovalPlanId}' não encontrado.");
+                    throw new ResourceNotFoundException(
+                        $"Plano com ID externo '{subscriptionResponse.PreapprovalPlanId}' não encontrado."
+                    );
                 }
 
                 if (!Guid.TryParse(userIdString, out var userIdGuid))
@@ -102,24 +115,39 @@ namespace MeuCrudCsharp.Features.Subscriptions.Services
                     PayerEmail = subscriptionResponse.PayerEmail,
                     CreatedAt = DateTime.UtcNow,
                     // Adicionar dados do cartão salvo para referência
-                    LastFourCardDigits = savedCard.LastFourDigits
+                    LastFourCardDigits = savedCard.LastFourDigits,
                 };
 
                 _context.Subscriptions.Add(newSubscription);
                 await _context.SaveChangesAsync(); // Salva o customerId no usuário E a nova assinatura em uma única transação.
 
-                _logger.LogInformation("Assinatura {SubscriptionId} criada com sucesso para o usuário {UserId}", newSubscription.ExternalId, userIdString);
+                _logger.LogInformation(
+                    "Assinatura {SubscriptionId} criada com sucesso para o usuário {UserId}",
+                    newSubscription.ExternalId,
+                    userIdString
+                );
 
                 return subscriptionResponse;
             }
             catch (HttpRequestException ex) // Captura falhas da API
             {
-                _logger.LogError(ex, "Erro da API externa ao criar assinatura para o usuário {UserId}", userIdString);
-                throw new ExternalApiException("Erro ao comunicar com o provedor de pagamento.", ex);
+                _logger.LogError(
+                    ex,
+                    "Erro da API externa ao criar assinatura para o usuário {UserId}",
+                    userIdString
+                );
+                throw new ExternalApiException(
+                    "Erro ao comunicar com o provedor de pagamento.",
+                    ex
+                );
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erro inesperado ao criar assinatura para o usuário {UserId}", userIdString);
+                _logger.LogError(
+                    ex,
+                    "Erro inesperado ao criar assinatura para o usuário {UserId}",
+                    userIdString
+                );
                 throw new AppServiceException("Ocorreu um erro ao processar sua assinatura.", ex);
             }
         }
