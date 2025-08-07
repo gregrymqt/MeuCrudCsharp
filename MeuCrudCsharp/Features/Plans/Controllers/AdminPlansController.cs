@@ -35,14 +35,18 @@ namespace MeuCrudCsharp.Features.Plans.Controllers
             try
             {
                 var newPlan = await _planService.CreatePlanAsync(createDto);
-                return CreatedAtAction(nameof(GetPlans), new { id = newPlan.Id }, newPlan);
+                // Usar nameof(GetPlanById) se você tiver um método que busca por ID
+                return CreatedAtAction("GetPlanById", new { id = newPlan.Id }, newPlan);
             }
-            catch (Exception ex)
+            catch (AppServiceException ex) // Captura erros de negócio (ex: nome duplicado)
             {
-                return StatusCode(
-                    500,
-                    new { message = "Erro ao criar o plano.", error = ex.Message }
-                );
+                // 400 Bad Request é mais apropriado para erros de validação ou regras de negócio
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex) // Captura erros inesperados e graves
+            {
+                // Logue o erro completo aqui para depuração
+                return StatusCode(500, new { message = "Ocorreu um erro inesperado no servidor." });
             }
         }
 

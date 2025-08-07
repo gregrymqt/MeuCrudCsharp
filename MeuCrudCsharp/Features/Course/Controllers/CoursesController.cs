@@ -14,12 +14,10 @@ namespace MeuCrudCsharp.Features.Courses.Controllers
     public class CoursesController : ControllerBase
     {
         private readonly ICourseService _courseService;
-
         public CoursesController(ICourseService courseService)
         {
             _courseService = courseService;
         }
-
         [HttpGet] // Responde a GET /api/admin/courses
         public async Task<IActionResult> GetAllCourses()
         {
@@ -34,7 +32,6 @@ namespace MeuCrudCsharp.Features.Courses.Controllers
                 return StatusCode(500, new { message = ex.Message });
             }
         }
-
         [HttpGet("{id:guid}")]
         public async Task<IActionResult> GetCourseById(Guid id)
         {
@@ -48,7 +45,6 @@ namespace MeuCrudCsharp.Features.Courses.Controllers
                 return NotFound(new { message = ex.Message });
             }
         }
-
         [HttpPost]
         public async Task<IActionResult> CreateCourse([FromBody] CreateCourseDto createDto)
         {
@@ -63,7 +59,6 @@ namespace MeuCrudCsharp.Features.Courses.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
-
         [HttpPut("{id:guid}")]
         public async Task<IActionResult> UpdateCourse(Guid id, [FromBody] UpdateCourseDto updateDto)
         {
@@ -81,7 +76,6 @@ namespace MeuCrudCsharp.Features.Courses.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
-
         [HttpDelete("{id:guid}")]
         public async Task<IActionResult> DeleteCourse(Guid id)
         {

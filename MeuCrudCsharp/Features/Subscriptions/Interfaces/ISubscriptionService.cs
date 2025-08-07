@@ -20,5 +20,7 @@ namespace MeuCrudCsharp.Features.Subscriptions.Interfaces
             string subscriptionId,
             UpdateSubscriptionStatusDto dto
         );
+        Task<SubscriptionResponseDto> UpdateSubscriptionValueAsync(string subscriptionId, UpdateSubscriptionValueDto dto);
+
     }
 }

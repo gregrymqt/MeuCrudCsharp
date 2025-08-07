@@ -151,13 +151,26 @@
                     throw new Error(errorData.message || 'Falha ao criar o curso.');
                 }
 
-                alert('Curso criado com sucesso!');
+                // --- MUDANÇA AQUI ---
+                Swal.fire({
+                    title: 'Sucesso!',
+                    text: 'Curso criado com sucesso!',
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+
                 createCourseForm.reset();
-                await loadCourses(); // Recarrega a lista para mostrar o novo curso
+                await loadCourses(); // Recarrega a lista
 
             } catch (error) {
                 console.error('Erro ao criar curso:', error);
-                alert(`Erro: ${error.message}`);
+                // --- MUDANÇA AQUI ---
+                Swal.fire({
+                    title: 'Erro!',
+                    text: error.message,
+                    icon: 'error'
+                });
             } finally {
                 submitButton.disabled = false;
                 submitButton.textContent = 'Salvar Curso';
@@ -204,13 +217,26 @@
                 throw new Error(errorData.message || 'Falha ao atualizar o curso.');
             }
 
-            alert('Curso atualizado com sucesso!');
+            // --- MUDANÇA AQUI ---
+            Swal.fire({
+                title: 'Atualizado!',
+                text: 'Curso atualizado com sucesso.',
+                icon: 'success',
+                timer: 2000,
+                showConfirmButton: false
+            });
+
             closeEditCourseModal();
             await loadCourses(); // Recarrega a lista
 
         } catch (error) {
             console.error('Erro ao atualizar curso:', error);
-            alert(`Erro: ${error.message}`);
+            // --- MUDANÇA AQUI ---
+            Swal.fire({
+                title: 'Erro!',
+                text: error.message,
+                icon: 'error'
+            });
         } finally {
             submitButton.disabled = false;
             submitButton.textContent = 'Salvar Alterações';
@@ -221,7 +247,21 @@
     // DELETE: Excluir um Curso
     // =====================================================================
     async function deleteCourse(courseId) {
-        if (!confirm('Você tem certeza que deseja excluir este curso? Esta ação pode falhar se houver vídeos associados a ele.')) {
+        // --- MUDANÇA AQUI ---
+        // Usamos o Swal.fire para pedir confirmação
+        const result = await Swal.fire({
+            title: 'Você tem certeza?',
+            text: "Esta ação não pode ser desfeita e pode falhar se houver vídeos associados.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Sim, excluir!',
+            cancelButtonText: 'Cancelar'
+        });
+
+        // Se o usuário clicou em "Sim, excluir!", o resultado será confirmado.
+        if (!result.isConfirmed) {
             return;
         }
 
@@ -235,12 +275,23 @@
                 throw new Error(errorData.message || 'Falha ao excluir o curso.');
             }
 
-            alert('Curso excluído com sucesso!');
+            // --- MUDANÇA AQUI ---
+            Swal.fire(
+                'Excluído!',
+                'O curso foi excluído com sucesso.',
+                'success'
+            );
+
             await loadCourses(); // Recarrega a lista
 
         } catch (error) {
             console.error('Erro ao excluir curso:', error);
-            alert(`Erro: ${error.message}`);
+            // --- MUDANÇA AQUI ---
+            Swal.fire(
+                'Erro!',
+                error.message,
+                'error'
+            );
         }
     }
 
@@ -315,11 +366,20 @@
                     // Se a API retornar um erro, exibe a mensagem
                     throw new Error(result.message || 'Ocorreu um erro ao criar o plano.');
                 }
-                // Exibe a mensagem de sucesso com o ID retornado pela API
-                createPlanStatus.innerHTML = `<p style="color: var(--success-color);"><strong>Plano criado com sucesso!</strong> ID: ${result.id}</p>`;
+                await Swal.fire({
+                    title: 'Sucesso!',
+                    text: `Plano criado com sucesso! ID: ${result.id}`,
+                    icon: 'success'
+                });
+
                 createPlanForm.reset();
+                await loadPlans();
             } catch (error) {
-                createPlanStatus.innerHTML = `<p style="color: var(--danger-color);">Erro: ${error.message}</p>`;
+                Swal.fire({
+                    title: 'Erro!',
+                    text: error.message,
+                    icon: 'error'
+                });
             } finally {
                 saveButton.disabled = false;
                 saveButton.textContent = 'Criar Plano';
@@ -366,44 +426,87 @@
                 body: JSON.stringify(updatedData)
             });
 
-            if (!response.ok) throw new Error('Falha ao atualizar o plano.');
+            if (!response.ok) {
+                // Tenta extrair uma mensagem de erro mais detalhada do backend
+                const errorData = await response.json().catch(() => null);
+                throw new Error(errorData?.message || 'Falha ao atualizar o plano.');
+            }
 
-            alert('Plano atualizado com sucesso!');
+            // --- MUDANÇA AQUI ---
+            Swal.fire({
+                title: 'Sucesso!',
+                text: 'Plano atualizado com sucesso!',
+                icon: 'success',
+                timer: 2000,
+                showConfirmButton: false
+            });
+
             closeEditModal();
             await loadPlans(); // Recarrega a lista
 
         } catch (error) {
             console.error('Erro ao atualizar plano:', error);
-            alert('Erro ao atualizar o plano.');
+            // --- MUDANÇA AQUI ---
+            Swal.fire({
+                title: 'Erro!',
+                text: error.message,
+                icon: 'error'
+            });
         } finally {
             submitButton.disabled = false;
             submitButton.textContent = 'Salvar Alterações';
         }
-    });
+    }); 
 
     // =====================================================================
     // DELETE: Excluir um Plano
     // =====================================================================
     async function deletePlan(planId) {
-        // Confirmação para evitar exclusão acidental
-        if (!confirm('Você tem certeza que deseja excluir este plano? Esta ação não pode ser desfeita.')) {
+        // --- MUDANÇA AQUI ---
+        // Substituindo o confirm() nativo pelo SweetAlert2
+        const result = await Swal.fire({
+            title: 'Você tem certeza?',
+            text: "Esta ação não pode ser desfeita.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Sim, excluir!',
+            cancelButtonText: 'Cancelar'
+        });
+
+        // Se o usuário não confirmou, a função para aqui.
+        if (!result.isConfirmed) {
             return;
         }
 
         try {
-            // Supondo que você tenha um endpoint DELETE /api/admin/plans/{id}
             const response = await fetch(`${API_BASE_URL}/${planId}`, {
                 method: 'DELETE'
             });
 
-            if (!response.ok) throw new Error('Falha ao excluir o plano.');
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => null);
+                throw new Error(errorData?.message || 'Falha ao excluir o plano.');
+            }
 
-            alert('Plano excluído com sucesso!');
+            // --- MUDANÇA AQUI ---
+            Swal.fire(
+                'Excluído!',
+                'O plano foi excluído com sucesso.',
+                'success'
+            );
+
             await loadPlans(); // Recarrega a lista
 
         } catch (error) {
             console.error('Erro ao excluir plano:', error);
-            alert('Erro ao excluir o plano.');
+            // --- MUDANÇA AQUI ---
+            Swal.fire(
+                'Erro!',
+                error.message,
+                'error'
+            );
         }
     }
 

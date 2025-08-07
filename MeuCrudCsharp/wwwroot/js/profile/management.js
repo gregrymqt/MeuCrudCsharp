@@ -66,31 +66,48 @@
     async function updateSubscriptionOnBackend(payload) {
         // Validação inicial
         if (!SUBSCRIPTION_ID || SUBSCRIPTION_ID.includes('SEU_ID')) {
-            alert('Erro: ID da assinatura inválido. Atualize a página.');
+            // --- MUDANÇA AQUI ---
+            Swal.fire({
+                icon: 'error',
+                title: 'Erro de Configuração',
+                text: 'O ID da assinatura é inválido. Por favor, atualize a página e tente novamente.'
+            });
             return Promise.reject('ID da assinatura inválido.');
         }
 
-        const backendApiUrl = '/api/user/subscription/card'; // Endpoint do backend para atualizar o cartão
+        const backendApiUrl = '/api/user/subscription/card';
 
         try {
             const response = await fetch(backendApiUrl, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    subscriptionId: SUBSCRIPTION_ID, // Enviando o ID da assinatura
-                    updatePayload: payload
-                }),
+                body: JSON.stringify({ newCardToken: payload.token }),
             });
 
             if (!response.ok) {
                 const errorData = await response.json();
                 throw new Error(errorData.message || 'Falha ao atualizar a assinatura.');
             }
-            
-            alert('Operação realizada com sucesso!');
-            // Opcional: fechar o acordeão ou recarregar a seção.
+
+            // --- MUDANÇA AQUI ---
+            Swal.fire({
+                icon: 'success',
+                title: 'Sucesso!',
+                text: 'Sua assinatura foi atualizada com sucesso.',
+                timer: 2000,
+                showConfirmButton: false
+            });
+
+            // Opcional: recarregar a página para ver as mudanças
+            // setTimeout(() => location.reload(), 2000);
+
         } catch (error) {
-            alert(`Erro: ${error.message}`);
+            // --- MUDANÇA AQUI ---
+            Swal.fire({
+                icon: 'error',
+                title: 'Oops...',
+                text: error.message
+            });
             // Rejeita a promessa para o Brick saber que houve erro.
             return Promise.reject(error);
         }
@@ -116,10 +133,57 @@
     // Formulário de Reativação (permanece igual)
     document.getElementById('form-reactivate-subscription').addEventListener('submit', async (e) => {
         e.preventDefault();
-        const payload = { status: 'authorized' };
-        // Este endpoint é diferente, precisa de um novo controller ou rota
-        // await updateStatusOnBackend(payload); 
-        alert("Função de reativação a ser implementada no endpoint do backend.");
+        const submitButton = e.target.querySelector('button[type="submit"]');
+
+        // --- MUDANÇA AQUI ---
+        const result = await Swal.fire({
+            title: 'Reativar Assinatura?',
+            text: 'Você está prestes a reativar sua assinatura. A cobrança será retomada no próximo ciclo.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#28a745',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Sim, reativar!',
+            cancelButtonText: 'Cancelar'
+        });
+
+        if (!result.isConfirmed) {
+            return;
+        }
+
+        // Feedback visual
+        submitButton.disabled = true;
+        submitButton.textContent = 'Reativando...';
+
+        try {
+            const response = await fetch(`/api/user/subscription/reactivate`, {
+                method: 'POST', // O endpoint espera POST
+                headers: { 'Content-Type': 'application/json' }
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Não foi possível reativar a assinatura.');
+            }
+
+            await Swal.fire({
+                icon: 'success',
+                title: 'Reativada!',
+                text: 'Sua assinatura foi reativada com sucesso.'
+            });
+
+            location.reload(); // Recarrega a página para mostrar o novo status
+
+        } catch (error) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Erro!',
+                text: error.message
+            });
+        } finally {
+            submitButton.disabled = false;
+            submitButton.textContent = 'Reativar Assinatura';
+        }
     });
 
 
@@ -170,10 +234,22 @@
 
     // Adiciona o listener para o envio do formulário de reembolso
     refundForm.addEventListener('submit', async function (event) {
-        event.preventDefault(); // Impede o envio tradicional do formulário
+        event.preventDefault();
+        const submitButton = refundForm.querySelector('button[type="submit"]');
 
-        // Pede uma confirmação final ao usuário, pois é uma ação destrutiva
-        if (!confirm('Você tem certeza que deseja solicitar o reembolso? Esta ação não pode ser desfeita.')) {
+        // --- MUDANÇA AQUI ---
+        const result = await Swal.fire({
+            title: 'Você tem certeza?',
+            text: "Esta ação não pode ser desfeita. Seu acesso ao conteúdo será revogado.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Sim, solicitar reembolso!',
+            cancelButtonText: 'Cancelar'
+        });
+
+        if (!result.isConfirmed) {
             return;
         }
 
@@ -184,39 +260,41 @@
 
         try {
             // --- A requisição para o seu backend ---
-            // Nota: O seu backend irá conter a lógica para chamar a API do Mercado Pago.
             const response = await fetch('/api/profile/request-refund', {
                 method: 'POST',
-                headers: {
-                    // O backend já sabe qual usuário está logado, então não precisamos enviar um corpo (body).
-                    'Content-Type': 'application/json',
-                    // Adicionar headers de segurança como Anti-Forgery Token se necessário
-                }
+                headers: { 'Content-Type': 'application/json' }
             });
 
             // --- Tratamento da resposta do backend ---
             if (response.ok) {
-                // SUCESSO: Esconde o passo 1 e mostra o passo 2 (mensagem calmante)
+                // SUCESSO: Esconde o passo 1 e mostra o passo 2
                 refundStep1.style.display = 'none';
                 refundStep2.style.display = 'block';
+                // O passo 2 já contém a mensagem calmante, então não precisamos de outro Swal aqui.
             } else {
-                // ERRO: O servidor respondeu com um erro (ex: fora do prazo, pagamento já reembolsado)
                 const errorData = await response.json();
-                showRefundError(errorData.message || 'Não foi possível processar sua solicitação. Tente novamente.');
-
+                // --- MUDANÇA AQUI ---
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Não foi possível processar',
+                    text: errorData.message || 'Ocorreu um erro ao solicitar o reembolso.'
+                });
                 // Restaura o botão em caso de erro
                 submitButton.disabled = false;
-                submitButton.textContent = originalButtonText;
+                submitButton.textContent = 'Entendo e Quero Solicitar o Reembolso';
             }
 
         } catch (error) {
-            // ERRO DE REDE: O servidor não pôde ser contatado
             console.error('Erro de rede ao solicitar reembolso:', error);
-            showRefundError('Ocorreu um erro de conexão. Verifique sua internet e tente novamente.');
-
+            // --- MUDANÇA AQUI ---
+            Swal.fire({
+                icon: 'error',
+                title: 'Erro de Conexão',
+                text: 'Não foi possível conectar ao servidor. Verifique sua internet e tente novamente.'
+            });
             // Restaura o botão em caso de erro
             submitButton.disabled = false;
-            submitButton.textContent = originalButtonText;
+            submitButton.textContent = 'Entendo e Quero Solicitar o Reembolso';
         }
     });
 

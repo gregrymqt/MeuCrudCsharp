@@ -146,6 +146,45 @@ namespace MeuCrudCsharp.Features.Subscriptions.Services
                 );
         }
 
+        public async Task<SubscriptionResponseDto> UpdateSubscriptionValueAsync(string subscriptionId, UpdateSubscriptionValueDto dto)
+        {
+            _logger.LogInformation("Iniciando atualização de valor para a assinatura MP: {SubscriptionId}", subscriptionId);
+
+            // 1. Monta o endpoint da API
+            var endpoint = $"/v1/preapproval/{subscriptionId}";
+
+            // 2. Cria o payload no formato que a API do Mercado Pago espera
+            var payload = new UpdateSubscriptionValueDto
+            {
+                    TransactionAmount = dto.TransactionAmount  
+            };
+
+            // 3. Chama o método genérico da classe base para enviar a requisição
+            var responseBody = await SendMercadoPagoRequestAsync(HttpMethod.Put, endpoint, payload);
+            var mpSubscriptionResponse = JsonSerializer.Deserialize<SubscriptionResponseDto>(responseBody)
+                ?? throw new AppServiceException("Falha ao desserializar a resposta da atualização da assinatura.");
+
+            // 4. Sincroniza a mudança com o banco de dados local (Passo Opcional, mas recomendado)
+            var localSubscription = await _context.Subscriptions
+                .Include(s => s.Plan) // Inclui o plano para poder alterar o valor
+                .FirstOrDefaultAsync(s => s.ExternalId == subscriptionId);
+
+            if (localSubscription?.Plan != null)
+            {
+                localSubscription.Plan.TransactionAmount = dto.TransactionAmount;
+                await _context.SaveChangesAsync();
+                _logger.LogInformation("Valor do plano local associado à assinatura {SubscriptionId} foi atualizado.", subscriptionId);
+            }
+            else
+            {
+                _logger.LogWarning("Assinatura {SubscriptionId} atualizada no MP, mas plano local não foi encontrado para sincronização.", subscriptionId);
+            }
+
+             await _cacheService.RemoveAsync($"SubscriptionDetails_{localSubscription.UserId}");
+
+            return mpSubscriptionResponse;
+        }
+
         public async Task<SubscriptionResponseDto> UpdateSubscriptionStatusAsync(
             string subscriptionId,
             UpdateSubscriptionStatusDto dto

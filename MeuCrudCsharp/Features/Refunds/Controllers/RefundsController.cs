@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace MeuCrudCsharp.Features.Refunds.Controllers
 {
     [ApiController]
-    [Route("api/refunds")]
+    [Route("api/profile")] // Rota base
     [Authorize] // Garante que apenas usuários logados podem acessar
     public class RefundsController : ControllerBase
     {
@@ -18,7 +18,7 @@ namespace MeuCrudCsharp.Features.Refunds.Controllers
             _logger = logger;
         }
 
-        [HttpPost("request")]
+        [HttpPost("request-refund")]
         public async Task<IActionResult> RequestRefund()
         {
             try
