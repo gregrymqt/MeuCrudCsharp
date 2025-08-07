@@ -1,8 +1,8 @@
-﻿using MeuCrudCsharp.Features.Profiles.UserAccount.Services;
+﻿using MeuCrudCsharp.Features.Refunds.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace MeuCrudCsharp.Features.Profiles.UserAccount.Controllers
+namespace MeuCrudCsharp.Features.Refunds.Controllers
 {
     [ApiController]
     [Route("api/refunds")]
@@ -33,13 +33,25 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Controllers
             }
             catch (HttpRequestException ex)
             {
-                _logger.LogError(ex, "Erro ao comunicar com a API do Mercado Pago durante o reembolso.");
-                return StatusCode(502, new { message = "Houve um erro ao processar seu reembolso com nosso provedor de pagamentos. Tente novamente mais tarde." });
+                _logger.LogError(
+                    ex,
+                    "Erro ao comunicar com a API do Mercado Pago durante o reembolso."
+                );
+                return StatusCode(
+                    502,
+                    new
+                    {
+                        message = "Houve um erro ao processar seu reembolso com nosso provedor de pagamentos. Tente novamente mais tarde.",
+                    }
+                );
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Erro inesperado ao processar a solicitação de reembolso.");
-                return StatusCode(500, new { message = "Ocorreu um erro interno. Nossa equipe já foi notificada." });
+                return StatusCode(
+                    500,
+                    new { message = "Ocorreu um erro interno. Nossa equipe já foi notificada." }
+                );
             }
         }
     }

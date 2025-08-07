@@ -1,21 +1,20 @@
-﻿using System.Security.Claims;
+﻿// Local: Features/Subscriptions/Interfaces/ISubscriptionService.cs
+
+using System.Security.Claims;
 using MeuCrudCsharp.Features.Subscriptions.DTOs;
 
 namespace MeuCrudCsharp.Features.Subscriptions.Interfaces
 {
     public interface ISubscriptionService
     {
-        // Ação do Usuário
         Task<SubscriptionResponseDto> CreateSubscriptionAndCustomerIfNeededAsync(
             CreateSubscriptionDto createDto,
-            ClaimsPrincipal user
+            ClaimsPrincipal users
         );
-
-        // Ações do Admin
         Task<SubscriptionResponseDto> GetSubscriptionByIdAsync(string subscriptionId);
-        Task<SubscriptionResponseDto> UpdateSubscriptionValueAsync(
+        Task<SubscriptionResponseDto> UpdateSubscriptionCardAsync(
             string subscriptionId,
-            UpdateSubscriptionValueDto dto
+            string newCardId
         );
         Task<SubscriptionResponseDto> UpdateSubscriptionStatusAsync(
             string subscriptionId,

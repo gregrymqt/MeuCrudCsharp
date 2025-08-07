@@ -13,7 +13,8 @@ namespace MeuCrudCsharp.Features.MercadoPago.Jobs
 
         public BackgroundJobQueueService(
             IBackgroundJobClient backgroundJobClient,
-            ILogger<BackgroundJobQueueService> logger) // MUDANÇA 1
+            ILogger<BackgroundJobQueueService> logger
+        ) // MUDANÇA 1
         {
             _backgroundJobClient = backgroundJobClient;
             _logger = logger;
@@ -24,13 +25,19 @@ namespace MeuCrudCsharp.Features.MercadoPago.Jobs
             // MUDANÇA 2: Validação "Fail-Fast"
             if (string.IsNullOrEmpty(paymentId))
             {
-                throw new ArgumentException("O ID do pagamento não pode ser nulo ou vazio.", nameof(paymentId));
+                throw new ArgumentException(
+                    "O ID do pagamento não pode ser nulo ou vazio.",
+                    nameof(paymentId)
+                );
             }
 
             // MUDANÇA 3: Bloco try-catch para garantir que o enfileiramento funcione
             try
             {
-                _logger.LogInformation("Enfileirando job de processamento para o PaymentId: {PaymentId}", paymentId);
+                _logger.LogInformation(
+                    "Enfileirando job de processamento para o PaymentId: {PaymentId}",
+                    paymentId
+                );
 
                 _backgroundJobClient.Enqueue<ProcessPaymentNotificationJob>(job =>
                     job.ExecuteAsync(paymentId)
@@ -41,11 +48,18 @@ namespace MeuCrudCsharp.Features.MercadoPago.Jobs
             catch (Exception ex)
             {
                 // MUDANÇA 4: Logging detalhado e lançamento de uma exceção customizada
-                _logger.LogError(ex, "Falha ao enfileirar o job de notificação de pagamento para o PaymentId {PaymentId}. O job NÃO foi agendado.", paymentId);
+                _logger.LogError(
+                    ex,
+                    "Falha ao enfileirar o job de notificação de pagamento para o PaymentId {PaymentId}. O job NÃO foi agendado.",
+                    paymentId
+                );
 
                 // Lança nossa exceção de serviço para que a camada que chamou (ex: o WebhookController)
                 // saiba que a operação falhou e possa retornar um erro HTTP 500.
-                throw new AppServiceException("Falha ao agendar a tarefa de processamento de pagamento.", ex);
+                throw new AppServiceException(
+                    "Falha ao agendar a tarefa de processamento de pagamento.",
+                    ex
+                );
             }
         }
     }

@@ -1,4 +1,6 @@
-﻿using MeuCrudCsharp.Features.Plans.DTOs;
+﻿// Local: Features/Plans/Interfaces/IPlanService.cs
+
+using MeuCrudCsharp.Features.Plans.DTOs;
 using MeuCrudCsharp.Models;
 
 namespace MeuCrudCsharp.Features.Plans.Interfaces
@@ -7,7 +9,7 @@ namespace MeuCrudCsharp.Features.Plans.Interfaces
     {
         Task<List<PlanDto>> GetActivePlansAsync();
         Task<Plan> CreatePlanAsync(CreatePlanDto createDto);
-        Task<Plan> UpdatePlanAsync(string externalPlanId, UpdatePlanDto updateDto); // Assinatura corrigida
+        Task<Plan> UpdatePlanAsync(string externalPlanId, UpdatePlanDto updateDto);
         Task DeletePlanAsync(string externalPlanId);
     }
 }

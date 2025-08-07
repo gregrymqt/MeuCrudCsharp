@@ -1,13 +1,13 @@
 ﻿// 1. Crie e importe suas exceções customizadas
+using System;
+using System.Text.Json;
+using System.Threading.Tasks;
 using MeuCrudCsharp.Features.Exceptions;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 using StackExchange.Redis; // Para capturar exceções específicas do Redis
-using System;
-using System.Text.Json;
-using System.Threading.Tasks;
 
 public class CacheService : ICacheService
 {
@@ -17,7 +17,11 @@ public class CacheService : ICacheService
     private readonly IMemoryCache _memoryCache; // 1. Adicionada a dependência do IMemoryCache
 
     // 3. Removida a dependência do IMemoryCache para manter a responsabilidade única
-    public CacheService(IDistributedCache cache, ILogger<CacheService> logger, IMemoryCache memoryCache)
+    public CacheService(
+        IDistributedCache cache,
+        ILogger<CacheService> logger,
+        IMemoryCache memoryCache
+    )
     {
         _cache = cache;
         _logger = logger;
@@ -37,12 +41,20 @@ public class CacheService : ICacheService
         }
         catch (RedisConnectionException ex) // Erro comum: Redis está fora do ar
         {
-            _logger.LogError(ex, "Não foi possível conectar ao Redis para buscar a chave {CacheKey}.", key);
+            _logger.LogError(
+                ex,
+                "Não foi possível conectar ao Redis para buscar a chave {CacheKey}.",
+                key
+            );
             return default; // Trata como um cache miss para não quebrar a aplicação
         }
         catch (JsonException ex) // Erro de desserialização (dado corrompido no cache)
         {
-            _logger.LogWarning(ex, "Dado corrompido na chave de cache {CacheKey}. O item será tratado como expirado.", key);
+            _logger.LogWarning(
+                ex,
+                "Dado corrompido na chave de cache {CacheKey}. O item será tratado como expirado.",
+                key
+            );
             await RemoveAsync(key); // Remove o dado corrompido
             return default;
         }
@@ -54,20 +66,28 @@ public class CacheService : ICacheService
         {
             var options = new DistributedCacheEntryOptions
             {
-                AbsoluteExpirationRelativeToNow = absoluteExpireTime ?? DefaultExpiration
+                AbsoluteExpirationRelativeToNow = absoluteExpireTime ?? DefaultExpiration,
             };
             var serializedValue = JsonSerializer.Serialize(value);
             await _cache.SetStringAsync(key, serializedValue, options);
         }
         catch (RedisConnectionException ex)
         {
-            _logger.LogError(ex, "Não foi possível conectar ao Redis para definir a chave {CacheKey}.", key);
+            _logger.LogError(
+                ex,
+                "Não foi possível conectar ao Redis para definir a chave {CacheKey}.",
+                key
+            );
             // Lança uma exceção de serviço para que o chamador saiba que a operação falhou
             throw new AppServiceException("Não foi possível salvar os dados no cache.", ex);
         }
     }
 
-    public Task<T?> GetOrCreateAsync<T>(string key, Func<Task<T>> factory, TimeSpan? absoluteExpireTime = null)
+    public Task<T?> GetOrCreateAsync<T>(
+        string key,
+        Func<Task<T>> factory,
+        TimeSpan? absoluteExpireTime = null
+    )
     {
         var options = new MemoryCacheEntryOptions();
         if (absoluteExpireTime.HasValue)
@@ -75,23 +95,33 @@ public class CacheService : ICacheService
             options.SetAbsoluteExpiration(absoluteExpireTime.Value);
         }
 
-        return _memoryCache.GetOrCreateAsync(key, entry =>
-        {
-            entry.SetOptions(options);
-            return factory();
-        });
+        return _memoryCache.GetOrCreateAsync(
+            key,
+            entry =>
+            {
+                entry.SetOptions(options);
+                return factory();
+            }
+        );
     }
 
-    public Task<T?> GetOrCreateAsync<T>(string key, Func<Task<T>> factory, IChangeToken expirationToken)
+    public Task<T?> GetOrCreateAsync<T>(
+        string key,
+        Func<Task<T>> factory,
+        IChangeToken expirationToken
+    )
     {
         var options = new MemoryCacheEntryOptions();
         options.AddExpirationToken(expirationToken);
 
-        return _memoryCache.GetOrCreateAsync(key, entry =>
-        {
-            entry.SetOptions(options);
-            return factory();
-        });
+        return _memoryCache.GetOrCreateAsync(
+            key,
+            entry =>
+            {
+                entry.SetOptions(options);
+                return factory();
+            }
+        );
     }
 
     public async Task RemoveAsync(string key)
@@ -102,7 +132,11 @@ public class CacheService : ICacheService
         }
         catch (RedisConnectionException ex)
         {
-            _logger.LogError(ex, "Não foi possível conectar ao Redis para remover a chave {CacheKey}.", key);
+            _logger.LogError(
+                ex,
+                "Não foi possível conectar ao Redis para remover a chave {CacheKey}.",
+                key
+            );
             throw new AppServiceException("Não foi possível invalidar o cache.", ex);
         }
     }

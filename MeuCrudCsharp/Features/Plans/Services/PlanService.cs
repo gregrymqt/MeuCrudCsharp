@@ -1,137 +1,133 @@
-﻿using MeuCrudCsharp.Data;
+﻿using System.Text.Json;
+using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Features.Exceptions;
+using MeuCrudCsharp.Features.MercadoPago.Base; // Importando a classe base
 using MeuCrudCsharp.Features.Plans.DTOs;
 using MeuCrudCsharp.Features.Plans.Interfaces;
-using MeuCrudCsharp.Features.Profiles.Admin.Interfaces;
 using MeuCrudCsharp.Models;
-using Microsoft.AspNetCore.Routing.Matching;
 using Microsoft.EntityFrameworkCore;
 
 namespace MeuCrudCsharp.Features.Plans.Services
 {
-    public class PlanService : IPlanService
+    // --- CORREÇÃO: Herda da classe base ---
+    public class PlanService : MercadoPagoServiceBase, IPlanService
     {
         private readonly ApiDbContext _context;
-        private readonly ICacheService _cacheService;
-        private readonly IMercadoPagoService _mercadoPagoService;
-        private readonly ILogger<PlanService> _logger;
+        private readonly ICacheService _cacheService; // Descomente quando o serviço de cache estiver implementado
 
+        // --- CORREÇÃO: Construtor ajustado ---
         public PlanService(
             ApiDbContext context,
             ICacheService cacheService,
-            IMercadoPagoService mercadoPagoService,
+            HttpClient httpClient,
+            IConfiguration configuration,
             ILogger<PlanService> logger
         )
+            : base(httpClient, configuration, logger) // Passa as dependências para a classe base
         {
             _context = context;
             _cacheService = cacheService;
-            _mercadoPagoService = mercadoPagoService;
-            _logger = logger;
         }
 
         public async Task<List<PlanDto>> GetActivePlansAsync()
         {
-            const string cacheKey = "ActiveSubscriptionPlans";
-            return await _cacheService.GetOrCreateAsync(
-                cacheKey,
-                async () =>
+            // Estratégia API-First: Tenta buscar da API do Mercado Pago primeiro
+            try
+            {
+                _logger.LogInformation("Buscando planos da API do Mercado Pago.");
+
+                const string endpoint = "/preapproval_plan/search";
+                // --- CORREÇÃO: Chama o método da classe base ---
+                var responseBody = await SendMercadoPagoRequestAsync(
+                    HttpMethod.Get,
+                    endpoint,
+                    (object?)null
+                );
+
+                var apiPlans = JsonSerializer.Deserialize<PlanSearchResponseDto>(responseBody);
+
+                return apiPlans
+                    .Results.Where(plan => plan.AutoRecurring != null)
+                    .Select(plan => new PlanDto
+                    {
+                        Name = plan.Reason,
+                        Slug =
+                            plan.AutoRecurring!.FrequencyType.ToLower() == "months"
+                                ? "mensal"
+                                : "anual",
+                        PriceDisplay = FormatPriceDisplay(
+                            plan.AutoRecurring.TransactionAmount,
+                            plan.AutoRecurring.FrequencyType
+                        ),
+                        BillingInfo = FormatBillingInfo(
+                            plan.AutoRecurring.TransactionAmount,
+                            plan.AutoRecurring.FrequencyType
+                        ),
+                        IsRecommended = plan.AutoRecurring.FrequencyType.ToLower() == "years",
+                        Features = new List<string>
+                        {
+                            "Acesso a todos os cursos",
+                            "Vídeos novos toda semana",
+                            "Suporte via comunidade",
+                            "Cancele quando quiser",
+                        },
+                    })
+                    .ToList();
+            }
+            catch (Exception ex)
+            {
+                // ESTRATÉGIA DE FALLBACK
+                _logger.LogWarning(
+                    ex,
+                    "Falha ao buscar planos da API. Acionando fallback para o banco de dados local."
+                );
+
+                // MUDANÇA: Adicionando try-catch ao fallback
+                try
                 {
-                    try
-                    {
-                        // ESTRATÉGIA API-FIRST
-                        _logger.LogInformation("Tentando buscar planos da API do Mercado Pago.");
-                        var apiPlans = await _mercadoPagoService.SearchPlansAsync();
+                    var plansFromDb = await _context
+                        .Plans.AsNoTracking()
+                        .Where(p => p.IsActive)
+                        .OrderBy(p => p.TransactionAmount)
+                        .ToListAsync();
 
-                        // Mapeia a resposta da API para o nosso DTO de exibição
-                        return apiPlans
-                            .Results.Where(plan => plan.AutoRecurring != null) // Garante que o plano tem dados de recorrência
-                            .Select(plan => new PlanDto
+                    // Mapeia a entidade do banco para o DTO de exibição
+                    return plansFromDb
+                        .Select(plan => new PlanDto
+                        {
+                            Name = plan.Name,
+                            Slug = plan.FrequencyType.ToLower() == "months" ? "mensal" : "anual",
+                            PriceDisplay = FormatPriceDisplay(
+                                plan.TransactionAmount,
+                                plan.FrequencyType
+                            ),
+                            BillingInfo = FormatBillingInfo(
+                                plan.TransactionAmount,
+                                plan.FrequencyType
+                            ),
+                            IsRecommended = plan.FrequencyType.ToLower() == "years",
+                            Features = new List<string>
                             {
-                                Name = plan.Reason,
-                                Slug =
-                                    plan.AutoRecurring!.FrequencyType.ToLower() == "months"
-                                        ? "mensal"
-                                        : "anual",
-                                PriceDisplay = FormatPriceDisplay(
-                                    plan.AutoRecurring.TransactionAmount,
-                                    plan.AutoRecurring.FrequencyType
-                                ),
-                                BillingInfo = FormatBillingInfo(
-                                    plan.AutoRecurring.TransactionAmount,
-                                    plan.AutoRecurring.FrequencyType
-                                ),
-                                IsRecommended =
-                                    plan.AutoRecurring.FrequencyType.ToLower() == "years",
-                                Features = new List<string>
-                                {
-                                    "Acesso a todos os cursos",
-                                    "Vídeos novos toda semana",
-                                    "Suporte via comunidade",
-                                    "Cancele quando quiser",
-                                },
-                            })
-                            .ToList();
-                    }
-                    catch (Exception ex)
-                    {
-                        // ESTRATÉGIA DE FALLBACK
-                        _logger.LogWarning(
-                            ex,
-                            "Falha ao buscar planos da API. Acionando fallback para o banco de dados local."
-                        );
-
-                        // MUDANÇA: Adicionando try-catch ao fallback
-                        try
-                        {
-                            var plansFromDb = await _context
-                                .Plans.AsNoTracking()
-                                .Where(p => p.IsActive)
-                                .OrderBy(p => p.TransactionAmount)
-                                .ToListAsync();
-
-                            // Mapeia a entidade do banco para o DTO de exibição
-                            return plansFromDb
-                                .Select(plan => new PlanDto
-                                {
-                                    Name = plan.Name,
-                                    Slug =
-                                        plan.FrequencyType.ToLower() == "months"
-                                            ? "mensal"
-                                            : "anual",
-                                    PriceDisplay = FormatPriceDisplay(
-                                        plan.TransactionAmount,
-                                        plan.FrequencyType
-                                    ),
-                                    BillingInfo = FormatBillingInfo(
-                                        plan.TransactionAmount,
-                                        plan.FrequencyType
-                                    ),
-                                    IsRecommended = plan.FrequencyType.ToLower() == "years",
-                                    Features = new List<string>
-                                    {
-                                        "Acesso a todos os cursos",
-                                        "Vídeos novos toda semana",
-                                        "Suporte via comunidade",
-                                        "Cancele quando quiser",
-                                    },
-                                })
-                                .ToList();
-                        }
-                        catch (Exception dbEx)
-                        {
-                            _logger.LogError(
-                                dbEx,
-                                "Falha crítica: A API e o banco de dados falharam ao buscar os planos."
-                            );
-                            throw new AppServiceException(
-                                "Não foi possível carregar os planos de nenhuma fonte.",
-                                dbEx
-                            );
-                        }
-                    }
-                },
-                TimeSpan.FromHours(1)
-            );
+                                "Acesso a todos os cursos",
+                                "Vídeos novos toda semana",
+                                "Suporte via comunidade",
+                                "Cancele quando quiser",
+                            },
+                        })
+                        .ToList();
+                }
+                catch (Exception dbEx)
+                {
+                    _logger.LogError(
+                        dbEx,
+                        "Falha crítica: A API e o banco de dados falharam ao buscar os planos."
+                    );
+                    throw new AppServiceException(
+                        "Não foi possível carregar os planos de nenhuma fonte.",
+                        dbEx
+                    );
+                }
+            }
         }
 
         // Métodos auxiliares para formatação, agora reutilizáveis
@@ -158,7 +154,14 @@ namespace MeuCrudCsharp.Features.Plans.Services
         {
             try
             {
-                var mpPlanResponse = await _mercadoPagoService.CreatePlanAsync(createDto);
+                const string endpoint = "/preapproval_plan";
+                // --- CORREÇÃO: Chama o método da classe base ---
+                var responseBody = await SendMercadoPagoRequestAsync(
+                    HttpMethod.Post,
+                    endpoint,
+                    createDto
+                );
+                var mpPlanResponse = JsonSerializer.Deserialize<PlanResponseDto>(responseBody);
 
                 var newPlan = new Plan
                 {
@@ -208,7 +211,9 @@ namespace MeuCrudCsharp.Features.Plans.Services
         {
             try
             {
-                await _mercadoPagoService.UpdatePlanAsync(externalPlanId, updateDto);
+                var endpoint = $"/preapproval_plan/{externalPlanId}";
+                // --- CORREÇÃO: Chama o método da classe base ---
+                await SendMercadoPagoRequestAsync(HttpMethod.Put, endpoint, updateDto);
 
                 var localPlan = await _context.Plans.FirstOrDefaultAsync(p =>
                     p.ExternalPlanId == externalPlanId
@@ -259,10 +264,10 @@ namespace MeuCrudCsharp.Features.Plans.Services
             try
             {
                 // No Mercado Pago, planos não são deletados, apenas desativados (status: cancelled)
-                await _mercadoPagoService.UpdateSubscriptionStatusAsync(
-                    externalPlanId,
-                    "cancelled"
-                );
+                var endpoint = $"/preapproval_plan/{externalPlanId}";
+                var payload = new { status = "cancelled" };
+                // --- CORREÇÃO: Chama o método da classe base ---
+                await SendMercadoPagoRequestAsync(HttpMethod.Put, endpoint, payload);
 
                 var localPlan = await _context.Plans.FirstOrDefaultAsync(p =>
                     p.ExternalPlanId == externalPlanId

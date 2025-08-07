@@ -24,11 +24,17 @@ namespace MeuCrudCsharp.Features.Auth
             // MUDANÇA 2: Validação de Parâmetros (Fail-Fast)
             if (user == null)
             {
-                throw new ArgumentNullException(nameof(user), "O objeto do usuário não pode ser nulo para o login.");
+                throw new ArgumentNullException(
+                    nameof(user),
+                    "O objeto do usuário não pode ser nulo para o login."
+                );
             }
             if (httpContext == null)
             {
-                throw new ArgumentNullException(nameof(httpContext), "O HttpContext é necessário para o login.");
+                throw new ArgumentNullException(
+                    nameof(httpContext),
+                    "O HttpContext é necessário para o login."
+                );
             }
 
             // MUDANÇA 3: Bloco try-catch para capturar erros inesperados durante o processo de login
@@ -44,7 +50,15 @@ namespace MeuCrudCsharp.Features.Auth
 
                 // No seu Program.cs, o esquema de cookie foi definido como CookieAuthenticationDefaults.AuthenticationScheme
                 // É uma boa prática usar a constante em vez de uma string mágica.
-                var claimsIdentity = new ClaimsIdentity(claims, Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationDefaults.AuthenticationScheme);
+                var claimsIdentity = new ClaimsIdentity(
+                    claims,
+                    Microsoft
+                        .AspNetCore
+                        .Authentication
+                        .Cookies
+                        .CookieAuthenticationDefaults
+                        .AuthenticationScheme
+                );
 
                 var authProperties = new AuthenticationProperties
                 {
@@ -53,21 +67,38 @@ namespace MeuCrudCsharp.Features.Auth
                 };
 
                 await httpContext.SignInAsync(
-                    Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationDefaults.AuthenticationScheme,
+                    Microsoft
+                        .AspNetCore
+                        .Authentication
+                        .Cookies
+                        .CookieAuthenticationDefaults
+                        .AuthenticationScheme,
                     new ClaimsPrincipal(claimsIdentity),
                     authProperties
                 );
 
                 // MUDANÇA 5: Logging de sucesso (boa prática)
-                _logger.LogInformation("Usuário {UserId} - {UserEmail} logado com sucesso.", user.Id, user.Email);
+                _logger.LogInformation(
+                    "Usuário {UserId} - {UserEmail} logado com sucesso.",
+                    user.Id,
+                    user.Email
+                );
             }
             catch (Exception ex)
             {
                 // MUDANÇA 4: Logging detalhado do erro e lançamento de exceção customizada
-                _logger.LogError(ex, "Erro inesperado ao tentar realizar o login para o usuário {UserId} - {UserEmail}.", user.Id, user.Email);
+                _logger.LogError(
+                    ex,
+                    "Erro inesperado ao tentar realizar o login para o usuário {UserId} - {UserEmail}.",
+                    user.Id,
+                    user.Email
+                );
 
                 // Lança nossa exceção base, que pode ser capturada por um middleware ou pelo controller
-                throw new AppServiceException("Ocorreu um erro inesperado ao tentar realizar o login.", ex);
+                throw new AppServiceException(
+                    "Ocorreu um erro inesperado ao tentar realizar o login.",
+                    ex
+                );
             }
         }
     }

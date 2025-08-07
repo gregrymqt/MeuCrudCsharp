@@ -28,7 +28,13 @@ namespace MeuCrudCsharp.Features.Emails.Services
             var from = new EmailAddress("seu-email@seudominio.com", "Nome da Sua Empresa");
             var toAddress = new EmailAddress(to);
 
-            var msg = MailHelper.CreateSingleEmail(from, toAddress, subject, plainTextBody, htmlBody);
+            var msg = MailHelper.CreateSingleEmail(
+                from,
+                toAddress,
+                subject,
+                plainTextBody,
+                htmlBody
+            );
 
             var response = await client.SendEmailAsync(msg);
 

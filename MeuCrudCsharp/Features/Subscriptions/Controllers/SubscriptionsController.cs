@@ -37,10 +37,11 @@ namespace MeuCrudCsharp.Features.Subscriptions.Controllers
 
             try
             {
-                var subscriptionResponse = await _subscriptionService.CreateSubscriptionAsync(
-                    createDto,
-                    User
-                );
+                var subscriptionResponse =
+                    await _subscriptionService.CreateSubscriptionAndCustomerIfNeededAsync(
+                        createDto,
+                        User
+                    );
                 return Ok(subscriptionResponse);
             }
             catch (AppServiceException ex)

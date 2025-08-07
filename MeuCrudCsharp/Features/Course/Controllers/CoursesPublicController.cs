@@ -15,6 +15,7 @@ namespace MeuCrudCsharp.Features.Courses.Controllers
         {
             _courseService = courseService;
         }
+
         [Authorize(Roles = "Admin,User")] // Permite acesso apenas para usuários autenticados com as roles Admin ou User
         [HttpGet("all")] // Rota final: GET /api/courses/all
         public async Task<IActionResult> GetAllCoursesWithVideos()

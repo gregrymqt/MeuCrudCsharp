@@ -3,19 +3,28 @@ using Hangfire;
 using Hangfire.Redis.StackExchange;
 using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Features.Auth;
+using MeuCrudCsharp.Features.Clients.Interfaces;
+using MeuCrudCsharp.Features.Clients.Service;
 using MeuCrudCsharp.Features.Courses.Interfaces;
 using MeuCrudCsharp.Features.Courses.Services;
 using MeuCrudCsharp.Features.Emails.Interfaces;
 using MeuCrudCsharp.Features.Emails.Services;
+using MeuCrudCsharp.Features.Exceptions;
+using MeuCrudCsharp.Features.MercadoPago.Base;
 using MeuCrudCsharp.Features.MercadoPago.Jobs; // Adicionado para os Jobs
 using MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces;
 using MeuCrudCsharp.Features.MercadoPago.Payments.Services;
 using MeuCrudCsharp.Features.MercadoPago.Tokens;
 using MeuCrudCsharp.Features.Plans.Interfaces;
+using MeuCrudCsharp.Features.Plans.Services;
 using MeuCrudCsharp.Features.Profiles.Admin.Interfaces;
 using MeuCrudCsharp.Features.Profiles.Admin.Services;
 using MeuCrudCsharp.Features.Profiles.UserAccount.Interfaces;
 using MeuCrudCsharp.Features.Profiles.UserAccount.Services;
+using MeuCrudCsharp.Features.Refunds.Interfaces;
+using MeuCrudCsharp.Features.Refunds.Services;
+using MeuCrudCsharp.Features.Subscriptions.Interfaces;
+using MeuCrudCsharp.Features.Subscriptions.Services;
 using MeuCrudCsharp.Features.Videos.Interfaces;
 using MeuCrudCsharp.Features.Videos.Service;
 using MeuCrudCsharp.Models;
@@ -97,16 +106,9 @@ else
             .UseInMemoryStorage()
     );
 }
-builder.Services.AddScoped<ICacheService, CacheService>();
-
-// Adiciona o HttpClient para ser injetado no serviço do Mercado Pago
-builder.Services.AddHttpClient<IMercadoPagoService, MercadoPagoService>(client =>
-{
-    client.BaseAddress = new Uri("https://api.mercadopago.com");
-});
 
 // 5. Registrando seus serviços customizados da aplicação
-builder.Services.AddScoped<IMercadoPagoService, MercadoPagoService>();
+builder.Services.AddScoped<ICacheService, CacheService>();
 builder.Services.AddScoped<IAppAuthService, AppAuthService>();
 builder.Services.AddScoped<ICreditCardPayments, CreditCardPaymentService>();
 builder.Services.AddScoped<IPreferencePayment, PreferencePaymentService>();
@@ -122,8 +124,17 @@ builder.Services.AddScoped<IVideoProcessingService, VideoProcessingService>();
 builder.Services.AddScoped<ICourseService, CourseService>();
 builder.Services.AddScoped<IPlanService, IPlanService>();
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddHttpClient<MercadoPagoService>();
-builder.Services.AddScoped<RefundService>();
+builder.Services.AddScoped<IRefundService, RefundService>();
+builder.Services.AddScoped<IClientService, ClientService>();
+builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
+builder.Services.AddScoped<IPlanService, PlanService>();
+builder.Services.AddScoped<MercadoPagoServiceBase>();
+builder.Services.AddScoped<ProcessPaymentNotificationJob>();
+builder.Services.AddScoped<INotificationPaymentService, NotificationPaymentService>();
+builder.Services.AddScoped<IQueueService, BackgroundJobQueueService>();
+builder.Services.AddScoped<AppServiceException>();
+builder.Services.AddScoped<ExternalApiException>();
+builder.Services.AddScoped<ResourceNotFoundException>();
 
 // 6. Adiciona o servidor Hangfire que processa os jobs na fila
 // Isso deve vir depois que o Hangfire foi configurado (AddHangfire)

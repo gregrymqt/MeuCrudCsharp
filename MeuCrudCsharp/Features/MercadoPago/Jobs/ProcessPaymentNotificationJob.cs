@@ -33,12 +33,20 @@ namespace MeuCrudCsharp.Features.MercadoPago.Jobs
             // Se o ID for inválido, o job falha imediatamente sem consumir recursos.
             if (string.IsNullOrEmpty(paymentId))
             {
-                _logger.LogError("Job de notificação de pagamento recebido com um PaymentId nulo ou vazio. O job será descartado.");
+                _logger.LogError(
+                    "Job de notificação de pagamento recebido com um PaymentId nulo ou vazio. O job será descartado."
+                );
                 // Lançar exceção evita que o Hangfire tente reprocessar um job inválido.
-                throw new ArgumentNullException(nameof(paymentId), "O ID do pagamento não pode ser nulo.");
+                throw new ArgumentNullException(
+                    nameof(paymentId),
+                    "O ID do pagamento não pode ser nulo."
+                );
             }
 
-            _logger.LogInformation("Iniciando processamento do job para o Payment ID: {PaymentId}", paymentId);
+            _logger.LogInformation(
+                "Iniciando processamento do job para o Payment ID: {PaymentId}",
+                paymentId
+            );
 
             // A transação é a melhor forma de garantir a consistência dos dados.
             await using var transaction = await _context.Database.BeginTransactionAsync();
@@ -48,8 +56,10 @@ namespace MeuCrudCsharp.Features.MercadoPago.Jobs
                 // MUDANÇA 2: Corrigindo o nome da tabela na consulta SQL
                 // E simplificando a busca com .FirstOrDefault() que pode ser nulo.
                 var pagamentoLocal = await _context
-                    .Payments
-                    .FromSqlRaw(@"SELECT * FROM ""Payments"" WHERE ""ExternalId"" = {0} FOR UPDATE", paymentId)
+                    .Payments.FromSqlRaw(
+                        @"SELECT * FROM ""Payments"" WHERE ""ExternalId"" = {0} FOR UPDATE",
+                        paymentId
+                    )
                     .FirstOrDefaultAsync();
 
                 if (pagamentoLocal == null)
@@ -57,7 +67,9 @@ namespace MeuCrudCsharp.Features.MercadoPago.Jobs
                     // MUDANÇA 3: Lançar uma exceção específica em vez de retornar vazio.
                     // Isso informa ao Hangfire que algo está errado (ex: o webhook chegou antes do pagamento ser salvo).
                     // O retry do Hangfire pode resolver isso na próxima tentativa.
-                    throw new ResourceNotFoundException($"Pagamento com ID externo {paymentId} não encontrado no banco. Tentando novamente mais tarde.");
+                    throw new ResourceNotFoundException(
+                        $"Pagamento com ID externo {paymentId} não encontrado no banco. Tentando novamente mais tarde."
+                    );
                 }
 
                 // A verificação de reprocessamento está ótima.

@@ -1,36 +1,36 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using MercadoPago.Resource.Payment;
+﻿// Local: Features/Profiles/UserAccount/Services/UserAccountService.cs
+
+using System.Security.Claims;
+using System.Text.Json;
 using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Features.Exceptions;
-using MeuCrudCsharp.Features.Profiles.Admin.Interfaces;
+using MeuCrudCsharp.Features.MercadoPago.Base; // Importando a classe base
 using MeuCrudCsharp.Features.Profiles.UserAccount.DTOs;
 using MeuCrudCsharp.Features.Profiles.UserAccount.Interfaces;
+using MeuCrudCsharp.Features.Subscriptions.DTOs; // Importando DTOs de assinatura
 using MeuCrudCsharp.Models;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging; // MUDANÇA 1: Adicionando o Logger
 
 namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
 {
-    public class UserAccountService : IUserAccountService
+    // --- CORREÇÃO: Herda da classe base ---
+    public class UserAccountService : MercadoPagoServiceBase, IUserAccountService
     {
         private readonly ApiDbContext _context;
-        private readonly IMercadoPagoService _mercadoPagoService;
-        private readonly ICacheService _cacheService;
-        private readonly ILogger<UserAccountService> _logger; // MUDANÇA 1
+        private readonly ICacheService _cacheService; // Descomente quando o serviço de cache estiver implementado
 
+        // --- CORREÇÃO: Construtor ajustado para injetar dependências corretas ---
         public UserAccountService(
             ApiDbContext context,
-            IMercadoPagoService mercadoPagoService,
             ICacheService cacheService,
+            HttpClient httpClient,
+            IConfiguration configuration,
             ILogger<UserAccountService> logger
-        ) // MUDANÇA 1
+        )
+            : base(httpClient, configuration, logger) // Passa dependências para a classe base
         {
             _context = context;
-            _mercadoPagoService = mercadoPagoService;
             _cacheService = cacheService;
-            _logger = logger;
         }
 
         public async Task<UserProfileDto> GetUserProfileAsync(Guid userId)
@@ -93,9 +93,19 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
                         if (subscription?.Plan == null)
                             return null;
 
-                        var mpSubscription = await _mercadoPagoService.GetSubscriptionAsync(
-                            subscription.ExternalId
+                        // --- CORREÇÃO: Lógica da API movida para dentro do método ---
+                        var endpoint = $"/preapproval/{subscription.ExternalId}";
+                        var responseBody = await SendMercadoPagoRequestAsync(
+                            HttpMethod.Get,
+                            endpoint,
+                            (object?)null
                         );
+                        var mpSubscription = JsonSerializer.Deserialize<SubscriptionResponseDto>(
+                            responseBody
+                        );
+
+                        if (mpSubscription == null)
+                            return null;
 
                         return new SubscriptionDetailsDto
                         {
@@ -106,17 +116,6 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
                             NextBillingDate = mpSubscription.NextBillingDate,
                             LastFourCardDigits = mpSubscription.Card?.LastFourDigits,
                         };
-                    }
-                    // Captura exceções específicas da comunicação com a API externa
-                    catch (ExternalApiException ex)
-                    {
-                        _logger.LogError(
-                            ex,
-                            "Falha ao buscar detalhes da assinatura {SubscriptionId} no Mercado Pago para o usuário {UserId}.",
-                            "ID_EXTERNO_AQUI",
-                            userId
-                        );
-                        throw; // Relança para o controller tratar
                     }
                     catch (Exception ex)
                     {
@@ -130,8 +129,7 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
                             ex
                         );
                     }
-                },
-                TimeSpan.FromMinutes(5)
+                }
             );
         }
 
@@ -172,18 +170,16 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
         {
             try
             {
-                var subscription = await _context.Subscriptions.FirstOrDefaultAsync(s =>
-                    s.UserId == userId && s.Status != "cancelado"
+                var subscription = await FindActiveSubscriptionAsync(
+                    userId,
+                    "para atualização de cartão"
                 );
-                if (subscription == null)
-                    throw new ResourceNotFoundException(
-                        "Assinatura ativa não encontrada para atualização."
-                    );
 
-                await _mercadoPagoService.UpdateSubscriptionCardAsync(
-                    subscription.ExternalId,
-                    newCardToken
-                );
+                // --- CORREÇÃO: Lógica da API movida para dentro do método ---
+                var endpoint = $"/preapproval/{subscription.ExternalId}";
+                var payload = new UpdateCardTokenDto { NewCardToken = newCardToken };
+                await SendMercadoPagoRequestAsync(HttpMethod.Put, endpoint, payload);
+
                 await _cacheService.RemoveAsync($"SubscriptionDetails_{userId}");
 
                 _logger.LogInformation(
@@ -217,18 +213,17 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
         {
             try
             {
-                var subscription = await _context.Subscriptions.FirstOrDefaultAsync(s =>
-                    s.UserId == userId && s.Status != "cancelado"
-                );
-                if (subscription == null)
-                    throw new ResourceNotFoundException(
-                        "Assinatura ativa não encontrada para cancelamento."
-                    );
+                var subscription = await FindActiveSubscriptionAsync(userId, "para cancelamento");
 
-                var result = await _mercadoPagoService.UpdateSubscriptionStatusAsync(
-                    subscription.ExternalId,
-                    "cancelled"
+                // --- CORREÇÃO: Lógica da API movida para dentro do método ---
+                var endpoint = $"/preapproval/{subscription.ExternalId}";
+                var payload = new SubscriptionDetailsDto { Status = "cancelled" };
+                var responseBody = await SendMercadoPagoRequestAsync(
+                    HttpMethod.Put,
+                    endpoint,
+                    payload
                 );
+                var result = JsonSerializer.Deserialize<SubscriptionResponseDto>(responseBody);
 
                 if (result.Status == "cancelled")
                 {
@@ -263,23 +258,26 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
                 var subscription = await _context.Subscriptions.FirstOrDefaultAsync(s =>
                     s.UserId == userId && s.Status == "pausado"
                 );
-                if (subscription == null)
-                    return false;
 
-                var result = await _mercadoPagoService.UpdateSubscriptionStatusAsync(
-                    subscription.ExternalId,
-                    "authorized"
+                if (subscription == null)
+                    return false; // Não é um erro, apenas não há o que reativar
+
+                // --- CORREÇÃO: Lógica da API movida para dentro do método ---
+                var endpoint = $"/preapproval/{subscription.ExternalId}";
+                var payload = new SubscriptionDetailsDto { Status = "authorized" };
+                var responseBody = await SendMercadoPagoRequestAsync(
+                    HttpMethod.Put,
+                    endpoint,
+                    payload
                 );
+                var result = JsonSerializer.Deserialize<SubscriptionResponseDto>(responseBody);
 
                 if (result.Status == "authorized")
                 {
                     subscription.Status = "ativo";
                     subscription.UpdatedAt = DateTime.UtcNow;
                     await _context.SaveChangesAsync();
-
-                    // 3. AÇÃO DE ESCRITA: Invalida o cache
                     await _cacheService.RemoveAsync($"SubscriptionDetails_{userId}");
-
                     return true;
                 }
                 return false;
@@ -334,6 +332,18 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
                     ex
                 );
             }
+        }
+
+        private async Task<Subscription> FindActiveSubscriptionAsync(Guid userId, string action)
+        {
+            var subscription = await _context.Subscriptions.FirstOrDefaultAsync(s =>
+                s.UserId == userId && (s.Status == "ativo" || s.Status == "pausado")
+            );
+
+            if (subscription == null)
+                throw new ResourceNotFoundException($"Assinatura ativa não encontrada {action}.");
+
+            return subscription;
         }
     }
 }

@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace MeuCrudCsharp.Features.MercadoPago.Dtos
+namespace MeuCrudCsharp.Features.Refunds.DTOs
 {
     public class RefundRequestDto
     {

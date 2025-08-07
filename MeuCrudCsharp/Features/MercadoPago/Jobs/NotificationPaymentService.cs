@@ -21,7 +21,8 @@ namespace MeuCrudCsharp.Features.MercadoPago.Jobs
             ApiDbContext context,
             IEmailSenderService emailSender,
             IRazorViewToStringRenderer razorRenderer,
-            ILogger<NotificationPaymentService> logger) // MUDANÇA 1
+            ILogger<NotificationPaymentService> logger
+        ) // MUDANÇA 1
         {
             _context = context;
             _emailSender = emailSender;
@@ -31,7 +32,11 @@ namespace MeuCrudCsharp.Features.MercadoPago.Jobs
 
         public async Task VerifyAndProcessNotificationAsync(Guid userId, string paymentId)
         {
-            _logger.LogInformation("Iniciando processamento de notificação para UserID: {UserId}, PaymentId: {PaymentId}", userId, paymentId);
+            _logger.LogInformation(
+                "Iniciando processamento de notificação para UserID: {UserId}, PaymentId: {PaymentId}",
+                userId,
+                paymentId
+            );
 
             // MUDANÇA 2: Envolvendo o método principal em um try-catch
             try
@@ -41,12 +46,20 @@ namespace MeuCrudCsharp.Features.MercadoPago.Jobs
 
                 // MUDANÇA 3: Substituindo falha silenciosa por uma exceção clara
                 if (user == null)
-                    throw new ResourceNotFoundException($"Usuário com ID {userId} não foi encontrado para notificação.");
+                    throw new ResourceNotFoundException(
+                        $"Usuário com ID {userId} não foi encontrado para notificação."
+                    );
 
                 if (status == null)
-                    throw new ResourceNotFoundException($"Pagamento com ID {paymentId} não foi encontrado para notificação.");
+                    throw new ResourceNotFoundException(
+                        $"Pagamento com ID {paymentId} não foi encontrado para notificação."
+                    );
 
-                _logger.LogInformation("Pagamento {PaymentId} encontrado com status: {Status}", paymentId, status);
+                _logger.LogInformation(
+                    "Pagamento {PaymentId} encontrado com status: {Status}",
+                    paymentId,
+                    status
+                );
 
                 if (status == "approved")
                 {
@@ -59,7 +72,12 @@ namespace MeuCrudCsharp.Features.MercadoPago.Jobs
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Falha crítica no processamento da notificação para UserID: {UserId}, PaymentId: {PaymentId}", userId, paymentId);
+                _logger.LogError(
+                    ex,
+                    "Falha crítica no processamento da notificação para UserID: {UserId}, PaymentId: {PaymentId}",
+                    userId,
+                    paymentId
+                );
                 // Relança a exceção para que o Hangfire saiba que o job falhou e deve tentar novamente.
                 throw;
             }
@@ -75,15 +93,19 @@ namespace MeuCrudCsharp.Features.MercadoPago.Jobs
                     throw new ArgumentException($"O PaymentId '{paymentId}' não é um GUID válido.");
                 }
 
-                var payment = await _context.Payments
-                    .AsNoTracking()
+                var payment = await _context
+                    .Payments.AsNoTracking()
                     .FirstOrDefaultAsync(p => p.Id == paymentGuid);
 
                 return payment?.Status;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erro ao buscar o status do pagamento {PaymentId} no banco de dados.", paymentId);
+                _logger.LogError(
+                    ex,
+                    "Erro ao buscar o status do pagamento {PaymentId} no banco de dados.",
+                    paymentId
+                );
                 throw new AppServiceException($"Falha ao consultar o pagamento {paymentId}.", ex);
             }
         }
@@ -100,17 +122,32 @@ namespace MeuCrudCsharp.Features.MercadoPago.Jobs
                     PaymentId = paymentId,
                 };
                 var htmlBody = await _razorRenderer.RenderViewToStringAsync(
-                    "~/Pages/EmailTemplates/Confirmation/Email.cshtml", viewModel);
-                var plainTextBody = $"Olá, {viewModel.UserName}! Seu pagamento com ID {viewModel.PaymentId} foi aprovado com sucesso.";
+                    "~/Pages/EmailTemplates/Confirmation/Email.cshtml",
+                    viewModel
+                );
+                var plainTextBody =
+                    $"Olá, {viewModel.UserName}! Seu pagamento com ID {viewModel.PaymentId} foi aprovado com sucesso.";
 
                 await _emailSender.SendEmailAsync(user.Email, subject, htmlBody, plainTextBody);
-                _logger.LogInformation("E-mail de confirmação enviado com sucesso para {UserEmail} referente ao pagamento {PaymentId}.", user.Email, paymentId);
+                _logger.LogInformation(
+                    "E-mail de confirmação enviado com sucesso para {UserEmail} referente ao pagamento {PaymentId}.",
+                    user.Email,
+                    paymentId
+                );
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Falha ao enviar e-mail de CONFIRMAÇÃO para {UserEmail} (PaymentId: {PaymentId}).", user.Email, paymentId);
+                _logger.LogError(
+                    ex,
+                    "Falha ao enviar e-mail de CONFIRMAÇÃO para {UserEmail} (PaymentId: {PaymentId}).",
+                    user.Email,
+                    paymentId
+                );
                 // Lança uma exceção específica de API externa para sinalizar o tipo de erro
-                throw new ExternalApiException("Falha ao renderizar ou enviar o e-mail de confirmação.", ex);
+                throw new ExternalApiException(
+                    "Falha ao renderizar ou enviar o e-mail de confirmação.",
+                    ex
+                );
             }
         }
 
@@ -123,18 +160,34 @@ namespace MeuCrudCsharp.Features.MercadoPago.Jobs
                 var viewModel = new RejectionEmailViewModel
                 {
                     UserName = user.Name,
-                    PaymentId = paymentId
+                    PaymentId = paymentId,
                 };
-                var htmlBody = await _razorRenderer.RenderViewToStringAsync("~/Pages/EmailTemplates/Rejection/Email.cshtml", viewModel);
-                var plainTextBody = $"Olá, {user.Name}. Infelizmente, ocorreu um problema com o seu pagamento de ID {paymentId} e ele foi rejeitado.";
+                var htmlBody = await _razorRenderer.RenderViewToStringAsync(
+                    "~/Pages/EmailTemplates/Rejection/Email.cshtml",
+                    viewModel
+                );
+                var plainTextBody =
+                    $"Olá, {user.Name}. Infelizmente, ocorreu um problema com o seu pagamento de ID {paymentId} e ele foi rejeitado.";
 
                 await _emailSender.SendEmailAsync(user.Email, subject, htmlBody, plainTextBody);
-                _logger.LogInformation("E-mail de rejeição enviado com sucesso para {UserEmail} referente ao pagamento {PaymentId}.", user.Email, paymentId);
+                _logger.LogInformation(
+                    "E-mail de rejeição enviado com sucesso para {UserEmail} referente ao pagamento {PaymentId}.",
+                    user.Email,
+                    paymentId
+                );
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Falha ao enviar e-mail de REJEIÇÃO para {UserEmail} (PaymentId: {PaymentId}).", user.Email, paymentId);
-                throw new ExternalApiException("Falha ao renderizar ou enviar o e-mail de rejeição.", ex);
+                _logger.LogError(
+                    ex,
+                    "Falha ao enviar e-mail de REJEIÇÃO para {UserEmail} (PaymentId: {PaymentId}).",
+                    user.Email,
+                    paymentId
+                );
+                throw new ExternalApiException(
+                    "Falha ao renderizar ou enviar o e-mail de rejeição.",
+                    ex
+                );
             }
         }
     }
