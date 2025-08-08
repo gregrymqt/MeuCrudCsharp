@@ -36,18 +36,47 @@ window.onclick = function (event) {
 };
 
 async function deleteVideo(videoId) {
-    if (!confirm('Você tem certeza que deseja deletar este vídeo? Esta ação não pode ser desfeita.')) {
+    // --- MUDANÇA AQUI ---
+    const result = await Swal.fire({
+        title: 'Você tem certeza?',
+        text: "Esta ação não pode ser desfeita.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Sim, deletar!',
+        cancelButtonText: 'Cancelar'
+    });
+
+    if (!result.isConfirmed) {
         return;
     }
+
     try {
         const response = await fetch(`/api/admin/videos/${videoId}`, { method: 'DELETE' });
-        const result = await response.json();
-        if (!response.ok) throw new Error(result.message || 'Falha ao deletar o vídeo.');
-        alert(result.message);
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Falha ao deletar o vídeo.');
+        }
+
+        const successData = await response.json();
+
+        // --- MUDANÇA AQUI ---
+        Swal.fire(
+            'Deletado!',
+            successData.message, // Usa a mensagem de sucesso vinda do backend
+            'success'
+        );
+
         document.dispatchEvent(new CustomEvent('reloadAllVideos'));
     } catch (error) {
         console.error('Erro ao deletar:', error);
-        alert(`Erro: ${error.message}`);
+        // --- MUDANÇA AQUI ---
+        Swal.fire(
+            'Erro!',
+            error.message,
+            'error'
+        );
     }
 }
 
@@ -219,7 +248,16 @@ document.addEventListener('DOMContentLoaded', function () {
 
         metadataFieldset.disabled = true;
         saveButton.disabled = true;
-        uploadStatusDiv.innerHTML = `<p style="color: #0d6efd;">Enviando arquivo, por favor aguarde...</p>`;
+
+        // --- MUDANÇA AQUI: Mostra um loading modal ---
+        Swal.fire({
+            title: 'Enviando...',
+            text: 'Por favor, aguarde o upload do arquivo.',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
 
         const formData = new FormData();
         formData.append('videoFile', file);
@@ -231,12 +269,31 @@ document.addEventListener('DOMContentLoaded', function () {
                 throw new Error(errorData.message || 'Ocorreu um erro no upload.');
             }
             const result = await response.json();
-            uploadStatusDiv.innerHTML = `<p style="color: #198754;"><strong>Upload concluído!</strong> Agora, preencha os detalhes do vídeo abaixo.</p>`;
+
+            // --- MUDANÇA AQUI: Fecha o loading e mostra um toast de sucesso ---
+            Swal.close();
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'success',
+                title: 'Upload concluído!',
+                showConfirmButton: false,
+                timer: 3000
+            });
+
+            // Mantemos o innerHTML para uma mensagem persistente
+            uploadStatusDiv.innerHTML = `<p style="color: #198754;"><strong>Upload concluído!</strong> Agora, preencha os detalhes abaixo.</p>`;
             storageIdentifierInput.value = result.storageIdentifier;
             metadataFieldset.disabled = false;
             saveButton.disabled = false;
         } catch (error) {
             console.error('Erro no upload:', error);
+            // --- MUDANÇA AQUI: Fecha o loading e mostra um alerta de erro ---
+            Swal.fire({
+                icon: 'error',
+                title: 'Erro no Upload',
+                text: error.message,
+            });
             uploadStatusDiv.innerHTML = `<p style="color: #dc3545;"><strong>Erro no upload:</strong> ${error.message}</p>`;
         }
     });
@@ -244,22 +301,14 @@ document.addEventListener('DOMContentLoaded', function () {
     createForm.addEventListener('submit', async function (event) {
         event.preventDefault();
         if (!storageIdentifierInput.value) {
-            alert('Por favor, envie um arquivo de vídeo primeiro.');
+            // --- MUDANÇA AQUI ---
+            Swal.fire('Atenção', 'Por favor, envie um arquivo de vídeo primeiro.', 'warning');
             return;
         }
         saveButton.disabled = true;
         saveButton.textContent = 'Salvando...';
 
-        const formData = new FormData();
-        formData.append('Title', titleInput.value);
-        formData.append('Description', descriptionInput.value);
-        formData.append('StorageIdentifier', storageIdentifierInput.value);
-        formData.append('CourseName', courseSelect.value === 'new_course' ? newCourseInput.value : courseSelect.options[courseSelect.selectedIndex].text);
-
-        // Adiciona o arquivo da thumbnail, se um foi selecionado
-        if (createThumbnailInput.files.length > 0) {
-            formData.append('ThumbnailFile', createThumbnailInput.files[0]);
-        }
+        const formData = new FormData(createForm); // Forma mais simples de pegar todos os dados
 
         try {
             const response = await fetch('/api/admin/videos', {
@@ -269,9 +318,17 @@ document.addEventListener('DOMContentLoaded', function () {
             if (!response.ok) {
                 const errorData = await response.json();
                 const errorMessages = Object.values(errorData.errors || {}).flat().join('\n');
-                throw new Error(errorMessages || 'Ocorreu um erro ao salvar os dados.');
+                throw new Error(errorMessages || errorData.message || 'Ocorreu um erro ao salvar os dados.');
             }
-            alert('Vídeo cadastrado com sucesso!');
+
+            // --- MUDANÇA AQUI ---
+            await Swal.fire({
+                title: 'Sucesso!',
+                text: 'Vídeo cadastrado com sucesso!',
+                icon: 'success'
+            });
+
+            // Limpa e reseta o formulário após o usuário fechar o alerta
             document.dispatchEvent(new CustomEvent('reloadAllVideos'));
             if (courseSelect.value === 'new_course') {
                 await loadCoursesIntoSelect();
@@ -283,7 +340,8 @@ document.addEventListener('DOMContentLoaded', function () {
             uploadStatusDiv.innerHTML = '';
         } catch (error) {
             console.error('Erro ao salvar metadados:', error);
-            alert(`Erro ao salvar: ${error.message}`);
+            // --- MUDANÇA AQUI ---
+            Swal.fire('Erro ao Salvar', error.message, 'error');
         } finally {
             saveButton.disabled = false;
             saveButton.textContent = 'Salvar Vídeo';
@@ -294,30 +352,33 @@ document.addEventListener('DOMContentLoaded', function () {
     editForm.addEventListener('submit', async function (event) {
         event.preventDefault();
         const videoId = editVideoIdInput.value;
-
-        // MUDANÇA CRÍTICA: Usando FormData para enviar arquivos
-        const formData = new FormData();
-        formData.append('Title', editVideoTitleInput.value);
-        formData.append('Description', editVideoDescriptionInput.value);
-
-        // Adiciona o arquivo da thumbnail, se um novo foi selecionado
-        if (editThumbnailInput.files.length > 0) {
-            formData.append('ThumbnailFile', editThumbnailInput.files[0]);
-        }
+        const formData = new FormData(editForm);
 
         try {
             const response = await fetch(`/api/admin/videos/${videoId}`, {
                 method: 'PUT',
                 body: formData
             });
-            if (!response.ok) throw new Error('Falha ao atualizar o vídeo.');
-            alert('Vídeo atualizado com sucesso!');
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Falha ao atualizar o vídeo.');
+            }
+
+            // --- MUDANÇA AQUI ---
+            Swal.fire({
+                title: 'Atualizado!',
+                text: 'Vídeo atualizado com sucesso!',
+                icon: 'success',
+                timer: 2000,
+                showConfirmButton: false
+            });
+
             closeEditModal();
-            // Dispara o evento para recarregar as listas
             document.dispatchEvent(new CustomEvent('reloadAllVideos'));
         } catch (error) {
             console.error('Erro ao atualizar:', error);
-            alert(`Erro: ${error.message}`);
+            // --- MUDANÇA AQUI ---
+            Swal.fire('Erro!', error.message, 'error');
         }
     });
 

@@ -4,14 +4,17 @@ namespace MeuCrudCsharp.Features.Videos.DTOs
 {
     public class CreateVideoDto
     {
-        // ... propriedades existentes ...
+        [Required]
         public string Title { get; set; }
-        public string Description { get; set; }
+        public string? Description { get; set; }
+
+        [Required]
         public string StorageIdentifier { get; set; }
+
+        [Required]
         public string CourseName { get; set; }
 
-        // NOVO
-        [Url(ErrorMessage = "A URL da thumbnail não é válida.")]
-        public string? ThumbnailUrl { get; set; }
+        // --- PROPRIEDADE ADICIONADA ---
+        public IFormFile? ThumbnailFile { get; set; }
     }
 }

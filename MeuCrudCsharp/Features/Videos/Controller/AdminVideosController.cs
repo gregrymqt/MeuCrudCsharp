@@ -83,14 +83,15 @@ namespace MeuCrudCsharp.Features.Videos.Controller
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateVideoMetadata([FromBody] CreateVideoDto createDto, IFormFile? thumbnailFile)
-
+        public async Task<IActionResult> CreateVideoMetadata([FromForm] CreateVideoDto createDto)
         {
+            // O IFormFile da Thumbnail já está dentro do createDto, então não precisa ser um parâmetro separado.
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
-            var videoToReturn = await _videoService.CreateVideoAsync(createDto, thumbnailFile);
+            // Supondo que seu CreateVideoDto agora tenha uma propriedade IFormFile ThumbnailFile
+            var videoToReturn = await _videoService.CreateVideoAsync(createDto);
             return CreatedAtAction(
                 nameof(GetAllVideos),
                 new { id = videoToReturn.Id },
@@ -99,9 +100,10 @@ namespace MeuCrudCsharp.Features.Videos.Controller
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateVideo(Guid id, [FromBody] UpdateVideoDto updateDto, IFormFile? thumbnailFile)
+        public async Task<IActionResult> UpdateVideo(Guid id, [FromForm] UpdateVideoDto updateDto)
         {
-            var updatedVideo = await _videoService.UpdateVideoAsync(id, updateDto, thumbnailFile);
+            // O IFormFile da Thumbnail já está dentro do updateDto
+            var updatedVideo = await _videoService.UpdateVideoAsync(id, updateDto);
             return Ok(updatedVideo);
         }
 
@@ -109,7 +111,7 @@ namespace MeuCrudCsharp.Features.Videos.Controller
         public async Task<IActionResult> DeleteVideo(Guid id)
         {
             await _videoService.DeleteVideoAsync(id);
-            
+
             return Ok(new { message = "Vídeo e arquivos associados foram deletados com sucesso." });
         }
     }

@@ -1,11 +1,13 @@
 ﻿using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace MeuCrudCsharp.Features.Videos.Controller
 {
     [ApiController]
+    [Authorize]
     [Route("api/videos")]
     public class VideosController : ControllerBase
     {
