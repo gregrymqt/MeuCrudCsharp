@@ -1,83 +1,156 @@
 ﻿using System;
 using System.Security.Claims;
 using System.Threading.Tasks;
-using MeuCrudCsharp.Features.Profiles.UserAccount.DTOs; // Precisaremos do DTO de request
+using MeuCrudCsharp.Features.Profiles.UserAccount.DTOs;
 using MeuCrudCsharp.Features.Profiles.UserAccount.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
 namespace MeuCrudCsharp.Features.UserAccount.Controllers
 {
+    /// <summary>
+    /// Manages the authenticated user's subscription actions, such as changing payment methods,
+    /// cancelling, and reactivating.
+    /// </summary>
     [Authorize]
     [ApiController]
-    [Route("api/user/subscription")] // Rota base para a API de assinatura do usuário
+    [Route("api/user/subscription")]
     public class SubscriptionApiController : ControllerBase
     {
         private readonly IUserAccountService _userAccountService;
+        private readonly ILogger<SubscriptionApiController> _logger;
 
-        public SubscriptionApiController(IUserAccountService userAccountService)
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SubscriptionApiController"/> class.
+        /// </summary>
+        /// <param name="userAccountService">The service for user account and subscription logic.</param>
+        /// <param name="logger">The logger for recording events and errors.</param>
+        public SubscriptionApiController(
+            IUserAccountService userAccountService,
+            ILogger<SubscriptionApiController> logger
+        )
         {
             _userAccountService = userAccountService;
+            _logger = logger;
         }
 
+        /// <summary>
+        /// Updates the payment card associated with the user's current subscription.
+        /// </summary>
+        /// <param name="request">A DTO containing the new card token from the payment provider.</param>
+        /// <returns>A confirmation message upon success.</returns>
+        /// <response code="200">Indicates the card was successfully updated.</response>
+        /// <response code="400">If the request is invalid or the card token is missing.</response>
+        /// <response code="401">If the user is not authenticated.</response>
+        /// <response code="404">If the user's subscription is not found or the update fails.</response>
+        /// <response code="500">If an unexpected server error occurs.</response>
         [HttpPut("card")]
+        [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> ChangeCard([FromBody] UpdateCardTokenDto? request)
         {
-            var userId = GetCurrentUserId();
-
-            // Esta chamada agora é inteligente:
-            // O método do serviço vai alterar os dados e automaticamente limpará o cache.
-            var success = await _userAccountService.UpdateSubscriptionCardAsync(
-                userId,
-                request?.NewCardToken
-            );
-
-            if (!success)
+            try
             {
-                return NotFound(
-                    new { message = "Assinatura não encontrada ou falha na atualização." }
+                var userId = GetCurrentUserId();
+                var success = await _userAccountService.UpdateSubscriptionCardAsync(
+                    userId,
+                    request?.NewCardToken
                 );
-            }
 
-            return Ok(new { message = "Cartão da assinatura atualizado com sucesso." });
+                if (!success)
+                {
+                    return NotFound(new { message = "Subscription not found or update failed." });
+                }
+
+                return Ok(new { message = "Subscription card updated successfully." });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error changing subscription card for user.");
+                return StatusCode(500, new { message = "An unexpected error occurred." });
+            }
         }
 
-        [HttpPost("cancel")] // Rota: POST api/user/subscription/cancel
+        /// <summary>
+        /// Cancels the authenticated user's active subscription.
+        /// </summary>
+        /// <returns>A confirmation message upon success.</returns>
+        /// <response code="200">Indicates the subscription was successfully cancelled.</response>
+        /// <response code="401">If the user is not authenticated.</response>
+        /// <response code="404">If the subscription is not found or is already cancelled.</response>
+        /// <response code="500">If an unexpected server error occurs.</response>
+        [HttpPost("cancel")]
+        [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> CancelSubscription()
         {
-            var userId = GetCurrentUserId();
-            var success = await _userAccountService.CancelSubscriptionAsync(userId);
-
-            if (!success)
+            try
             {
-                return NotFound(
-                    new { message = "Assinatura não encontrada ou já está cancelada." }
-                );
-            }
+                var userId = GetCurrentUserId();
+                var success = await _userAccountService.CancelSubscriptionAsync(userId);
 
-            return Ok(new { message = "Assinatura cancelada com sucesso." });
+                if (!success)
+                {
+                    return NotFound(
+                        new { message = "Subscription not found or is already cancelled." }
+                    );
+                }
+
+                return Ok(new { message = "Subscription cancelled successfully." });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error cancelling subscription for user.");
+                return StatusCode(500, new { message = "An unexpected error occurred." });
+            }
         }
 
-        [HttpPost("reactivate")] // Rota: POST api/user/subscription/reactivate
+        /// <summary>
+        /// Reactivates the authenticated user's previously cancelled subscription.
+        /// </summary>
+        /// <returns>A confirmation message upon success.</returns>
+        /// <response code="200">Indicates the subscription was successfully reactivated.</response>
+        /// <response code="401">If the user is not authenticated.</response>
+        /// <response code="404">If the subscription is not found or cannot be reactivated.</response>
+        /// <response code="500">If an unexpected server error occurs.</response>
+        [HttpPost("reactivate")]
+        [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> ReactivateSubscription()
         {
-            var userId = GetCurrentUserId();
-            var success = await _userAccountService.ReactivateSubscriptionAsync(userId);
-
-            if (!success)
+            try
             {
-                return NotFound(
-                    new
-                    {
-                        message = "Assinatura não encontrada ou não está em um estado que permita reativação.",
-                    }
-                );
-            }
+                var userId = GetCurrentUserId();
+                var success = await _userAccountService.ReactivateSubscriptionAsync(userId);
 
-            return Ok(new { message = "Assinatura reativada com sucesso." });
+                if (!success)
+                {
+                    return NotFound(
+                        new
+                        {
+                            message = "Subscription not found or is not in a state that allows reactivation.",
+                        }
+                    );
+                }
+
+                return Ok(new { message = "Subscription reactivated successfully." });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error reactivating subscription for user.");
+                return StatusCode(500, new { message = "An unexpected error occurred." });
+            }
         }
 
-        // Método auxiliar para pegar o ID do usuário logado de forma segura
+        /// <summary>
+        /// Safely retrieves the current user's unique identifier from the security claims.
+        /// </summary>
+        /// <returns>The GUID of the authenticated user.</returns>
+        /// <exception cref="InvalidOperationException">Thrown if the user's identifier claim is missing or invalid.</exception>
         private Guid GetCurrentUserId()
         {
             var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -85,9 +158,7 @@ namespace MeuCrudCsharp.Features.UserAccount.Controllers
             {
                 return userId;
             }
-            throw new InvalidOperationException(
-                "Não foi possível obter a identificação do usuário."
-            );
+            throw new InvalidOperationException("Could not retrieve the user's identifier.");
         }
     }
 }

@@ -1,12 +1,16 @@
-﻿// Local: Features/Refunds/Interfaces/IRefundService.cs
+﻿using System.Threading.Tasks;
 
 namespace MeuCrudCsharp.Features.Refunds.Interfaces
 {
+    /// <summary>
+    /// Defines the contract for a service that handles refund requests.
+    /// </summary>
     public interface IRefundService
     {
         /// <summary>
-        /// Orquestra o processo de solicitação de reembolso para o usuário logado.
+        /// Initiates and processes a refund request for the currently authenticated user.
         /// </summary>
+        /// <returns>A task that represents the asynchronous refund operation.</returns>
         Task RequestUserRefundAsync();
     }
 }

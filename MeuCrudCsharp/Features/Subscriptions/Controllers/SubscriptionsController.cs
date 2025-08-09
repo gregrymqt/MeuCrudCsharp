@@ -1,31 +1,54 @@
 ﻿using System;
-using System.Security.Claims;
 using System.Threading.Tasks;
-using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Features.Exceptions;
-using MeuCrudCsharp.Features.Profiles.Admin.Interfaces;
 using MeuCrudCsharp.Features.Subscriptions.DTOs;
 using MeuCrudCsharp.Features.Subscriptions.Interfaces;
-using MeuCrudCsharp.Models;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace MeuCrudCsharp.Features.Subscriptions.Controllers
 {
+    /// <summary>
+    /// Manages the creation of new subscriptions for authenticated users.
+    /// </summary>
     [ApiController]
     [Route("api/subscriptions")]
     [Authorize]
     public class SubscriptionsController : ControllerBase
     {
         private readonly ISubscriptionService _subscriptionService;
+        private readonly ILogger<SubscriptionsController> _logger;
 
-        public SubscriptionsController(ISubscriptionService subscriptionService)
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SubscriptionsController"/> class.
+        /// </summary>
+        /// <param name="subscriptionService">The service for subscription business logic.</param>
+        /// <param name="logger">The logger for recording events and errors.</param>
+        public SubscriptionsController(
+            ISubscriptionService subscriptionService,
+            ILogger<SubscriptionsController> logger
+        )
         {
             _subscriptionService = subscriptionService;
+            _logger = logger;
         }
 
+        /// <summary>
+        /// Creates a new subscription for the authenticated user.
+        /// If the user does not yet exist as a customer in the payment provider, one will be created.
+        /// </summary>
+        /// <param name="createDto">The DTO containing the plan and payment details for the new subscription.</param>
+        /// <returns>The details of the newly created subscription.</returns>
+        /// <response code="200">Returns the created subscription details.</response>
+        /// <response code="400">If the request data is invalid or a business rule is violated.</response>
+        /// <response code="401">If the user is not authenticated.</response>
+        /// <response code="500">If an unexpected server error occurs.</response>
         [HttpPost]
+        [ProducesResponseType(typeof(SubscriptionResponseDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> CreateSubscription(
             [FromBody] CreateSubscriptionDto createDto
         )
@@ -46,10 +69,16 @@ namespace MeuCrudCsharp.Features.Subscriptions.Controllers
             }
             catch (AppServiceException ex)
             {
-                return StatusCode(
-                    500,
-                    new { message = ex.Message, error = ex.InnerException?.Message }
+                _logger.LogWarning(
+                    ex,
+                    "A business logic error occurred while creating a subscription."
                 );
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An unexpected error occurred while creating a subscription.");
+                return StatusCode(500, new { message = "An unexpected error occurred." });
             }
         }
     }

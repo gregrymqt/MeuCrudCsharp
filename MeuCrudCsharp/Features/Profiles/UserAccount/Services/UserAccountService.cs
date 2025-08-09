@@ -1,37 +1,47 @@
-﻿// Local: Features/Profiles/UserAccount/Services/UserAccountService.cs
-
-using System.Security.Claims;
-using System.Text.Json;
+﻿using System.Text.Json;
 using MeuCrudCsharp.Data;
+using MeuCrudCsharp.Features.Caching;
 using MeuCrudCsharp.Features.Exceptions;
-using MeuCrudCsharp.Features.MercadoPago.Base; // Importando a classe base
+using MeuCrudCsharp.Features.MercadoPago.Base;
 using MeuCrudCsharp.Features.Profiles.UserAccount.DTOs;
 using MeuCrudCsharp.Features.Profiles.UserAccount.Interfaces;
-using MeuCrudCsharp.Features.Subscriptions.DTOs; // Importando DTOs de assinatura
+using MeuCrudCsharp.Features.Subscriptions.DTOs;
 using MeuCrudCsharp.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
 {
-    // --- CORREÇÃO: Herda da classe base ---
+    /// <summary>
+    /// Implements <see cref="IUserAccountService"/> to manage user account operations.
+    /// This service orchestrates data retrieval and actions related to user profiles, subscriptions,
+    /// and payments, interacting with the database, cache, and the Mercado Pago API.
+    /// </summary>
     public class UserAccountService : MercadoPagoServiceBase, IUserAccountService
     {
         private readonly ApiDbContext _context;
-        private readonly ICacheService _cacheService; // Descomente quando o serviço de cache estiver implementado
+        private readonly ICacheService _cacheService;
 
-        // --- CORREÇÃO: Construtor ajustado para injetar dependências corretas ---
+        /// <summary>
+        /// Initializes a new instance of the <see cref="UserAccountService"/> class.
+        /// </summary>
+        /// <param name="context">The database context.</param>
+        /// <param name="cacheService">The caching service for performance optimization.</param>
+        /// <param name="httpClient">The HTTP client for making API requests, passed to the base class.</param>
+        /// <param name="logger">The logger for recording events and errors, passed to the base class.</param>
         public UserAccountService(
             ApiDbContext context,
             ICacheService cacheService,
             HttpClient httpClient,
             ILogger<UserAccountService> logger
         )
-            : base(httpClient, logger) // Passa dependências para a classe base
+            : base(httpClient, logger)
         {
             _context = context;
             _cacheService = cacheService;
         }
 
+        /// <inheritdoc />
         public async Task<UserProfileDto> GetUserProfileAsync(Guid userId)
         {
             string cacheKey = $"UserProfile_{userId}";
@@ -46,7 +56,7 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
                             .FirstOrDefaultAsync(u => u.Id == userId.ToString());
                         if (user == null)
                             throw new ResourceNotFoundException(
-                                $"Usuário com ID {userId} não encontrado."
+                                $"User with ID {userId} not found."
                             );
 
                         return new UserProfileDto
@@ -60,11 +70,11 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
                     {
                         _logger.LogError(
                             ex,
-                            "Erro ao buscar perfil do usuário {UserId} no banco de dados.",
+                            "Error fetching user profile {UserId} from the database.",
                             userId
                         );
                         throw new AppServiceException(
-                            "Ocorreu um erro ao buscar os dados do perfil.",
+                            "An error occurred while fetching the profile data.",
                             ex
                         );
                     }
@@ -73,6 +83,7 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
             );
         }
 
+        /// <inheritdoc />
         public async Task<SubscriptionDetailsDto?> GetUserSubscriptionDetailsAsync(Guid userId)
         {
             string cacheKey = $"SubscriptionDetails_{userId}";
@@ -86,13 +97,12 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
                             .Subscriptions.AsNoTracking()
                             .Include(s => s.Plan)
                             .FirstOrDefaultAsync(s =>
-                                s.UserId == userId && s.Status != "cancelado"
+                                s.UserId == userId && s.Status != "cancelled"
                             );
 
                         if (subscription?.Plan == null)
                             return null;
 
-                        // --- CORREÇÃO: Lógica da API movida para dentro do método ---
                         var endpoint = $"/preapproval/{subscription.ExternalId}";
                         var responseBody = await SendMercadoPagoRequestAsync(
                             HttpMethod.Get,
@@ -120,11 +130,11 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
                     {
                         _logger.LogError(
                             ex,
-                            "Erro ao buscar detalhes da assinatura para o usuário {UserId}.",
+                            "Error fetching subscription details for user {UserId}.",
                             userId
                         );
                         throw new AppServiceException(
-                            "Ocorreu um erro ao buscar os detalhes da sua assinatura.",
+                            "An error occurred while fetching your subscription details.",
                             ex
                         );
                     }
@@ -132,11 +142,11 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
             );
         }
 
+        /// <inheritdoc />
         public async Task<IEnumerable<Models.Payments>> GetUserPaymentHistoryAsync(Guid userId)
         {
             try
             {
-                // Opcional: Cache para o histórico de pagamentos
                 string? cacheKey = $"PaymentHistory_{userId}";
                 return await _cacheService.GetOrCreateAsync(
                     cacheKey,
@@ -153,28 +163,21 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(
-                    ex,
-                    "Erro ao buscar histórico de pagamentos para o usuário {UserId}.",
-                    userId
-                );
+                _logger.LogError(ex, "Error fetching payment history for user {UserId}.", userId);
                 throw new ResourceNotFoundException(
-                    "Ocorreu um erro ao buscar seu histórico de pagamentos.",
+                    "An error occurred while fetching your payment history.",
                     ex
                 );
             }
         }
 
+        /// <inheritdoc />
         public async Task<bool> UpdateSubscriptionCardAsync(Guid userId, string newCardToken)
         {
             try
             {
-                var subscription = await FindActiveSubscriptionAsync(
-                    userId,
-                    "para atualização de cartão"
-                );
+                var subscription = await FindActiveSubscriptionAsync(userId, "for card update");
 
-                // --- CORREÇÃO: Lógica da API movida para dentro do método ---
                 var endpoint = $"/preapproval/{subscription.ExternalId}";
                 var payload = new UpdateCardTokenDto { NewCardToken = newCardToken };
                 await SendMercadoPagoRequestAsync(HttpMethod.Put, endpoint, payload);
@@ -182,7 +185,7 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
                 await _cacheService.RemoveAsync($"SubscriptionDetails_{userId}");
 
                 _logger.LogInformation(
-                    "Cartão da assinatura {SubscriptionId} do usuário {UserId} foi atualizado.",
+                    "Card for subscription {SubscriptionId} of user {UserId} was updated.",
                     subscription.ExternalId,
                     userId
                 );
@@ -192,7 +195,7 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
             {
                 _logger.LogError(
                     ex,
-                    "Erro da API externa ao tentar atualizar o cartão para o usuário {UserId}.",
+                    "External API error while trying to update the card for user {UserId}.",
                     userId
                 );
                 throw;
@@ -201,22 +204,22 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
             {
                 _logger.LogError(
                     ex,
-                    "Erro inesperado ao atualizar o cartão para o usuário {UserId}.",
+                    "Unexpected error while updating the card for user {UserId}.",
                     userId
                 );
-                throw new AppServiceException("Ocorreu um erro ao atualizar seu cartão.", ex);
+                throw new AppServiceException("An error occurred while updating your card.", ex);
             }
         }
 
+        /// <inheritdoc />
         public async Task<bool> CancelSubscriptionAsync(Guid userId)
         {
             try
             {
-                var subscription = await FindActiveSubscriptionAsync(userId, "para cancelamento");
+                var subscription = await FindActiveSubscriptionAsync(userId, "for cancellation");
 
-                // --- CORREÇÃO: Lógica da API movida para dentro do método ---
                 var endpoint = $"/preapproval/{subscription.ExternalId}";
-                var payload = new SubscriptionDetailsDto { Status = "cancelled" };
+                var payload = new { status = "cancelled" };
                 var responseBody = await SendMercadoPagoRequestAsync(
                     HttpMethod.Put,
                     endpoint,
@@ -224,46 +227,50 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
                 );
                 var result = JsonSerializer.Deserialize<SubscriptionResponseDto>(responseBody);
 
-                if (result.Status == "cancelled")
+                if (result?.Status == "cancelled")
                 {
-                    subscription.Status = "cancelado";
+                    subscription.Status = "cancelled";
                     subscription.UpdatedAt = DateTime.UtcNow;
                     await _context.SaveChangesAsync();
                     await _cacheService.RemoveAsync($"SubscriptionDetails_{userId}");
                     _logger.LogInformation(
-                        "Assinatura {SubscriptionId} do usuário {UserId} foi cancelada.",
+                        "Subscription {SubscriptionId} for user {UserId} was cancelled.",
                         subscription.ExternalId,
                         userId
                     );
                     return true;
                 }
+
                 return false;
             }
             catch (Exception ex)
             {
                 _logger.LogError(
                     ex,
-                    "Erro inesperado ao cancelar a assinatura para o usuário {UserId}.",
+                    "Unexpected error while cancelling the subscription for user {UserId}.",
                     userId
                 );
-                throw new AppServiceException("Ocorreu um erro ao cancelar sua assinatura.", ex);
+                throw new AppServiceException(
+                    "An error occurred while cancelling your subscription.",
+                    ex
+                );
             }
         }
 
+        /// <inheritdoc />
         public async Task<bool> ReactivateSubscriptionAsync(Guid userId)
         {
             try
             {
                 var subscription = await _context.Subscriptions.FirstOrDefaultAsync(s =>
-                    s.UserId == userId && s.Status == "pausado"
+                    s.UserId == userId && s.Status == "paused"
                 );
 
                 if (subscription == null)
-                    return false; // Não é um erro, apenas não há o que reativar
+                    return false; // Not an error, just nothing to reactivate.
 
-                // --- CORREÇÃO: Lógica da API movida para dentro do método ---
                 var endpoint = $"/preapproval/{subscription.ExternalId}";
-                var payload = new SubscriptionDetailsDto { Status = "authorized" };
+                var payload = new { status = "authorized" };
                 var responseBody = await SendMercadoPagoRequestAsync(
                     HttpMethod.Put,
                     endpoint,
@@ -271,35 +278,38 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
                 );
                 var result = JsonSerializer.Deserialize<SubscriptionResponseDto>(responseBody);
 
-                if (result.Status == "authorized")
+                if (result?.Status == "authorized")
                 {
-                    subscription.Status = "ativo";
+                    subscription.Status = "active";
                     subscription.UpdatedAt = DateTime.UtcNow;
                     await _context.SaveChangesAsync();
                     await _cacheService.RemoveAsync($"SubscriptionDetails_{userId}");
                     return true;
                 }
+
                 return false;
             }
             catch (Exception ex)
             {
                 _logger.LogError(
                     ex,
-                    "Erro inesperado ao reativar a assinatura para o usuário {UserId}.",
+                    "Unexpected error while reactivating the subscription for user {UserId}.",
                     userId
                 );
-                throw new AppServiceException("Ocorreu um erro ao reativar sua assinatura.", ex);
+                throw new AppServiceException(
+                    "An error occurred while reactivating your subscription.",
+                    ex
+                );
             }
         }
 
-        // Dentro da classe UserAccountService
-
+        /// <inheritdoc />
         public async Task<Payments> GetPaymentForReceiptAsync(Guid userId, Guid paymentId)
         {
             try
             {
                 _logger.LogInformation(
-                    "Buscando pagamento {PaymentId} para o usuário {UserId}.",
+                    "Fetching payment {PaymentId} for user {UserId}.",
                     paymentId,
                     userId
                 );
@@ -309,11 +319,10 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
                     .Include(p => p.User)
                     .FirstOrDefaultAsync(p => p.Id == paymentId && p.UserId == userId);
 
-                // Lança uma exceção se o pagamento não for encontrado ou não pertencer ao usuário
                 if (payment == null)
                 {
                     throw new ResourceNotFoundException(
-                        $"Pagamento com ID {paymentId} não encontrado ou não pertence ao usuário {userId}."
+                        $"Payment with ID {paymentId} not found or does not belong to user {userId}."
                     );
                 }
 
@@ -323,24 +332,31 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
             {
                 _logger.LogError(
                     ex,
-                    "Erro ao buscar o pagamento {PaymentId} no banco de dados.",
+                    "Error fetching payment {PaymentId} from the database.",
                     paymentId
                 );
                 throw new AppServiceException(
-                    "Ocorreu um erro ao buscar os dados do seu pagamento.",
+                    "An error occurred while fetching your payment data.",
                     ex
                 );
             }
         }
 
+        /// <summary>
+        /// Finds a user's active or paused subscription.
+        /// </summary>
+        /// <param name="userId">The user's unique identifier.</param>
+        /// <param name="action">A description of the action being performed, for logging and error messages.</param>
+        /// <returns>The user's active or paused <see cref="Subscription"/> entity.</returns>
+        /// <exception cref="ResourceNotFoundException">Thrown if no active or paused subscription is found.</exception>
         private async Task<Subscription> FindActiveSubscriptionAsync(Guid userId, string action)
         {
             var subscription = await _context.Subscriptions.FirstOrDefaultAsync(s =>
-                s.UserId == userId && (s.Status == "ativo" || s.Status == "pausado")
+                s.UserId == userId && (s.Status == "active" || s.Status == "paused")
             );
 
             if (subscription == null)
-                throw new ResourceNotFoundException($"Assinatura ativa não encontrada {action}.");
+                throw new ResourceNotFoundException($"Active subscription not found {action}.");
 
             return subscription;
         }

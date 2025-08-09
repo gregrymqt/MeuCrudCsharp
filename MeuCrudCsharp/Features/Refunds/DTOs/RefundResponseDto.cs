@@ -11,7 +11,7 @@ namespace MeuCrudCsharp.Features.Refunds.DTOs
         public long PaymentId { get; set; }
 
         [JsonPropertyName("status")]
-        public string Status { get; set; }
+        public string? Status { get; set; }
 
         [JsonPropertyName("date_created")]
         public DateTime DateCreated { get; set; }

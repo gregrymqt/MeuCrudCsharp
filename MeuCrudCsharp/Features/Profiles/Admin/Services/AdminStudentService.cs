@@ -3,32 +3,46 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using MeuCrudCsharp.Data;
+using MeuCrudCsharp.Features.Caching;
 using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.Profiles.Admin.Dtos;
 using MeuCrudCsharp.Features.Profiles.Admin.Interfaces;
-using MeuCrudCsharp.Models;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging; // MUDANÇA 1: Adicionando a dependência do Logger
+using Microsoft.Extensions.Logging;
 
 namespace MeuCrudCsharp.Features.Profiles.Admin.Services
 {
+    /// <summary>
+    /// Implements <see cref="IAdminStudentService"/> to provide administrative functionalities for student profiles.
+    /// </summary>
     public class AdminStudentService : IAdminStudentService
     {
         private readonly ApiDbContext _context;
         private readonly ICacheService _cacheService;
-        private readonly ILogger<AdminStudentService> _logger; // MUDANÇA 1
+        private readonly ILogger<AdminStudentService> _logger;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="AdminStudentService"/> class.
+        /// </summary>
+        /// <param name="context">The database context.</param>
+        /// <param name="cacheService">The caching service for performance optimization.</param>
+        /// <param name="logger">The logger for recording events and errors.</param>
         public AdminStudentService(
             ApiDbContext context,
             ICacheService cacheService,
             ILogger<AdminStudentService> logger
-        ) // MUDANÇA 1
+        )
         {
             _context = context;
             _cacheService = cacheService;
             _logger = logger;
         }
 
+        /// <inheritdoc />
+        /// <remarks>
+        /// This method caches the list of students for 5 minutes to improve performance
+        /// on repeated requests.
+        /// </remarks>
         public async Task<List<StudentDto>> GetAllStudentsAsync()
         {
             const string cacheKey = "Admin_AllStudentsWithSubscription";
@@ -37,7 +51,6 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Services
                 cacheKey,
                 async () =>
                 {
-                    // MUDANÇA 2: Tratamento de exceção dentro da 'factory' do cache
                     try
                     {
                         _logger.LogInformation(
@@ -69,9 +82,8 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Services
                             ex,
                             "Falha ao buscar a lista de alunos do banco de dados."
                         );
-                        // Lança nossa exceção customizada para ser tratada pelo Controller
                         throw new AppServiceException(
-                            "Ocorreu um erro ao consultar os dados dos alunos.",
+                            "An error occurred while querying student data.",
                             ex
                         );
                     }
@@ -80,24 +92,31 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Services
             );
         }
 
+        /// <summary>
+        /// Invalidates and removes the cached list of all students.
+        /// This should be called after any operation that creates, updates, or deletes a user or their subscription.
+        /// </summary>
+        /// <returns>A task that represents the asynchronous operation.</returns>
+        /// <exception cref="AppServiceException">Thrown if an error occurs while clearing the cache.</exception>
         public async Task InvalidateStudentsCacheAsync()
         {
-            // MUDANÇA 3: Tratamento de exceção no método de invalidação
             try
             {
                 await _cacheService.RemoveAsync("Admin_AllStudentsWithSubscription");
                 _logger.LogInformation(
-                    "Cache de alunos ('Admin_AllStudentsWithSubscription') invalidado com sucesso."
+                    "Student cache ('Admin_AllStudentsWithSubscription') was successfully invalidated."
                 );
             }
             catch (Exception ex)
             {
                 _logger.LogError(
                     ex,
-                    "Falha ao invalidar o cache de alunos. A aplicação continuará, mas o cache pode ficar dessincronizado."
+                    "Failed to invalidate student cache. The application will continue, but the cache may be out of sync."
                 );
-                // Lança a exceção para que o chamador saiba que a invalidação falhou
-                throw new AppServiceException("Ocorreu um erro ao limpar o cache de alunos.", ex);
+                throw new AppServiceException(
+                    "An error occurred while clearing the student cache.",
+                    ex
+                );
             }
         }
     }
