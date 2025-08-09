@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text;
 using Hangfire;
 using Hangfire.Redis.StackExchange;
 using MercadoPago.Config;
@@ -10,8 +11,6 @@ using MeuCrudCsharp.Features.Courses.Interfaces;
 using MeuCrudCsharp.Features.Courses.Services;
 using MeuCrudCsharp.Features.Emails.Interfaces;
 using MeuCrudCsharp.Features.Emails.Services;
-using MeuCrudCsharp.Features.Exceptions;
-using MeuCrudCsharp.Features.MercadoPago.Base;
 using MeuCrudCsharp.Features.MercadoPago.Jobs; // Adicionado para os Jobs
 using MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces;
 using MeuCrudCsharp.Features.MercadoPago.Payments.Services;
@@ -31,9 +30,11 @@ using MeuCrudCsharp.Features.Videos.Service;
 using MeuCrudCsharp.Models;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.StackExchangeRedis;
+using Microsoft.IdentityModel.Tokens;
 using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -60,7 +61,8 @@ builder
     .AddRoles<IdentityRole>() // <-- Adiciona o suporte a Roles
     .AddEntityFrameworkStores<ApiDbContext>();
 
-builder.Services.AddAuthentication(); // Adiciona os serviços de autenticação
+// Adiciona os serviços de autenticação
+
 builder.Services.AddAuthorization();
 
 // 3. Habilita o serviço de cache em memória nativo do .NET
@@ -148,6 +150,29 @@ builder
         options.DefaultChallengeScheme = GoogleDefaults.AuthenticationScheme;
     })
     .AddCookie()
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"])
+            ),
+            ValidateIssuer = false,
+            ValidateAudience = false,
+        };
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                if (context.Request.Cookies.TryGetValue("jwt", out var token))
+                {
+                    context.Token = token;
+                }
+                return Task.CompletedTask;
+            }
+        };
+    })
     .AddGoogle(
         GoogleDefaults.AuthenticationScheme,
         options =>
@@ -224,6 +249,21 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+}
+
+// Exemplo de criação de roles
+using (var scope = app.Services.CreateScope())
+{
+    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+    string[] roles = { "Admin", "User", "Manager" };
+
+    foreach (var role in roles)
+    {
+        if (!await roleManager.RoleExistsAsync(role))
+        {
+            await roleManager.CreateAsync(new IdentityRole(role));
+        }
+    }
 }
 
 app.UseHttpsRedirection();

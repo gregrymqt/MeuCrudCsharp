@@ -1,19 +1,45 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using MeuCrudCsharp.Features.Emails.Interfaces;
+using MeuCrudCsharp.Features.Exceptions;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using SendGrid;
 using SendGrid.Helpers.Mail;
 
 namespace MeuCrudCsharp.Features.Emails.Services
 {
+    /// <summary>
+    /// Implementação de <see cref="IEmailSenderService"/> que utiliza o serviço SendGrid para enviar e-mails.
+    /// </summary>
     public class SendGridEmailSenderService : IEmailSenderService
     {
         private readonly IConfiguration _configuration;
+        private readonly ILogger<SendGridEmailSenderService> _logger;
 
-        public SendGridEmailSenderService(IConfiguration configuration)
+        /// <summary>
+        /// Inicializa uma nova instância da classe <see cref="SendGridEmailSenderService"/>.
+        /// </summary>
+        /// <param name="configuration">A configuração da aplicação para obter as chaves do SendGrid.</param>
+        /// <param name="logger">O serviço de logging.</param>
+        public SendGridEmailSenderService(
+            IConfiguration configuration,
+            ILogger<SendGridEmailSenderService> logger
+        )
         {
             _configuration = configuration;
+            _logger = logger;
         }
 
+        /// <summary>
+        /// Envia um e-mail utilizando o serviço SendGrid.
+        /// </summary>
+        /// <param name="to">O endereço de e-mail do destinatário.</param>
+        /// <param name="subject">O assunto do e-mail.</param>
+        /// <param name="htmlBody">O corpo do e-mail em formato HTML.</param>
+        /// <param name="plainTextBody">O corpo do e-mail em formato de texto simples, como alternativa ao HTML.</param>
+        /// <returns>Uma <see cref="Task"/> que representa a operação de envio assíncrona.</returns>
+        /// <exception cref="AppServiceException">Lançada quando ocorre um erro ao enviar o e-mail.</exception>
         public async Task SendEmailAsync(
             string to,
             string subject,
@@ -21,24 +47,56 @@ namespace MeuCrudCsharp.Features.Emails.Services
             string plainTextBody
         )
         {
-            // Pega a chave da API do appsettings.json ou de variáveis de ambiente
-            var apiKey = _configuration["SendGrid:ApiKey"];
-            var client = new SendGridClient(apiKey);
+            try
+            {
+                var apiKey = _configuration["SendGrid:ApiKey"];
+                var fromEmail = _configuration["SendGrid:FromEmail"];
+                var fromName = _configuration["SendGrid:FromName"];
 
-            var from = new EmailAddress("seu-email@seudominio.com", "Nome da Sua Empresa");
-            var toAddress = new EmailAddress(to);
+                if (
+                    string.IsNullOrEmpty(apiKey)
+                    || string.IsNullOrEmpty(fromEmail)
+                    || string.IsNullOrEmpty(fromName)
+                )
+                {
+                    throw new InvalidOperationException(
+                        "As configurações do SendGrid (ApiKey, FromEmail, FromName) não foram definidas."
+                    );
+                }
 
-            var msg = MailHelper.CreateSingleEmail(
-                from,
-                toAddress,
-                subject,
-                plainTextBody,
-                htmlBody
-            );
+                var client = new SendGridClient(apiKey);
+                var from = new EmailAddress(fromEmail, fromName);
+                var toAddress = new EmailAddress(to);
+                var msg = MailHelper.CreateSingleEmail(
+                    from,
+                    toAddress,
+                    subject,
+                    plainTextBody,
+                    htmlBody
+                );
 
-            var response = await client.SendEmailAsync(msg);
+                var response = await client.SendEmailAsync(msg);
 
-            // Aqui você pode logar se o email foi enviado com sucesso ou não
+                if (response.IsSuccessStatusCode)
+                {
+                    _logger.LogInformation("E-mail para {To} enviado com sucesso.", to);
+                }
+                else
+                {
+                    var responseBody = await response.Body.ReadAsStringAsync();
+                    _logger.LogError(
+                        "Falha ao enviar e-mail para {To}. Status: {StatusCode}. Resposta: {ResponseBody}",
+                        to,
+                        response.StatusCode,
+                        responseBody
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro inesperado ao enviar e-mail para {To}.", to);
+                throw new AppServiceException("Ocorreu um erro ao tentar enviar o e-mail.", ex);
+            }
         }
     }
 }

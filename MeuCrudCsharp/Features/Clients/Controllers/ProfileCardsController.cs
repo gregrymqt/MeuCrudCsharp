@@ -1,12 +1,15 @@
 ﻿using System.Security.Claims;
-using MeuCrudCsharp.Data; // Supondo que o ApiDbContext esteja aqui
-using MeuCrudCsharp.Features.Clients.DTOs; // Supondo que o CardRequestDto esteja aqui
+using MeuCrudCsharp.Data;
+using MeuCrudCsharp.Features.Clients.DTOs;
 using MeuCrudCsharp.Features.Clients.Interfaces;
 using MeuCrudCsharp.Features.Exceptions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore; // Necessário para o FirstOrDefaultAsync
+using Microsoft.EntityFrameworkCore;
 
+/// <summary>
+/// Endpoints para gerenciamento de cartões do perfil do usuário autenticado.
+/// </summary>
 [ApiController]
 [Route("api/profile/cards")]
 [Authorize]
@@ -16,6 +19,12 @@ public class ProfileCardsController : ControllerBase
     private readonly ApiDbContext _apiDbContext;
     private readonly ILogger<ProfileCardsController> _logger;
 
+    /// <summary>
+    /// Cria uma nova instância do controlador de cartões do perfil.
+    /// </summary>
+    /// <param name="clientService">Serviço de clientes do provedor de pagamento.</param>
+    /// <param name="apiDbContext">Contexto de dados da aplicação.</param>
+    /// <param name="logger">Logger para rastreamento e diagnóstico.</param>
     public ProfileCardsController(
         IClientService clientService,
         ApiDbContext apiDbContext,
@@ -27,8 +36,11 @@ public class ProfileCardsController : ControllerBase
         _logger = logger;
     }
 
-    // --- CREATE ---
-    // POST api/profile/cards
+    /// <summary>
+    /// Adiciona um novo cartão ao cliente do usuário atual.
+    /// </summary>
+    /// <param name="request">Dados do cartão contendo o token do provedor.</param>
+    /// <returns>Dados do cartão salvo.</returns>
     [HttpPost]
     public async Task<IActionResult> AddNewCard([FromBody] CardRequestDto request)
     {
@@ -48,8 +60,10 @@ public class ProfileCardsController : ControllerBase
         }
     }
 
-    // --- READ ---
-    // GET api/profile/cards
+    /// <summary>
+    /// Lista os cartões vinculados ao cliente do usuário atual.
+    /// </summary>
+    /// <returns>Lista de cartões do cliente.</returns>
     [HttpGet]
     public async Task<IActionResult> ListMyCards()
     {
@@ -66,8 +80,11 @@ public class ProfileCardsController : ControllerBase
         }
     }
 
-    // --- DELETE ---
-    // DELETE api/profile/cards/{cardId}
+    /// <summary>
+    /// Remove um cartão específico do cliente do usuário atual.
+    /// </summary>
+    /// <param name="cardId">Identificador do cartão no provedor.</param>
+    /// <returns>Confirmação da remoção.</returns>
     [HttpDelete("{cardId}")]
     public async Task<IActionResult> DeleteMyCard(string cardId)
     {
@@ -79,10 +96,6 @@ public class ProfileCardsController : ControllerBase
         try
         {
             var customerId = await GetCurrentUserCustomerIdAsync();
-
-            // Lógica de negócio: não permitir deletar o cartão usado na assinatura
-            // (Você pode adicionar essa verificação aqui antes de chamar o serviço)
-
             var deletedCard = await _clientService.DeleteCardFromCustomerAsync(customerId, cardId);
             return Ok(deletedCard);
         }
@@ -97,9 +110,11 @@ public class ProfileCardsController : ControllerBase
         }
     }
 
-    // =======================================================
-    // MÉTODO AUXILIAR PRIVADO
-    // =======================================================
+    /// <summary>
+    /// Obtém o identificador de cliente no provedor de pagamentos para o usuário atual.
+    /// </summary>
+    /// <remarks>Lança <see cref="AppServiceException"/> quando usuário não está identificado, não existe ou não possui cliente associado.</remarks>
+    /// <returns>Identificador do cliente no provedor de pagamentos.</returns>
     private async Task<string> GetCurrentUserCustomerIdAsync()
     {
         var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
