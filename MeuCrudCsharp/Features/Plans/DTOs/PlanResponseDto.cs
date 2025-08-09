@@ -18,7 +18,7 @@ namespace MeuCrudCsharp.Features.Plans.DTOs
         public DateTime DateCreated { get; set; }
 
         [JsonPropertyName("ExternalPlanId")]
-        public string ExternalPlanId { get; set; }
+        public string? ExternalPlanId { get; set; }
         public AutoRecurringDto? AutoRecurring { get; set; }
     }
 }

@@ -6,6 +6,6 @@ namespace MeuCrudCsharp.Features.Plans.DTOs
     public class PlanSearchResponseDto
     {
         [JsonPropertyName("results")]
-        public List<PlanResponseDto> Results { get; set; }
+        public List<PlanResponseDto> Results { get; set; } = new List<PlanResponseDto>();
     }
 }

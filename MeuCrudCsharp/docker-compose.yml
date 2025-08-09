@@ -6,6 +6,9 @@ services:
   redis:
     image: "redis:alpine" # Puxa a imagem oficial e leve do Redis
     container_name: meu-servidor-redis
+    ports:
+      - "6379:6379"
+
 
   # Serviço 2: Nossa aplicação ASP.NET
   webapp:

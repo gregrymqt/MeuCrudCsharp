@@ -7,9 +7,9 @@ namespace MeuCrudCsharp.Features.Clients.DTOs
     public class CustomerRequestDto
     {
         [JsonPropertyName("email")]
-        public string Email { get; set; }
+        public string? Email { get; set; }
 
         [JsonPropertyName("first_name")]
-        public string FirstName { get; set; }
+        public string? FirstName { get; set; }
     }
 }

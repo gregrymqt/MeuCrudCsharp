@@ -22,10 +22,9 @@ namespace MeuCrudCsharp.Features.Refunds.Services
             ApiDbContext context,
             IHttpContextAccessor httpContextAccessor,
             HttpClient httpClient,
-            IConfiguration configuration,
             ILogger<RefundService> logger
         )
-            : base(httpClient, configuration, logger) // Passa dependências para a classe base
+            : base(httpClient, logger) // Passa dependências para a classe base
         {
             _context = context;
             _httpContextAccessor = httpContextAccessor;

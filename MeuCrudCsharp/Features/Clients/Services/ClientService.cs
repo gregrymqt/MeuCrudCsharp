@@ -13,12 +13,8 @@ namespace MeuCrudCsharp.Features.Clients.Service
     {
         // O construtor agora é mais simples. Ele apenas passa as dependências
         // para a classe base, que gerencia o HttpClient e o Access Token.
-        public ClientService(
-            HttpClient httpClient,
-            IConfiguration configuration,
-            ILogger<ClientService> logger
-        )
-            : base(httpClient, configuration, logger) { }
+        public ClientService(HttpClient httpClient, ILogger<ClientService> logger)
+            : base(httpClient, logger) { }
 
         public async Task<CustomerResponseDto> CreateCustomerAsync(string email, string firstName)
         {

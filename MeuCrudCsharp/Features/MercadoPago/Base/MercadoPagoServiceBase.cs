@@ -1,6 +1,7 @@
 ﻿using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using MercadoPago.Client;
 using MeuCrudCsharp.Features.Exceptions;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Base
@@ -10,23 +11,12 @@ namespace MeuCrudCsharp.Features.MercadoPago.Base
         // Usamos 'protected' para que as classes filhas possam acessar esses campos.
         protected readonly ILogger _logger;
         protected readonly HttpClient _httpClient;
-        protected readonly string _accessToken;
 
         // O construtor da classe base recebe as dependências comuns.
-        protected MercadoPagoServiceBase(
-            HttpClient httpClient,
-            IConfiguration configuration,
-            ILogger logger
-        )
+        protected MercadoPagoServiceBase(HttpClient httpClient, ILogger logger)
         {
             _httpClient = httpClient;
             _logger = logger;
-            _accessToken =
-                configuration["MercadoPago:AccessToken"]
-                ?? throw new ArgumentNullException(
-                    nameof(configuration),
-                    "Access Token do Mercado Pago não encontrado."
-                );
         }
 
         /// <summary>
@@ -39,11 +29,15 @@ namespace MeuCrudCsharp.Features.MercadoPago.Base
         )
             where T : class
         {
+            var requestOptions = new RequestOptions();
             var request = new HttpRequestMessage(
                 method,
                 new Uri($"https://api.mercadopago.com{endpoint}")
             );
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _accessToken);
+            request.Headers.Authorization = new AuthenticationHeaderValue(
+                "Bearer",
+                requestOptions.AccessToken
+            );
             request.Headers.Add("X-Idempotency-Key", Guid.NewGuid().ToString());
 
             if (payload != null)

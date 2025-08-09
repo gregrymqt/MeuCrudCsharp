@@ -24,10 +24,9 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
             ApiDbContext context,
             ICacheService cacheService,
             HttpClient httpClient,
-            IConfiguration configuration,
             ILogger<UserAccountService> logger
         )
-            : base(httpClient, configuration, logger) // Passa dependências para a classe base
+            : base(httpClient, logger) // Passa dependências para a classe base
         {
             _context = context;
             _cacheService = cacheService;

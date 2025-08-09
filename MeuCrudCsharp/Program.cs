@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Hangfire;
 using Hangfire.Redis.StackExchange;
+using MercadoPago.Config;
 using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Features.Auth;
 using MeuCrudCsharp.Features.Clients.Interfaces;
@@ -107,6 +108,8 @@ else
     );
 }
 
+MercadoPagoConfig.AccessToken = builder.Configuration["MercadoPago:AccessToken"];
+
 // 5. Registrando seus serviços customizados da aplicação
 builder.Services.AddScoped<ICacheService, CacheService>();
 builder.Services.AddScoped<IAppAuthService, AppAuthService>();
@@ -122,19 +125,16 @@ builder.Services.AddTransient<VideoProcessingService>();
 builder.Services.AddScoped<IUserAccountService, UserAccountService>();
 builder.Services.AddScoped<IVideoProcessingService, VideoProcessingService>();
 builder.Services.AddScoped<ICourseService, CourseService>();
-builder.Services.AddScoped<IPlanService, IPlanService>();
+builder.Services.AddScoped<IPlanService, PlanService>();
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddHttpClient();
 builder.Services.AddScoped<IRefundService, RefundService>();
 builder.Services.AddScoped<IClientService, ClientService>();
 builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
 builder.Services.AddScoped<IPlanService, PlanService>();
-builder.Services.AddScoped<MercadoPagoServiceBase>();
 builder.Services.AddScoped<ProcessPaymentNotificationJob>();
 builder.Services.AddScoped<INotificationPaymentService, NotificationPaymentService>();
 builder.Services.AddScoped<IQueueService, BackgroundJobQueueService>();
-builder.Services.AddScoped<AppServiceException>();
-builder.Services.AddScoped<ExternalApiException>();
-builder.Services.AddScoped<ResourceNotFoundException>();
 
 // 6. Adiciona o servidor Hangfire que processa os jobs na fila
 // Isso deve vir depois que o Hangfire foi configurado (AddHangfire)

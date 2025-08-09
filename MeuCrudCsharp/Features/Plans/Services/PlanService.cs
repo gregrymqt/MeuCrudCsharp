@@ -20,10 +20,9 @@ namespace MeuCrudCsharp.Features.Plans.Services
             ApiDbContext context,
             ICacheService cacheService,
             HttpClient httpClient,
-            IConfiguration configuration,
             ILogger<PlanService> logger
         )
-            : base(httpClient, configuration, logger) // Passa as dependências para a classe base
+            : base(httpClient, logger) // Passa as dependências para a classe base
         {
             _context = context;
             _cacheService = cacheService;
@@ -46,7 +45,7 @@ namespace MeuCrudCsharp.Features.Plans.Services
 
                 var apiPlans = JsonSerializer.Deserialize<PlanSearchResponseDto>(responseBody);
 
-                return apiPlans
+                return apiPlans!
                     .Results.Where(plan => plan.AutoRecurring != null)
                     .Select(plan => new PlanDto
                     {

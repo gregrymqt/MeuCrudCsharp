@@ -10,4 +10,6 @@ public class PaymentRequestDto
     public decimal Amount { get; set; } // Adicione esta propriedade
     public string? Plano { get; set; }
     public string? PreapprovalPlanId { get; set; }
+
+    public IdentificationDto? Identification { get; set; } // Adicione esta propriedade para descrição do pagamento
 }

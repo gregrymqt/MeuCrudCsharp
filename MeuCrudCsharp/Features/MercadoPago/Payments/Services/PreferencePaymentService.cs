@@ -16,21 +16,15 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
 {
     public class PreferencePaymentService : IPreferencePayment
     {
-        private readonly TokenMercadoPago _tokenMercadoPago;
         private readonly IConfiguration _configuration;
-        private readonly PreferenceClient _preferenceClient;
         private readonly ILogger<PreferencePaymentService> _logger;
 
         public PreferencePaymentService(
-            TokenMercadoPago tokenMercadoPago,
             IConfiguration configuration,
-            PreferenceClient preferenceClient,
             ILogger<PreferencePaymentService> logger
         ) // Adicionando ILogger
         {
-            _tokenMercadoPago = tokenMercadoPago;
             _configuration = configuration;
-            _preferenceClient = preferenceClient;
             _logger = logger;
         }
 
@@ -56,10 +50,8 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
 
             try
             {
-                var requestOptions = new RequestOptions
-                {
-                    AccessToken = _tokenMercadoPago._access_Token,
-                };
+                var preferenceClient = new PreferenceClient();
+                var requestOptions = new RequestOptions();
                 requestOptions.CustomHeaders.Add("x-idempotency-key", Guid.NewGuid().ToString());
 
                 var baseUrl =
@@ -109,7 +101,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
                     amount
                 );
 
-                Preference preference = await _preferenceClient.CreateAsync(
+                Preference preference = await preferenceClient.CreateAsync(
                     preferenceRequest,
                     requestOptions
                 );
