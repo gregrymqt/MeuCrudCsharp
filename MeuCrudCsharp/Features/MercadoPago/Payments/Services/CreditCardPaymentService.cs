@@ -18,6 +18,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
 {
+    /// <summary>
+    /// Implementa <see cref="ICreditCardPayments"/> para processar pagamentos com cartão de crédito.
+    /// </summary>
     public class CreditCardPaymentService : ICreditCardPayments
     {
         private readonly ApiDbContext _context;
@@ -51,6 +54,11 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
             _subscriptionService = subscriptionService;
         }
 
+        /// <inheritdoc />
+        /// <summary>
+        /// Cria um pagamento ou assinatura com base na solicitação.
+        /// </summary>
+        /// <param name="request">Os dados da solicitação de pagamento.</param>
         public async Task<object> CreatePaymentOrSubscriptionAsync(PaymentRequestDto request)
         {
             // MUDANÇA 2: Validação "Fail-Fast"
@@ -67,6 +75,13 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
             return await CreateSinglePaymentInternalAsync(request);
         }
 
+        /// <summary>
+        /// Cria um pagamento único com base nos dados fornecidos.
+        /// </summary>
+        /// <param name="paymentData">Os dados do pagamento.</param>
+        /// <returns>Um objeto representando a resposta do pagamento.</returns>
+        /// <exception cref="ArgumentException">Se os dados do pagamento forem inválidos.</exception>
+        /// <exception cref="AppServiceException">Se ocorrer um erro ao criar o pagamento.</exception>
         private async Task<PaymentResponseDto> CreateSinglePaymentInternalAsync(
             PaymentRequestDto paymentData
         )
@@ -74,7 +89,10 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
             var userId = GetCurrentUserId();
 
             // É uma boa prática validar os dados recebidos antes de prosseguir.
-            if (paymentData.Payer?.Email is null || paymentData.Identification?.Number is null)
+            if (
+                paymentData.Payer?.Email is null
+                || paymentData.Payer.Identification?.Number is null
+            )
             {
                 throw new ArgumentException("Dados do pagador (email, CPF) são obrigatórios.");
             }
@@ -85,7 +103,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
                 Status = "iniciando",
                 PayerEmail = paymentData.Payer.Email,
                 Method = paymentData.PaymentMethodId,
-                CustomerCpf = paymentData.Identification.Number,
+                CustomerCpf = paymentData.Payer.Identification.Number,
                 Amount = paymentData.Amount,
                 Installments = paymentData.Installments,
                 ExternalId = Guid.NewGuid().ToString(), // Usando um ID externo único para idempotência
@@ -126,8 +144,8 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
                         Email = paymentData.Payer.Email,
                         Identification = new IdentificationRequest
                         {
-                            Type = paymentData.Identification.Type,
-                            Number = paymentData.Identification.Number,
+                            Type = paymentData.Payer.Identification.Type,
+                            Number = paymentData.Payer.Identification.Number,
                         },
                     },
                 };
@@ -196,6 +214,13 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
             }
         }
 
+        /// <summary>
+        /// Cria uma nova assinatura com base nos dados fornecidos.
+        /// </summary>
+        /// <param name="subscriptionData">Os dados da assinatura.</param>
+        /// <returns>Um objeto representando a resposta da criação da assinatura.</returns>
+        /// <exception cref="ArgumentException">Se os dados da assinatura forem inválidos.</exception>
+        /// <exception cref="AppServiceException">Se ocorrer um erro ao criar a assinatura.</exception>
         private async Task<object> CreateSubscriptionInternalAsync(
             PaymentRequestDto subscriptionData
         )

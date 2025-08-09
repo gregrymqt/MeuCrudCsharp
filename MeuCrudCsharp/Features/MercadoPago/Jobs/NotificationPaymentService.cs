@@ -3,26 +3,37 @@ using System.Threading.Tasks;
 using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Features.Emails.Interfaces;
 using MeuCrudCsharp.Features.Emails.ViewModels;
-using MeuCrudCsharp.Features.Exceptions; // Nossas exceções customizadas
+using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Models;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging; // MUDANÇA 1: Adicionando o Logger
+using Microsoft.Extensions.Logging;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Jobs
 {
+    /// <summary>
+    /// Implementa <see cref="INotificationPaymentService"/> para processar notificações de pagamento.
+    /// Este serviço verifica o status de um pagamento no banco de dados local e envia e-mails de confirmação ou rejeição ao usuário.
+    /// </summary>
     public class NotificationPaymentService : INotificationPaymentService
     {
         private readonly ApiDbContext _context;
         private readonly IEmailSenderService _emailSender;
         private readonly IRazorViewToStringRenderer _razorRenderer;
-        private readonly ILogger<NotificationPaymentService> _logger; // MUDANÇA 1
+        private readonly ILogger<NotificationPaymentService> _logger;
 
+        /// <summary>
+        /// Inicializa uma nova instância da classe <see cref="NotificationPaymentService"/>.
+        /// </summary>
+        /// <param name="context">O contexto do banco de dados.</param>
+        /// <param name="emailSender">O serviço para envio de e-mails.</param>
+        /// <param name="razorRenderer">O serviço para renderizar templates Razor para string.</param>
+        /// <param name="logger">O serviço de logging.</param>
         public NotificationPaymentService(
             ApiDbContext context,
             IEmailSenderService emailSender,
             IRazorViewToStringRenderer razorRenderer,
             ILogger<NotificationPaymentService> logger
-        ) // MUDANÇA 1
+        )
         {
             _context = context;
             _emailSender = emailSender;
@@ -30,6 +41,11 @@ namespace MeuCrudCsharp.Features.MercadoPago.Jobs
             _logger = logger;
         }
 
+        /// <inheritdoc />
+        /// <remarks>
+        /// Este método foi projetado para ser executado por um job em segundo plano (ex: Hangfire).
+        /// Ele relança exceções para permitir que o sistema de jobs trate falhas e execute novas tentativas.
+        /// </remarks>
         public async Task VerifyAndProcessNotificationAsync(Guid userId, string paymentId)
         {
             _logger.LogInformation(
@@ -38,13 +54,11 @@ namespace MeuCrudCsharp.Features.MercadoPago.Jobs
                 paymentId
             );
 
-            // MUDANÇA 2: Envolvendo o método principal em um try-catch
             try
             {
                 var status = await SearchForStatusAsync(paymentId);
                 var user = await _context.Users.FindAsync(userId.ToString());
 
-                // MUDANÇA 3: Substituindo falha silenciosa por uma exceção clara
                 if (user == null)
                     throw new ResourceNotFoundException(
                         $"Usuário com ID {userId} não foi encontrado para notificação."
@@ -78,16 +92,21 @@ namespace MeuCrudCsharp.Features.MercadoPago.Jobs
                     userId,
                     paymentId
                 );
-                // Relança a exceção para que o Hangfire saiba que o job falhou e deve tentar novamente.
                 throw;
             }
         }
 
+        /// <summary>
+        /// Busca o status de um pagamento no banco de dados local.
+        /// </summary>
+        /// <param name="paymentId">O ID do pagamento a ser consultado.</param>
+        /// <returns>A string representando o status do pagamento, ou nulo se não encontrado.</returns>
+        /// <exception cref="ArgumentException">Lançada se o <paramref name="paymentId"/> não for um GUID válido.</exception>
+        /// <exception cref="AppServiceException">Lançada se ocorrer um erro ao acessar o banco de dados.</exception>
         private async Task<string?> SearchForStatusAsync(string paymentId)
         {
             try
             {
-                // A conversão de string para Guid pode falhar
                 if (!Guid.TryParse(paymentId, out var paymentGuid))
                 {
                     throw new ArgumentException($"O PaymentId '{paymentId}' não é um GUID válido.");
@@ -110,9 +129,14 @@ namespace MeuCrudCsharp.Features.MercadoPago.Jobs
             }
         }
 
+        /// <summary>
+        /// Renderiza e envia um e-mail de confirmação de pagamento para o usuário.
+        /// </summary>
+        /// <param name="user">O usuário que receberá o e-mail.</param>
+        /// <param name="paymentId">O ID do pagamento confirmado.</param>
+        /// <exception cref="ExternalApiException">Lançada se houver uma falha ao renderizar o template ou enviar o e-mail.</exception>
         private async Task SendConfirmationEmailAsync(Users user, string paymentId)
         {
-            // MUDANÇA 4: Adicionando try-catch específico para o envio de e-mail
             try
             {
                 var subject = "Seu pagamento foi aprovado! 🎉";
@@ -152,6 +176,12 @@ namespace MeuCrudCsharp.Features.MercadoPago.Jobs
         }
 
         // Repetimos o mesmo padrão para o e-mail de rejeição
+        /// <summary>
+        /// Renderiza e envia um e-mail de rejeição de pagamento para o usuário.
+        /// </summary>
+        /// <param name="user">O usuário que receberá o e-mail.</param>
+        /// <param name="paymentId">O ID do pagamento rejeitado.</param>
+        /// <exception cref="ExternalApiException">Lançada se houver uma falha ao renderizar o template ou enviar o e-mail.</exception>
         private async Task SendRejectionEmailAsync(Users user, string paymentId)
         {
             try

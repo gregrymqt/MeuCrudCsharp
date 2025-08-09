@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Linq; // Adicionado para usar .Any()
+using System.Linq;
 using System.Threading.Tasks;
 using Hangfire;
 using MeuCrudCsharp.Data;
@@ -9,12 +9,22 @@ using Microsoft.Extensions.Logging;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Jobs
 {
+    /// <summary>
+    /// Representa um job do Hangfire responsável por processar uma notificação de pagamento recebida.
+    /// Este job garante a consistência transacional, a idempotência e a lógica de retentativas para o processamento de pagamentos.
+    /// </summary>
     public class ProcessPaymentNotificationJob
     {
         private readonly ILogger<ProcessPaymentNotificationJob> _logger;
         private readonly ApiDbContext _context;
         private readonly INotificationPaymentService _notificationPaymentService;
 
+        /// <summary>
+        /// Inicializa uma nova instância da classe <see cref="ProcessPaymentNotificationJob"/>.
+        /// </summary>
+        /// <param name="logger">O serviço de logging.</param>
+        /// <param name="context">O contexto do banco de dados para operações transacionais.</param>
+        /// <param name="notificationPaymentService">O serviço que contém a lógica de negócio para processar a notificação.</param>
         public ProcessPaymentNotificationJob(
             ILogger<ProcessPaymentNotificationJob> logger,
             ApiDbContext context,
@@ -26,17 +36,26 @@ namespace MeuCrudCsharp.Features.MercadoPago.Jobs
             _notificationPaymentService = notificationPaymentService;
         }
 
+        /// <summary>
+        /// Executa a lógica de processamento da notificação de pagamento.
+        /// </summary>
+        /// <remarks>
+        /// Este método é invocado pelo Hangfire. O atributo <see cref="AutomaticRetryAttribute"/>
+        /// garante que o job será reexecutado em caso de falha, com um atraso de 60 segundos entre as 3 tentativas.
+        /// A lógica utiliza uma transação de banco de dados e um bloqueio de linha (FOR UPDATE) para garantir
+        /// a consistência e evitar condições de corrida.
+        /// </remarks>
+        /// <param name="paymentId">O ID externo do pagamento a ser processado.</param>
+        /// <exception cref="ArgumentNullException">Lançada se o <paramref name="paymentId"/> for nulo ou vazio.</exception>
+        /// <exception cref="ResourceNotFoundException">Lançada se o pagamento não for encontrado no banco de dados, acionando uma nova tentativa do Hangfire.</exception>
         [AutomaticRetry(Attempts = 3, DelaysInSeconds = new int[] { 60 })] // Aumentando o delay para 1 minuto
         public async Task ExecuteAsync(string paymentId)
         {
-            // MUDANÇA 1: Validação "Fail-Fast" antes de qualquer outra coisa.
-            // Se o ID for inválido, o job falha imediatamente sem consumir recursos.
             if (string.IsNullOrEmpty(paymentId))
             {
                 _logger.LogError(
                     "Job de notificação de pagamento recebido com um PaymentId nulo ou vazio. O job será descartado."
                 );
-                // Lançar exceção evita que o Hangfire tente reprocessar um job inválido.
                 throw new ArgumentNullException(
                     nameof(paymentId),
                     "O ID do pagamento não pode ser nulo."
@@ -48,13 +67,10 @@ namespace MeuCrudCsharp.Features.MercadoPago.Jobs
                 paymentId
             );
 
-            // A transação é a melhor forma de garantir a consistência dos dados.
             await using var transaction = await _context.Database.BeginTransactionAsync();
 
             try
             {
-                // MUDANÇA 2: Corrigindo o nome da tabela na consulta SQL
-                // E simplificando a busca com .FirstOrDefault() que pode ser nulo.
                 var pagamentoLocal = await _context
                     .Payments.FromSqlRaw(
                         @"SELECT * FROM ""Payments"" WHERE ""ExternalId"" = {0} FOR UPDATE",
@@ -64,15 +80,12 @@ namespace MeuCrudCsharp.Features.MercadoPago.Jobs
 
                 if (pagamentoLocal == null)
                 {
-                    // MUDANÇA 3: Lançar uma exceção específica em vez de retornar vazio.
-                    // Isso informa ao Hangfire que algo está errado (ex: o webhook chegou antes do pagamento ser salvo).
-                    // O retry do Hangfire pode resolver isso na próxima tentativa.
                     throw new ResourceNotFoundException(
                         $"Pagamento com ID externo {paymentId} não encontrado no banco. Tentando novamente mais tarde."
                     );
                 }
 
-                // A verificação de reprocessamento está ótima.
+                // Garante a idempotência: se o pagamento já foi processado, encerra o job com sucesso.
                 var statusProcessaveis = new[] { "pendente", "iniciando" };
                 if (!statusProcessaveis.Contains(pagamentoLocal.Status))
                 {
@@ -82,7 +95,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Jobs
                         pagamentoLocal.Status
                     );
                     await transaction.CommitAsync();
-                    return; // Encerra o job com sucesso, sem erros.
+                    return;
                 }
 
                 await _notificationPaymentService.VerifyAndProcessNotificationAsync(
@@ -107,8 +120,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Jobs
 
                 await transaction.RollbackAsync();
 
-                // Relançar a exceção é crucial para que o Hangfire saiba que o job falhou
-                // e possa aplicar a política de retentativas.
+                // Relança a exceção para que o Hangfire saiba que o job falhou e aplique a política de retentativas.
                 throw;
             }
         }

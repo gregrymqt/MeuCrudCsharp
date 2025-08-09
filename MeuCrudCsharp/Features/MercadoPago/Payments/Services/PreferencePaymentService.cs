@@ -6,31 +6,44 @@ using MercadoPago.Client;
 using MercadoPago.Client.Preference;
 using MercadoPago.Error;
 using MercadoPago.Resource.Preference;
-using MeuCrudCsharp.Features.Exceptions; // Nossas exceções
+using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces;
-using MeuCrudCsharp.Features.MercadoPago.Tokens;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging; // Injetando o Logger
+using Microsoft.Extensions.Logging;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
 {
+    /// <summary>
+    /// Implementa <see cref="IPreferencePayment"/> para criar preferências de pagamento no Mercado Pago.
+    /// </summary>
     public class PreferencePaymentService : IPreferencePayment
     {
         private readonly IConfiguration _configuration;
         private readonly ILogger<PreferencePaymentService> _logger;
 
+        /// <summary>
+        /// Inicializa uma nova instância da classe <see cref="PreferencePaymentService"/>.
+        /// </summary>
+        /// <param name="configuration">A configuração da aplicação para obter URLs e outras configurações.</param>
+        /// <param name="logger">O serviço de logging.</param>
         public PreferencePaymentService(
             IConfiguration configuration,
             ILogger<PreferencePaymentService> logger
-        ) // Adicionando ILogger
+        )
         {
             _configuration = configuration;
             _logger = logger;
         }
 
+        /// <inheritdoc />
+        /// <summary>
+        /// Cria uma nova preferência de pagamento.
+        /// </summary>
+        /// <param name="amount">O valor da preferência.</param>
+        /// <param name="user">O usuário que está criando a preferência.</param>
+        /// <returns>A preferência de pagamento criada.</returns>
         public async Task<Preference> CreatePreferenceAsync(decimal amount, ClaimsPrincipal user)
         {
-            // Validação "Fail-Fast"
             if (user?.Identity?.IsAuthenticated != true)
                 throw new ArgumentException("Usuário não autenticado.", nameof(user));
 

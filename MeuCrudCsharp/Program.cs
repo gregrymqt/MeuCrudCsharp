@@ -14,7 +14,6 @@ using MeuCrudCsharp.Features.Emails.Services;
 using MeuCrudCsharp.Features.MercadoPago.Jobs; // Adicionado para os Jobs
 using MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces;
 using MeuCrudCsharp.Features.MercadoPago.Payments.Services;
-using MeuCrudCsharp.Features.MercadoPago.Tokens;
 using MeuCrudCsharp.Features.Plans.Interfaces;
 using MeuCrudCsharp.Features.Plans.Services;
 using MeuCrudCsharp.Features.Profiles.Admin.Interfaces;
@@ -122,7 +121,6 @@ builder.Services.AddScoped<IEmailSenderService, SendGridEmailSenderService>();
 builder.Services.AddScoped<IRazorViewToStringRenderer, RazorViewToStringRenderer>();
 builder.Services.AddScoped<IAdminVideoService, AdminVideoService>();
 builder.Services.AddScoped<IAdminStudentService, AdminStudentService>();
-builder.Services.AddSingleton<TokenMercadoPago>();
 builder.Services.AddTransient<VideoProcessingService>();
 builder.Services.AddScoped<IUserAccountService, UserAccountService>();
 builder.Services.AddScoped<IVideoProcessingService, VideoProcessingService>();
@@ -170,7 +168,7 @@ builder
                     context.Token = token;
                 }
                 return Task.CompletedTask;
-            }
+            },
         };
     })
     .AddGoogle(

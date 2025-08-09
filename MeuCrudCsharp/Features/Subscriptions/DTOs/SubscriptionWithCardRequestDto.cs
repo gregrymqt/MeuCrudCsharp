@@ -1,4 +1,5 @@
 ﻿using System.Text.Json.Serialization;
+using MeuCrudCsharp.Features.MercadoPago.Payments.Dtos;
 
 // Este DTO representa o corpo da requisição para criar a assinatura
 public class SubscriptionWithCardRequestDto
@@ -18,4 +19,7 @@ public class PayerRequestDto
 {
     [JsonPropertyName("email")]
     public string? Email { get; set; }
+
+    [JsonPropertyName("identification")]
+    public IdentificationDto? Identification { get; set; }
 }
