@@ -101,41 +101,40 @@ public class ProfileCardsController : ControllerBase
         }
         catch (AppServiceException ex)
         {
-            _logger.LogError(
-                ex,
-                "Erro no provedor de pagamento ao deletar o cartão {CardId}.",
-                cardId
-            );
+            _logger.LogError(ex, "Payment provider error while deleting card {CardId}.", cardId);
             return BadRequest(new { message = ex.Message });
-        }
+                "Erro no provedor de pagamento ao deletar o cartão {CardId}.",
     }
 
     /// <summary>
-    /// Obtém o identificador de cliente no provedor de pagamentos para o usuário atual.
+    /// Gets the payment provider's customer identifier for the current user.
     /// </summary>
+    /// <remarks>
+    /// Throws an <see cref="AppServiceException"/> if the user is not identified, does not exist, or has no associated customer profile.
+    /// Obtém o identificador de cliente no provedor de pagamentos para o usuário atual.
+    /// <returns>The payment provider's customer identifier.</returns>
     /// <remarks>Lança <see cref="AppServiceException"/> quando usuário não está identificado, não existe ou não possui cliente associado.</remarks>
     /// <returns>Identificador do cliente no provedor de pagamentos.</returns>
-    private async Task<string> GetCurrentUserCustomerIdAsync()
-    {
-        var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(userIdString))
         {
-            throw new AppServiceException("Não foi possível identificar o usuário na sessão.");
         }
 
-        var user = await _apiDbContext
+        // 2. Find the user in the database.
+            throw new AppServiceException("Não foi possível identificar o usuário na sessão.");
             .Users.AsNoTracking()
             .FirstOrDefaultAsync(u => u.Id == userIdString);
+        if (user == null)
+            throw new AppServiceException("User not found.");
 
+        // 3. Ensure the user has a customer ID from the payment provider.
         if (user == null)
         {
             throw new AppServiceException("Usuário não encontrado.");
         }
-
-        if (string.IsNullOrEmpty(user.MercadoPagoCustomerId))
         {
+                "User does not have an associated payment customer profile."
+            );
             throw new AppServiceException("Usuário não possui um cliente de pagamentos associado.");
-        }
 
         return user.MercadoPagoCustomerId;
     }

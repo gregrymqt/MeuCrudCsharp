@@ -1,11 +1,16 @@
 ﻿using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Models;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace MeuCrudCsharp.Features.Videos.Controller
 {
+    /// <summary>
+    /// Serves HLS (HTTP Live Streaming) video content to authenticated users.
+    /// This controller handles requests for both the main manifest file (.m3u8) and the individual video segments (.ts).
+    /// </summary>
     [ApiController]
     [Authorize]
     [Route("api/videos")]
@@ -13,30 +18,53 @@ namespace MeuCrudCsharp.Features.Videos.Controller
     {
         private readonly ApiDbContext _context;
         private readonly IWebHostEnvironment _env;
+        private readonly ILogger<VideosController> _logger;
 
-        public VideosController(ApiDbContext context, IWebHostEnvironment env)
+        /// <summary>
+        /// Initializes a new instance of the <see cref="VideosController"/> class.
+        /// </summary>
+        /// <param name="context">The database context.</param>
+        /// <param name="env">The web hosting environment for file path information.</param>
+        /// <param name="logger">The logger for recording events and errors.</param>
+        public VideosController(
+            ApiDbContext context,
+            IWebHostEnvironment env,
+            ILogger<VideosController> logger
+        )
         {
             _context = context;
             _env = env;
+            _logger = logger;
         }
 
-        // Rota para o manifesto: ex: /api/videos/GUID-DO-VIDEO/manifest.m3u8
+        /// <summary>
+        /// Retrieves the HLS manifest file (.m3u8) for a specific video.
+        /// </summary>
+        /// <remarks>
+        /// This endpoint is the entry point for video playback. It validates that the requested video
+        /// exists and is available before serving the manifest file to the client's player.
+        /// </remarks>
+        /// <param name="storageIdentifier">The unique identifier of the video.</param>
+        /// <returns>The manifest file if the video is found and available.</returns>
+        /// <response code="200">Returns the manifest file with the correct content type.</response>
+        /// <response code="401">If the user is not authenticated.</response>
+        /// <response code="404">If the video is not found or is not yet available.</response>
+        /// <response code="500">If the manifest file is missing on the server, indicating a processing error.</response>
         [HttpGet("{storageIdentifier}/manifest.m3u8")]
-        // [Authorize] // Garante que apenas usuários logados possam assistir
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(FileResult))]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetManifest(string storageIdentifier)
         {
-            // PASSO 1: O usuário clicou, pegamos o ID (storageIdentifier).
-            // PASSO 2: Buscamos no banco de dados para validar.
             var videoExists = await _context.Videos.AnyAsync(v =>
                 v.StorageIdentifier == storageIdentifier && v.Status == VideoStatus.Available
             );
 
             if (!videoExists)
             {
-                return NotFound("Vídeo não encontrado ou ainda não está disponível.");
+                return NotFound("Video not found or is not yet available.");
             }
 
-            // PASSO 3: Se o vídeo existe, montamos o caminho para o arquivo JÁ PROCESSADO.
             var manifestPath = Path.Combine(
                 _env.WebRootPath,
                 "Videos",
@@ -47,24 +75,38 @@ namespace MeuCrudCsharp.Features.Videos.Controller
 
             if (!System.IO.File.Exists(manifestPath))
             {
-                // Isso indicaria um erro no processamento do FFmpeg.
+                _logger.LogError(
+                    "Manifest file not found for video {StorageIdentifier}, but it exists in the database. This indicates a processing error.",
+                    storageIdentifier
+                );
                 return StatusCode(
                     500,
-                    "Arquivo de manifesto não encontrado no servidor, apesar de constar no banco de dados."
+                    "Manifest file not found on the server, indicating a processing error."
                 );
             }
 
-            // PASSO 4: Entregamos o arquivo de manifesto para o player.
             return PhysicalFile(manifestPath, "application/vnd.apple.mpegurl");
         }
 
-        // Rota para os segmentos: ex: /api/videos/GUID-DO-VIDEO/hls/segment001.ts
+        /// <summary>
+        /// Retrieves an HLS video segment file (.ts).
+        /// </summary>
+        /// <remarks>
+        /// This endpoint serves the individual video chunks requested by the player. For performance,
+        /// it does not re-validate against the database for every segment request, assuming the
+        /// initial manifest request was already authorized and validated.
+        /// </remarks>
+        /// <param name="storageIdentifier">The unique identifier of the video.</param>
+        /// <param name="segmentName">The name of the video segment file (e.g., "segment001.ts").</param>
+        /// <returns>The video segment file if it exists.</returns>
+        /// <response code="200">Returns the video segment file with the correct content type.</response>
+        /// <response code="401">If the user is not authenticated.</response>
+        /// <response code="404">If the requested segment file does not exist.</response>
         [HttpGet("{storageIdentifier}/hls/{segmentName}")]
-        // [Authorize]
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(FileResult))]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public IActionResult GetVideoSegment(string storageIdentifier, string segmentName)
         {
-            // Aqui não precisamos verificar o banco de dados para cada chunk,
-            // pois a verificação principal já foi feita no manifesto.
             var segmentPath = Path.Combine(
                 _env.WebRootPath,
                 "Videos",
@@ -75,7 +117,7 @@ namespace MeuCrudCsharp.Features.Videos.Controller
 
             if (!System.IO.File.Exists(segmentPath))
             {
-                return NotFound("Segmento de vídeo não encontrado.");
+                return NotFound("Video segment not found.");
             }
 
             return PhysicalFile(segmentPath, "video/mp2t");

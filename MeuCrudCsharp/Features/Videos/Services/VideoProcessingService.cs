@@ -3,7 +3,6 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
-using System.Threading.Tasks;
 using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.Videos.Interfaces;
@@ -14,6 +13,10 @@ using Microsoft.Extensions.Logging;
 
 namespace MeuCrudCsharp.Features.Videos.Service
 {
+    /// <summary>
+    /// Implements <see cref="IVideoProcessingService"/> to handle video file conversions using FFmpeg.
+    /// This service is designed to be run in the background (e.g., by Hangfire).
+    /// </summary>
     public class VideoProcessingService : IVideoProcessingService
     {
         private readonly ILogger<VideoProcessingService> _logger;
@@ -21,6 +24,11 @@ namespace MeuCrudCsharp.Features.Videos.Service
         private const string _ffmpegPath = "ffmpeg";
         private const string _ffprobePath = "ffprobe";
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="VideoProcessingService"/> class.
+        /// </summary>
+        /// <param name="logger">The logger for recording events and errors.</param>
+        /// <param name="serviceProvider">The service provider to create dependency scopes for background jobs.</param>
         public VideoProcessingService(
             ILogger<VideoProcessingService> logger,
             IServiceProvider serviceProvider
@@ -30,16 +38,20 @@ namespace MeuCrudCsharp.Features.Videos.Service
             _serviceProvider = serviceProvider;
         }
 
+        /// <inheritdoc />
+        /// <remarks>
+        /// This method creates a new dependency scope to safely interact with the database from a background thread.
+        /// It updates the video's status to 'Available' on success or 'Error' on failure.
+        /// </remarks>
         public async Task ProcessVideoToHlsAsync(
             string inputFilePath,
             string outputDirectory,
             string storageIdentifier
         )
         {
-            // Usar 'await using' garante que o escopo seja descartado corretamente
             await using var scope = _serviceProvider.CreateAsyncScope();
             var context = scope.ServiceProvider.GetRequiredService<ApiDbContext>();
-            Video? video = null; // Declaramos aqui para usar no bloco catch final
+            Video? video = null;
 
             try
             {
@@ -48,62 +60,50 @@ namespace MeuCrudCsharp.Features.Videos.Service
                 );
                 if (video == null)
                 {
-                    // MUDANÇA 1: Lança uma exceção clara se o vídeo não for encontrado.
-                    // Isso evita que o job seja considerado bem-sucedido.
                     throw new ResourceNotFoundException(
-                        $"Vídeo com StorageIdentifier {storageIdentifier} não encontrado para processamento."
+                        $"Video with StorageIdentifier {storageIdentifier} not found for processing."
                     );
                 }
 
                 if (!File.Exists(inputFilePath))
                 {
-                    throw new FileNotFoundException(
-                        $"Arquivo de entrada não encontrado: {inputFilePath}"
-                    );
+                    throw new FileNotFoundException($"Input file not found: {inputFilePath}");
                 }
 
                 Directory.CreateDirectory(outputDirectory);
 
-                // --- Passo 1: Obter a duração do vídeo ---
                 var duration = await GetVideoDurationAsync(inputFilePath);
 
-                // --- Passo 2: Processar o vídeo com ffmpeg ---
                 var manifestPath = Path.Combine(outputDirectory, "manifest.m3u8");
                 var arguments =
                     $"-i \"{inputFilePath}\" -c:v libx264 -c:a aac -hls_time 10 -hls_playlist_type vod -hls_segment_filename \"{Path.Combine(outputDirectory, "segment%03d.ts")}\" \"{manifestPath}\"";
 
                 await RunProcessAsync(_ffmpegPath, arguments);
 
-                // Se chegou aqui sem exceções, o processo foi bem-sucedido
                 video.Status = VideoStatus.Available;
                 video.Duration = duration;
                 _logger.LogInformation(
-                    "Vídeo {StorageIdentifier} processado com sucesso.",
+                    "Video {StorageIdentifier} processed successfully.",
                     storageIdentifier
                 );
             }
-            // MUDANÇA 2: Bloco catch para lidar com todas as falhas
             catch (Exception ex)
             {
                 _logger.LogError(
                     ex,
-                    "Falha crítica ao processar o vídeo {StorageIdentifier}.",
+                    "Critical failure while processing video {StorageIdentifier}.",
                     storageIdentifier
                 );
 
-                // Se o vídeo foi encontrado, atualiza seu status para 'Error'
                 if (video != null)
                 {
                     video.Status = VideoStatus.Error;
                 }
 
-                // Relança a exceção para que o Hangfire saiba que o job falhou e aplique as retentativas.
                 throw;
             }
             finally
             {
-                // MUDANÇA 3: Bloco finally para garantir que o SaveChanges seja chamado
-                // tanto em caso de sucesso quanto de erro (para salvar o status 'Error').
                 if (video != null && context.ChangeTracker.HasChanges())
                 {
                     await context.SaveChangesAsync();
@@ -111,7 +111,17 @@ namespace MeuCrudCsharp.Features.Videos.Service
             }
         }
 
-        private async Task RunProcessAsync(string filePath, string arguments)
+        /// <summary>
+        /// Executes an external command-line process asynchronously.
+        /// </summary>
+        /// <param name="filePath">The path to the executable file (e.g., "ffmpeg").</param>
+        /// <param name="arguments">The command-line arguments to pass to the process.</param>
+        /// <returns>A tuple containing the standard output and standard error streams as strings.</returns>
+        /// <exception cref="AppServiceException">Thrown if the process fails to start or returns a non-zero exit code.</exception>
+        private async Task<(string StandardOutput, string StandardError)> RunProcessAsync(
+            string filePath,
+            string arguments
+        )
         {
             var processStartInfo = new ProcessStartInfo
             {
@@ -123,53 +133,61 @@ namespace MeuCrudCsharp.Features.Videos.Service
                 CreateNoWindow = true,
             };
 
-            // MUDANÇA 4: Adicionando try-catch específico para a execução do processo
             try
             {
                 using var process = Process.Start(processStartInfo);
                 if (process == null)
                 {
-                    throw new AppServiceException(
-                        $"Não foi possível iniciar o processo para '{filePath}'."
-                    );
+                    throw new AppServiceException($"Could not start the process for '{filePath}'.");
                 }
 
+                string output = await process.StandardOutput.ReadToEndAsync();
                 string error = await process.StandardError.ReadToEndAsync();
                 await process.WaitForExitAsync();
 
                 if (process.ExitCode != 0)
                 {
-                    // Lança uma exceção com a saída de erro do FFmpeg
                     throw new AppServiceException(
-                        $"Processo '{filePath}' falhou com código de saída {process.ExitCode}. Erro: {error}"
+                        $"Process '{filePath}' failed with exit code {process.ExitCode}. Error: {error}"
                     );
                 }
+
+                return (output, error);
             }
-            catch (Win32Exception ex) // Erro comum se o ffmpeg não for encontrado
+            catch (Win32Exception ex)
             {
                 _logger.LogError(
                     ex,
-                    "Erro ao iniciar o processo '{FileName}'. Verifique se o FFmpeg/FFprobe está instalado e no PATH do sistema.",
+                    "Error starting process '{FileName}'. Verify that FFmpeg/FFprobe is installed and in the system's PATH.",
                     filePath
                 );
                 throw new AppServiceException(
-                    $"Dependência externa '{filePath}' não encontrada. Verifique a instalação.",
+                    $"External dependency '{filePath}' not found. Please check the installation.",
                     ex
                 );
             }
         }
 
+        /// <summary>
+        /// Gets the duration of a video file using ffprobe.
+        /// </summary>
+        /// <param name="inputFilePath">The full path to the video file.</param>
+        /// <returns>A <see cref="TimeSpan"/> representing the video's duration, or <see cref="TimeSpan.Zero"/> if it cannot be determined.</returns>
         private async Task<TimeSpan> GetVideoDurationAsync(string inputFilePath)
         {
             var arguments =
                 $"-v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 \"{inputFilePath}\"";
 
-            // O método RunProcessAsync agora lança exceção em caso de erro, então não precisamos mais de um try-catch aqui
-            // A responsabilidade está centralizada
-            await RunProcessAsync(_ffprobePath, arguments); // Executa o ffprobe
+            var (output, error) = await RunProcessAsync(_ffprobePath, arguments);
 
-            // A lógica de ler a saída foi movida para um novo método para maior clareza
-            var output = await ReadProcessOutputAsync(_ffprobePath, arguments);
+            if (!string.IsNullOrEmpty(error))
+            {
+                _logger.LogWarning(
+                    "ffprobe returned an error while getting duration for {InputPath}: {Error}",
+                    inputFilePath,
+                    error
+                );
+            }
 
             if (
                 double.TryParse(
@@ -184,32 +202,11 @@ namespace MeuCrudCsharp.Features.Videos.Service
             }
 
             _logger.LogWarning(
-                "Não foi possível obter a duração do vídeo: {InputPath}. A saída do ffprobe não foi um número válido.",
-                inputFilePath
+                "Could not parse video duration from ffprobe output for: {InputPath}. Output was: '{Output}'",
+                inputFilePath,
+                output
             );
             return TimeSpan.Zero;
-        }
-
-        private async Task<string> ReadProcessOutputAsync(string filePath, string arguments)
-        {
-            var processStartInfo = new ProcessStartInfo
-            {
-                FileName = filePath,
-                Arguments = arguments,
-                RedirectStandardOutput = true,
-                UseShellExecute = false,
-                CreateNoWindow = true,
-            };
-
-            using var process = Process.Start(processStartInfo);
-            if (process == null)
-                throw new AppServiceException(
-                    $"Não foi possível iniciar o processo para '{filePath}'."
-                );
-
-            string output = await process.StandardOutput.ReadToEndAsync();
-            await process.WaitForExitAsync();
-            return output.Trim();
         }
     }
 }

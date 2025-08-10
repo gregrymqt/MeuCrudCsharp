@@ -1,33 +1,39 @@
+/**
+ * @file Manages the client-side logic for the main course listing page.
+ * This includes fetching and caching course data, rendering a feature carousel,
+ * displaying course and video lists, and handling the "Continue Watching" feature.
+ */
 document.addEventListener('DOMContentLoaded', function () {
-
-    // =====================================================================
-    // Seleção de Elementos DOM
-    // =====================================================================
+    // --- DOM Element Selections ---
     const carouselWrapper = document.getElementById('carousel-wrapper');
     const coursesContainer = document.getElementById('courses-section-container');
     const pageLoader = document.getElementById('page-loader');
 
-    // =====================================================================
-    // Estado e Cache
-    // =====================================================================
+    // --- State and Cache Management ---
     const sessionCache = {};
     let swiperInstance;
 
-    // =====================================================================
-    // Funções de Renderização (Criação do HTML)
-    // =====================================================================
+    // --- Rendering Functions ---
 
-    // MUDANÇA 1: A função agora aceita o 'courseId' para criar o link correto.
+    /**
+     * Creates the HTML for a single video card.
+     * @param {object} video - The video data object.
+     * @param {string} courseId - The ID of the course the video belongs to.
+     * @returns {string} The HTML string for the video card.
+     */
     function createVideoCard(video, courseId) {
-        // MUDANÇA 2: Usando a nova propriedade 'durationInSeconds'.
-        const durationMinutes = Math.floor(video.durationInSeconds / 60);
+        // The backend should provide duration in a consistent format, but we handle it here.
+        // Assuming video.duration is a TimeSpan string like "00:05:30" or a number in seconds.
+        let durationMinutes = 0;
+        if (typeof video.duration === 'string' && video.duration.includes(':')) {
+            const parts = video.duration.split(':');
+            durationMinutes = parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+        } else if (typeof video.duration === 'number') {
+            durationMinutes = Math.floor(video.duration / 60);
+        }
         const durationText = `${durationMinutes} min`;
 
-        // MUDANÇA 3: Usando a nova propriedade 'thumbnailUrl'.
         const thumbnailUrl = video.thumbnailUrl || `https://placehold.co/600x400/111111/FFFFFF?text=${encodeURIComponent(video.title)}`;
-
-        // MUDANÇA 4: Criando o link dinâmico que você pediu.
-        // A sintaxe correta é /PageName?param1=valor1&param2=valor2
         const videoPageUrl = `/Videos/Index?videoId=${video.id}&courseId=${courseId}`;
 
         return `
@@ -43,17 +49,23 @@ document.addEventListener('DOMContentLoaded', function () {
         `;
     }
 
-    // Cria a seção "Continuar Assistindo"
+    /**
+     * Renders the "Continue Watching" section if a last-watched video is found in local storage.
+     */
     function renderContinueWatching() {
         const lastWatchedVideoJson = localStorage.getItem('lastWatchedVideo');
         if (!lastWatchedVideoJson) return;
 
         const videoData = JSON.parse(lastWatchedVideoJson);
 
-        // Ponto de Atenção: O 'courseId' precisa estar salvo no localStorage.
+        // Ensure the required data exists before rendering.
+        if (!videoData || !videoData.courseId) {
+            return;
+        }
+
         const continueWatchingHTML = `
             <div id="continue-watching-row" class="course-row">
-                <h2 class="course-row-title">Continuar Assistindo</h2>
+                <h2 class="course-row-title">Continue Watching</h2>
                 <div class="videos-scroller">
                     ${createVideoCard(videoData, videoData.courseId)}
                 </div>
@@ -62,7 +74,10 @@ document.addEventListener('DOMContentLoaded', function () {
         coursesContainer.insertAdjacentHTML('afterbegin', continueWatchingHTML);
     }
 
-    // Cria todas as fileiras de cursos e seus vídeos
+    /**
+     * Renders all course rows and their associated video cards.
+     * @param {Array<object>} courses - An array of course objects, each containing a list of videos.
+     */
     function renderCourseRows(courses) {
         let coursesHTML = '';
         courses.forEach(course => {
@@ -80,61 +95,56 @@ document.addEventListener('DOMContentLoaded', function () {
         coursesContainer.innerHTML += coursesHTML;
     }
 
-    // As outras funções (renderCarousel, loadPageContent) permanecem as mesmas...
-
-    // =====================================================================
-    // Função Principal para Buscar e Exibir os Dados
-    // =====================================================================
+    /**
+     * The main function to fetch and display all page content.
+     * It uses a session-level cache to avoid redundant API calls.
+     */
     async function loadPageContent() {
-        // Se os dados já estiverem em cache...
+        // If data is already cached, render from cache.
         if (sessionCache['allCourses']) {
             const data = sessionCache['allCourses'];
             renderCarousel(data);
             renderCourseRows(data);
-            initSwiper(); // <-- CHAMAR AQUI
+            initSwiper();
             pageLoader.style.display = 'none';
             return;
         }
 
-        // Se precisar buscar os dados da API...
+        // Otherwise, fetch data from the API.
         try {
             const response = await fetch('/api/courses/all');
             if (!response.ok) {
-                throw new Error(`Erro na rede: ${response.statusText}`);
+                throw new Error(`Network error: ${response.statusText}`);
             }
             const coursesData = await response.json();
             sessionCache['allCourses'] = coursesData;
 
             renderCarousel(coursesData);
             renderCourseRows(coursesData);
-            initSwiper(); // <-- E CHAMAR AQUI TAMBÉM
+            initSwiper();
 
         } catch (error) {
-            console.error("Falha ao carregar o conteúdo da página:", error);
-            coursesContainer.innerHTML = `<p class="error-message">Falha ao carregar cursos. Tente novamente mais tarde.</p>`;
+            console.error("Failed to load page content:", error);
+            coursesContainer.innerHTML = `<p class="error-message">Failed to load courses. Please try again later.</p>`;
         } finally {
             pageLoader.style.display = 'none';
         }
     }
 
-    // =====================================================================
-    // Funções de Renderização (Adicionar estas)
-    // =====================================================================
-
     /**
-     * Cria os slides do carrossel com base nos dados dos cursos.
-     * @param {Array} courses - A lista de cursos vinda da API.
+     * Creates the carousel slides based on the course data.
+     * @param {Array<object>} courses - The list of courses from the API.
      */
     function renderCarousel(courses) {
-        // Filtra para pegar apenas cursos que tenham vídeos, para garantir que temos uma thumbnail.
+        // Filter for courses that have videos to ensure a thumbnail is available.
         const coursesWithVideos = courses.filter(course => course.videos && course.videos.length > 0);
 
-        // Cria o HTML para cada slide
+        // Create the HTML for each slide.
         const slidesHTML = coursesWithVideos.map(course => {
             const firstVideo = course.videos[0];
-            // Usa a thumbnail do primeiro vídeo como imagem do carrossel
+            // Use the first video's thumbnail as the carousel image.
             const thumbnailUrl = firstVideo.thumbnailUrl || `https://placehold.co/1280x720/000000/FFFFFF?text=${encodeURIComponent(course.name)}`;
-            // O link do slide leva para a página do primeiro vídeo do curso
+            // The slide links to the first video of the course.
             const videoPageUrl = `/Videos/Index?videoId=${firstVideo.id}&courseId=${course.id}`;
 
             return `
@@ -142,55 +152,52 @@ document.addEventListener('DOMContentLoaded', function () {
                 <img src="${thumbnailUrl}" alt="Banner para o curso ${course.name}" class="carousel-image"/>
                 <div class="carousel-caption">
                     <h2 class="carousel-title">${course.name}</h2>
-                    <p class="carousel-description">Assista agora ao primeiro vídeo!</p>
+                    <p class="carousel-description">Watch the first video now!</p>
                 </div>
             </a>
         `;
         }).join('');
 
-        // Insere os slides gerados no wrapper do carrossel
+        // Insert the generated slides into the carousel wrapper.
         if (carouselWrapper) {
             carouselWrapper.innerHTML = slidesHTML;
         }
     }
 
     /**
-     * Inicializa a biblioteca Swiper.js com as configurações desejadas.
-     * Deve ser chamada DEPOIS que a função renderCarousel() inserir os slides no DOM.
+     * Initializes the Swiper.js library with the desired settings.
+     * This should be called AFTER renderCarousel() has inserted the slides into the DOM.
      */
     function initSwiper() {
-        // Destrói uma instância anterior para evitar inicializações duplicadas
+        // Destroy a previous instance to avoid duplicate initializations.
         if (swiperInstance) {
             swiperInstance.destroy(true, true);
         }
 
-        // Cria a nova instância do Swiper
+        // Create the new Swiper instance.
         swiperInstance = new Swiper('.swiper', {
-            // Opções do Swiper
-            loop: true, // Cria um loop infinito
+            loop: true,
             autoplay: {
-                delay: 5000, // Passa para o próximo slide a cada 5 segundos
-                disableOnInteraction: false, // Continua o autoplay mesmo depois do usuário interagir
+                delay: 5000, // Switch to the next slide every 5 seconds
+                disableOnInteraction: false, // Continue autoplay after user interaction
             },
             pagination: {
-                el: '.swiper-pagination', // Elemento da paginação (as bolinhas)
-                clickable: true, // Permite clicar nas bolinhas para navegar
+                el: '.swiper-pagination', // Pagination element (the dots)
+                clickable: true, // Allow clicking on dots to navigate
             },
             navigation: {
-                nextEl: '.swiper-button-next', // Elemento do botão "próximo"
-                prevEl: '.swiper-button-prev', // Elemento do botão "anterior"
+                nextEl: '.swiper-button-next', // "Next" button element
+                prevEl: '.swiper-button-prev', // "Previous" button element
             },
-            effect: 'fade', // Efeito de transição (pode ser 'slide', 'fade', 'cube', etc.)
+            effect: 'fade', // Transition effect
             fadeEffect: {
-                crossFade: true // Evita "piscadas" no efeito fade
+                crossFade: true // Prevents flickering during the fade effect
             },
-            grabCursor: true, // Mostra o ícone de "mão" ao passar o mouse
+            grabCursor: true, // Shows the "grab" cursor on hover
         });
     }
 
-    // =====================================================================
-    // Ponto de Entrada
-    // =====================================================================
+    // --- Page Initialization ---
     renderContinueWatching();
     loadPageContent();
 });

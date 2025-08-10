@@ -1,33 +1,43 @@
-﻿// Local: Features/Subscriptions/Services/SubscriptionService.cs
-
-using System;
+﻿using System;
 using System.Security.Claims;
 using System.Text.Json;
 using System.Threading.Tasks;
 using MeuCrudCsharp.Data;
-using MeuCrudCsharp.Features.Clients.Interfaces; // CORREÇÃO: Usar a interface do ClientService
+using MeuCrudCsharp.Features.Caching;
+using MeuCrudCsharp.Features.Clients.Interfaces;
 using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.MercadoPago.Base;
+using MeuCrudCsharp.Features.MercadoPago.Payments.Dtos;
 using MeuCrudCsharp.Features.Subscriptions.DTOs;
 using MeuCrudCsharp.Features.Subscriptions.Interfaces;
 using MeuCrudCsharp.Models;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace MeuCrudCsharp.Features.Subscriptions.Services
 {
+    /// <summary>
+    /// Implements <see cref="ISubscriptionService"/> to manage the lifecycle of user subscriptions.
+    /// This service orchestrates the creation and management of subscriptions by coordinating
+    /// with the local database, the payment provider (Mercado Pago), and a caching layer.
+    /// </summary>
     public class SubscriptionService : MercadoPagoServiceBase, ISubscriptionService
     {
-        // --- CORREÇÃO: Declarar todas as dependências como campos privados ---
         private readonly ApiDbContext _context;
-        private readonly IClientService _clientService; // Dependência para criar clientes e cartões
-        private readonly ICacheService _cacheService; // Descomente se você tiver um serviço de cache
+        private readonly IClientService _clientService;
+        private readonly ICacheService _cacheService;
 
-        // --- CORREÇÃO: Injetar todas as dependências e corrigir o tipo do Logger ---
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SubscriptionService"/> class.
+        /// </summary>
+        /// <param name="httpClient">The HTTP client for making API requests, passed to the base class.</param>
+        /// <param name="logger">The logger for recording events and errors.</param>
+        /// <param name="context">The database context.</param>
+        /// <param name="clientService">The service for managing payment provider customers and cards.</param>
+        /// <param name="cacheService">The caching service for performance optimization.</param>
         public SubscriptionService(
             HttpClient httpClient,
-            ILogger<SubscriptionService> logger, // O Logger deve ser do tipo da própria classe
+            ILogger<SubscriptionService> logger,
             ApiDbContext context,
             IClientService clientService,
             ICacheService cacheService
@@ -39,6 +49,7 @@ namespace MeuCrudCsharp.Features.Subscriptions.Services
             _cacheService = cacheService;
         }
 
+        /// <inheritdoc />
         public async Task<SubscriptionResponseDto> CreateSubscriptionAndCustomerIfNeededAsync(
             CreateSubscriptionDto createDto,
             ClaimsPrincipal users
@@ -48,7 +59,7 @@ namespace MeuCrudCsharp.Features.Subscriptions.Services
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userIdString);
             if (user == null)
             {
-                throw new AppServiceException("Usuário não encontrado.");
+                throw new AppServiceException("User not found.");
             }
 
             string customerId = user.MercadoPagoCustomerId;
@@ -56,23 +67,20 @@ namespace MeuCrudCsharp.Features.Subscriptions.Services
             if (string.IsNullOrEmpty(customerId))
             {
                 _logger.LogInformation(
-                    "Usuário {UserId} não possui um cliente no MP. Criando agora...",
+                    "User {UserId} does not have a customer in the payment provider. Creating one now...",
                     userIdString
                 );
 
-                // --- CORREÇÃO: Usar o _clientService injetado ---
                 var newCustomer = await _clientService.CreateCustomerAsync(user.Email, user.Name);
                 customerId = newCustomer.Id;
                 user.MercadoPagoCustomerId = customerId;
             }
 
-            // --- CORREÇÃO: Usar o _clientService injetado ---
             var savedCard = await _clientService.AddCardToCustomerAsync(
                 customerId,
                 createDto.CardTokenId
             );
 
-            // A lógica de criar a assinatura em si já estava quase certa, agora ela é um método separado.
             var subscriptionResponse = await CreateSubscriptionAsync(
                 createDto.PreapprovalPlanId,
                 savedCard.Id,
@@ -88,12 +96,13 @@ namespace MeuCrudCsharp.Features.Subscriptions.Services
             if (localPlan == null)
             {
                 throw new ResourceNotFoundException(
-                    $"Plano com ID externo '{subscriptionResponse.PreapprovalPlanId}' não encontrado."
+                    $"Plan with external ID '{subscriptionResponse.PreapprovalPlanId}' not found."
                 );
             }
+
             if (!Guid.TryParse(userIdString, out var userIdGuid))
             {
-                throw new AppServiceException("ID de usuário inválido na sessão.");
+                throw new AppServiceException("Invalid user ID in session.");
             }
 
             var newSubscription = new Subscription
@@ -111,14 +120,14 @@ namespace MeuCrudCsharp.Features.Subscriptions.Services
             await _context.SaveChangesAsync();
 
             _logger.LogInformation(
-                "Assinatura {SubscriptionId} criada com sucesso para o usuário {UserId}",
+                "Subscription {SubscriptionId} created successfully for user {UserId}",
                 newSubscription.ExternalId,
                 userIdString
             );
             return subscriptionResponse;
         }
 
-        // --- CORREÇÃO: Métodos que interagem com a API agora vivem aqui, usando o método base ---
+        /// <inheritdoc />
         public async Task<SubscriptionResponseDto> GetSubscriptionByIdAsync(string subscriptionId)
         {
             var endpoint = $"/preapproval/{subscriptionId}";
@@ -128,53 +137,37 @@ namespace MeuCrudCsharp.Features.Subscriptions.Services
                 (object?)null
             );
             return JsonSerializer.Deserialize<SubscriptionResponseDto>(responseBody)
-                ?? throw new AppServiceException("Falha ao desserializar dados da assinatura.");
+                ?? throw new AppServiceException("Failed to deserialize subscription data.");
         }
 
-        public async Task<SubscriptionResponseDto> UpdateSubscriptionCardAsync(
-            string subscriptionId,
-            string newCardId
-        )
-        {
-            var endpoint = $"/v1/preapproval/{subscriptionId}";
-            var payload = new SubscriptionWithCardRequestDto { CardId = newCardId };
-            var responseBody = await SendMercadoPagoRequestAsync(HttpMethod.Put, endpoint, payload);
-            return JsonSerializer.Deserialize<SubscriptionResponseDto>(responseBody)
-                ?? throw new AppServiceException(
-                    "Falha ao desserializar a resposta da atualização da assinatura."
-                );
-        }
-
+        /// <inheritdoc />
         public async Task<SubscriptionResponseDto> UpdateSubscriptionValueAsync(
             string subscriptionId,
             UpdateSubscriptionValueDto dto
         )
         {
             _logger.LogInformation(
-                "Iniciando atualização de valor para a assinatura MP: {SubscriptionId}",
+                "Initiating value update for MP subscription: {SubscriptionId}",
                 subscriptionId
             );
 
-            // 1. Monta o endpoint da API
             var endpoint = $"/v1/preapproval/{subscriptionId}";
 
-            // 2. Cria o payload no formato que a API do Mercado Pago espera
             var payload = new UpdateSubscriptionValueDto
             {
                 TransactionAmount = dto.TransactionAmount,
             };
 
-            // 3. Chama o método genérico da classe base para enviar a requisição
             var responseBody = await SendMercadoPagoRequestAsync(HttpMethod.Put, endpoint, payload);
             var mpSubscriptionResponse =
                 JsonSerializer.Deserialize<SubscriptionResponseDto>(responseBody)
                 ?? throw new AppServiceException(
-                    "Falha ao desserializar a resposta da atualização da assinatura."
+                    "Failed to deserialize the subscription update response."
                 );
 
-            // 4. Sincroniza a mudança com o banco de dados local (Passo Opcional, mas recomendado)
+            // Sync the change with the local database (optional but recommended).
             var localSubscription = await _context
-                .Subscriptions.Include(s => s.Plan) // Inclui o plano para poder alterar o valor
+                .Subscriptions.Include(s => s.Plan)
                 .FirstOrDefaultAsync(s => s.ExternalId == subscriptionId);
 
             if (localSubscription?.Plan != null)
@@ -182,14 +175,14 @@ namespace MeuCrudCsharp.Features.Subscriptions.Services
                 localSubscription.Plan.TransactionAmount = dto.TransactionAmount;
                 await _context.SaveChangesAsync();
                 _logger.LogInformation(
-                    "Valor do plano local associado à assinatura {SubscriptionId} foi atualizado.",
+                    "Local plan value associated with subscription {SubscriptionId} has been updated.",
                     subscriptionId
                 );
             }
             else
             {
                 _logger.LogWarning(
-                    "Assinatura {SubscriptionId} atualizada no MP, mas plano local não foi encontrado para sincronização.",
+                    "Subscription {SubscriptionId} updated in MP, but the local plan was not found for synchronization.",
                     subscriptionId
                 );
             }
@@ -199,6 +192,7 @@ namespace MeuCrudCsharp.Features.Subscriptions.Services
             return mpSubscriptionResponse;
         }
 
+        /// <inheritdoc />
         public async Task<SubscriptionResponseDto> UpdateSubscriptionStatusAsync(
             string subscriptionId,
             UpdateSubscriptionStatusDto dto
@@ -210,7 +204,7 @@ namespace MeuCrudCsharp.Features.Subscriptions.Services
             var mpSubscriptionResponse =
                 JsonSerializer.Deserialize<SubscriptionResponseDto>(responseBody)
                 ?? throw new AppServiceException(
-                    "Falha ao desserializar a resposta da atualização de status."
+                    "Failed to deserialize the status update response."
                 );
 
             var localSubscription = await _context.Subscriptions.FirstOrDefaultAsync(s =>
@@ -219,12 +213,12 @@ namespace MeuCrudCsharp.Features.Subscriptions.Services
 
             if (localSubscription != null)
             {
-                localSubscription.Status = dto.Status; // Ex: "cancelled" ou "paused"
+                localSubscription.Status = dto.Status;
                 localSubscription.UpdatedAt = DateTime.UtcNow;
                 await _context.SaveChangesAsync();
                 await _cacheService.RemoveAsync($"SubscriptionDetails_{localSubscription.UserId}");
                 _logger.LogInformation(
-                    "Status da assinatura {SubscriptionId} atualizado para {Status} no banco de dados local.",
+                    "Status for subscription {SubscriptionId} updated to {Status} in the local database.",
                     subscriptionId,
                     dto.Status
                 );
@@ -232,14 +226,21 @@ namespace MeuCrudCsharp.Features.Subscriptions.Services
             else
             {
                 _logger.LogWarning(
-                    "Assinatura {SubscriptionId} foi atualizada no Mercado Pago, mas não foi encontrada no banco de dados local para sincronização.",
+                    "Subscription {SubscriptionId} was updated in Mercado Pago, but was not found in the local database for synchronization.",
                     subscriptionId
                 );
             }
             return mpSubscriptionResponse;
         }
 
-        // Método privado para a lógica de criação da assinatura, mantendo o código limpo
+        /// <summary>
+        /// A private helper method to encapsulate the API call for creating a subscription.
+        /// </summary>
+        /// <param name="preapprovalPlanId">The ID of the pre-approval plan.</param>
+        /// <param name="cardId">The ID of the pre-saved card.</param>
+        /// <param name="payerEmail">The email of the payer.</param>
+        /// <returns>The response DTO from the subscription creation API call.</returns>
+        /// <exception cref="AppServiceException">Thrown if the API response cannot be deserialized.</exception>
         private async Task<SubscriptionResponseDto> CreateSubscriptionAsync(
             string preapprovalPlanId,
             string cardId,
@@ -260,7 +261,7 @@ namespace MeuCrudCsharp.Features.Subscriptions.Services
             );
             return JsonSerializer.Deserialize<SubscriptionResponseDto>(responseBody)
                 ?? throw new AppServiceException(
-                    "Falha ao desserializar a resposta da criação da assinatura."
+                    "Failed to deserialize the subscription creation response."
                 );
         }
     }

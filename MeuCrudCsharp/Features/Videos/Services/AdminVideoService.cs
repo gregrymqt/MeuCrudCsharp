@@ -1,21 +1,24 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using MeuCrudCsharp.Data;
+using MeuCrudCsharp.Features.Caching;
 using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.Videos.DTOs;
 using MeuCrudCsharp.Features.Videos.Interfaces;
 using MeuCrudCsharp.Models;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Primitives;
 
 namespace MeuCrudCsharp.Features.Videos.Service
 {
+    /// <summary>
+    /// Implements <see cref="IAdminVideoService"/> to provide administrative functionalities for video management.
+    /// This service handles CRUD operations for video metadata, file storage for thumbnails, and cache invalidation.
+    /// </summary>
     public class AdminVideoService : IAdminVideoService
     {
         private readonly ApiDbContext _context;
@@ -24,6 +27,13 @@ namespace MeuCrudCsharp.Features.Videos.Service
         private readonly ILogger<AdminVideoService> _logger;
         private const string VideosCacheVersionKey = "videos_cache_version";
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="AdminVideoService"/> class.
+        /// </summary>
+        /// <param name="context">The database context.</param>
+        /// <param name="env">The web hosting environment for file path information.</param>
+        /// <param name="cacheService">The caching service for performance optimization.</param>
+        /// <param name="logger">The logger for recording events and errors.</param>
         public AdminVideoService(
             ApiDbContext context,
             IWebHostEnvironment env,
@@ -37,29 +47,34 @@ namespace MeuCrudCsharp.Features.Videos.Service
             _logger = logger;
         }
 
-        public async Task<List<VideoDto>> GetAllVideosAsync(int page, int pageSize)
+        /// <inheritdoc />
+        /// <remarks>
+        /// This method uses a version-based caching strategy. When video data changes, the cache version is updated,
+        /// effectively invalidating all cached pages of videos at once.
+        /// </remarks>
+        public async Task<PaginatedResult<VideoDto>> GetAllVideosAsync(int page, int pageSize)
         {
-            // MUDANÇA 2: Obter a versão atual do cache.
             var cacheVersion = await _cacheService.GetOrCreateAsync(
                 VideosCacheVersionKey,
-                () => Task.FromResult(Guid.NewGuid().ToString()), // Se não existir, cria uma nova versão.
+                () => Task.FromResult(Guid.NewGuid().ToString()),
                 absoluteExpireTime: TimeSpan.FromDays(30)
-            ); // A versão pode durar bastante.
+            );
 
             var cacheKey = $"AdminVideos_v{cacheVersion}_Page{page}_Size{pageSize}";
 
-            // MUDANÇA 3: A chamada ao GetOrCreateAsync agora não usa mais o IChangeToken.
             return await _cacheService.GetOrCreateAsync(
                 cacheKey,
                 async () =>
                 {
                     _logger.LogInformation(
-                        "Buscando vídeos do banco (cache miss) para a chave: {CacheKey}",
+                        "Fetching videos from database (cache miss) for key: {CacheKey}",
                         cacheKey
                     );
                     try
                     {
-                        return await _context
+                        var totalCount = await _context.Videos.CountAsync();
+
+                        var items = await _context
                             .Videos.Include(v => v.Course)
                             .OrderByDescending(v => v.UploadDate)
                             .Skip((page - 1) * pageSize)
@@ -71,25 +86,32 @@ namespace MeuCrudCsharp.Features.Videos.Service
                                 Description = v.Description,
                                 StorageIdentifier = v.StorageIdentifier,
                                 UploadDate = v.UploadDate,
+                                Duration = v.Duration,
                                 Status = v.Status.ToString(),
                                 CourseName = v.Course.Name,
-                                ThumbnailUrl = v.ThumbnailUrl, // Inclui a URL da miniatura
+                                ThumbnailUrl = v.ThumbnailUrl,
                             })
                             .ToListAsync();
+
+                        return new PaginatedResult<VideoDto>(items, totalCount, page, pageSize);
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError(ex, "Erro ao buscar a lista de vídeos do banco de dados.");
+                        _logger.LogError(
+                            ex,
+                            "Error fetching the list of videos from the database."
+                        );
                         throw new AppServiceException(
-                            "Ocorreu um erro ao consultar os vídeos.",
+                            "An error occurred while querying for videos.",
                             ex
                         );
                     }
                 },
                 absoluteExpireTime: TimeSpan.FromMinutes(10)
-            ); // O cache da página em si pode ser mais curto.
+            );
         }
 
+        /// <inheritdoc />
         public async Task<VideoDto> CreateVideoAsync(CreateVideoDto createDto)
         {
             try
@@ -116,7 +138,7 @@ namespace MeuCrudCsharp.Features.Videos.Service
                 _context.Videos.Add(video);
                 await _context.SaveChangesAsync();
 
-                InvalidateVideosCache();
+                await InvalidateVideosCache();
 
                 return new VideoDto
                 {
@@ -125,22 +147,24 @@ namespace MeuCrudCsharp.Features.Videos.Service
                     Description = video.Description,
                     StorageIdentifier = video.StorageIdentifier,
                     UploadDate = video.UploadDate,
+                    Duration = video.Duration,
                     Status = video.Status.ToString(),
                     CourseName = course.Name,
-                    ThumbnailUrl = video.ThumbnailUrl, // Inclui a URL da miniatura
+                    ThumbnailUrl = video.ThumbnailUrl,
                 };
             }
             catch (Exception ex)
             {
                 _logger.LogError(
                     ex,
-                    "Erro inesperado ao criar o vídeo '{VideoTitle}'.",
+                    "Unexpected error while creating video '{VideoTitle}'.",
                     createDto.Title
                 );
-                throw new AppServiceException("Ocorreu um erro ao salvar o novo vídeo.", ex);
+                throw new AppServiceException("An error occurred while saving the new video.", ex);
             }
         }
 
+        /// <inheritdoc />
         public async Task<VideoDto> UpdateVideoAsync(Guid id, UpdateVideoDto updateDto)
         {
             try
@@ -150,19 +174,13 @@ namespace MeuCrudCsharp.Features.Videos.Service
                     .FirstOrDefaultAsync(v => v.Id == id);
                 if (video == null)
                     throw new ResourceNotFoundException(
-                        $"Vídeo com ID {id} não encontrado para atualização."
+                        $"Video with ID {id} not found for update."
                     );
 
-                // Se um novo arquivo de thumbnail foi enviado, processa a troca.
                 if (updateDto.ThumbnailFile != null && updateDto.ThumbnailFile.Length > 0)
                 {
-                    // --- INÍCIO: Lógica para deletar a thumbnail antiga ---
-
-                    // 1. Verifica se já existe uma thumbnail antiga registrada no banco.
                     if (!string.IsNullOrEmpty(video.ThumbnailUrl))
                     {
-                        // 2. Converte a URL relativa para um caminho físico completo.
-                        // Remove a barra inicial e converte para o separador do sistema operacional.
                         var relativePath = video
                             .ThumbnailUrl.TrimStart('/')
                             .Replace('/', Path.DirectorySeparatorChar);
@@ -170,30 +188,25 @@ namespace MeuCrudCsharp.Features.Videos.Service
 
                         try
                         {
-                            // 3. Verifica se o arquivo físico existe e o deleta.
                             if (File.Exists(oldThumbnailPath))
                             {
                                 File.Delete(oldThumbnailPath);
                                 _logger.LogInformation(
-                                    "Thumbnail antiga '{Path}' deletada com sucesso.",
+                                    "Old thumbnail '{Path}' deleted successfully.",
                                     oldThumbnailPath
                                 );
                             }
                         }
                         catch (Exception ex)
                         {
-                            // 4. Se a deleção falhar, apenas registra um aviso e continua.
-                            // Não queremos que a operação inteira falhe por isso.
                             _logger.LogWarning(
                                 ex,
-                                "Falha ao deletar a thumbnail antiga no caminho: {Path}",
+                                "Failed to delete old thumbnail at path: {Path}",
                                 oldThumbnailPath
                             );
                         }
                     }
-                    // --- FIM: Lógica para deletar a thumbnail antiga ---
 
-                    // 5. Salva a nova thumbnail e atualiza a URL no banco.
                     video.ThumbnailUrl = await SaveThumbnailAsync(updateDto.ThumbnailFile);
                 }
 
@@ -202,9 +215,8 @@ namespace MeuCrudCsharp.Features.Videos.Service
 
                 await _context.SaveChangesAsync();
                 await InvalidateVideosCache();
-                _logger.LogInformation("Vídeo {VideoId} atualizado com sucesso.", id);
+                _logger.LogInformation("Video {VideoId} updated successfully.", id);
 
-                // Retorna o DTO com os dados atualizados
                 return new VideoDto
                 {
                     Id = video.Id,
@@ -212,6 +224,7 @@ namespace MeuCrudCsharp.Features.Videos.Service
                     Description = video.Description,
                     StorageIdentifier = video.StorageIdentifier,
                     UploadDate = video.UploadDate,
+                    Duration = video.Duration,
                     Status = video.Status.ToString(),
                     CourseName = video.Course.Name,
                     ThumbnailUrl = video.ThumbnailUrl,
@@ -219,23 +232,18 @@ namespace MeuCrudCsharp.Features.Videos.Service
             }
             catch (DbUpdateException ex)
             {
-                _logger.LogError(ex, "Erro de banco de dados ao atualizar o vídeo {VideoId}.", id);
-                throw new AppServiceException(
-                    "Ocorreu um erro ao salvar as alterações do vídeo.",
-                    ex
-                );
+                _logger.LogError(ex, "Database error while updating video {VideoId}.", id);
+                throw new AppServiceException("An error occurred while saving video changes.", ex);
             }
         }
 
+        /// <inheritdoc />
         public async Task DeleteVideoAsync(Guid id)
         {
             var video = await _context.Videos.FindAsync(id);
             if (video == null)
-                throw new ResourceNotFoundException(
-                    $"Vídeo com ID {id} não encontrado para deleção."
-                );
+                throw new ResourceNotFoundException($"Video with ID {id} not found for deletion.");
 
-            // Tratamento de exceção para a deleção de arquivos
             try
             {
                 var videoFolderPath = Path.Combine(
@@ -252,63 +260,67 @@ namespace MeuCrudCsharp.Features.Videos.Service
             {
                 _logger.LogError(
                     ex,
-                    "Falha ao deletar a pasta de arquivos para o vídeo {VideoId}. A remoção do banco de dados será abortada.",
+                    "Failed to delete the file folder for video {VideoId}. Database removal will be aborted.",
                     id
                 );
                 throw new AppServiceException(
-                    "Ocorreu um erro ao remover os arquivos físicos do vídeo.",
+                    "An error occurred while removing the physical video files.",
                     ex
                 );
             }
 
-            // Tratamento de exceção para a deleção no banco
             try
             {
                 _context.Videos.Remove(video);
                 await _context.SaveChangesAsync();
 
-                InvalidateVideosCache();
+                await InvalidateVideosCache();
 
                 _logger.LogInformation(
-                    "Vídeo {VideoId} deletado do banco de dados com sucesso.",
+                    "Video {VideoId} deleted from the database successfully.",
                     id
                 );
             }
             catch (DbUpdateException ex)
             {
-                _logger.LogError(ex, "Erro de banco de dados ao deletar o vídeo {VideoId}.", id);
+                _logger.LogError(ex, "Database error while deleting video {VideoId}.", id);
                 throw new AppServiceException(
-                    "Ocorreu um erro ao remover o vídeo do nosso sistema.",
+                    "An error occurred while removing the video from our system.",
                     ex
                 );
             }
         }
 
+        /// <summary>
+        /// Saves a thumbnail file to the server and returns its relative URL path.
+        /// </summary>
+        /// <param name="file">The thumbnail file to save.</param>
+        /// <returns>The relative URL path to the saved thumbnail, or null if no file was provided.</returns>
         private async Task<string?> SaveThumbnailAsync(IFormFile? file)
         {
             if (file == null || file.Length == 0)
             {
-                return null; // Nenhum arquivo enviado
+                return null;
             }
 
-            // Cria um diretório para as thumbnails se ele não existir
             var thumbnailsDirectory = Path.Combine(_env.WebRootPath, "thumbnails");
             Directory.CreateDirectory(thumbnailsDirectory);
 
-            // Gera um nome de arquivo único para evitar conflitos
             var fileName = $"{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
             var filePath = Path.Combine(thumbnailsDirectory, fileName);
 
-            // Salva o arquivo no disco
             await using (var stream = new FileStream(filePath, FileMode.Create))
             {
                 await file.CopyToAsync(stream);
             }
 
-            // Retorna o caminho relativo para ser salvo no banco de dados
             return $"/thumbnails/{fileName}";
         }
 
+        /// <summary>
+        /// Invalidates the video cache by updating the master cache version key.
+        /// </summary>
+        /// <exception cref="AppServiceException">Thrown if updating the cache version fails.</exception>
         private async Task InvalidateVideosCache()
         {
             try
@@ -320,17 +332,17 @@ namespace MeuCrudCsharp.Features.Videos.Service
                     TimeSpan.FromDays(30)
                 );
                 _logger.LogInformation(
-                    "Cache de vídeos invalidado. Nova versão: {CacheVersion}",
+                    "Videos cache invalidated. New version: {CacheVersion}",
                     newVersion
                 );
             }
             catch (Exception ex)
             {
-                _logger.LogError(
-                    ex,
-                    "Falha ao invalidar o cache de vídeos (atualizar a chave de versão)."
+                _logger.LogError(ex, "Failed to invalidate videos cache (update version key).");
+                throw new AppServiceException(
+                    "An error occurred while clearing the videos cache.",
+                    ex
                 );
-                throw new AppServiceException("Ocorreu um erro ao limpar o cache de vídeos.", ex);
             }
         }
     }

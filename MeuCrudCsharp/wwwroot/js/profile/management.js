@@ -1,26 +1,59 @@
-﻿document.addEventListener('DOMContentLoaded', () => {
-    // --- 1. INICIALIZAÇÃO DO SDK DO MERCADO PAGO ---
-    // Substitua pela sua Chave Pública
-    const publicKey = 'SUA_PUBLIC_KEY'; 
-    if (!publicKey || publicKey === 'SUA_PUBLIC_KEY') {
-        console.error('Chave pública do Mercado Pago não configurada!');
+﻿/**
+ * @file Manages the interactivity of the user's profile page.
+ *
+ * This script handles:
+ * 1. Tab navigation (Subscription, Cards, etc.).
+ * 2. Accordion logic to show/hide forms.
+ * 3. Initialization and dynamic rendering of Mercado Pago Card Bricks.
+ * 4. Communication with the backend API to:
+ *    - Update a subscription's card.
+ *    - Reactivate a subscription.
+ *    - Request a refund.
+ * 5. Displaying user feedback using the SweetAlert2 library.
+ */
+document.addEventListener('DOMContentLoaded', () => {
+    // --- 1. GLOBAL INITIALIZATION AND CONFIGURATION ---
+
+    /**
+     * Mercado Pago public key for SDK initialization.
+     * @type {string}
+     * @constant
+     * @warning **IMPORTANT:** This key must be replaced with your actual public key.
+     */
+    const publicKey = 'APP_USR-9237cffa-5ad4-4056-956b-20d62d1d0dab';
+    if (!publicKey || publicKey === 'APP_USR-9237cffa-5ad4-4056-956b-20d62d1d0dab') {
+        console.error('Mercado Pago public key is not configured!');
         return;
     }
+
+    /**
+     * Main instance of the Mercado Pago SDK.
+     * @type {MercadoPago}
+     */
     const mp = new MercadoPago(publicKey);
+    /**
+     * Mercado Pago Bricks builder, used to create UI instances.
+     * @type {object}
+     */
     const bricksBuilder = mp.bricks();
 
-    // Flags para controlar se os Bricks já foram renderizados
+    /**
+     * Flags to prevent unnecessary re-rendering of the card Bricks.
+     * @type {boolean}
+     */
     let primaryBrickRendered = false;
     let secondaryBrickRendered = false;
-    
-    // --- 2. LÓGICA DE NAVEGAÇÃO ENTRE ABAS (sem alterações) ---
+
+    // --- 2. TAB NAVIGATION LOGIC ---
     const navLinks = document.querySelectorAll('.profile-nav-link');
     const contentSections = document.querySelectorAll('.main-section');
     navLinks.forEach(link => {
         link.addEventListener('click', (e) => {
             e.preventDefault();
             const targetId = link.getAttribute('data-target');
-            if (!targetId) return;
+            if (!targetId) return; // Ignore clicks on links without a target
+
+            // Update the visual state of tabs and content sections
             navLinks.forEach(nav => nav.classList.remove('active'));
             link.classList.add('active');
             contentSections.forEach(section => section.classList.remove('active'));
@@ -28,25 +61,26 @@
         });
     });
 
-    // --- 3. LÓGICA DO ACORDEÃO (com renderização dinâmica dos Bricks) ---
+    // --- 3. ACCORDION LOGIC WITH DYNAMIC RENDERING ---
     const accordionHeaders = document.querySelectorAll('.accordion-header');
     accordionHeaders.forEach(header => {
         header.addEventListener('click', () => {
             const body = header.nextElementSibling;
             const wasActive = header.classList.contains('active');
 
-            // Fecha todos os acordeões
+            // Close all accordions
             accordionHeaders.forEach(h => {
                 h.classList.remove('active');
                 h.nextElementSibling.classList.remove('active');
             });
 
-            // Abre ou fecha o acordeão clicado
+            // If the clicked accordion was not active, open it.
             if (!wasActive) {
                 header.classList.add('active');
                 body.classList.add('active');
 
-                // Verifica se precisa renderizar um Brick
+                // Check if this accordion should trigger the rendering of a Card Brick.
+                // The 'data-brick-target' attribute in the HTML defines the Brick's container.
                 const brickTargetId = header.getAttribute('data-brick-target');
                 if (brickTargetId === 'primary-card-brick-container' && !primaryBrickRendered) {
                     createAndRenderCardBrick('primary-card-brick-container', handlePrimaryCardUpdate);
@@ -58,21 +92,25 @@
             }
         });
     });
-    
-    // --- 4. FUNÇÕES DE LÓGICA DA API ---
+
+    // --- 4. API INTERACTION LOGIC ---
     const profileContainer = document.querySelector('.profile-container');
     const SUBSCRIPTION_ID = profileContainer.dataset.subscriptionId;
 
+    /**
+     * Sends a request to the backend to update the card associated with a subscription.
+     * Uses SweetAlert for visual feedback to the user.
+     * @param {object} payload - The request body to be sent. Usually contains the new card token.
+     * @returns {Promise<void>} A promise that resolves on success and rejects on error.
+     */
     async function updateSubscriptionOnBackend(payload) {
-        // Validação inicial
-        if (!SUBSCRIPTION_ID || SUBSCRIPTION_ID.includes('SEU_ID')) {
-            // --- MUDANÇA AQUI ---
+        if (!SUBSCRIPTION_ID || SUBSCRIPTION_ID.includes('SEU_ID')) { // Security validation
             Swal.fire({
                 icon: 'error',
-                title: 'Erro de Configuração',
-                text: 'O ID da assinatura é inválido. Por favor, atualize a página e tente novamente.'
+                title: 'Configuration Error',
+                text: 'The subscription ID is invalid. Please refresh the page and try again.'
             });
-            return Promise.reject('ID da assinatura inválido.');
+            return Promise.reject('Invalid subscription ID.');
         }
 
         const backendApiUrl = '/api/user/subscription/card';
@@ -86,124 +124,140 @@
 
             if (!response.ok) {
                 const errorData = await response.json();
-                throw new Error(errorData.message || 'Falha ao atualizar a assinatura.');
+                throw new Error(errorData.message || 'Failed to update the subscription.');
             }
 
-            // --- MUDANÇA AQUI ---
             Swal.fire({
                 icon: 'success',
-                title: 'Sucesso!',
-                text: 'Sua assinatura foi atualizada com sucesso.',
+                title: 'Success!',
+                text: 'Your subscription has been updated successfully.',
                 timer: 2000,
                 showConfirmButton: false
             });
 
-            // Opcional: recarregar a página para ver as mudanças
-            // setTimeout(() => location.reload(), 2000);
+            // Optional: reload the page after a while to reflect the changes.
+            // setTimeout(() => location.reload(), 2200);
 
         } catch (error) {
-            // --- MUDANÇA AQUI ---
             Swal.fire({
                 icon: 'error',
                 title: 'Oops...',
                 text: error.message
             });
-            // Rejeita a promessa para o Brick saber que houve erro.
+            // Rejects the promise so the Brick knows there was an error.
             return Promise.reject(error);
         }
     }
 
-    // Callbacks específicos para cada formulário
+    /**
+     * Callback executed when the primary card form is submitted.
+     * Prepares the payload and calls the backend update function.
+     * @param {object} formData - Dados do formulário retornados pelo Brick do Mercado Pago.
+     * @param {string} formData.token - O token do cartão gerado.
+     * @returns {Promise<void>}
+     */
     function handlePrimaryCardUpdate(formData) {
-        console.log("Enviando para troca de cartão primário:", formData.token);
+        console.log("Submitting for primary card change:", formData.token);
         const payload = { card_token_id: formData.token };
         return updateSubscriptionOnBackend(payload);
     }
 
+    /**
+     * Callback executed when the secondary card form is submitted.
+     * Prepares the payload and calls the backend update function.
+     * @param {object} formData - Dados do formulário retornados pelo Brick do Mercado Pago.
+     * @param {string} formData.token - O token do cartão gerado.
+     * @param {string} formData.payment_method_id - O ID do método de pagamento (ex: 'master', 'visa').
+     * @returns {Promise<void>}
+     */
     function handleSecondaryCardUpdate(formData) {
-        console.log("Enviando para troca de cartão secundário:", formData.token);
-        const payload = { 
+        console.log("Submitting for secondary card change:", formData.token);
+        const payload = {
             card_token_id_secondary: formData.token,
-            // O Brick já nos dá o ID do método de pagamento (ex: 'master', 'visa')
-            payment_method_id_secondary: formData.payment_method_id 
+            payment_method_id_secondary: formData.payment_method_id
         };
         return updateSubscriptionOnBackend(payload);
     }
-    
-    // Formulário de Reativação (permanece igual)
+
+    // --- 5. SUBSCRIPTION REACTIVATION FORM LOGIC ---
     document.getElementById('form-reactivate-subscription').addEventListener('submit', async (e) => {
         e.preventDefault();
         const submitButton = e.target.querySelector('button[type="submit"]');
 
-        // --- MUDANÇA AQUI ---
         const result = await Swal.fire({
-            title: 'Reativar Assinatura?',
-            text: 'Você está prestes a reativar sua assinatura. A cobrança será retomada no próximo ciclo.',
+            title: 'Reactivate Subscription?',
+            text: 'You are about to reactivate your subscription. Billing will resume in the next cycle.',
             icon: 'question',
             showCancelButton: true,
             confirmButtonColor: '#28a745',
             cancelButtonColor: '#6c757d',
-            confirmButtonText: 'Sim, reativar!',
-            cancelButtonText: 'Cancelar'
+            confirmButtonText: 'Yes, reactivate!',
+            cancelButtonText: 'Cancel'
         });
 
         if (!result.isConfirmed) {
             return;
         }
 
-        // Feedback visual
+        // Visual processing feedback
         submitButton.disabled = true;
-        submitButton.textContent = 'Reativando...';
+        submitButton.textContent = 'Reactivating...';
 
         try {
             const response = await fetch(`/api/user/subscription/reactivate`, {
-                method: 'POST', // O endpoint espera POST
+                method: 'POST',
                 headers: { 'Content-Type': 'application/json' }
             });
 
             if (!response.ok) {
                 const errorData = await response.json();
-                throw new Error(errorData.message || 'Não foi possível reativar a assinatura.');
+                throw new Error(errorData.message || 'Could not reactivate the subscription.');
             }
 
             await Swal.fire({
                 icon: 'success',
-                title: 'Reativada!',
-                text: 'Sua assinatura foi reativada com sucesso.'
+                title: 'Reactivated!',
+                text: 'Your subscription has been successfully reactivated.'
             });
 
-            location.reload(); // Recarrega a página para mostrar o novo status
+            location.reload(); // Reloads the page to show the new subscription status
 
         } catch (error) {
             Swal.fire({
                 icon: 'error',
-                title: 'Erro!',
+                title: 'Error!',
                 text: error.message
             });
         } finally {
             submitButton.disabled = false;
-            submitButton.textContent = 'Reativar Assinatura';
+            submitButton.textContent = 'Reactivate Subscription';
         }
     });
 
-
-    // --- 5. FUNÇÃO GENÉRICA PARA CRIAR O BRICK ---
+    // --- 6. GENERIC FUNCTION TO CREATE AND RENDER BRICKS ---
+    /**
+     * Generic function to create and render a Mercado Pago 'cardPayment' Brick.
+     * @param {string} containerId - The ID of the HTML element where the Brick will be rendered.
+     * @param {function} onSubmitCallback - The function to be executed when the Brick form is submitted.
+     * @returns {Promise<object>} A promise that resolves with the Brick controller after rendering.
+     */
     async function createAndRenderCardBrick(containerId, onSubmitCallback) {
         const settings = {
-            initialization: { amount: 1.00 }, // Valor simbólico
+            initialization: { amount: 1.00 }, // Symbolic value for card validation
             customization: {
                 visual: {
                     style: {
-                        theme: 'bootstrap', // ou 'default', 'dark'
+                        theme: 'bootstrap', // or 'default', 'dark'
                     }
                 }
             },
             callbacks: {
-                onReady: () => console.log(`Brick em #${containerId} está pronto.`),
-                onError: (error) => console.error(`Erro no Brick #${containerId}:`, error),
+                onReady: () => console.log(`Brick in #${containerId} is ready.`),
+                onError: (error) => console.error(`Error in Brick #${containerId}:`, error),
                 onSubmit: (formData) => {
-                    // Chama o callback específico passado como parâmetro
+                    // The Brick's 'onSubmit' callback expects a Promise.
                     return new Promise((resolve, reject) => {
+                        // Executes the specific callback function (e.g., handlePrimaryCardUpdate)
                         onSubmitCallback(formData)
                             .then(resolve)
                             .catch(reject);
@@ -211,18 +265,14 @@
                 },
             },
         };
-        // Limpa o contêiner antes de renderizar para evitar duplicatas
+        // Clears the container before rendering to avoid duplicates
         document.getElementById(containerId).innerHTML = '';
         return await bricksBuilder.create('cardPayment', containerId, settings);
     }
 
-    // =======================================================
-    // LÓGICA DE REEMBOLSO
-    // =======================================================
-
+    // --- 7. REFUND REQUEST LOGIC ---
     const refundForm = document.getElementById('form-request-refund');
-
-    // Se o formulário de reembolso não existir na página, não faz nada.
+    // If the refund form does not exist on the page, do nothing.
     if (!refundForm) {
         return;
     }
@@ -230,77 +280,69 @@
     const refundStep1 = document.getElementById('refund-step-1');
     const refundStep2 = document.getElementById('refund-step-2');
     const submitButton = refundForm.querySelector('button[type="submit"]');
-    const originalButtonText = submitButton.textContent;
 
-    // Adiciona o listener para o envio do formulário de reembolso
     refundForm.addEventListener('submit', async function (event) {
         event.preventDefault();
-        const submitButton = refundForm.querySelector('button[type="submit"]');
 
-        // --- MUDANÇA AQUI ---
+        // Asks the user for confirmation with a warning about the consequences.
         const result = await Swal.fire({
-            title: 'Você tem certeza?',
-            text: "Esta ação não pode ser desfeita. Seu acesso ao conteúdo será revogado.",
+            title: 'Are you sure?',
+            text: "This action cannot be undone. Your access to the content will be revoked.",
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#d33',
             cancelButtonColor: '#6c757d',
-            confirmButtonText: 'Sim, solicitar reembolso!',
-            cancelButtonText: 'Cancelar'
+            confirmButtonText: 'Yes, request refund!',
+            cancelButtonText: 'Cancel'
         });
 
         if (!result.isConfirmed) {
             return;
         }
 
-        // --- Feedback visual para o usuário ---
+        // Visual processing feedback
         submitButton.disabled = true;
-        submitButton.textContent = 'Processando...';
+        submitButton.textContent = 'Processing...';
         removeExistingErrors();
 
         try {
-            // --- A requisição para o seu backend ---
             const response = await fetch('/api/profile/request-refund', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' }
             });
 
-            // --- Tratamento da resposta do backend ---
             if (response.ok) {
-                // SUCESSO: Esconde o passo 1 e mostra o passo 2
+                // SUCCESS: Toggles the visibility of the panels to show the confirmation message.
                 refundStep1.style.display = 'none';
                 refundStep2.style.display = 'block';
-                // O passo 2 já contém a mensagem calmante, então não precisamos de outro Swal aqui.
             } else {
                 const errorData = await response.json();
-                // --- MUDANÇA AQUI ---
                 Swal.fire({
                     icon: 'error',
-                    title: 'Não foi possível processar',
-                    text: errorData.message || 'Ocorreu um erro ao solicitar o reembolso.'
-                });
-                // Restaura o botão em caso de erro
-                submitButton.disabled = false;
-                submitButton.textContent = 'Entendo e Quero Solicitar o Reembolso';
+                    title: 'Could not process',
+                    text: errorData.message || 'An error occurred while requesting the refund.'
+                }); // The showRefundError function could also be used here.
             }
 
         } catch (error) {
-            console.error('Erro de rede ao solicitar reembolso:', error);
-            // --- MUDANÇA AQUI ---
+            console.error('Network error when requesting refund:', error);
             Swal.fire({
                 icon: 'error',
-                title: 'Erro de Conexão',
-                text: 'Não foi possível conectar ao servidor. Verifique sua internet e tente novamente.'
+                title: 'Connection Error',
+                text: 'Could not connect to the server. Check your internet connection and try again.'
             });
-            // Restaura o botão em caso de erro
+        } finally {
+            // Restores the button in case of an error
             submitButton.disabled = false;
-            submitButton.textContent = 'Entendo e Quero Solicitar o Reembolso';
+            submitButton.textContent = 'I Understand and Wish to Request a Refund';
         }
     });
 
     /**
-     * Exibe uma mensagem de erro dentro da seção de reembolso.
-     * @param {string} message A mensagem de erro a ser exibida.
+     * @deprecated The showRefundError function has been replaced by SweetAlert for UI consistency.
+     *             Kept for reference in case inline errors are decided upon in the future.
+     * Displays an error message within the refund section.
+     * @param {string} message The error message to be displayed.
      */
     function showRefundError(message) {
         removeExistingErrors();
@@ -308,12 +350,12 @@
         errorDiv.className = 'refund-error-message';
         errorDiv.textContent = message;
 
-        // Insere a mensagem de erro antes do formulário
+        // Inserts the error message before the form
         refundForm.parentNode.insertBefore(errorDiv, refundForm);
     }
 
     /**
-     * Remove mensagens de erro anteriores.
+     * Removes existing refund error messages to prevent them from piling up.
      */
     function removeExistingErrors() {
         const existingError = document.querySelector('.refund-error-message');

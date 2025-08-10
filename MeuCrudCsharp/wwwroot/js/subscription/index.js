@@ -1,24 +1,40 @@
-﻿document.addEventListener('DOMContentLoaded', () => {
+﻿/**
+ * @file Fetches and displays subscription plans on the page.
+ *
+ * This script runs when the DOM is loaded. It fetches a list of subscription plans
+ * from a backend API, dynamically generates HTML cards for each plan, and
+ * injects them into the page. It also handles loading states and potential errors.
+ */
+document.addEventListener('DOMContentLoaded', () => {
     const plansContainer = document.getElementById('plans-grid-container');
     const loader = document.getElementById('plans-loader');
 
     /**
-     * Cria o HTML para um único card de plano.
-     * @param {object} plan - O objeto do plano vindo da API.
-     * @returns {string} O HTML do card.
+     * Creates the HTML string for a single plan card.
+     * @param {object} plan - The plan object from the API.
+     * @param {string} plan.name - The name of the plan (e.g., "Monthly").
+     * @param {string} plan.priceDisplay - The formatted price string (e.g., "$49.90").
+     * @param {string} plan.billingInfo - A short description of the billing cycle (e.g., "Billed monthly").
+     * @param {string[]} plan.features - An array of features included in the plan.
+     * @param {string} plan.slug - A unique identifier for the plan used in the URL (e.g., "monthly").
+     * @param {boolean} [plan.isRecommended=false] - Flag to highlight the plan as recommended.
+     * @returns {string} The HTML string for the plan card.
      */
     function createPlanCardHTML(plan) {
+        // Add a specific class and a badge if the plan is marked as recommended.
         const isRecommended = plan.isRecommended ? 'recommended' : '';
-        const recommendationBadge = plan.isRecommended ? '<div class="recommendation-badge">MAIS POPULAR</div>' : '';
-        const buttonText = plan.isRecommended ? 'Economize com o Anual' : 'Assinar Agora';
+        const recommendationBadge = plan.isRecommended ? '<div class="recommendation-badge">MOST POPULAR</div>' : '';
+        const buttonText = plan.isRecommended ? 'Save with Annual' : 'Subscribe Now';
 
-        // Divide o preço para estilização (ex: "R$ 49,90" -> ["R$ 49", "90"])
+        // Split the price string to style the main part and the cents differently.
+        // Example: "$49.90" -> ["$49", "90"]
         const priceParts = plan.priceDisplay.split(',');
         const mainPrice = priceParts[0];
         const cents = priceParts.length > 1 ? `,${priceParts[1]}` : '';
-        const priceSuffix = plan.slug === 'mensal' ? '/mês' : '/mês';
+        // The suffix is currently the same, but this allows for future flexibility.
+        const priceSuffix = plan.slug === 'mensal' ? '/month' : '/month';
 
-        // Gera a lista de features
+        // Generate the list of features with checkmark icons.
         const featuresHTML = plan.features.map(feature => `<li><i class="fas fa-check-circle"></i> ${feature}</li>`).join('');
 
         return `
@@ -36,7 +52,8 @@
     }
 
     /**
-     * Busca os planos da API e renderiza os cards na página.
+     * Fetches plans from the API and renders the cards on the page.
+     * Handles loading and error states.
      */
     async function loadPlans() {
         try {
@@ -46,24 +63,25 @@
             }
             const plans = await response.json();
 
+            // Render plans if available, otherwise show a message.
             if (plans && plans.length > 0) {
                 const plansHTML = plans.map(createPlanCardHTML).join('');
                 plansContainer.innerHTML = plansHTML;
             } else {
-                plansContainer.innerHTML = '<p class="error-message">Nenhum plano disponível no momento.</p>';
+                plansContainer.innerHTML = '<p class="error-message">No plans available at the moment.</p>';
             }
 
         } catch (error) {
-            console.error('Falha ao buscar os planos:', error);
-            plansContainer.innerHTML = '<p class="error-message">Não foi possível carregar os planos. Tente novamente mais tarde.</p>';
+            console.error('Failed to fetch plans:', error);
+            plansContainer.innerHTML = '<p class="error-message">Could not load plans. Please try again later.</p>';
         } finally {
-            // Remove o loader, mesmo que tenha dado erro
+            // Always remove the loader, even if an error occurred.
             if (loader) {
                 loader.remove();
             }
         }
     }
 
-    // Inicia o processo ao carregar a página
+    // Start the process when the page loads.
     loadPlans();
 });

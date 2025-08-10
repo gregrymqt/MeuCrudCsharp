@@ -1,7 +1,9 @@
-﻿document.addEventListener('DOMContentLoaded', function() {
-    // =====================================================================
-    // Lógica de Navegação da Sidebar
-    // =====================================================================
+﻿/**
+ * @file Manages all client-side logic for the admin dashboard, including navigation,
+ * data fetching with caching, and CRUD operations for Plans, Courses, and Students.
+ */
+document.addEventListener('DOMContentLoaded', function() {
+    // --- Sidebar Navigation & Panel Switching ---
     const sidebarLinks = document.querySelectorAll('.sidebar-link');
     const contentPanels = document.querySelectorAll('.content-panel');
 
@@ -9,11 +11,11 @@
         link.addEventListener('click', (e) => {
             e.preventDefault();
 
-            // Remove a classe 'active' de todos
+            // Remove 'active' class from all links and panels
             sidebarLinks.forEach(l => l.classList.remove('active'));
             contentPanels.forEach(c => c.classList.remove('active'));
 
-            // Adiciona 'active' ao link e ao painel correspondente
+            // Add 'active' to the clicked link and its corresponding panel
             link.classList.add('active');
             const contentId = link.id.replace('nav-', 'content-');
             const activePanel = document.getElementById(contentId);
@@ -21,7 +23,7 @@
                 activePanel.classList.add('active');
             }
 
-            // Lógica para carregar os dados da aba clicada (apenas uma vez)
+            // Load data for the clicked tab, but only once.
             if (activePanel && !activePanel.dataset.loaded) {
                 switch (link.id) {
                     case 'nav-plans':
@@ -34,11 +36,12 @@
                         loadStudents();
                         break;
                 }
-                activePanel.dataset.loaded = 'true'; // Marca o painel como carregado
+                activePanel.dataset.loaded = 'true'; // Mark panel as loaded
             }
         });
     });
 
+    // --- Plan Editing Modal Elements ---
     const editModal = document.getElementById('edit-plan-modal');
     const editForm = document.getElementById('edit-plan-form');
     const closeEditModalButton = document.getElementById('close-edit-plan-modal');
@@ -50,7 +53,7 @@
     const editPlanFrequencyType = document.getElementById('edit-plan-frequency-type');
     const editPlanBackUrl = document.getElementById('edit-plan-back-url');
 
-    // Modal de Edição de Curso
+    // --- Course Editing Modal Elements ---
     const editCourseModal = document.getElementById('edit-course-modal');
     const editCourseForm = document.getElementById('edit-course-form');
     const closeEditCourseModalButton = document.getElementById('close-edit-course-modal');
@@ -59,59 +62,66 @@
     const editCourseDescription = document.getElementById('edit-course-description');
 
 
-    // --- Seleção de Elementos DOM para Cursos ---
+    // --- Course Management Elements ---
     const coursesTableBody = document.getElementById('courses-table-body');
     const searchCourseInput = document.getElementById('search-course-input');
-    const createCourseForm = document.getElementById('create-course-form'); // Adicionado para o CREATE
+    const createCourseForm = document.getElementById('create-course-form');
 
-
-     // Endpoint base para os planos
+    // Simple session-level cache to avoid re-fetching data.
     const sessionCache = {};
 
-    // =====================================================================
-    // READ: Buscar e Renderizar os Planos e Cursos
-    // =====================================================================
+    /**
+     * Fetches data from a given API endpoint, caches it in the session, and renders it.
+     * If the data is already in the cache, it uses the cached version instead of fetching.
+     * @param {string} cacheKey - The key to use for storing/retrieving data from the session cache.
+     * @param {string} apiUrl - The URL of the API endpoint to fetch data from.
+     * @param {function} renderFunction - The function to call to render the fetched data.
+     * @param {HTMLElement} tableBody - The table body element to display loading/error messages.
+     */
     async function fetchAndCache(cacheKey, apiUrl, renderFunction, tableBody) {
-        // 1. Tenta carregar do cache primeiro
         if (sessionCache[cacheKey]) {
-            console.log(`Carregando '${cacheKey}' do cache da sessão.`);
+            console.log(`Loading '${cacheKey}' from session cache.`);
             renderFunction(sessionCache[cacheKey]);
             return;
         }
 
-        // 2. Se não estiver no cache, busca na API
         try {
-            tableBody.innerHTML = `<tr><td colspan="5" class="text-center">Carregando...</td></tr>`;
+            tableBody.innerHTML = `<tr><td colspan="5" class="text-center">Loading...</td></tr>`;
             const response = await fetch(apiUrl);
             if (!response.ok) {
-                throw new Error('Falha ao buscar os dados do servidor.');
+                throw new Error('Failed to fetch data from the server.');
             }
             const data = await response.json();
 
-            // 3. Armazena no cache e renderiza
             sessionCache[cacheKey] = data;
             renderFunction(data);
 
         } catch (error) {
-            console.error(`Erro ao carregar '${cacheKey}':`, error);
+            console.error(`Error loading '${cacheKey}':`, error);
             tableBody.innerHTML = `<tr><td colspan="5" class="text-center text-danger">${error.message}</td></tr>`;
         }
     }
 
     const API_COURSES_URL = '/api/admin/courses';
 
+    /**
+     * Loads and renders the list of courses.
+     */
     async function loadCourses() {await fetchAndCache('allCourses', API_COURSES_URL, renderCoursesTable, coursesTableBody);}
 
+    /**
+     * Renders the list of courses into the corresponding table.
+     * @param {Array<object>} courses - An array of course objects to render.
+     */
     function renderCoursesTable(courses) {
         coursesTableBody.innerHTML = '';
         if (!courses || courses.length === 0) {
-            coursesTableBody.innerHTML = '<tr><td colspan="3" class="text-center">Nenhum curso encontrado.</td></tr>';
+            coursesTableBody.innerHTML = '<tr><td colspan="3" class="text-center">No courses found.</td></tr>';
             return;
         }
 
         courses.forEach(course => {
             const row = document.createElement('tr');
-            // Adicionamos data attributes para facilitar a seleção dos botões
             row.innerHTML = `
                 <td>${course.name}</td>
                 <td>${course.description || 'Sem descrição'}</td>
@@ -124,15 +134,16 @@
         });
     }
 
-    // =====================================================================
-    // CREATE: Criar um Novo Curso
-    // =====================================================================
+    /**
+     * Handles the submission of the 'Create Course' form.
+     * Sends a POST request to the API and updates the UI on success or failure.
+     */
     if (createCourseForm) {
         createCourseForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const submitButton = createCourseForm.querySelector('button[type="submit"]');
             submitButton.disabled = true;
-            submitButton.textContent = 'Salvando...';
+            submitButton.textContent = 'Saving...';
 
             const courseData = {
                 name: document.getElementById('course-name-new').value,
@@ -148,13 +159,12 @@
 
                 if (!response.ok) {
                     const errorData = await response.json();
-                    throw new Error(errorData.message || 'Falha ao criar o curso.');
+                    throw new Error(errorData.message || 'Failed to create the course.');
                 }
 
-                // --- MUDANÇA AQUI ---
                 Swal.fire({
-                    title: 'Sucesso!',
-                    text: 'Curso criado com sucesso!',
+                    title: 'Success!',
+                    text: 'Course created successfully!',
                     icon: 'success',
                     timer: 2000,
                     showConfirmButton: false
@@ -164,23 +174,23 @@
                 await loadCourses(); // Recarrega a lista
 
             } catch (error) {
-                console.error('Erro ao criar curso:', error);
-                // --- MUDANÇA AQUI ---
+                console.error('Error creating course:', error);
                 Swal.fire({
-                    title: 'Erro!',
+                    title: 'Error!',
                     text: error.message,
                     icon: 'error'
                 });
             } finally {
                 submitButton.disabled = false;
-                submitButton.textContent = 'Salvar Curso';
+                submitButton.textContent = 'Save Course';
             }
         });
     }
 
-    // =====================================================================
-    // UPDATE: Abrir e Submeter o Modal de Edição
-    // =====================================================================
+    /**
+     * Opens the edit modal and populates it with the selected course's data.
+     * @param {object} course - The course object to edit.
+     */
     function openEditCourseModal(course) {
         editCourseId.value = course.id;
         editCourseName.value = course.name;
@@ -188,17 +198,21 @@
         editCourseModal.style.display = 'block';
     }
 
+    /**
+     * Closes and resets the course edit modal.
+     */
     function closeEditCourseModal() {
         editCourseModal.style.display = 'none';
         editCourseForm.reset();
     }
 
+    // Handles the submission of the course edit form.
     editCourseForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const courseId = editCourseId.value;
         const submitButton = editCourseForm.querySelector('button[type="submit"]');
         submitButton.disabled = true;
-        submitButton.textContent = 'Salvando...';
+        submitButton.textContent = 'Saving...';
 
         const updatedData = {
             name: editCourseName.value,
@@ -214,13 +228,12 @@
 
             if (!response.ok) {
                 const errorData = await response.json();
-                throw new Error(errorData.message || 'Falha ao atualizar o curso.');
+                throw new Error(errorData.message || 'Failed to update the course.');
             }
 
-            // --- MUDANÇA AQUI ---
             Swal.fire({
-                title: 'Atualizado!',
-                text: 'Curso atualizado com sucesso.',
+                title: 'Updated!',
+                text: 'Course updated successfully.',
                 icon: 'success',
                 timer: 2000,
                 showConfirmButton: false
@@ -230,34 +243,33 @@
             await loadCourses(); // Recarrega a lista
 
         } catch (error) {
-            console.error('Erro ao atualizar curso:', error);
-            // --- MUDANÇA AQUI ---
+            console.error('Error updating course:', error);
             Swal.fire({
-                title: 'Erro!',
+                title: 'Error!',
                 text: error.message,
                 icon: 'error'
             });
         } finally {
             submitButton.disabled = false;
-            submitButton.textContent = 'Salvar Alterações';
+            submitButton.textContent = 'Save Changes';
         }
     });
 
-    // =====================================================================
-    // DELETE: Excluir um Curso
-    // =====================================================================
+    /**
+     * Prompts the user for confirmation and then deletes a course.
+     * @param {string} courseId - The ID of the course to delete.
+     */
     async function deleteCourse(courseId) {
-        // --- MUDANÇA AQUI ---
-        // Usamos o Swal.fire para pedir confirmação
+        // Use SweetAlert for a better confirmation dialog.
         const result = await Swal.fire({
-            title: 'Você tem certeza?',
-            text: "Esta ação não pode ser desfeita e pode falhar se houver vídeos associados.",
+            title: 'Are you sure?',
+            text: "This action cannot be undone and may fail if there are associated videos.",
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#d33',
             cancelButtonColor: '#6c757d',
-            confirmButtonText: 'Sim, excluir!',
-            cancelButtonText: 'Cancelar'
+            confirmButtonText: 'Yes, delete it!',
+            cancelButtonText: 'Cancel'
         });
 
         // Se o usuário clicou em "Sim, excluir!", o resultado será confirmado.
@@ -272,23 +284,21 @@
 
             if (!response.ok) {
                 const errorData = await response.json();
-                throw new Error(errorData.message || 'Falha ao excluir o curso.');
+                throw new Error(errorData.message || 'Failed to delete the course.');
             }
 
-            // --- MUDANÇA AQUI ---
             Swal.fire(
-                'Excluído!',
-                'O curso foi excluído com sucesso.',
+                'Deleted!',
+                'The course has been deleted.',
                 'success'
             );
 
             await loadCourses(); // Recarrega a lista
 
         } catch (error) {
-            console.error('Erro ao excluir curso:', error);
-            // --- MUDANÇA AQUI ---
+            console.error('Error deleting course:', error);
             Swal.fire(
-                'Erro!',
+                'Error!',
                 error.message,
                 'error'
             );
@@ -296,21 +306,24 @@
     }
 
     // =====================================================================
-    // READ: Buscar e Renderizar os Planos
+    // == PLAN MANAGEMENT ==
     // =====================================================================
 
     const API_PLANS_URL = '/api/admin/plans';
     const createPlanForm = document.getElementById('create-plan-form');
     const plansTableBody = document.getElementById('plans-table-body');
 
+    /**
+     * Loads and renders the list of subscription plans.
+     */
     async function loadPlans() {
         await fetchAndCache('allPlans', API_PLANS_URL, renderPlansTable, plansTableBody);
     }
 
     function renderPlansTable(plans) {
-        plansTableBody.innerHTML = ''; // Limpa a tabela
+        plansTableBody.innerHTML = '';
         if (!plans || plans.length === 0) {
-            plansTableBody.innerHTML = '<tr><td colspan="5" class="text-center">Nenhum plano encontrado.</td></tr>';
+            plansTableBody.innerHTML = '<tr><td colspan="5" class="text-center">No plans found.</td></tr>';
             return;
         }
 
@@ -318,8 +331,8 @@
             const row = document.createElement('tr');
             row.innerHTML = `
                 <td>${plan.reason || 'N/A'}</td>
-                <td>${plan.autoRecurring?.frequencyType === 'years' ? 'Anual' : 'Mensal'}</td>
-                <td>R$ ${plan.autoRecurring?.transactionAmount.toFixed(2).replace('.', ',')}</td>
+                <td>${plan.autoRecurring?.frequencyType === 'years' ? 'Annual' : 'Monthly'}</td>
+                <td>$${plan.autoRecurring?.transactionAmount.toFixed(2)}</td>
                 <td><span class="status-badge status-${plan.status?.toLowerCase()}">${plan.status || 'N/A'}</span></td>
                 <td class="actions">
                     <button class="btn btn-secondary btn-sm btn-edit" data-plan-id="${plan.id}">Editar</button>
@@ -330,27 +343,26 @@
         });
     }
 
-    // =====================================================================
-    // Lógica do Painel "Criar Plano"
-    // =====================================================================
-   
+    /**
+     * Handles the submission of the 'Create Plan' form.
+     */
     const createPlanStatus = document.getElementById('create-plan-status');
     if (createPlanForm) {
         createPlanForm.addEventListener('submit', async function (e) {
             e.preventDefault();
             const saveButton = createPlanForm.querySelector('button[type="submit"]');
             saveButton.disabled = true;
-            saveButton.textContent = 'Criando...';
-            createPlanStatus.innerHTML = '<p>Enviando dados para o Mercado Pago...</p>';
-            // Coleta os dados do formulário
+            saveButton.textContent = 'Creating...';
+            createPlanStatus.innerHTML = '<p>Sending data to payment provider...</p>';
+
             const planData = {
                 reason: document.getElementById('plan-reason').value,
                 autoRecurring: {
-                    frequency: 1, // Fixo em 1 para simplicidade
+                    frequency: 1, // Fixed to 1 for simplicity
                     frequencyType: document.getElementById('plan-type').value,
                     transactionAmount: parseFloat(document.getElementById('plan-amount').value),
                 },
-                backUrl: "https://www.seusite.com/confirmacao" // URL de retorno
+                backUrl: "https://www.yoursite.com/confirmation" // Return URL
             };
             try {
                 // Faz a chamada real para a sua API de backend
@@ -363,12 +375,11 @@
                 });
                 const result = await response.json();
                 if (!response.ok) {
-                    // Se a API retornar um erro, exibe a mensagem
-                    throw new Error(result.message || 'Ocorreu um erro ao criar o plano.');
+                    throw new Error(result.message || 'An error occurred while creating the plan.');
                 }
                 await Swal.fire({
-                    title: 'Sucesso!',
-                    text: `Plano criado com sucesso! ID: ${result.id}`,
+                    title: 'Success!',
+                    text: `Plan created successfully! ID: ${result.id}`,
                     icon: 'success'
                 });
 
@@ -376,20 +387,21 @@
                 await loadPlans();
             } catch (error) {
                 Swal.fire({
-                    title: 'Erro!',
+                    title: 'Error!',
                     text: error.message,
                     icon: 'error'
                 });
             } finally {
                 saveButton.disabled = false;
-                saveButton.textContent = 'Criar Plano';
+                saveButton.textContent = 'Create Plan';
             }
         });
     }
 
-    // =====================================================================
-    // UPDATE: Abrir e Submeter o Modal de Edição do Plano
-    // =====================================================================
+    /**
+     * Opens the edit modal and populates it with the selected plan's data.
+     * @param {object} plan - The plan object to edit.
+     */
     function openEditModal(plan) {
         editPlanId.value = plan.id;
         editPlanReason.value = plan.reason;
@@ -399,17 +411,21 @@
         editModal.style.display = 'block';
     }
 
+    /**
+     * Closes and resets the plan edit modal.
+     */
     function closeEditModal() {
         editModal.style.display = 'none';
         editForm.reset();
     }
 
+    // Handles the submission of the plan edit form.
     editForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const planId = editPlanId.value;
         const submitButton = editForm.querySelector('button[type="submit"]');
         submitButton.disabled = true;
-        submitButton.textContent = 'Salvando...';
+        submitButton.textContent = 'Saving...';
 
         const updatedData = {
             reason: editPlanReason.value,
@@ -420,68 +436,63 @@
         };
 
         try {
-            const response = await fetch(`${API_BASE_URL}/${planId}`, {
+            const response = await fetch(`${API_PLANS_URL}/${planId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(updatedData)
             });
 
             if (!response.ok) {
-                // Tenta extrair uma mensagem de erro mais detalhada do backend
                 const errorData = await response.json().catch(() => null);
-                throw new Error(errorData?.message || 'Falha ao atualizar o plano.');
+                throw new Error(errorData?.message || 'Failed to update the plan.');
             }
 
-            // --- MUDANÇA AQUI ---
             Swal.fire({
-                title: 'Sucesso!',
-                text: 'Plano atualizado com sucesso!',
+                title: 'Success!',
+                text: 'Plan updated successfully!',
                 icon: 'success',
                 timer: 2000,
                 showConfirmButton: false
             });
 
             closeEditModal();
-            await loadPlans(); // Recarrega a lista
+            await loadPlans();
 
         } catch (error) {
-            console.error('Erro ao atualizar plano:', error);
-            // --- MUDANÇA AQUI ---
+            console.error('Error updating plan:', error);
             Swal.fire({
-                title: 'Erro!',
+                title: 'Error!',
                 text: error.message,
                 icon: 'error'
             });
         } finally {
             submitButton.disabled = false;
-            submitButton.textContent = 'Salvar Alterações';
+            submitButton.textContent = 'Save Changes';
         }
     }); 
 
-    // =====================================================================
-    // DELETE: Excluir um Plano
-    // =====================================================================
+    /**
+     * Prompts the user for confirmation and then deletes a plan.
+     * @param {string} planId - The ID of the plan to delete.
+     */
     async function deletePlan(planId) {
-        // --- MUDANÇA AQUI ---
-        // Substituindo o confirm() nativo pelo SweetAlert2
         const result = await Swal.fire({
-            title: 'Você tem certeza?',
-            text: "Esta ação não pode ser desfeita.",
+            title: 'Are you sure?',
+            text: "This action cannot be undone.",
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#d33',
             cancelButtonColor: '#6c757d',
-            confirmButtonText: 'Sim, excluir!',
-            cancelButtonText: 'Cancelar'
+            confirmButtonText: 'Yes, delete it!',
+            cancelButtonText: 'Cancel'
         });
 
-        // Se o usuário não confirmou, a função para aqui.
         if (!result.isConfirmed) {
             return;
         }
 
         try {
-            const response = await fetch(`${API_BASE_URL}/${planId}`, {
+            const response = await fetch(`${API_PLANS_URL}/${planId}`, {
                 method: 'DELETE'
             });
 
@@ -490,29 +501,27 @@
                 throw new Error(errorData?.message || 'Falha ao excluir o plano.');
             }
 
-            // --- MUDANÇA AQUI ---
             Swal.fire(
-                'Excluído!',
-                'O plano foi excluído com sucesso.',
+                'Deleted!',
+                'The plan has been deleted.',
                 'success'
             );
 
-            await loadPlans(); // Recarrega a lista
+            await loadPlans();
 
         } catch (error) {
-            console.error('Erro ao excluir plano:', error);
-            // --- MUDANÇA AQUI ---
+            console.error('Error deleting plan:', error);
             Swal.fire(
-                'Erro!',
+                'Error!',
                 error.message,
                 'error'
             );
         }
     }
 
-    // =====================================================================
-    // SEARCH: Filtrar a tabela de cursos
-    // =====================================================================
+    /**
+     * Filters the courses table based on user input in the search field.
+     */
     searchCourseInput.addEventListener('input', (e) => {
         const searchTerm = e.target.value.toLowerCase();
         const filteredCourses = allCoursesCache.filter(course =>
@@ -522,9 +531,7 @@
         renderCoursesTable(filteredCourses);
     });
 
-    // =====================================================================
-    // Event Listeners
-    // =====================================================================
+    //
     closeEditModalButton.addEventListener('click', closeEditModal);
     closeEditCourseModalButton.addEventListener('click', closeEditCourseModal);
 

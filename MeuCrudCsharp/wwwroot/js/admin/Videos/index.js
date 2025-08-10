@@ -1,4 +1,10 @@
-// Funções Globais para a página de Vídeos
+/**
+ * @file Manages all client-side logic for the Videos admin page.
+ * This includes tab navigation, CRUD operations for video metadata, file uploads,
+ * and an HLS video player.
+ */
+
+// --- Global Modal Elements & Functions ---
 const editModal = document.getElementById('edit-modal');
 const editForm = document.getElementById('edit-video-form');
 const editVideoIdInput = document.getElementById('edit-video-id');
@@ -7,45 +13,52 @@ const editVideoDescriptionInput = document.getElementById('edit-video-descriptio
 const editThumbnailInput = document.getElementById('edit-video-thumbnail-file');
 const editThumbnailPreview = document.getElementById('edit-thumbnail-preview');
 
-
-// --- Atualize a Função de Abrir o Modal ---
+/**
+ * Opens the edit modal and populates it with the selected video's data.
+ * @param {object} video - The video object to be edited.
+ */
 function openEditModal(video) {
     editVideoIdInput.value = video.id;
     editVideoTitleInput.value = video.title;
     editVideoDescriptionInput.value = video.description;
 
-    // Mostra a imagem atual no preview
     if (video.thumbnailUrl) {
         editThumbnailPreview.src = video.thumbnailUrl;
         editThumbnailPreview.style.display = 'block';
     } else {
         editThumbnailPreview.style.display = 'none';
     }
-
     editModal.style.display = 'block';
 }
 
+/**
+ * Closes the video edit modal.
+ */
 function closeEditModal() {
     editModal.style.display = 'none';
 }
 
+// Close modal if user clicks outside of it.
 window.onclick = function (event) {
     if (event.target == editModal) {
         closeEditModal();
     }
 };
 
+/**
+ * Prompts the user for confirmation and then deletes a video and its associated files.
+ * @param {string} videoId - The ID of the video to delete.
+ */
 async function deleteVideo(videoId) {
-    // --- MUDANÇA AQUI ---
     const result = await Swal.fire({
-        title: 'Você tem certeza?',
-        text: "Esta ação não pode ser desfeita.",
+        title: 'Are you sure?',
+        text: "This action cannot be undone.",
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#d33',
         cancelButtonColor: '#6c757d',
-        confirmButtonText: 'Sim, deletar!',
-        cancelButtonText: 'Cancelar'
+        confirmButtonText: 'Yes, delete it!',
+        cancelButtonText: 'Cancel'
     });
 
     if (!result.isConfirmed) {
@@ -56,24 +69,22 @@ async function deleteVideo(videoId) {
         const response = await fetch(`/api/admin/videos/${videoId}`, { method: 'DELETE' });
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.message || 'Falha ao deletar o vídeo.');
+            throw new Error(errorData.message || 'Failed to delete the video.');
         }
 
         const successData = await response.json();
 
-        // --- MUDANÇA AQUI ---
         Swal.fire(
-            'Deletado!',
-            successData.message, // Usa a mensagem de sucesso vinda do backend
+            'Deleted!',
+            successData.message,
             'success'
         );
 
         document.dispatchEvent(new CustomEvent('reloadAllVideos'));
     } catch (error) {
-        console.error('Erro ao deletar:', error);
-        // --- MUDANÇA AQUI ---
+        console.error('Error deleting video:', error);
         Swal.fire(
-            'Erro!',
+            'Error!',
             error.message,
             'error'
         );
@@ -81,7 +92,7 @@ async function deleteVideo(videoId) {
 }
 
 document.addEventListener('DOMContentLoaded', function () {
-    // Seleção de Elementos DOM da página de Vídeos
+    // --- DOM Element Selections ---
     const createForm = document.getElementById('create-video-form');
     const fileInput = document.getElementById('video-file-input');
     const uploadStatusDiv = document.getElementById('upload-status');
@@ -106,11 +117,17 @@ document.addEventListener('DOMContentLoaded', function () {
     const videoPlayer = document.getElementById('video-player');
     let hlsInstance;
 
-    // Estado para Cache e Rolagem Infinita
+    // --- State Management for Caching and Infinite Scroll ---
     let crudState = { currentPage: 1, isLoading: false, allDataLoaded: false, cache: {} };
     let viewerState = { currentPage: 1, isLoading: false, allDataLoaded: false, cache: {} };
 
-    // Funções de Renderização
+    // --- Rendering Functions ---
+
+    /**
+     * Renders a single video row in the CRUD management table.
+     * Attaches event listeners for edit and delete buttons directly to the new row.
+     * @param {object} video - The video object to render.
+     */
     function renderCrudTableRow(video) {
         const row = document.createElement('tr');
         row.innerHTML = `
@@ -124,18 +141,21 @@ document.addEventListener('DOMContentLoaded', function () {
         </td>
     `;
 
-        // Adicionando os event listeners diretamente aqui (mais seguro que 'onclick')
         row.querySelector('.btn-edit').addEventListener('click', () => {
-            openEditModal(video); // Passando o objeto de vídeo inteiro
+            openEditModal(video);
         });
 
         row.querySelector('.btn-delete').addEventListener('click', () => {
-            deleteVideo(video.id); // Supondo que você tenha uma função deleteVideo(id)
+            deleteVideo(video.id);
         });
 
         videosTableBody.appendChild(row);
     }
 
+    /**
+     * Renders a single video item in the viewer playlist.
+     * @param {object} video - The video object to render.
+     */
     function renderViewerPlaylistItem(video) {
         const item = document.createElement('div');
         item.className = 'playlist-item';
@@ -144,7 +164,12 @@ document.addEventListener('DOMContentLoaded', function () {
         viewerPlaylist.appendChild(item);
     }
 
-    // Lógica de Carregamento Genérica
+    /**
+     * A generic function to fetch paginated data, with caching and infinite scroll support.
+     * @param {object} state - The state object for the current panel (CRUD or Viewer).
+     * @param {function} renderFunction - The function to call to render each item.
+     * @param {HTMLElement} containerElement - The container element where items will be appended.
+     */
     async function loadData(state, renderFunction, containerElement) {
         if (state.isLoading || state.allDataLoaded) return;
         state.isLoading = true;
@@ -155,26 +180,36 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         try {
             const response = await fetch(`/api/admin/videos?page=${state.currentPage}&pageSize=15`);
-            if (!response.ok) throw new Error('Erro ao buscar vídeos.');
-            const videos = await response.json();
-            state.cache[state.currentPage] = videos;
-            if (videos.length < 15) state.allDataLoaded = true;
-            if (state.currentPage === 1 && videos.length === 0) {
+            if (!response.ok) throw new Error('Error fetching videos.');
+            const paginatedResult = await response.json();
+            const videos = paginatedResult.items;
+
+            state.cache[state.currentPage] = videos; // Cache the items for the current page
+
+            if (!videos || videos.length < 15) {
+                state.allDataLoaded = true;
+            }
+
+            if (state.currentPage === 1 && (!videos || videos.length === 0)) {
                 containerElement.innerHTML = (containerElement.tagName === 'TBODY')
-                    ? '<tr><td colspan="5" style="text-align:center;">Nenhum vídeo encontrado.</td></tr>'
-                    : '<p style="padding:1rem;">Nenhum vídeo disponível.</p>';
+                    ? '<tr><td colspan="5" style="text-align:center;">No videos found.</td></tr>'
+                    : '<p style="padding:1rem;">No videos available.</p>';
             } else {
                 videos.forEach(renderFunction);
             }
             state.currentPage++;
         } catch (error) {
-            console.error('Erro ao carregar dados:', error);
+            console.error('Error loading data:', error);
         } finally {
             state.isLoading = false;
         }
     }
 
-    // Lógica da Aba "Visualizar Vídeos"
+    /**
+     * Initializes or updates the HLS player to play the selected video.
+     * @param {string} storageIdentifier - The unique identifier of the video to play.
+     * @param {HTMLElement} clickedItem - The playlist item element that was clicked.
+     */
     function playVideo(storageIdentifier, clickedItem) {
         document.querySelectorAll('.playlist-item.playing').forEach(el => el.classList.remove('playing'));
         clickedItem.classList.add('playing');
@@ -191,19 +226,27 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    // Lógica de Eventos e Inicialização
+    // --- Event Listeners and Initialization ---
+
+    /**
+     * Resets the state and reloads data for the CRUD panel.
+     */
     function resetAndLoadCrud() {
         crudState = { currentPage: 1, isLoading: false, allDataLoaded: false, cache: {} };
         videosTableBody.innerHTML = '';
         loadData(crudState, renderCrudTableRow, videosTableBody);
     }
 
+    /**
+     * Resets the state and reloads data for the Viewer panel.
+     */
     function resetAndLoadViewer() {
         viewerState = { currentPage: 1, isLoading: false, allDataLoaded: false, cache: {} };
         viewerPlaylist.innerHTML = '';
         loadData(viewerState, renderViewerPlaylistItem, viewerPlaylist);
     }
 
+    // Tab navigation logic
     navCrud.addEventListener('click', () => {
         navCrud.classList.add('active');
         navViewer.classList.remove('active');
@@ -221,17 +264,20 @@ document.addEventListener('DOMContentLoaded', function () {
         if (viewerPlaylist.innerHTML === '') resetAndLoadViewer();
     });
 
+    // Custom event to allow other parts of the app to trigger a data reload.
     document.addEventListener('reloadAllVideos', () => {
         resetAndLoadCrud();
         resetAndLoadViewer();
     });
 
+    // Infinite scroll for the viewer playlist.
     viewerPlaylist.addEventListener('scroll', () => {
         if (viewerPlaylist.scrollTop + viewerPlaylist.clientHeight >= viewerPlaylist.scrollHeight - 50) {
             loadData(viewerState, renderViewerPlaylistItem, viewerPlaylist);
         }
     });
 
+    // Infinite scroll for the CRUD table.
     window.addEventListener('scroll', () => {
         if (!panelCrud.classList.contains('active')) return;
         if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 200) {
@@ -239,9 +285,9 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    resetAndLoadCrud();
+    // --- Video Creation Form Logic ---
 
-    // CREATE: Lógica para Upload e Criação de Metadados
+    // Handles the file input change event to start the upload process.
     fileInput.addEventListener('change', async function (event) {
         const file = event.target.files[0];
         if (!file) return;
@@ -249,10 +295,9 @@ document.addEventListener('DOMContentLoaded', function () {
         metadataFieldset.disabled = true;
         saveButton.disabled = true;
 
-        // --- MUDANÇA AQUI: Mostra um loading modal ---
         Swal.fire({
-            title: 'Enviando...',
-            text: 'Por favor, aguarde o upload do arquivo.',
+            title: 'Uploading...',
+            text: 'Please wait while the file is being uploaded.',
             allowOutsideClick: false,
             didOpen: () => {
                 Swal.showLoading();
@@ -266,49 +311,46 @@ document.addEventListener('DOMContentLoaded', function () {
             const response = await fetch('/api/admin/videos/upload', { method: 'POST', body: formData });
             if (!response.ok) {
                 const errorData = await response.json();
-                throw new Error(errorData.message || 'Ocorreu um erro no upload.');
+                throw new Error(errorData.message || 'An error occurred during upload.');
             }
             const result = await response.json();
 
-            // --- MUDANÇA AQUI: Fecha o loading e mostra um toast de sucesso ---
             Swal.close();
             Swal.fire({
                 toast: true,
                 position: 'top-end',
                 icon: 'success',
-                title: 'Upload concluído!',
+                title: 'Upload complete!',
                 showConfirmButton: false,
                 timer: 3000
             });
 
-            // Mantemos o innerHTML para uma mensagem persistente
-            uploadStatusDiv.innerHTML = `<p style="color: #198754;"><strong>Upload concluído!</strong> Agora, preencha os detalhes abaixo.</p>`;
+            uploadStatusDiv.innerHTML = `<p style="color: #198754;"><strong>Upload complete!</strong> Now, please fill in the details below.</p>`;
             storageIdentifierInput.value = result.storageIdentifier;
             metadataFieldset.disabled = false;
             saveButton.disabled = false;
         } catch (error) {
-            console.error('Erro no upload:', error);
-            // --- MUDANÇA AQUI: Fecha o loading e mostra um alerta de erro ---
+            console.error('Upload error:', error);
             Swal.fire({
                 icon: 'error',
-                title: 'Erro no Upload',
+                title: 'Upload Error',
                 text: error.message,
             });
-            uploadStatusDiv.innerHTML = `<p style="color: #dc3545;"><strong>Erro no upload:</strong> ${error.message}</p>`;
+            uploadStatusDiv.innerHTML = `<p style="color: #dc3545;"><strong>Upload error:</strong> ${error.message}</p>`;
         }
     });
 
+    // Handles the final submission of the video metadata form.
     createForm.addEventListener('submit', async function (event) {
         event.preventDefault();
         if (!storageIdentifierInput.value) {
-            // --- MUDANÇA AQUI ---
-            Swal.fire('Atenção', 'Por favor, envie um arquivo de vídeo primeiro.', 'warning');
+            Swal.fire('Attention', 'Please upload a video file first.', 'warning');
             return;
         }
         saveButton.disabled = true;
-        saveButton.textContent = 'Salvando...';
+        saveButton.textContent = 'Saving...';
 
-        const formData = new FormData(createForm); // Forma mais simples de pegar todos os dados
+        const formData = new FormData(createForm);
 
         try {
             const response = await fetch('/api/admin/videos', {
@@ -318,17 +360,15 @@ document.addEventListener('DOMContentLoaded', function () {
             if (!response.ok) {
                 const errorData = await response.json();
                 const errorMessages = Object.values(errorData.errors || {}).flat().join('\n');
-                throw new Error(errorMessages || errorData.message || 'Ocorreu um erro ao salvar os dados.');
+                throw new Error(errorMessages || errorData.message || 'An error occurred while saving the data.');
             }
 
-            // --- MUDANÇA AQUI ---
             await Swal.fire({
-                title: 'Sucesso!',
-                text: 'Vídeo cadastrado com sucesso!',
+                title: 'Success!',
+                text: 'Video registered successfully!',
                 icon: 'success'
             });
 
-            // Limpa e reseta o formulário após o usuário fechar o alerta
             document.dispatchEvent(new CustomEvent('reloadAllVideos'));
             if (courseSelect.value === 'new_course') {
                 await loadCoursesIntoSelect();
@@ -339,16 +379,17 @@ document.addEventListener('DOMContentLoaded', function () {
             saveButton.disabled = true;
             uploadStatusDiv.innerHTML = '';
         } catch (error) {
-            console.error('Erro ao salvar metadados:', error);
-            // --- MUDANÇA AQUI ---
-            Swal.fire('Erro ao Salvar', error.message, 'error');
+            console.error('Error saving metadata:', error);
+            Swal.fire('Save Error', error.message, 'error');
         } finally {
             saveButton.disabled = false;
-            saveButton.textContent = 'Salvar Vídeo';
+            saveButton.textContent = 'Save Video';
         }
     });
 
-    // UPDATE: Lógica para o Formulário de Edição no Modal
+    /**
+     * Handles the submission of the video edit form.
+     */
     editForm.addEventListener('submit', async function (event) {
         event.preventDefault();
         const videoId = editVideoIdInput.value;
@@ -361,13 +402,12 @@ document.addEventListener('DOMContentLoaded', function () {
             });
             if (!response.ok) {
                 const errorData = await response.json();
-                throw new Error(errorData.message || 'Falha ao atualizar o vídeo.');
+                throw new Error(errorData.message || 'Failed to update the video.');
             }
 
-            // --- MUDANÇA AQUI ---
             Swal.fire({
-                title: 'Atualizado!',
-                text: 'Vídeo atualizado com sucesso!',
+                title: 'Updated!',
+                text: 'Video updated successfully!',
                 icon: 'success',
                 timer: 2000,
                 showConfirmButton: false
@@ -376,18 +416,20 @@ document.addEventListener('DOMContentLoaded', function () {
             closeEditModal();
             document.dispatchEvent(new CustomEvent('reloadAllVideos'));
         } catch (error) {
-            console.error('Erro ao atualizar:', error);
-            // --- MUDANÇA AQUI ---
-            Swal.fire('Erro!', error.message, 'error');
+            console.error('Error updating video:', error);
+            Swal.fire('Error!', error.message, 'error');
         }
     });
 
-    // --- Lógica de Pré-visualização da Imagem ---
+    /**
+     * Sets up a file input to show a preview of the selected image.
+     * @param {HTMLInputElement} fileInput - The file input element.
+     * @param {HTMLImageElement} previewImage - The image element to display the preview.
+     */
     function setupThumbnailPreview(fileInput, previewImage) {
         fileInput.addEventListener('change', () => {
             const file = fileInput.files[0];
             if (file) {
-                // Cria uma URL temporária para o arquivo selecionado
                 previewImage.src = URL.createObjectURL(file);
                 previewImage.style.display = 'block';
             } else {
@@ -395,7 +437,43 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
     }
+
+    /**
+     * Fetches the list of courses and populates the course selection dropdown.
+     */
+    async function loadCoursesIntoSelect() {
+        try {
+            const response = await fetch('/api/admin/courses');
+            if (!response.ok) throw new Error('Could not fetch courses.');
+            const courses = await response.json();
+
+            // Clear existing options except the first two ("Select" and "New")
+            while (courseSelect.options.length > 2) {
+                courseSelect.remove(2);
+            }
+
+            courses.forEach(course => {
+                const option = new Option(course.name, course.name);
+                courseSelect.add(option);
+            });
+        } catch (error) {
+            console.error('Error loading courses for select dropdown:', error);
+        }
+    }
+
+    // Shows/hides the "New Course Name" input based on dropdown selection.
+    courseSelect.addEventListener('change', function () {
+        const isNew = this.value === 'new_course';
+        newCourseInput.style.display = isNew ? 'block' : 'none';
+        newCourseInput.required = isNew;
+        if (!isNew) {
+            newCourseInput.value = '';
+        }
+    });
+
+    // Initial setup calls
     setupThumbnailPreview(createThumbnailInput, createThumbnailPreview);
     setupThumbnailPreview(editThumbnailInput, editThumbnailPreview);
-
+    loadCoursesIntoSelect();
+    resetAndLoadCrud();
 });
