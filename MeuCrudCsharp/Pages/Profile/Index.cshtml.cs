@@ -31,7 +31,9 @@ namespace MeuCrudCsharp.Pages.Profile
             var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (!Guid.TryParse(userIdString, out var userId))
             {
-                _logger.LogWarning("Tentativa de acesso à página de perfil com um ID de usuário inválido no cookie.");
+                _logger.LogWarning(
+                    "Tentativa de acesso à página de perfil com um ID de usuário inválido no cookie."
+                );
                 return Unauthorized();
             }
 
@@ -50,7 +52,7 @@ namespace MeuCrudCsharp.Pages.Profile
                 {
                     UserProfile = await userProfileTask,
                     Subscription = await subscriptionTask,
-                    PaymentHistory = await paymentHistoryTask
+                    PaymentHistory = await paymentHistoryTask,
                 };
 
                 return Page();
@@ -59,16 +61,27 @@ namespace MeuCrudCsharp.Pages.Profile
             catch (ResourceNotFoundException ex)
             {
                 // Este erro é crítico: o usuário está logado, mas não existe no banco.
-                _logger.LogError(ex, "Usuário autenticado com ID {UserId} não foi encontrado no banco de dados.", userId);
+                _logger.LogError(
+                    ex,
+                    "Usuário autenticado com ID {UserId} não foi encontrado no banco de dados.",
+                    userId
+                );
                 // Deslogar o usuário pode ser uma boa ação aqui para limpar o cookie inválido.
                 await HttpContext.SignOutAsync();
-                return NotFound("Seu usuário não foi encontrado em nosso sistema. Por favor, contate o suporte.");
+                return NotFound(
+                    "Seu usuário não foi encontrado em nosso sistema. Por favor, contate o suporte."
+                );
             }
             catch (ExternalApiException ex)
             {
                 // Aconteceu um erro ao falar com o Mercado Pago. A página ainda pode ser útil.
-                _logger.LogWarning(ex, "Falha na API externa ao carregar dados para o usuário {UserId}.", userId);
-                TempData["ErrorMessage"] = "Não foi possível carregar os detalhes da sua assinatura no momento. Tente novamente mais tarde.";
+                _logger.LogWarning(
+                    ex,
+                    "Falha na API externa ao carregar dados para o usuário {UserId}.",
+                    userId
+                );
+                TempData["ErrorMessage"] =
+                    "Não foi possível carregar os detalhes da sua assinatura no momento. Tente novamente mais tarde.";
 
                 // Tenta carregar os dados que não dependem da API externa para uma experiência degradada
                 await LoadPartialViewModelOnError(userId);
@@ -77,8 +90,13 @@ namespace MeuCrudCsharp.Pages.Profile
             catch (Exception ex)
             {
                 // Erro genérico (ex: banco de dados fora do ar)
-                _logger.LogError(ex, "Erro inesperado ao carregar a página de perfil para o usuário {UserId}.", userId);
-                TempData["ErrorMessage"] = "Ocorreu um erro ao carregar seus dados. Nossa equipe já foi notificada.";
+                _logger.LogError(
+                    ex,
+                    "Erro inesperado ao carregar a página de perfil para o usuário {UserId}.",
+                    userId
+                );
+                TempData["ErrorMessage"] =
+                    "Ocorreu um erro ao carregar seus dados. Nossa equipe já foi notificada.";
 
                 // Tenta carregar o mínimo de dados possível
                 await LoadPartialViewModelOnError(userId);
@@ -101,7 +119,11 @@ namespace MeuCrudCsharp.Pages.Profile
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Falha ao carregar o ViewModel parcial para o usuário {UserId} após erro inicial.", userId);
+                _logger.LogError(
+                    ex,
+                    "Falha ao carregar o ViewModel parcial para o usuário {UserId} após erro inicial.",
+                    userId
+                );
                 // Se até o perfil falhar, a página ficará com os dados padrão.
             }
         }

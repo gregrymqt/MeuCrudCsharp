@@ -140,6 +140,10 @@ builder.Services.AddScoped<IQueueService, BackgroundJobQueueService>();
 // It must come after Hangfire has been configured (AddHangfire).
 builder.Services.AddHangfireServer();
 
+builder.Services.Configure<SendGridSettings>(
+    builder.Configuration.GetSection(SendGridSettings.SectionName)
+);
+
 // --- Authentication Configuration ---
 builder
     .Services.AddAuthentication(options =>

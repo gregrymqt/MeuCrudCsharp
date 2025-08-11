@@ -1,14 +1,14 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using Microsoft.Extensions.Configuration;
-using Microsoft.IdentityModel.Tokens;
 using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Models;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using Microsoft.IdentityModel.Tokens;
 
 namespace MeuCrudCsharp.Features.Auth
 {
@@ -31,7 +31,8 @@ namespace MeuCrudCsharp.Features.Auth
         public AppAuthService(
             UserManager<Users> userManager,
             IConfiguration configuration,
-            ILogger<AppAuthService> logger)
+            ILogger<AppAuthService> logger
+        )
         {
             _userManager = userManager;
             _configuration = configuration;
@@ -80,7 +81,12 @@ namespace MeuCrudCsharp.Features.Auth
 
                 var claimsIdentity = new ClaimsIdentity(
                     claims,
-                    Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationDefaults.AuthenticationScheme
+                    Microsoft
+                        .AspNetCore
+                        .Authentication
+                        .Cookies
+                        .CookieAuthenticationDefaults
+                        .AuthenticationScheme
                 );
 
                 var authProperties = new AuthenticationProperties
@@ -94,7 +100,12 @@ namespace MeuCrudCsharp.Features.Auth
 
                 // Realiza o login via cookie (Identity + Cookies)
                 await httpContext.SignInAsync(
-                    Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationDefaults.AuthenticationScheme,
+                    Microsoft
+                        .AspNetCore
+                        .Authentication
+                        .Cookies
+                        .CookieAuthenticationDefaults
+                        .AuthenticationScheme,
                     new ClaimsPrincipal(claimsIdentity),
                     authProperties
                 );
@@ -108,7 +119,7 @@ namespace MeuCrudCsharp.Features.Auth
                         HttpOnly = true,
                         Secure = true,
                         SameSite = SameSiteMode.Strict,
-                        Expires = authProperties.ExpiresUtc
+                        Expires = authProperties.ExpiresUtc,
                     }
                 );
 
@@ -143,7 +154,10 @@ namespace MeuCrudCsharp.Features.Auth
         {
             if (user == null)
             {
-                throw new ArgumentNullException(nameof(user), "Usuário não pode ser nulo para gerar o token.");
+                throw new ArgumentNullException(
+                    nameof(user),
+                    "Usuário não pode ser nulo para gerar o token."
+                );
             }
 
             var userRoles = await _userManager.GetRolesAsync(user);
@@ -153,7 +167,7 @@ namespace MeuCrudCsharp.Features.Auth
                 new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
                 new Claim(JwtRegisteredClaimNames.Email, user.Email ?? string.Empty),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-                new Claim(ClaimTypes.Name, user.Name ?? string.Empty)
+                new Claim(ClaimTypes.Name, user.Name ?? string.Empty),
             };
 
             foreach (var role in userRoles)

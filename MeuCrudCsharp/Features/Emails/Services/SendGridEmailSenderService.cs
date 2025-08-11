@@ -2,8 +2,8 @@
 using System.Threading.Tasks;
 using MeuCrudCsharp.Features.Emails.Interfaces;
 using MeuCrudCsharp.Features.Exceptions;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using SendGrid;
 using SendGrid.Helpers.Mail;
 
@@ -14,20 +14,20 @@ namespace MeuCrudCsharp.Features.Emails.Services
     /// </summary>
     public class SendGridEmailSenderService : IEmailSenderService
     {
-        private readonly IConfiguration _configuration;
+        private readonly SendGridSettings _settings;
         private readonly ILogger<SendGridEmailSenderService> _logger;
 
         /// <summary>
         /// Inicializa uma nova instância da classe <see cref="SendGridEmailSenderService"/>.
         /// </summary>
-        /// <param name="configuration">A configuração da aplicação para obter as chaves do SendGrid.</param>
+        /// <param name="options">As configurações do SendGrid injetadas via Options Pattern.</param>
         /// <param name="logger">O serviço de logging.</param>
         public SendGridEmailSenderService(
-            IConfiguration configuration,
+            IOptions<SendGridSettings> options,
             ILogger<SendGridEmailSenderService> logger
         )
         {
-            _configuration = configuration;
+            _settings = options.Value;
             _logger = logger;
         }
 
@@ -49,9 +49,9 @@ namespace MeuCrudCsharp.Features.Emails.Services
         {
             try
             {
-                var apiKey = _configuration["SendGrid:ApiKey"];
-                var fromEmail = _configuration["SendGrid:FromEmail"];
-                var fromName = _configuration["SendGrid:FromName"];
+                var apiKey = _settings.ApiKey;
+                var fromEmail = _settings.FromEmail;
+                var fromName = _settings.FromName;
 
                 if (
                     string.IsNullOrEmpty(apiKey)
@@ -60,7 +60,7 @@ namespace MeuCrudCsharp.Features.Emails.Services
                 )
                 {
                     throw new InvalidOperationException(
-                        "As configurações do SendGrid (ApiKey, FromEmail, FromName) não foram definidas."
+                        "As configurações do SendGrid (ApiKey, FromEmail, FromName) não foram definidas corretamente."
                     );
                 }
 

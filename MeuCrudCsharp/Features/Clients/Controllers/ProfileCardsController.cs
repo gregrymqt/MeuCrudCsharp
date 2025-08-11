@@ -103,7 +103,7 @@ public class ProfileCardsController : ControllerBase
         {
             _logger.LogError(ex, "Payment provider error while deleting card {CardId}.", cardId);
             return BadRequest(new { message = ex.Message });
-                "Erro no provedor de pagamento ao deletar o cartão {CardId}.",
+        }
     }
 
     /// <summary>
@@ -115,26 +115,30 @@ public class ProfileCardsController : ControllerBase
     /// <returns>The payment provider's customer identifier.</returns>
     /// <remarks>Lança <see cref="AppServiceException"/> quando usuário não está identificado, não existe ou não possui cliente associado.</remarks>
     /// <returns>Identificador do cliente no provedor de pagamentos.</returns>
+    public async Task<string> GetCurrentUserCustomerIdAsync()
+    {
+        var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(userIdString))
         {
+            throw new AppServiceException("Não foi possível identificar o usuário na sessão.");
         }
 
+        var users = _apiDbContext.Users;
+
         // 2. Find the user in the database.
-            throw new AppServiceException("Não foi possível identificar o usuário na sessão.");
-            .Users.AsNoTracking()
-            .FirstOrDefaultAsync(u => u.Id == userIdString);
+        var user = await users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userIdString);
+
         if (user == null)
             throw new AppServiceException("User not found.");
 
-        // 3. Ensure the user has a customer ID from the payment provider.
-        if (user == null)
+        if (string.IsNullOrEmpty(user.MercadoPagoCustomerId))
         {
-            throw new AppServiceException("Usuário não encontrado.");
-        }
-        {
-                "User does not have an associated payment customer profile."
+            _logger.LogWarning(
+                "User {UserId} does not have an associated payment customer profile.",
+                user.Id
             );
             throw new AppServiceException("Usuário não possui um cliente de pagamentos associado.");
+        }
 
         return user.MercadoPagoCustomerId;
     }

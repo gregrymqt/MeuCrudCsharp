@@ -29,7 +29,8 @@ namespace MeuCrudCsharp.Pages.Payment
         public CreditCardModel(
             IPreferencePayment preferencePayment,
             IConfiguration configuration,
-            ILogger<CreditCardModel> logger) // MUDANÇA 1
+            ILogger<CreditCardModel> logger
+        ) // MUDANÇA 1
         {
             _preferencePayment = preferencePayment;
             _configuration = configuration;
@@ -39,9 +40,15 @@ namespace MeuCrudCsharp.Pages.Payment
         public async Task<IActionResult> OnGetAsync()
         {
             // MUDANÇA 2: Validação robusta do plano
-            if (string.IsNullOrEmpty(Plano) || (Plano.ToLower() != "mensal" && Plano.ToLower() != "anual"))
+            if (
+                string.IsNullOrEmpty(Plano)
+                || (Plano.ToLower() != "mensal" && Plano.ToLower() != "anual")
+            )
             {
-                _logger.LogWarning("Tentativa de acesso à página de pagamento com plano inválido: {Plano}", Plano);
+                _logger.LogWarning(
+                    "Tentativa de acesso à página de pagamento com plano inválido: {Plano}",
+                    Plano
+                );
                 return RedirectToPage("/Subscription/Index"); // Volta para a página de planos
             }
 
@@ -57,11 +64,15 @@ namespace MeuCrudCsharp.Pages.Payment
                 // Validação para garantir que a configuração foi encontrada
                 if (Valor <= 0)
                 {
-                    throw new InvalidOperationException($"O preço para o plano '{Plano}' não está configurado ou é inválido.");
+                    throw new InvalidOperationException(
+                        $"O preço para o plano '{Plano}' não está configurado ou é inválido."
+                    );
                 }
                 if (Plano.ToLower() == "anual" && string.IsNullOrEmpty(PreapprovalPlanId))
                 {
-                    throw new InvalidOperationException($"O PreapprovalPlanId para o plano '{Plano}' não está configurado.");
+                    throw new InvalidOperationException(
+                        $"O PreapprovalPlanId para o plano '{Plano}' não está configurado."
+                    );
                 }
 
                 // Carrega a chave pública para o frontend
@@ -75,9 +86,14 @@ namespace MeuCrudCsharp.Pages.Payment
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erro ao configurar a página de pagamento para o plano {Plano}", Plano);
+                _logger.LogError(
+                    ex,
+                    "Erro ao configurar a página de pagamento para o plano {Plano}",
+                    Plano
+                );
                 // Adicione uma mensagem de erro para o usuário, se desejar
-                TempData["ErrorMessage"] = "Não foi possível preparar seu pagamento. Tente novamente mais tarde.";
+                TempData["ErrorMessage"] =
+                    "Não foi possível preparar seu pagamento. Tente novamente mais tarde.";
                 return RedirectToPage("/Subscription/Index");
             }
         }
@@ -88,7 +104,8 @@ namespace MeuCrudCsharp.Pages.Payment
     {
         public static string Capitalize(this string input)
         {
-            if (string.IsNullOrEmpty(input)) return string.Empty;
+            if (string.IsNullOrEmpty(input))
+                return string.Empty;
             return char.ToUpper(input[0]) + input.Substring(1).ToLower();
         }
     }

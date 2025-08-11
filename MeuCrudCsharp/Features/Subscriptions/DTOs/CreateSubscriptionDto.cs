@@ -36,5 +36,12 @@ namespace MeuCrudCsharp.Features.Subscriptions.DTOs
         [JsonPropertyName("back_url")]
         [Url(ErrorMessage = "The back URL must be a valid URL.")]
         public string? BackUrl { get; set; }
+
+        /// <summary>
+        /// The reason for the subscription.
+        /// </summary>
+        [JsonPropertyName("reason")]
+        [Required(ErrorMessage = "The reason is required.")]
+        public string? Reason { get; set; }
     }
 }

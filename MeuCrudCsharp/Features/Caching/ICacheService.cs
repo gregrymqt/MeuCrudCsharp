@@ -31,7 +31,11 @@ public interface ICacheService
     /// <param name="factory">Função assíncrona que produz o valor quando não existe em cache.</param>
     /// <param name="absoluteExpireTime">Tempo absoluto de expiração para o item de memória.</param>
     /// <returns>Instância do tipo T.</returns>
-    Task<T?> GetOrCreateAsync<T>(string key, Func<Task<T>> factory, TimeSpan? absoluteExpireTime = null);
+    Task<T?> GetOrCreateAsync<T>(
+        string key,
+        Func<Task<T>> factory,
+        TimeSpan? absoluteExpireTime = null
+    );
 
     /// <summary>
     /// Obtém um valor do cache em memória ou cria-o via factory, com expiração por token.

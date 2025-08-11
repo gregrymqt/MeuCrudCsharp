@@ -9,7 +9,6 @@ using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Features.Exceptions; // Nossas exceções
 using MeuCrudCsharp.Features.MercadoPago.Payments.Dtos;
 using MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces;
-using MeuCrudCsharp.Features.MercadoPago.Tokens;
 using MeuCrudCsharp.Features.Profiles.Admin.Interfaces;
 using MeuCrudCsharp.Features.Subscriptions.DTOs;
 using MeuCrudCsharp.Features.Subscriptions.Interfaces;
