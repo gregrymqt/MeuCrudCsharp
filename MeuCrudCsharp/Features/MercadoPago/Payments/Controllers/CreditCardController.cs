@@ -16,7 +16,6 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Controllers
     /// </summary>
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
     public class CreditCardController : ControllerBase
     {
         private const string IDEMPOTENCY_PREFIX = "CreditCardPayment";

@@ -12,7 +12,6 @@ namespace MeuCrudCsharp.Features.Videos.Controller
     /// This controller handles requests for both the main manifest file (.m3u8) and the individual video segments (.ts).
     /// </summary>
     [ApiController]
-    [Authorize]
     [Route("api/videos")]
     public class VideosController : ControllerBase
     {

@@ -12,7 +12,6 @@ using Microsoft.EntityFrameworkCore;
 /// </summary>
 [ApiController]
 [Route("api/profile/cards")]
-[Authorize]
 public class ProfileCardsController : ControllerBase
 {
     private readonly IClientService _clientService;

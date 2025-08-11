@@ -14,7 +14,6 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Controllers
     /// </summary>
     [ApiController]
     [Route("api/preferences")]
-    [Authorize]
     public class PreferenceController : ControllerBase
     {
         private readonly IPreferencePayment _preferencePaymentService;

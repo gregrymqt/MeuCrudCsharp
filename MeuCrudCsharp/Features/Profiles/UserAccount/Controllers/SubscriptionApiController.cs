@@ -13,7 +13,6 @@ namespace MeuCrudCsharp.Features.UserAccount.Controllers
     /// Manages the authenticated user's subscription actions, such as changing payment methods,
     /// cancelling, and reactivating.
     /// </summary>
-    [Authorize]
     [ApiController]
     [Route("api/user/subscription")]
     public class SubscriptionApiController : ControllerBase

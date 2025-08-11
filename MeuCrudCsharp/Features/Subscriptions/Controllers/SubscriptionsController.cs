@@ -15,7 +15,6 @@ namespace MeuCrudCsharp.Features.Subscriptions.Controllers
     /// </summary>
     [ApiController]
     [Route("api/subscriptions")]
-    [Authorize]
     public class SubscriptionsController : ControllerBase
     {
         private readonly ISubscriptionService _subscriptionService;

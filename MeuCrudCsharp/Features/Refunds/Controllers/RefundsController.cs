@@ -9,7 +9,6 @@ namespace MeuCrudCsharp.Features.Refunds.Controllers
     /// </summary>
     [ApiController]
     [Route("api/profile")]
-    [Authorize]
     public class RefundsController : ControllerBase
     {
         private readonly RefundService _refundService;

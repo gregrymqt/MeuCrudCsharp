@@ -61,7 +61,27 @@ builder
     .AddEntityFrameworkStores<ApiDbContext>();
 
 // Adds authorization services to the container.
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    // Cria uma política chamada "RequireJwtToken"
+    options.AddPolicy(
+        "RequireJwtToken",
+        policy =>
+        {
+            policy.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme);
+            policy.RequireAuthenticatedUser();
+        }
+    );
+});
+
+// Adiciona os serviços de controller e aplica o filtro de autorização global
+builder.Services.AddControllers(options =>
+{
+    // Isso garante que todos os endpoints exijam um JWT, a menos que sejam marcados com [AllowAnonymous]
+    options.Filters.Add(
+        new Microsoft.AspNetCore.Mvc.Authorization.AuthorizeFilter("RequireJwtToken")
+    );
+});
 
 // 4. In-Memory Cache
 // Registering this is useful as the custom CacheService implementation depends on it.
@@ -120,11 +140,9 @@ builder.Services.AddScoped<IEmailSenderService, SendGridEmailSenderService>();
 builder.Services.AddScoped<IRazorViewToStringRenderer, RazorViewToStringRenderer>();
 builder.Services.AddScoped<IAdminVideoService, AdminVideoService>();
 builder.Services.AddScoped<IAdminStudentService, AdminStudentService>();
-builder.Services.AddTransient<VideoProcessingService>();
 builder.Services.AddScoped<IUserAccountService, UserAccountService>();
 builder.Services.AddScoped<IVideoProcessingService, VideoProcessingService>();
 builder.Services.AddScoped<ICourseService, CourseService>();
-builder.Services.AddScoped<IPlanService, PlanService>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<IRefundService, RefundService>();
@@ -133,7 +151,6 @@ builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
 builder.Services.AddScoped<IPlanService, PlanService>();
 builder.Services.AddScoped<ProcessPaymentNotificationJob>();
 builder.Services.AddScoped<INotificationPaymentService, NotificationPaymentService>();
-builder.Services.AddScoped<IQueueService, BackgroundJobQueueService>();
 
 // 7. Hangfire Server
 // This adds the background processing server for Hangfire jobs.
