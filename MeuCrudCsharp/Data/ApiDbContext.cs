@@ -42,5 +42,31 @@ namespace MeuCrudCsharp.Data
         /// Conjunto de entidades de planos de assinatura.
         /// </summary>
         public DbSet<Plan> Plans { get; set; }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            // É muito importante chamar o método base primeiro!
+            base.OnModelCreating(modelBuilder);
+
+            // Configuração da relação Usuário -> Pagamentos
+            // Um usuário pode ter muitos pagamentos. Se o usuário for deletado,
+            // seus pagamentos também serão (comportamento padrão Cascade).
+            modelBuilder
+                .Entity<Payments>()
+                .HasOne(p => p.User)
+                .WithMany(u => u.Payments)
+                .HasForeignKey(p => p.UserId);
+
+            // Configuração da relação Pagamento -> Assinatura
+            // Esta é a configuração CRÍTICA que resolve o erro de múltiplos caminhos em cascata.
+            // Se uma Assinatura for deletada, o banco de dados NÃO permitirá a exclusão
+            // se houver algum Pagamento associado a ela.
+            modelBuilder
+                .Entity<Payments>()
+                .HasOne(p => p.Subscription) // Um pagamento tem uma assinatura
+                .WithMany() // Uma assinatura pode ter muitos pagamentos (não há propriedade de coleção em Subscription)
+                .HasForeignKey(p => p.SubscriptionId)
+                .OnDelete(DeleteBehavior.Restrict); // <-- AQUI ESTÁ A SOLUÇÃO!
+        }
     }
 }

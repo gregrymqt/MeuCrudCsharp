@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 namespace MeuCrudCsharp.Models
 {
     [Index(nameof(UserId))]
-    [Index(nameof(subscription_id))]
+    [Index(nameof(SubscriptionId))]
     [Index(nameof(ExternalId), IsUnique = true)]
     [Index(nameof(Status))]
     [Index(nameof(PayerEmail))]
@@ -22,7 +22,7 @@ namespace MeuCrudCsharp.Models
         // - Status
         // - PayerEmail
         // - CreatedAt, UpdatedAt
-        // - PaymentID 
+        // - PaymentID
 
         // Propriedades específicas de um Pagamento Único
         [Required]
@@ -46,9 +46,9 @@ namespace MeuCrudCsharp.Models
         public decimal Amount { get; set; }
 
         [Required]
-        public Guid subscription_id { get; set; }
+        public string SubscriptionId { get; set; } = null!;
 
-        [ForeignKey("subscription_id")]
+        [ForeignKey("SubscriptionId")]
         public virtual Subscription? Subscription { get; set; }
     }
 }

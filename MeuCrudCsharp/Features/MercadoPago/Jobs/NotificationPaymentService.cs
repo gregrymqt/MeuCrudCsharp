@@ -46,7 +46,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Jobs
         /// Este método foi projetado para ser executado por um job em segundo plano (ex: Hangfire).
         /// Ele relança exceções para permitir que o sistema de jobs trate falhas e execute novas tentativas.
         /// </remarks>
-        public async Task VerifyAndProcessNotificationAsync(Guid userId, string paymentId)
+        public async Task VerifyAndProcessNotificationAsync(string userId, string paymentId)
         {
             _logger.LogInformation(
                 "Iniciando processamento de notificação para UserID: {UserId}, PaymentId: {PaymentId}",
@@ -107,14 +107,9 @@ namespace MeuCrudCsharp.Features.MercadoPago.Jobs
         {
             try
             {
-                if (!Guid.TryParse(paymentId, out var paymentGuid))
-                {
-                    throw new ArgumentException($"O PaymentId '{paymentId}' não é um GUID válido.");
-                }
-
                 var payment = await _context
                     .Payments.AsNoTracking()
-                    .FirstOrDefaultAsync(p => p.Id == paymentGuid);
+                    .FirstOrDefaultAsync(p => p.Id == paymentId);
 
                 return payment?.Status;
             }

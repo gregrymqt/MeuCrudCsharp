@@ -29,27 +29,31 @@ public class ReceiptModel : PageModel
         // MUDANÇA 2: Bloco try-catch para lidar com todas as possíveis falhas
         try
         {
-            // Validação "Fail-Fast"
-            if (!Guid.TryParse(paymentId, out var paymentGuid))
-            {
-                _logger.LogWarning("Tentativa de acesso ao recibo com um paymentId inválido: {PaymentId}", paymentId);
-                return BadRequest("O ID do pagamento é inválido.");
-            }
-
             var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (!Guid.TryParse(userIdString, out var userId))
+            if (string.IsNullOrEmpty(userIdString))
             {
-  
+                _logger.LogWarning(
+                    "Tentativa de acesso ao recibo com um userId inválido: {UserId}",
+                    userIdString
+                );
                 return Unauthorized();
             }
 
             // MUDANÇA 3: Chamando o serviço para buscar os dados
-            var payment = await _userAccountService.GetPaymentForReceiptAsync(userId, paymentGuid);
+            var payment = await _userAccountService.GetPaymentForReceiptAsync(
+                userIdString,
+                paymentId
+            );
 
             // Regra de negócio: apenas recibos de pagamentos aprovados podem ser vistos.
             if (payment.Status != "aprovado")
             {
-                _logger.LogWarning("Tentativa de acesso a recibo de pagamento não aprovado. User: {UserId}, Payment: {PaymentId}, Status: {Status}", userId, paymentId, payment.Status);
+                _logger.LogWarning(
+                    "Tentativa de acesso a recibo de pagamento não aprovado. User: {UserId}, Payment: {PaymentId}, Status: {Status}",
+                    userIdString,
+                    paymentId,
+                    payment.Status
+                );
                 // Forbid é o resultado correto para acesso não autorizado a um recurso válido.
                 return Forbid();
             }
@@ -77,8 +81,13 @@ public class ReceiptModel : PageModel
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Erro inesperado ao gerar o recibo para o pagamento {PaymentId}", paymentId);
-            TempData["ErrorMessage"] = "Não foi possível gerar seu recibo no momento. Tente novamente mais tarde.";
+            _logger.LogError(
+                ex,
+                "Erro inesperado ao gerar o recibo para o pagamento {PaymentId}",
+                paymentId
+            );
+            TempData["ErrorMessage"] =
+                "Não foi possível gerar seu recibo no momento. Tente novamente mais tarde.";
             return RedirectToPage("/Profile/Index"); // Redireciona para uma página segura
         }
     }

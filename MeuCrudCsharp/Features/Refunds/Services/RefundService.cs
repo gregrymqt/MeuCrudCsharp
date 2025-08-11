@@ -64,7 +64,7 @@ namespace MeuCrudCsharp.Features.Refunds.Services
             }
 
             var payment = await _context
-                .Payments.Where(p => p.subscription_id == subscription.Id && p.Status == "approved")
+                .Payments.Where(p => p.SubscriptionId == subscription.Id && p.Status == "approved")
                 .OrderByDescending(p => p.CreatedAt)
                 .FirstOrDefaultAsync();
 
@@ -120,18 +120,16 @@ namespace MeuCrudCsharp.Features.Refunds.Services
         /// </summary>
         /// <returns>The GUID of the authenticated user.</returns>
         /// <exception cref="UnauthorizedAccessException">Thrown if the user's identifier claim is missing or invalid.</exception>
-        private Guid GetCurrentUserId()
+        private string GetCurrentUserId()
         {
             var userIdStr = _httpContextAccessor.HttpContext?.User.FindFirstValue(
                 ClaimTypes.NameIdentifier
             );
-            if (!Guid.TryParse(userIdStr, out var userId))
+            if (string.IsNullOrEmpty(userIdStr))
             {
-                throw new UnauthorizedAccessException(
-                    "User is not authenticated or has an invalid ID."
-                );
+                throw new UnauthorizedAccessException("User is not authenticated.");
             }
-            return userId;
+            return userIdStr;
         }
     }
 }

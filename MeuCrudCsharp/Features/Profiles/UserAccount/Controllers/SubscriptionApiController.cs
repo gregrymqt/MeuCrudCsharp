@@ -151,14 +151,16 @@ namespace MeuCrudCsharp.Features.UserAccount.Controllers
         /// </summary>
         /// <returns>The GUID of the authenticated user.</returns>
         /// <exception cref="InvalidOperationException">Thrown if the user's identifier claim is missing or invalid.</exception>
-        private Guid GetCurrentUserId()
+        private string GetCurrentUserId()
         {
             var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (Guid.TryParse(userIdString, out var userId))
+
+            if (string.IsNullOrEmpty(userIdString))
             {
-                return userId;
+                throw new InvalidOperationException("Could not retrieve the user's identifier.");
             }
-            throw new InvalidOperationException("Could not retrieve the user's identifier.");
+
+            return userIdString;
         }
     }
 }

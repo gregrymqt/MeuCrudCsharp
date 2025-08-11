@@ -309,19 +309,19 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
             return _statusMap.TryGetValue(mercadopagoStatus, out var status) ? status : "pendente";
         }
 
-        private Guid GetCurrentUserId()
+        private string GetCurrentUserId()
         {
             var userIdString = _httpContextAccessor.HttpContext?.User.FindFirstValue(
                 ClaimTypes.NameIdentifier
             );
-            if (!Guid.TryParse(userIdString, out Guid userIdGuid))
+            if (string.IsNullOrEmpty(userIdString))
             {
-                // MUDANÇA 4: Exceção mais específica
                 throw new AppServiceException(
                     "A identificação do usuário não pôde ser encontrada na sessão atual."
                 );
             }
-            return userIdGuid;
+
+            return userIdString;
         }
     }
 }

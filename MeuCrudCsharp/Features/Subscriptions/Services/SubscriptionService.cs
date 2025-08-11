@@ -56,6 +56,7 @@ namespace MeuCrudCsharp.Features.Subscriptions.Services
         )
         {
             var userIdString = users.FindFirstValue(ClaimTypes.NameIdentifier);
+
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userIdString);
             if (user == null)
             {
@@ -100,14 +101,9 @@ namespace MeuCrudCsharp.Features.Subscriptions.Services
                 );
             }
 
-            if (!Guid.TryParse(userIdString, out var userIdGuid))
-            {
-                throw new AppServiceException("Invalid user ID in session.");
-            }
-
             var newSubscription = new Subscription
             {
-                UserId = userIdGuid,
+                UserId = userIdString,
                 PlanId = localPlan.Id,
                 ExternalId = subscriptionResponse.Id,
                 Status = subscriptionResponse.Status,

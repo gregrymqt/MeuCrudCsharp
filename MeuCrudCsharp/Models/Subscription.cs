@@ -31,6 +31,5 @@ namespace MeuCrudCsharp.Models
         [ForeignKey("PlanId")]
         public virtual Plan? Plan { get; set; }
         public string? LastFourCardDigits { get; set; } // Últimos 4 dígitos do cartão usado na assinatura
-
     }
 }

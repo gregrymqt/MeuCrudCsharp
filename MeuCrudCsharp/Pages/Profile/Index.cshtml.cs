@@ -29,7 +29,8 @@ namespace MeuCrudCsharp.Pages.Profile
         public async Task<IActionResult> OnGetAsync()
         {
             var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (!Guid.TryParse(userIdString, out var userId))
+
+            if (string.IsNullOrEmpty(userIdString))
             {
                 _logger.LogWarning(
                     "Tentativa de acesso à página de perfil com um ID de usuário inválido no cookie."
@@ -40,9 +41,13 @@ namespace MeuCrudCsharp.Pages.Profile
             try
             {
                 // MUDANÇA 2: Buscamos os dados em paralelo para melhor performance
-                var userProfileTask = _userAccountService.GetUserProfileAsync(userId);
-                var subscriptionTask = _userAccountService.GetUserSubscriptionDetailsAsync(userId);
-                var paymentHistoryTask = _userAccountService.GetUserPaymentHistoryAsync(userId);
+                var userProfileTask = _userAccountService.GetUserProfileAsync(userIdString);
+                var subscriptionTask = _userAccountService.GetUserSubscriptionDetailsAsync(
+                    userIdString
+                );
+                var paymentHistoryTask = _userAccountService.GetUserPaymentHistoryAsync(
+                    userIdString
+                );
 
                 // Aguarda todas as tarefas serem concluídas
                 await Task.WhenAll(userProfileTask, subscriptionTask, paymentHistoryTask);
@@ -64,7 +69,7 @@ namespace MeuCrudCsharp.Pages.Profile
                 _logger.LogError(
                     ex,
                     "Usuário autenticado com ID {UserId} não foi encontrado no banco de dados.",
-                    userId
+                    userIdString
                 );
                 // Deslogar o usuário pode ser uma boa ação aqui para limpar o cookie inválido.
                 await HttpContext.SignOutAsync();
@@ -78,13 +83,13 @@ namespace MeuCrudCsharp.Pages.Profile
                 _logger.LogWarning(
                     ex,
                     "Falha na API externa ao carregar dados para o usuário {UserId}.",
-                    userId
+                    userIdString
                 );
                 TempData["ErrorMessage"] =
                     "Não foi possível carregar os detalhes da sua assinatura no momento. Tente novamente mais tarde.";
 
                 // Tenta carregar os dados que não dependem da API externa para uma experiência degradada
-                await LoadPartialViewModelOnError(userId);
+                await LoadPartialViewModelOnError(userIdString);
                 return Page();
             }
             catch (Exception ex)
@@ -93,13 +98,13 @@ namespace MeuCrudCsharp.Pages.Profile
                 _logger.LogError(
                     ex,
                     "Erro inesperado ao carregar a página de perfil para o usuário {UserId}.",
-                    userId
+                    userIdString
                 );
                 TempData["ErrorMessage"] =
                     "Ocorreu um erro ao carregar seus dados. Nossa equipe já foi notificada.";
 
                 // Tenta carregar o mínimo de dados possível
-                await LoadPartialViewModelOnError(userId);
+                await LoadPartialViewModelOnError(userIdString);
                 return Page();
             }
         }
@@ -107,14 +112,16 @@ namespace MeuCrudCsharp.Pages.Profile
         /// <summary>
         /// Método auxiliar para carregar dados parciais quando uma parte da página falha.
         /// </summary>
-        private async Task LoadPartialViewModelOnError(Guid userId)
+        private async Task LoadPartialViewModelOnError(string userIdString)
         {
             try
             {
                 // Garante que pelo menos o perfil do usuário seja carregado, se possível.
                 if (ViewModel.UserProfile == null)
                 {
-                    ViewModel.UserProfile = await _userAccountService.GetUserProfileAsync(userId);
+                    ViewModel.UserProfile = await _userAccountService.GetUserProfileAsync(
+                        userIdString
+                    );
                 }
             }
             catch (Exception ex)
@@ -122,7 +129,7 @@ namespace MeuCrudCsharp.Pages.Profile
                 _logger.LogError(
                     ex,
                     "Falha ao carregar o ViewModel parcial para o usuário {UserId} após erro inicial.",
-                    userId
+                    userIdString
                 );
                 // Se até o perfil falhar, a página ficará com os dados padrão.
             }

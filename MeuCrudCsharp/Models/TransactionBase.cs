@@ -9,14 +9,14 @@ namespace MeuCrudCsharp.Models
     public abstract class TransactionBase
     {
         [Key]
-        public Guid Id { get; set; }
+        public string Id { get; set; }
 
         // ID externo (do Mercado Pago, por exemplo)
         [Required]
         public string? ExternalId { get; set; }
 
         [Required]
-        public Guid UserId { get; set; }
+        public string UserId { get; set; }
 
         [ForeignKey("UserId")]
         public virtual Users? User { get; set; }
@@ -39,7 +39,7 @@ namespace MeuCrudCsharp.Models
 
         protected TransactionBase()
         {
-            Id = Guid.NewGuid();
+            Id = Guid.NewGuid().ToString();
             CreatedAt = DateTime.UtcNow;
         }
     }

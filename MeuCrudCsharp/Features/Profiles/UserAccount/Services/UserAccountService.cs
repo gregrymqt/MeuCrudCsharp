@@ -42,7 +42,7 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
         }
 
         /// <inheritdoc />
-        public async Task<UserProfileDto> GetUserProfileAsync(Guid userId)
+        public async Task<UserProfileDto> GetUserProfileAsync(string userId)
         {
             string cacheKey = $"UserProfile_{userId}";
             return await _cacheService.GetOrCreateAsync(
@@ -84,7 +84,7 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
         }
 
         /// <inheritdoc />
-        public async Task<SubscriptionDetailsDto?> GetUserSubscriptionDetailsAsync(Guid userId)
+        public async Task<SubscriptionDetailsDto?> GetUserSubscriptionDetailsAsync(string userId)
         {
             string cacheKey = $"SubscriptionDetails_{userId}";
             return await _cacheService.GetOrCreateAsync(
@@ -143,7 +143,7 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
         }
 
         /// <inheritdoc />
-        public async Task<IEnumerable<Models.Payments>> GetUserPaymentHistoryAsync(Guid userId)
+        public async Task<IEnumerable<Models.Payments>> GetUserPaymentHistoryAsync(string userId)
         {
             try
             {
@@ -172,7 +172,7 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
         }
 
         /// <inheritdoc />
-        public async Task<bool> UpdateSubscriptionCardAsync(Guid userId, string newCardToken)
+        public async Task<bool> UpdateSubscriptionCardAsync(string userId, string newCardToken)
         {
             try
             {
@@ -212,7 +212,7 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
         }
 
         /// <inheritdoc />
-        public async Task<bool> CancelSubscriptionAsync(Guid userId)
+        public async Task<bool> CancelSubscriptionAsync(string userId)
         {
             try
             {
@@ -258,7 +258,7 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
         }
 
         /// <inheritdoc />
-        public async Task<bool> ReactivateSubscriptionAsync(Guid userId)
+        public async Task<bool> ReactivateSubscriptionAsync(string userId)
         {
             try
             {
@@ -304,7 +304,7 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
         }
 
         /// <inheritdoc />
-        public async Task<Payments> GetPaymentForReceiptAsync(Guid userId, Guid paymentId)
+        public async Task<Payments> GetPaymentForReceiptAsync(string userId, string paymentId)
         {
             try
             {
@@ -349,7 +349,7 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
         /// <param name="action">A description of the action being performed, for logging and error messages.</param>
         /// <returns>The user's active or paused <see cref="Subscription"/> entity.</returns>
         /// <exception cref="ResourceNotFoundException">Thrown if no active or paused subscription is found.</exception>
-        private async Task<Subscription> FindActiveSubscriptionAsync(Guid userId, string action)
+        private async Task<Subscription> FindActiveSubscriptionAsync(string userId, string action)
         {
             var subscription = await _context.Subscriptions.FirstOrDefaultAsync(s =>
                 s.UserId == userId && (s.Status == "active" || s.Status == "paused")
