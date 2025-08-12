@@ -7,7 +7,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace MeuCrudCsharp.Pages.Course
 {
-    [Authorize] // 1. Garante que o usuário precisa estar logado para acessar.
     public class IndexModel : PageModel
     {
         private readonly ApiDbContext _context;

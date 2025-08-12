@@ -1,11 +1,13 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Models;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
@@ -22,6 +24,8 @@ namespace MeuCrudCsharp.Features.Auth
         private readonly UserManager<Users> _userManager;
         private readonly IConfiguration _configuration;
 
+        private readonly ApiDbContext _dbContext;
+
         /// <summary>
         /// Inicializa o serviço de autenticação da aplicação.
         /// </summary>
@@ -31,118 +35,14 @@ namespace MeuCrudCsharp.Features.Auth
         public AppAuthService(
             UserManager<Users> userManager,
             IConfiguration configuration,
-            ILogger<AppAuthService> logger
+            ILogger<AppAuthService> logger,
+            ApiDbContext dbContext
         )
         {
             _userManager = userManager;
             _configuration = configuration;
             _logger = logger;
-        }
-
-        /// <summary>
-        /// Realiza o login do usuário usando cookies e emite um token JWT armazenado em cookie HttpOnly.
-        /// </summary>
-        /// <param name="user">Usuário autenticado.</param>
-        /// <param name="httpContext">Contexto HTTP atual.</param>
-        public async Task SignInUser(Users user, HttpContext httpContext)
-        {
-            if (user == null)
-            {
-                throw new ArgumentNullException(
-                    nameof(user),
-                    "O objeto do usuário não pode ser nulo para o login."
-                );
-            }
-
-            if (httpContext == null)
-            {
-                throw new ArgumentNullException(
-                    nameof(httpContext),
-                    "O HttpContext é necessário para o login."
-                );
-            }
-
-            try
-            {
-                var userRoles = await _userManager.GetRolesAsync(user);
-
-                var claims = new List<Claim>
-                {
-                    new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                    new Claim(ClaimTypes.Name, user.Name ?? string.Empty),
-                    new Claim(ClaimTypes.Email, user.Email ?? string.Empty),
-                    new Claim("AvatarUrl", user.AvatarUrl ?? string.Empty),
-                };
-
-                foreach (var role in userRoles)
-                {
-                    claims.Add(new Claim(ClaimTypes.Role, role));
-                }
-
-                var claimsIdentity = new ClaimsIdentity(
-                    claims,
-                    Microsoft
-                        .AspNetCore
-                        .Authentication
-                        .Cookies
-                        .CookieAuthenticationDefaults
-                        .AuthenticationScheme
-                );
-
-                var authProperties = new AuthenticationProperties
-                {
-                    IsPersistent = true,
-                    ExpiresUtc = DateTimeOffset.UtcNow.AddDays(7),
-                };
-
-                // Gera o token JWT
-                var jwtToken = await GenerateJwtTokenAsync(user);
-
-                // Realiza o login via cookie (Identity + Cookies)
-                await httpContext.SignInAsync(
-                    Microsoft
-                        .AspNetCore
-                        .Authentication
-                        .Cookies
-                        .CookieAuthenticationDefaults
-                        .AuthenticationScheme,
-                    new ClaimsPrincipal(claimsIdentity),
-                    authProperties
-                );
-
-                // Grava o JWT em um cookie HttpOnly para uso em APIs (lido pelo JwtBearer)
-                httpContext.Response.Cookies.Append(
-                    "jwt",
-                    jwtToken,
-                    new CookieOptions
-                    {
-                        HttpOnly = true,
-                        Secure = true,
-                        SameSite = SameSiteMode.Strict,
-                        Expires = authProperties.ExpiresUtc,
-                    }
-                );
-
-                _logger.LogInformation(
-                    "Usuário {UserId} - {UserEmail} logado com sucesso.",
-                    user.Id,
-                    user.Email
-                );
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(
-                    ex,
-                    "Erro inesperado ao tentar realizar o login para o usuário {UserId} - {UserEmail}.",
-                    user.Id,
-                    user.Email
-                );
-
-                throw new AppServiceException(
-                    "Ocorreu um erro inesperado ao tentar realizar o login.",
-                    ex
-                );
-            }
+            _dbContext = dbContext;
         }
 
         /// <summary>
@@ -175,7 +75,7 @@ namespace MeuCrudCsharp.Features.Auth
                 claims.Add(new Claim(ClaimTypes.Role, role));
             }
 
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]));
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
             var expires = DateTime.UtcNow.AddHours(8);
 
@@ -190,6 +90,60 @@ namespace MeuCrudCsharp.Features.Auth
             _logger.LogInformation("Token JWT gerado para o usuário {UserId}", user.Id);
 
             return new JwtSecurityTokenHandler().WriteToken(token);
+        }
+
+        public async Task SignInWithGoogleAsync(
+            ClaimsPrincipal googleUserPrincipal,
+            HttpContext httpContext
+        )
+        {
+            string? googleId = googleUserPrincipal.FindFirstValue(ClaimTypes.NameIdentifier);
+            string? email = googleUserPrincipal.FindFirstValue(ClaimTypes.Email);
+
+            if (string.IsNullOrEmpty(googleId) || string.IsNullOrEmpty(email))
+            {
+                _logger.LogWarning(
+                    "Tentativa de login com Google falhou: GoogleId ou Email não encontrados."
+                );
+                return;
+            }
+
+            // Procura ou cria o usuário de forma assíncrona
+            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.GoogleId == googleId);
+            if (user == null)
+            {
+                string? name = googleUserPrincipal.FindFirstValue(ClaimTypes.Name);
+                string? avatar = googleUserPrincipal.FindFirstValue("urn:google:picture");
+                user = new Users
+                {
+                    UserName = email,
+                    Email = email,
+                    GoogleId = googleId,
+                    Name = name ?? "Usuário",
+                    AvatarUrl = avatar ?? string.Empty,
+                    EmailConfirmed = true,
+                };
+                await _userManager.CreateAsync(user);
+            }
+
+            // Gera o token JWT de forma assíncrona
+            var jwtString = await GenerateJwtTokenAsync(user);
+
+            // Adiciona o nosso cookie JWT
+            httpContext.Response.Cookies.Append(
+                "jwt",
+                jwtString,
+                new CookieOptions
+                {
+                    HttpOnly = true,
+                    Secure = httpContext.Request.IsHttps,
+                    SameSite = SameSiteMode.Strict,
+                    Expires = DateTime.UtcNow.AddHours(8),
+                }
+            );
+
+            // Redireciona o usuário
+            httpContext.Response.Redirect("/");
         }
     }
 }

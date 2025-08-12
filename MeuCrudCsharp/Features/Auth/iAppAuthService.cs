@@ -1,4 +1,5 @@
-﻿using MeuCrudCsharp.Models;
+﻿using System.Security.Claims;
+using MeuCrudCsharp.Models;
 
 namespace MeuCrudCsharp.Features.Auth
 {
@@ -9,17 +10,18 @@ namespace MeuCrudCsharp.Features.Auth
     public interface IAppAuthService
     {
         /// <summary>
-        /// Realiza o login do usuário usando cookies e emite um token JWT armazenado em cookie HttpOnly.
-        /// </summary>
-        /// <param name="user">Usuário autenticado.</param>
-        /// <param name="httpContext">Contexto HTTP atual.</param>
-        Task SignInUser(Users user, HttpContext httpContext);
-
-        /// <summary>
         /// Gera um token JWT assinado para o usuário informado.
         /// </summary>
         /// <param name="user">Usuário para o qual o token será gerado.</param>
         /// <returns>Token JWT assinado.</returns>
         Task<string> GenerateJwtTokenAsync(Users user);
+
+        /// <summary>
+        /// Realiza o login do usuário com as credenciais do Google.
+        /// </summary>
+        /// <param name="googleUserPrincipal"></param>
+        /// <param name="httpContext"></param>
+        /// <returns></returns>
+        Task SignInWithGoogleAsync(ClaimsPrincipal googleUserPrincipal, HttpContext httpContext);
     }
 }

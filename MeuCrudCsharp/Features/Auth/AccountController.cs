@@ -3,8 +3,8 @@ using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-[AllowAnonymous]
 [Route("[controller]/[action]")]
+[AllowAnonymous]
 public class AccountController : Controller
 {
     /// <summary>

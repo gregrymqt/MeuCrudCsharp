@@ -1,9 +1,11 @@
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace MeuCrudCsharp.Pages.auth
 {
+    [AllowAnonymous]
     public class googleLoginModel : PageModel
     {
         // O construtor e a inje��o do AccountController foram removidos.

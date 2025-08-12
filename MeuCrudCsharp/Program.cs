@@ -1,3 +1,4 @@
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using Hangfire;
@@ -27,9 +28,11 @@ using MeuCrudCsharp.Features.Subscriptions.Services;
 using MeuCrudCsharp.Features.Videos.Interfaces;
 using MeuCrudCsharp.Features.Videos.Service;
 using MeuCrudCsharp.Models;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authentication.OAuth;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.StackExchangeRedis;
@@ -59,29 +62,6 @@ builder
     })
     .AddRoles<IdentityRole>() // Adds support for Roles
     .AddEntityFrameworkStores<ApiDbContext>();
-
-// Adds authorization services to the container.
-builder.Services.AddAuthorization(options =>
-{
-    // Cria uma política chamada "RequireJwtToken"
-    options.AddPolicy(
-        "RequireJwtToken",
-        policy =>
-        {
-            policy.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme);
-            policy.RequireAuthenticatedUser();
-        }
-    );
-});
-
-// Adiciona os serviços de controller e aplica o filtro de autorização global
-builder.Services.AddControllers(options =>
-{
-    // Isso garante que todos os endpoints exijam um JWT, a menos que sejam marcados com [AllowAnonymous]
-    options.Filters.Add(
-        new Microsoft.AspNetCore.Mvc.Authorization.AuthorizeFilter("RequireJwtToken")
-    );
-});
 
 // 4. In-Memory Cache
 // Registering this is useful as the custom CacheService implementation depends on it.
@@ -165,24 +145,37 @@ builder.Services.Configure<SendGridSettings>(
 builder
     .Services.AddAuthentication(options =>
     {
-        options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-        options.DefaultChallengeScheme = GoogleDefaults.AuthenticationScheme;
+        // O esquema padrão para autenticar e desafiar o usuário será o JWT.
+        // A aplicação vai primariamente procurar por um JWT válido.
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
     })
-    .AddCookie()
+    .AddCookie(options =>
+    {
+        // O handler de cookie é usado internamente pelo Google para o processo de redirecionamento (OAuth).
+        // Não será o método principal de autenticação da sessão do usuário.
+        options.Cookie.Name = "ExternalLoginCookie";
+    })
     .AddJwtBearer(options =>
     {
+        var jwtKey = builder.Configuration["Jwt:Key"];
+        if (string.IsNullOrEmpty(jwtKey))
+        {
+            throw new InvalidOperationException(
+                "A chave JWT (Jwt:Key) não foi encontrada na configuração."
+            );
+        }
+
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"])
-            ),
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)), // Usa a variável validada
             ValidateIssuer = false,
             ValidateAudience = false,
         };
+        // Evento para ler o token JWT do cookie que vamos criar.
         options.Events = new JwtBearerEvents
         {
-            // This event allows the app to read the JWT from a cookie, which is useful for browser-based clients.
             OnMessageReceived = context =>
             {
                 if (context.Request.Cookies.TryGetValue("jwt", out var token))
@@ -193,74 +186,51 @@ builder
             },
         };
     })
-    .AddGoogle(
-        GoogleDefaults.AuthenticationScheme,
-        options =>
+    // DENTRO DO SEU PROGRAM.CS
+
+    .AddGoogle(options =>
+    {
+        // Validação das credenciais (seu código aqui está perfeito)
+        string? clientId = builder.Configuration["Google:ClientId"];
+        string? clientSecret = builder.Configuration["Google:ClientSecret"];
+        if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
         {
-            string? clientId = builder.Configuration["Google:ClientId"];
-            string? clientSecret = builder.Configuration["Google:ClientSecret"];
+            throw new InvalidOperationException(
+                "As credenciais do Google não foram encontradas na configuração."
+            );
+        }
+        options.ClientId = clientId;
+        options.ClientSecret = clientSecret;
 
-            if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
-            {
-                throw new InvalidOperationException(
-                    "Google credentials (ClientId and ClientSecret) were not found in the configuration."
-                );
-            }
+        options.Events.OnCreatingTicket = async context =>
+        {
+            var authService =
+                context.HttpContext.RequestServices.GetRequiredService<IAppAuthService>();
 
-            options.ClientId = clientId;
-            options.ClientSecret = clientSecret;
+            await authService.SignInWithGoogleAsync(context.Principal!, context.HttpContext);
 
-            // Event to synchronize the Google user with the local database upon successful login.
-            options.Events.OnCreatingTicket = context =>
-            {
-                var principal = context.Principal;
-                if (principal == null)
-                {
-                    return Task.CompletedTask; // Should not happen
-                }
+            await context.HttpContext.Response.CompleteAsync();
+        };
+    });
 
-                // Declare variables as 'string?' to handle potential nulls from FindFirstValue.
-                string? googleId = principal.FindFirstValue(ClaimTypes.NameIdentifier);
-                string? email = principal.FindFirstValue(ClaimTypes.Email);
-                string? name = principal.FindFirstValue(ClaimTypes.Name);
-                string? avatar = principal.FindFirstValue("urn:google:picture");
-
-                if (string.IsNullOrEmpty(googleId) || string.IsNullOrEmpty(email))
-                {
-                    return Task.CompletedTask; // Not a valid Google user for this app.
-                }
-
-                // Create a new DI scope to resolve services, as this event handler is a singleton.
-                using (var scope = context.HttpContext.RequestServices.CreateScope())
-                {
-                    var dbContext = scope.ServiceProvider.GetRequiredService<ApiDbContext>();
-                    var user = dbContext.Users.FirstOrDefault(u => u.GoogleId == googleId);
-
-                    if (user == null)
-                    {
-                        var newUser = new Users
-                        {
-                            GoogleId = googleId,
-                            Email = email,
-                            Name = name ?? "Anonymous User",
-                            AvatarUrl = avatar ?? string.Empty, // Add a default value to avoid nulls
-                        };
-                        dbContext.Users.Add(newUser);
-                        dbContext.SaveChanges();
-                        user = newUser;
-                    }
-
-                    var authService = scope.ServiceProvider.GetRequiredService<IAppAuthService>();
-                    // Use .Wait() because this event handler is not naturally async.
-                    authService.SignInUser(user, context.HttpContext).Wait();
-                }
-
-                return Task.CompletedTask;
-            };
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy(
+        "RequireJwtToken",
+        policy =>
+        {
+            policy.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme);
+            policy.RequireAuthenticatedUser();
         }
     );
+});
 
-builder.Services.AddControllersWithViews();
+builder.Services.AddControllersWithViews(options =>
+{
+    options.Filters.Add(
+        new Microsoft.AspNetCore.Mvc.Authorization.AuthorizeFilter("RequireJwtToken")
+    );
+});
 
 // --- HTTP Request Pipeline Configuration ---
 var app = builder.Build();
