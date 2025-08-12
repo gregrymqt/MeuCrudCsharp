@@ -21,7 +21,10 @@ namespace MeuCrudCsharp.Features.Auth
         /// </summary>
         /// <param name="googleUserPrincipal"></param>
         /// <param name="httpContext"></param>
-        /// <returns></returns>
-        Task SignInWithGoogleAsync(ClaimsPrincipal googleUserPrincipal, HttpContext httpContext);
+        /// <returns>Usuário autenticado.</returns>
+        Task<Users> SignInWithGoogleAsync(
+            ClaimsPrincipal googleUserPrincipal,
+            HttpContext httpContext
+        );
     }
 }

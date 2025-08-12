@@ -92,7 +92,7 @@ namespace MeuCrudCsharp.Features.Auth
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
 
-        public async Task SignInWithGoogleAsync(
+        public async Task<Users> SignInWithGoogleAsync(
             ClaimsPrincipal googleUserPrincipal,
             HttpContext httpContext
         )
@@ -105,31 +105,45 @@ namespace MeuCrudCsharp.Features.Auth
                 _logger.LogWarning(
                     "Tentativa de login com Google falhou: GoogleId ou Email não encontrados."
                 );
-                return;
+                // Lança uma exceção para ser tratada pelo PageModel
+                throw new InvalidOperationException(
+                    "Não foi possível obter os dados do provedor externo."
+                );
             }
 
-            // Procura ou cria o usuário de forma assíncrona
+            // Procura o usuário
             var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.GoogleId == googleId);
             if (user == null)
             {
-                string? name = googleUserPrincipal.FindFirstValue(ClaimTypes.Name);
-                string? avatar = googleUserPrincipal.FindFirstValue("urn:google:picture");
-                user = new Users
+                // Se não encontra, procura por e-mail para vincular a conta
+                user = await _userManager.FindByEmailAsync(email);
+                if (user == null)
                 {
-                    UserName = email,
-                    Email = email,
-                    GoogleId = googleId,
-                    Name = name ?? "Usuário",
-                    AvatarUrl = avatar ?? string.Empty,
-                    EmailConfirmed = true,
-                };
-                await _userManager.CreateAsync(user);
+                    // Se realmente não existe, cria um novo
+                    string? name = googleUserPrincipal.FindFirstValue(ClaimTypes.Name);
+                    string? avatar = googleUserPrincipal.FindFirstValue("urn:google:picture");
+                    user = new Users
+                    {
+                        UserName = email,
+                        Email = email,
+                        GoogleId = googleId,
+                        Name = name ?? "Usuário",
+                        AvatarUrl = avatar ?? string.Empty,
+                        EmailConfirmed = true,
+                    };
+                    await _userManager.CreateAsync(user);
+                }
+                // Associa o login do Google à conta encontrada ou recém-criada
+                await _userManager.AddLoginAsync(
+                    user,
+                    new UserLoginInfo("Google", googleId, "Google")
+                );
             }
 
-            // Gera o token JWT de forma assíncrona
+            // Gera o token JWT
             var jwtString = await GenerateJwtTokenAsync(user);
 
-            // Adiciona o nosso cookie JWT
+            // Adiciona o cookie JWT à resposta
             httpContext.Response.Cookies.Append(
                 "jwt",
                 jwtString,
@@ -142,8 +156,10 @@ namespace MeuCrudCsharp.Features.Auth
                 }
             );
 
-            // Redireciona o usuário
-            httpContext.Response.Redirect("/");
+            _logger.LogInformation("Usuário {UserId} logado com sucesso via Google.", user.Id);
+
+            // Retorna o usuário processado
+            return user;
         }
     }
 }

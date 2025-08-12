@@ -190,27 +190,19 @@ builder
 
     .AddGoogle(options =>
     {
-        // Validação das credenciais (seu código aqui está perfeito)
+        // Validação das credenciais (continua igual)
         string? clientId = builder.Configuration["Google:ClientId"];
         string? clientSecret = builder.Configuration["Google:ClientSecret"];
         if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
         {
-            throw new InvalidOperationException(
-                "As credenciais do Google não foram encontradas na configuração."
-            );
+            throw new InvalidOperationException("As credenciais do Google não foram encontradas.");
         }
         options.ClientId = clientId;
         options.ClientSecret = clientSecret;
 
-        options.Events.OnCreatingTicket = async context =>
-        {
-            var authService =
-                context.HttpContext.RequestServices.GetRequiredService<IAppAuthService>();
-
-            await authService.SignInWithGoogleAsync(context.Principal!, context.HttpContext);
-
-            await context.HttpContext.Response.CompleteAsync();
-        };
+        // ✅ MUDANÇA CRÍTICA:
+        // Diz ao Google para usar o esquema de cookie temporário do ASP.NET Identity.
+        options.SignInScheme = IdentityConstants.ExternalScheme;
     });
 
 builder.Services.AddAuthorization(options =>

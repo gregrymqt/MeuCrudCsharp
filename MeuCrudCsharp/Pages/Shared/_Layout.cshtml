@@ -1,5 +1,6 @@
 ﻿<!DOCTYPE html>
 <html lang="pt-br">
+
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -16,57 +17,31 @@
 </head>
 <body>
     <header class="site-header">
-    <nav class="main-nav container">
-        <a class="nav-logo" asp-page="/Index">
-            <i class="fas fa-graduation-cap"></i>
-            <span>SeuCurso</span>
-        </a>
+        <nav class="main-nav container">
+            <a class="nav-logo" asp-page="/Index">
+                <i class="fas fa-graduation-cap"></i>
+                <span>SeuCurso</span>
+            </a>
 
-        <div class="nav-center-right">
-            <div class="nav-menu" id="nav-menu">
-                <ul class="nav-links">
-                    <li><a class="nav-link" href="/Index">Home</a></li>
-                    <li><a class="nav-link" href="/Courses/index">Cursos</a></li>
-                    <li><a class="nav-link" href="/About">Sobre</a></li>
-                    <li><a class="nav-link" href="/Contact">Contato</a></li>
-                </ul>
-
-                <div class="nav-user">
-                    @if (User.Identity != null && User.Identity.IsAuthenticated)
-                    {
-                        var currentPagePath = ViewContext.RouteData.Values["page"]?.ToString() ?? "";
-                        var isProfilePage = currentPagePath.StartsWith("/Profile");
-
-                        <div class="user-dropdown">
-                            <button class="user-info-button" id="user-dropdown-button" aria-haspopup="true" aria-expanded="false">
-                                <img src="@(User.FindFirst("AvatarUrl")?.Value ?? "/images/default-avatar.png")" alt="Avatar" class="user-avatar" />
-                                <span>@User.Identity.Name</span>
-                                <i class="fas fa-chevron-down dropdown-caret"></i>
-                            </button>
-                            <div class="dropdown-menu" id="user-dropdown-menu">
-                                <a asp-page="/Profile/Index" class="dropdown-item @(isProfilePage ? "disabled" : "")" aria-disabled="@isProfilePage">
-                                    <i class="fas fa-user-circle"></i> Meu Perfil
-                                </a>
-                                <div class="dropdown-divider"></div>
-                                <a href="/Account/Logout" class="dropdown-item">
-                                    <i class="fas fa-sign-out-alt"></i> Sair
-                                </a>
-                            </div>
-                        </div>
-                    }
-                    else
-                    {
-                        <a class="btn btn-primary" href="/Auth/GoogleLogin">Entrar</a>
-                    }
+            <div class="nav-center-right">
+                <div class="nav-menu" id="nav-menu">
+                    <ul class="nav-links">
+                        <li><a class="nav-link" asp-page="/Index">Home</a></li>
+                        <li><a class="nav-link" asp-page="/Courses/Index">Cursos</a></li>
+                        <li><a class="nav-link" asp-page="/About">Sobre</a></li>
+                        <li><a class="nav-link" asp-page="/Contact">Contato</a></li>
+                    </ul>
+                    <div class="nav-user">
+                        <partial name="_LoginPartial" />
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation" aria-controls="nav-menu">
-            <i class="fas fa-bars"></i>
-        </button>
-    </nav>
-</header>
+            <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation" aria-controls="nav-menu">
+                <i class="fas fa-bars"></i>
+            </button>
+        </nav>
+    </header>
 
     <div class="container main-container">
         <main role="main" class="pb-3">
@@ -123,8 +98,7 @@
         </div>
     </footer>
 
-     <script src="~/js/layout.js" asp-append-version="true"></script>
-
+    <script src="~/js/layout.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

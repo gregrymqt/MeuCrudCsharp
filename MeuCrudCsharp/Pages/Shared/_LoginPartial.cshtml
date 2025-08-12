@@ -1,0 +1,30 @@
+﻿@using Microsoft.AspNetCore.Identity
+@using MeuCrudCsharp.Models
+
+@if (User.Identity != null && User.Identity.IsAuthenticated)
+{
+    var currentPagePath = ViewContext.RouteData.Values["page"]?.ToString() ?? "";
+    var isProfilePage = currentPagePath.StartsWith("/Profile");
+
+    <div class="user-dropdown">
+        <button class="user-info-button" id="user-dropdown-button" aria-haspopup="true" aria-expanded="false">
+            <img src="@(User.FindFirst("AvatarUrl")?.Value ?? "/images/default-avatar.png")" alt="Avatar" class="user-avatar" />
+            <span>@User.Identity.Name</span>
+            <i class="fas fa-chevron-down dropdown-caret"></i>
+        </button>
+
+        <div class="dropdown-menu" id="user-dropdown-menu">
+            <a asp-page="/Profile/Index" class="dropdown-item @(isProfilePage ? "disabled" : "")" aria-disabled="@isProfilePage">
+                <i class="fas fa-user-circle"></i> Meu Perfil
+            </a>
+            <div class="dropdown-divider"></div>
+            <a href="/Account/Logout" class="dropdown-item">
+                <i class="fas fa-sign-out-alt"></i> Sair
+            </a>
+        </div>
+    </div>
+}
+else
+{
+    <a class="btn btn-primary" href="/Account/Login">Entrar</a>
+}
