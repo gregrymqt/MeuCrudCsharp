@@ -33,26 +33,23 @@ namespace MeuCrudCsharp.Features.Courses.Controllers
         }
 
         /// <summary>
-        /// Obtém uma lista de todos os cursos com seus vídeos associados.
+        /// 
         /// </summary>
-        /// <returns>Uma lista de cursos com vídeos.</returns>
-        /// <response code="200">Retorna a lista de cursos.</response>
-        /// <response code="500">Se ocorrer um erro interno ao buscar os cursos.</response>
-        [HttpGet]
-        public async Task<IActionResult> GetAllCoursesWithVideos()
+        /// <param name="pageNumber"></param>
+        /// <param name="pageSize"></param>
+        /// <returns></returns>
+        [HttpGet("paginated")] 
+        public async Task<IActionResult> GetCoursesPaginated([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 5)
         {
             try
             {
-                var courses = await _courseService.GetAllCoursesWithVideosAsync();
-                return Ok(courses);
+                var paginatedResult = await _courseService.GetCoursesWithVideosPaginatedAsync(pageNumber, pageSize);
+                return Ok(paginatedResult);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erro ao buscar todos os cursos com vídeos.");
-                return StatusCode(
-                    500,
-                    new { message = "Não foi possível carregar os cursos no momento." }
-                );
+                _logger.LogError(ex, "Erro ao buscar cursos paginados.");
+                return StatusCode(500, new { message = "Não foi possível carregar os cursos no momento." });
             }
         }
     }

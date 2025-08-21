@@ -112,7 +112,7 @@ namespace MeuCrudCsharp.Features.Videos.Controller
         /// <response code="403">If the user is not in the 'Admin' role.</response>
         /// <response code="500">If an unexpected server error occurs.</response>
         [HttpGet]
-        [ProducesResponseType(typeof(PaginatedResult<VideoDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(PaginatedResultDto<VideoDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(string), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetAllVideos(
             [FromQuery] int page = 1,

@@ -1,7 +1,8 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
-using MeuCrudCsharp.Features.Courses.DTOs;
+using MeuCrudCsharp.Features.Course.DTOs;
 using MeuCrudCsharp.Features.Exceptions;
+using MeuCrudCsharp.Features.Videos.DTOs;
 
 namespace MeuCrudCsharp.Features.Courses.Interfaces
 {
@@ -14,7 +15,10 @@ namespace MeuCrudCsharp.Features.Courses.Interfaces
         /// Obtém uma lista de todos os cursos, incluindo seus vídeos associados.
         /// </summary>
         /// <returns>Uma tarefa que representa a operação assíncrona. O resultado da tarefa contém a lista de DTOs de curso.</returns>
-        Task<List<CourseDto>> GetAllCoursesWithVideosAsync();
+        Task<PaginatedResultDto<CourseDto>> GetCoursesWithVideosPaginatedAsync(
+            int pageNumber,
+            int pageSize
+        );
 
         /// <summary>
         /// Busca um curso específico pelo seu ID, incluindo seus vídeos.

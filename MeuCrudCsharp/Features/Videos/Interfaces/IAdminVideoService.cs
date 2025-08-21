@@ -16,7 +16,7 @@ namespace MeuCrudCsharp.Features.Videos.Interfaces
         /// <param name="page">The page number to retrieve.</param>
         /// <param name="pageSize">The number of items per page.</param>
         /// <returns>A task that represents the asynchronous operation. The task result contains a paginated list of videos.</returns>
-        Task<PaginatedResult<VideoDto>> GetAllVideosAsync(int page, int pageSize);
+        Task<PaginatedResultDto<VideoDto>> GetAllVideosAsync(int page, int pageSize);
 
         /// <summary>
         /// Creates the metadata for a new video.

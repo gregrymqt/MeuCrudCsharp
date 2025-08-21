@@ -52,7 +52,7 @@ namespace MeuCrudCsharp.Features.Videos.Service
         /// This method uses a version-based caching strategy. When video data changes, the cache version is updated,
         /// effectively invalidating all cached pages of videos at once.
         /// </remarks>
-        public async Task<PaginatedResult<VideoDto>> GetAllVideosAsync(int page, int pageSize)
+        public async Task<PaginatedResultDto<VideoDto>> GetAllVideosAsync(int page, int pageSize)
         {
             var cacheVersion = await _cacheService.GetOrCreateAsync(
                 VideosCacheVersionKey,
@@ -93,7 +93,7 @@ namespace MeuCrudCsharp.Features.Videos.Service
                             })
                             .ToListAsync();
 
-                        return new PaginatedResult<VideoDto>(items, totalCount, page, pageSize);
+                        return new PaginatedResultDto<VideoDto>(items, totalCount, page, pageSize);
                     }
                     catch (Exception ex)
                     {

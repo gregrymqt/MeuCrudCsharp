@@ -16,7 +16,8 @@ namespace MeuCrudCsharp.Models
     public class Video
     {
         [Key]
-        public Guid Id { get; set; }
+        public int Id { get; set; }
+        public Guid PublicId { get; set; } = Guid.NewGuid();
         public string Title { get; set; }
         public string Description { get; set; }
         public string StorageIdentifier { get; set; }
@@ -32,7 +33,6 @@ namespace MeuCrudCsharp.Models
 
         public Video()
         {
-            Id = Guid.NewGuid();
             UploadDate = DateTime.UtcNow;
             Status = VideoStatus.Processing; // O vídeo sempre começa como "Processando"
         }

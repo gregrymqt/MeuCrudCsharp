@@ -7,7 +7,7 @@ namespace MeuCrudCsharp.Features.Videos.DTOs
     /// Represents a generic result set for paginated queries.
     /// </summary>
     /// <typeparam name="T">The type of the items in the result set.</typeparam>
-    public class PaginatedResult<T>
+    public class PaginatedResultDto<T>
     {
         /// <summary>
         /// The collection of items for the current page.
@@ -34,7 +34,7 @@ namespace MeuCrudCsharp.Features.Videos.DTOs
         /// </summary>
         public int TotalPages => (int)Math.Ceiling(TotalCount / (double)PageSize);
 
-        public PaginatedResult(IEnumerable<T> items, int count, int page, int pageSize)
+        public PaginatedResultDto(IEnumerable<T> items, int count, int page, int pageSize)
         {
             Items = items;
             TotalCount = count;

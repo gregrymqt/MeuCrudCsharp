@@ -7,7 +7,9 @@ namespace MeuCrudCsharp.Models
     public class Course
     {
         [Key]
-        public Guid Id { get; set; }
+        public int Id { get; set; }
+
+        public Guid PublicId { get; set; } = new Guid();
 
         [Required]
         [MaxLength(200)]

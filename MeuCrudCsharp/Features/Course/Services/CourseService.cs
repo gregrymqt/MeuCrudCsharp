@@ -1,14 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using MeuCrudCsharp.Data;
-using MeuCrudCsharp.Features.Courses.DTOs;
+﻿using MeuCrudCsharp.Data;
+using MeuCrudCsharp.Features.Course.DTOs;
 using MeuCrudCsharp.Features.Courses.Interfaces;
 using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.Videos.DTOs;
+using MeuCrudCsharp.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace MeuCrudCsharp.Features.Courses.Services
 {
@@ -88,27 +89,33 @@ namespace MeuCrudCsharp.Features.Courses.Services
         }
 
         /// <summary>
-        /// Obtém todos os cursos com seus respectivos vídeos, utilizando cache para melhorar a performance.
+        ///
         /// </summary>
-        /// <returns>Uma lista de DTOs de cursos.</returns>
-        /// <remarks>Os dados são cacheados por 10 minutos para reduzir acessos ao banco de dados.</remarks>
-        public async Task<List<CourseDto>> GetAllCoursesWithVideosAsync()
+        /// <param name="pageNumber"></param>
+        /// <param name="pageSize"></param>
+        /// <returns></returns>
+        /// <exception cref="AppServiceException"></exception>
+        public async Task<PaginatedResultDto<CourseDto>> GetCoursesWithVideosPaginatedAsync(
+            int pageNumber,
+            int pageSize
+        )
         {
             try
             {
-                const string cacheKey = "AllCoursesWithVideos";
+                // A chave de cache agora deve incluir a página e o tamanho
+                var cacheKey = $"CoursesWithVideos_Page{pageNumber}_Size{pageSize}";
                 return await _cacheService.GetOrCreateAsync(
                     cacheKey,
                     async () =>
                     {
-                        _logger.LogInformation(
-                            "Buscando todos os cursos do banco de dados (cache miss)."
-                        );
+                        var totalCount = await _context.Courses.CountAsync(); // Pega o total de cursos
 
                         var courses = await _context
                             .Courses.AsNoTracking()
                             .Include(c => c.Videos)
                             .OrderBy(c => c.Name)
+                            .Skip((pageNumber - 1) * pageSize) // Pula os itens das páginas anteriores
+                            .Take(pageSize)
                             .Select(c => new CourseDto
                             {
                                 Id = c.Id,
@@ -131,14 +138,19 @@ namespace MeuCrudCsharp.Features.Courses.Services
                             })
                             .ToListAsync();
 
-                        return courses;
+                        return new PaginatedResultDto<CourseDto>(
+                            courses,
+                            totalCount,
+                            pageNumber,
+                            pageSize
+                        );
                     },
                     TimeSpan.FromMinutes(10)
                 );
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erro ao buscar todos os cursos.");
+                _logger.LogError(ex, "Erro ao buscar cursos paginados.");
                 throw new AppServiceException("Ocorreu um erro ao buscar a lista de cursos.", ex);
             }
         }
@@ -160,8 +172,9 @@ namespace MeuCrudCsharp.Features.Courses.Services
 
                 var newCourse = new Models.Course
                 {
-                    Name = createDto.Name,
-                    Description = createDto.Description,
+                    // Correção: Garantir que valores não nulos sejam passados para o modelo.
+                    Name = createDto.Name!, // O atributo [Required] no DTO garante que Name não será nulo.
+                    Description = createDto.Description ?? string.Empty, // Se a descrição for nula, usa uma string vazia.
                 };
 
                 _context.Courses.Add(newCourse);
@@ -200,9 +213,10 @@ namespace MeuCrudCsharp.Features.Courses.Services
         /// <exception cref="ResourceNotFoundException">Lançada se o curso com o ID especificado não for encontrado.</exception>
         public async Task<CourseDto> UpdateCourseAsync(Guid id, UpdateCourseDto updateDto)
         {
+            var coursePrivate = await GetVideoByPublicIdAsync(id);
             try
             {
-                var course = await _context.Courses.FirstOrDefaultAsync(c => c.Id == id);
+                var course = await _context.Courses.FirstOrDefaultAsync(c => c.Id == coursePrivate.Id);
                 if (course == null)
                 {
                     throw new ResourceNotFoundException(
@@ -210,8 +224,9 @@ namespace MeuCrudCsharp.Features.Courses.Services
                     );
                 }
 
-                course.Name = updateDto.Name;
-                course.Description = updateDto.Description;
+                // Correção: Garantir que valores não nulos sejam passados para o modelo.
+                course.Name = updateDto.Name!; // O [Required] garante que não será nulo.
+                course.Description = updateDto.Description ?? string.Empty; // Se a descrição for nula, usa uma string vazia.
                 await _context.SaveChangesAsync();
 
                 await _cacheService.RemoveAsync("AllCoursesWithVideos");
@@ -244,11 +259,12 @@ namespace MeuCrudCsharp.Features.Courses.Services
         /// <remarks>A exclusão só é permitida se o curso não tiver nenhum vídeo vinculado.</remarks>
         public async Task DeleteCourseAsync(Guid id)
         {
+            var coursePrivate = await GetVideoByPublicIdAsync(id);
             try
             {
                 var course = await _context
                     .Courses.Include(c => c.Videos)
-                    .FirstOrDefaultAsync(c => c.Id == id);
+                    .FirstOrDefaultAsync(c => c.Id == coursePrivate.Id);
 
                 if (course == null)
                 {
@@ -290,5 +306,22 @@ namespace MeuCrudCsharp.Features.Courses.Services
                 throw new AppServiceException("Ocorreu um erro ao deletar o curso.", ex);
             }
         }
+
+        private async Task<Models.Course> GetVideoByPublicIdAsync(Guid publicId)
+        {
+            var course = await _context.Courses
+                .FirstOrDefaultAsync(v => v.PublicId == publicId);
+
+            if (course == null)
+            {
+                // Lançar uma exceção específica é uma ótima prática.
+                throw new AppServiceException($"Vídeo com o PublicId {publicId} não foi encontrado.");
+            }
+
+            return course;
+        }
     }
+
+
 }
+

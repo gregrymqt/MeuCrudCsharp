@@ -9,9 +9,12 @@ document.addEventListener('DOMContentLoaded', function () {
     const coursesContainer = document.getElementById('courses-section-container');
     const pageLoader = document.getElementById('page-loader');
 
-    // --- State and Cache Management ---
-    const sessionCache = {};
-    let swiperInstance;
+    // Substitua o sessionCache por estas variáveis
+    let currentPage = 1;
+    const pageSize = 5; // O mesmo valor do backend
+    let isLoading = false;
+    let hasMorePages = true;
+    let swiperInstance; // Mantenha esta
 
     // --- Rendering Functions ---
 
@@ -75,9 +78,9 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     /**
-     * Renders all course rows and their associated video cards.
-     * @param {Array<object>} courses - An array of course objects, each containing a list of videos.
-     */
+ * ATUALIZADO: renderCourseRows agora anexa o conteúdo em vez de substituir
+ * @param {Array<object>} courses - Uma lista de cursos para ANEXAR ao container.
+ */
     function renderCourseRows(courses) {
         let coursesHTML = '';
         courses.forEach(course => {
@@ -92,42 +95,44 @@ document.addEventListener('DOMContentLoaded', function () {
                 `;
             }
         });
-        coursesContainer.innerHTML += coursesHTML;
+        coursesContainer.insertAdjacentHTML('beforeend', coursesHTML);
     }
 
     /**
-     * The main function to fetch and display all page content.
-     * It uses a session-level cache to avoid redundant API calls.
-     */
-    async function loadPageContent() {
-        // If data is already cached, render from cache.
-        if (sessionCache['allCourses']) {
-            const data = sessionCache['allCourses'];
-            renderCarousel(data);
-            renderCourseRows(data);
-            initSwiper();
-            pageLoader.style.display = 'none';
-            return;
-        }
+ * NOVO: Busca uma página de cursos e os renderiza.
+ */
+    async function fetchAndRenderCourses() {
+        if (isLoading || !hasMorePages) return; // Previne chamadas duplicadas
+        isLoading = true;
+        pageLoader.style.display = 'block'; // Mostra o loader
 
-        // Otherwise, fetch data from the API.
         try {
-            const response = await fetch('/api/courses/all');
-            if (!response.ok) {
-                throw new Error(`Network error: ${response.statusText}`);
-            }
-            const coursesData = await response.json();
-            sessionCache['allCourses'] = coursesData;
+            const response = await fetch(`/api/courses/paginated?pageNumber=${currentPage}&pageSize=${pageSize}`);
+            if (!response.ok) throw new Error('Network error');
 
-            renderCarousel(coursesData);
-            renderCourseRows(coursesData);
-            initSwiper();
+            const paginatedResult = await response.json();
+            const { items, totalCount } = paginatedResult;
+
+            if (items && items.length > 0) {
+                // Se for a primeira página, renderiza o carrossel também
+                if (currentPage === 1) {
+                    renderCarousel(items);
+                    initSwiper();
+                }
+                renderCourseRows(items);
+                currentPage++; // Prepara para a próxima página
+                // Verifica se ainda há mais páginas para carregar
+                hasMorePages = (currentPage - 1) * pageSize < totalCount;
+            } else {
+                hasMorePages = false; // Não há mais itens
+            }
 
         } catch (error) {
-            console.error("Failed to load page content:", error);
-            coursesContainer.innerHTML = `<p class="error-message">Failed to load courses. Please try again later.</p>`;
+            console.error("Failed to load courses:", error);
+            coursesContainer.innerHTML += `<p class="error-message">Failed to load more courses.</p>`;
         } finally {
-            pageLoader.style.display = 'none';
+            isLoading = false;
+            pageLoader.style.display = 'none'; // Esconde o loader
         }
     }
 
@@ -149,7 +154,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             return `
             <a href="${videoPageUrl}" class="swiper-slide">
-                <img src="${thumbnailUrl}" alt="Banner para o curso ${course.name}" class="carousel-image"/>
+                <img src="${thumbnailUrl}" loading="lazy" alt="Banner para o curso ${course.name}" class="carousel-image"/>
                 <div class="carousel-caption">
                     <h2 class="carousel-title">${course.name}</h2>
                     <p class="carousel-description">Watch the first video now!</p>
@@ -197,7 +202,27 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    /**
+ * NOVO: Lógica para a rolagem infinita usando Intersection Observer.
+ * É mais eficiente que ficar escutando o evento 'scroll'.
+ */
+    function setupInfiniteScroll() {
+        const observer = new IntersectionObserver((entries) => {
+            // A 'entry' é o elemento que estamos observando (o loader)
+            const firstEntry = entries[0];
+            if (firstEntry.isIntersecting && hasMorePages) {
+                fetchAndRenderCourses(); // Carrega mais cursos quando o loader fica visível
+            }
+        }, {
+            rootMargin: '100px' // Começa a carregar 100px antes do loader aparecer na tela
+        });
+
+        // Começa a observar o elemento loader
+        observer.observe(pageLoader);
+    }
+
     // --- Page Initialization ---
     renderContinueWatching();
-    loadPageContent();
+    fetchAndRenderCourses(); 
+    setupInfiniteScroll(); 
 });

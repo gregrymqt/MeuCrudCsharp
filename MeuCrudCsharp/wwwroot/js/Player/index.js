@@ -8,56 +8,57 @@
  * If HLS.js is not supported, it checks for native browser support (common on Apple devices)
  * as a fallback. If neither option is available, an error is logged to the console.
  */
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
+    const videoContainer = document.getElementById('videoContainer'); // O container geral
+    const placeholder = document.getElementById('videoPlaceholder');
+
+    // Se o placeholder não existir, não faz nada.
+    if (!placeholder) return;
+
+    // 1. Adiciona um ouvinte de evento de clique ao placeholder
+    placeholder.addEventListener('click', function () {
+        // Pega o ID do vídeo a partir do atributo data-*
+        const videoId = placeholder.getAttribute('data-video-id');
+
+        // Remove o placeholder da tela
+        placeholder.style.display = 'none';
+
+        // 2. Cria o elemento <video> dinamicamente
+        const videoElement = document.createElement('video');
+        videoElement.id = 'videoPlayer';
+        videoElement.controls = true;
+        videoElement.autoplay = true; // Importante para começar a tocar após o clique
+
+        // Adiciona o novo elemento de vídeo ao container
+        videoContainer.prepend(videoElement); // Adiciona no início do container
+
+        // 3. Executa a lógica de inicialização do HLS.js que você já tinha
+        initializePlayer(videoElement, videoId);
+
+    }, { once: true }); // O { once: true } remove o ouvinte após o primeiro clique.
+
     /**
-     * The HTML <video> element where the player will be rendered.
-     * @type {HTMLVideoElement|null}
+     * Função que contém a sua lógica original de inicialização do player.
+     * @param {HTMLVideoElement} videoEl - O elemento de vídeo recém-criado.
+     * @param {string} videoId - O ID do vídeo para montar a URL.
      */
-    const videoElement = document.getElementById('videoPlayer');
+    function initializePlayer(videoEl, videoId) {
+        const manifestUrl = `/api/videos/${videoId}/manifest.m3u8`;
 
-    // If the video element does not exist on the page, the script stops its execution
-    // to prevent errors on pages that do not contain a player.
-    if (!videoElement) return;
-
-    /**
-     * The unique identifier for the video, injected by the backend (ASP.NET Core Razor).
-     * @type {string}
-     * @description Using `@Model.VideoId` is a secure practice that ensures the video ID
-     * has been validated on the server, preventing client-side manipulation of the ID in the URL.
-     */
-    const videoId = "@Model.VideoId";
-
-    /**
-     * The HLS manifest URL (.m3u8) that will be loaded into the player.
-     * It points to a backend streaming API endpoint.
-     * @type {string}
-     */
-    const manifestUrl = `/api/videos/${videoId}/manifest.m3u8`;
-
-    // Check if the current browser supports the HLS.js library.
-    // This is the preferred approach to ensure cross-browser compatibility.
-    if (Hls.isSupported()) {
-        console.log("HLS.js is supported. Initializing player...");
-        const hls = new Hls();
-        hls.loadSource(manifestUrl);
-        hls.attachMedia(videoElement);
-        // Event fired when the manifest is successfully loaded and parsed.
-        hls.on(Hls.Events.MANIFEST_PARSED, function() {
-            console.log("HLS manifest loaded and ready for playback.");
-        });
-        // Event to capture and log errors that may occur during streaming.
-        hls.on(Hls.Events.ERROR, function(event, data) {
-            if (data.fatal) {
-                console.error('Fatal HLS.js error:', data);
-            }
-        });
-    } // As a fallback, check if the browser has native HLS support.
-    // This is common in Safari (macOS and iOS).
-    else if (videoElement.canPlayType('application/vnd.apple.mpegurl')) {
-        console.log("Native HLS support detected. Using the browser's player.");
-        videoElement.src = manifestUrl;
-    } else {
-        // If neither HLS.js nor native support is available, inform the developer.
-        console.error("This browser does not support HLS video playback.");
+        if (Hls.isSupported()) {
+            const hls = new Hls();
+            hls.loadSource(manifestUrl);
+            hls.attachMedia(videoEl);
+            hls.on(Hls.Events.MANIFEST_PARSED, function () {
+                console.log("HLS manifest loaded, starting playback.");
+                videoEl.play(); // Garante o início da reprodução
+            });
+            // ... seu código de tratamento de erro ...
+        } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
+            videoEl.src = manifestUrl;
+            videoEl.play(); // Garante o início da reprodução
+        } else {
+            console.error("This browser does not support HLS video playback.");
+        }
     }
 });
