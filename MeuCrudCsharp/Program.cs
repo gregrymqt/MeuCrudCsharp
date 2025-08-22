@@ -9,6 +9,7 @@ using MeuCrudCsharp.Features.Courses.Interfaces;
 using MeuCrudCsharp.Features.Courses.Services;
 using MeuCrudCsharp.Features.Emails.Interfaces;
 using MeuCrudCsharp.Features.Emails.Services;
+using MeuCrudCsharp.Features.Hubs;
 using MeuCrudCsharp.Features.MercadoPago.Jobs; // Adicionado para os Jobs
 using MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces;
 using MeuCrudCsharp.Features.MercadoPago.Payments.Services;
@@ -251,6 +252,9 @@ using (var scope = app.Services.CreateScope())
         }
     }
 }
+
+// SignalR
+app.MapHub<VideoProcessingHub>("/videoProcessingHub");
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();

@@ -1,62 +1,33 @@
 /**
- * @file Manages the Mercado Pago payment flow using Bricks.
- * This script initializes and renders the Payment Brick, handles form submission,
- * processes the payment with the backend, and displays the final status.
+ * ====================================================================================
+ * ARQUIVO JAVASCRIPT COMBINADO: MERCADO PAGO BRICKS + SIGNALR
+ * Responsabilidade: Orquestrar o fluxo de pagamento do Mercado Pago com
+ * notificações em tempo real via SignalR.
+ * ====================================================================================
  */
 
-/**
- * Displays an error message in the UI and logs it to the console.
- * @param {string} message - The error message to be displayed.
- */
-function showError(message) {
-    const errorContainer = document.getElementById('error-container');
-    const loadingMessage = document.getElementById('loading-message');
-    const paymentContainer = document.getElementById('paymentBrick_container');
-    if (errorContainer) {
-        errorContainer.textContent = message;
-        errorContainer.style.display = 'block';
-    }
-    // Hide the loading indicator
-    if (loadingMessage) {
-        loadingMessage.style.display = 'none';
-    }
-    // Show the payment form again so the user can retry.
-    if (paymentContainer) {
-        paymentContainer.style.display = 'block'; // Corrected from 'none' to allow retry
-    }
-    console.error(message);
+document.addEventListener('DOMContentLoaded', initializePayment);
+
+// --- FUNÇÕES DO MERCADO PAGO ---
+
+function renderStatusScreenBrick(builder, paymentId) {
+    // Esconde a mensagem de carregamento e mostra o container do status
+    document.getElementById('loading-message').style.display = 'none';
+    const statusContainer = document.getElementById('statusScreenBrick_container');
+    statusContainer.style.display = 'block';
+
+    const settings = {
+        initialization: { paymentId: paymentId },
+        callbacks: {
+            onReady: () => console.log('Status Screen Brick está pronto.'),
+            onError: (error) => showError('Ocorreu um erro ao exibir o status do pagamento: ' + error.message)
+        }
+    };
+    // Limpa o container antes de criar um novo brick para evitar duplicatas
+    statusContainer.innerHTML = '';
+    builder.create('statusScreen', 'statusScreenBrick_container', settings);
 }
 
-/**
- * Entry point for initializing the Mercado Pago payment process.
- * It verifies that the SDK and necessary configurations are available before rendering the Payment Brick.
- */
-function initializePayment() {
-    // Check if the Mercado Pago SDK has loaded successfully.
-    if (typeof MercadoPago === 'undefined') {
-        showError('Mercado Pago SDK failed to load.');
-        return;
-    }
-    // Check if the backend has provided the necessary configuration object.
-    if (!window.paymentConfig || !window.paymentConfig.publicKey || !window.paymentConfig.preferenceId) {
-        showError('Configuration error: Public key or preference ID not found.');
-        return;
-    }
-
-    const mp = new MercadoPago(window.paymentConfig.publicKey, {
-        locale: 'pt-BR'
-    });
-    const bricksBuilder = mp.bricks();
-
-    renderPaymentBrick(bricksBuilder);
-}
-
-/**
- * Renders the Mercado Pago Payment Brick.
- * This function sets up the configuration and callbacks for handling form submission,
- * errors, and the ready state.
- * @param {object} builder - The Mercado Pago Bricks builder instance.
- */
 function renderPaymentBrick(builder) {
     const settings = {
         initialization: {
@@ -65,85 +36,124 @@ function renderPaymentBrick(builder) {
         },
         customization: {
             paymentMethods: {
-                creditCard: "all", // Allows all credit cards
-                ticket: "all",     // Allows all ticket payments (e.g., Boleto)
-                pix: "all"         // Allows PIX
+                creditCard: "all",
+                ticket: "all",
+                pix: "all"
             }
         },
         callbacks: {
-            onReady: function() {
-                console.log("Payment Brick is ready.");
-                // Hide the main loader once the brick is ready to be displayed
+            onReady: () => {
+                console.log("Payment Brick está pronto.");
                 const loadingMessage = document.getElementById('loading-message');
                 if (loadingMessage) loadingMessage.style.display = 'none';
             },
-            onSubmit: function(params) {
-                // When the user submits the form, hide the payment brick and show a loading message.
+            // A MÁGICA ACONTECE AQUI! O onSubmit agora é uma função assíncrona.
+            onSubmit: async ({ formData }) => {
+                // Esconde o formulário e mostra uma mensagem de "processando".
                 document.getElementById('paymentBrick_container').style.display = 'none';
                 document.getElementById('loading-message').style.display = 'block';
                 document.getElementById('error-container').style.display = 'none';
 
-                // Send the payment data to the backend for processing.
-                fetch(window.paymentConfig.processPaymentUrl, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(params.formData)
-                })
-                .then(function(response) {
-                    if (!response.ok) {
-                        // If the server returns an error, parse the JSON and throw an error to be caught below.
-                        return response.json().then(function(err) {
-                            throw new Error(err.message || "HTTP Error: " + response.status);
-                        });
+                // --- INÍCIO DA INTEGRAÇÃO COM SIGNALR ---
+
+                // 1. Constrói a conexão com o Hub de Pagamento.
+                const connection = new signalR.HubConnectionBuilder()
+                    .withUrl("/paymentProcessingHub")
+                    .build();
+
+                // 2. Define o que fazer quando receber uma mensagem "PaymentStatusUpdate".
+                connection.on("PaymentStatusUpdate", (data) => {
+                    console.log("Status recebido via SignalR:", data); // { message, status, isComplete }
+
+                    // Atualiza a mensagem de carregamento para o usuário.
+                    document.getElementById('loading-message').innerText = data.message;
+
+                    // 3. Se o processo terminou (com sucesso ou falha).
+                    if (data.isComplete) {
+                        connection.stop(); // Desconecta do Hub.
+
+                        if (data.status === 'approved' || data.status === 'pending') {
+                            // Sucesso ou pendente, renderiza a tela de status do MP.
+                            // O paymentId deve vir do back-end junto com a notificação final.
+                            renderStatusScreenBrick(builder, data.paymentId);
+                        } else {
+                            // Se falhou ('failed', 'error'), mostra a mensagem de erro.
+                            showError(data.message);
+                        }
                     }
-                    return response.json();
-                })
-                .then(function(responseData) {
-                    // Validate the response from the server.
-                    if (!responseData.id || !responseData.status) {
-                        throw new Error(responseData.message || 'Invalid response from server.');
-                    }
-                    // On success, hide the loading message and show the container for the status screen.
-                    document.getElementById('loading-message').style.display = 'none';
-                    document.getElementById('statusScreenBrick_container').style.display = 'block';
-                    // Render the status screen with the payment ID received from the backend.
-                    renderStatusScreenBrick(builder, responseData.id);
-                })
-                .catch(function(error) {
-                    // If any error occurs during the fetch process, display it.
-                    showError('Error processing payment: ' + error.message);
                 });
+
+                try {
+                    // 4. Inicia a conexão e se inscreve no grupo do usuário.
+                    await connection.start();
+                    // O userId deve estar disponível globalmente ou ser pego de algum lugar.
+                    await connection.invoke("SubscribeToPaymentStatus", window.paymentConfig.userId);
+
+                    console.log("Conectado ao Hub! Enviando pagamento para o back-end...");
+
+                    // 5. AGORA SIM: chama a API para iniciar o processo de pagamento.
+                    // O back-end vai processar e enviar as atualizações via SignalR.
+                    const response = await fetch(window.paymentConfig.processPaymentUrl, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(formData)
+                    });
+
+                    // Se a chamada inicial à API falhar, trata o erro imediatamente.
+                    if (!response.ok) {
+                        const err = await response.json();
+                        throw new Error(err.message || "Falha ao iniciar o processo de pagamento.");
+                    }
+
+                    // A partir daqui, o front-end apenas espera passivamente pelas notificações do SignalR.
+
+                } catch (error) {
+                    console.error("Erro no processo:", error);
+                    showError('Erro: ' + error.message);
+                    if (connection.state === 'Connected') {
+                        connection.stop();
+                    }
+                }
             },
-            onError: function(error) {
-                // This callback handles client-side validation errors from the Brick itself (e.g., invalid card number).
-                showError('Please check the data you entered. ' + (error && error.message ? error.message : ''));
+            onError: (error) => {
+                showError('Por favor, verifique os dados inseridos. ' + (error?.message || ''));
             }
         }
     };
 
-    builder.create("payment", "paymentBrick_container", settings).then(function(controller) {
-        window.paymentBrickController = controller;
-    });
+    builder.create("payment", "paymentBrick_container", settings);
 }
 
-/**
- * Renders the Mercado Pago Status Screen Brick after a payment is processed.
- * @param {object} builder - The Mercado Pago Bricks builder instance.
- * @param {string} paymentId - The ID of the payment whose status will be displayed.
- */
-function renderStatusScreenBrick(builder, paymentId) {
-    const settings = {
-        initialization: { paymentId: paymentId },
-        callbacks: {
-            onReady: function() { console.log('Status Screen Brick is ready.'); },
-            onError: function(error) { showError('An error occurred while displaying the payment status: ' + error.message); }
-        }
-    };
+function initializePayment() {
+    if (typeof MercadoPago === 'undefined') {
+        showError('SDK do Mercado Pago falhou ao carregar.');
+        return;
+    }
+    if (!window.paymentConfig || !window.paymentConfig.publicKey || !window.paymentConfig.preferenceId) {
+        showError('Erro de configuração: Chave pública ou ID de preferência não encontrados.');
+        return;
+    }
 
-    builder.create('statusScreen', 'statusScreenBrick_container', settings).then(function(controller) {
-        window.statusScreenBrickController = controller;
-    });
+    const mp = new MercadoPago(window.paymentConfig.publicKey, { locale: 'pt-BR' });
+    const bricksBuilder = mp.bricks();
+    renderPaymentBrick(bricksBuilder);
 }
 
-// Initializes the payment process as soon as the DOM content is fully loaded.
-document.addEventListener('DOMContentLoaded', initializePayment);
+function showError(message) {
+    const errorContainer = document.getElementById('error-container');
+    const loadingMessage = document.getElementById('loading-message');
+    const paymentContainer = document.getElementById('paymentBrick_container');
+
+    if (errorContainer) {
+        errorContainer.textContent = message;
+        errorContainer.style.display = 'block';
+    }
+    if (loadingMessage) {
+        loadingMessage.style.display = 'none';
+    }
+    // Mostra o formulário de pagamento novamente para o usuário poder tentar de novo.
+    if (paymentContainer) {
+        paymentContainer.style.display = 'block';
+    }
+    console.error(message);
+}

@@ -2,6 +2,7 @@ using System;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces;
+using MeuCrudCsharp.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -25,6 +26,8 @@ namespace MeuCrudCsharp.Pages.Payment
         public string? PublicKey { get; private set; }
         public string? PreferenceId { get; private set; }
         public string? PreapprovalPlanId { get; private set; }
+        public Users? user { get; set; }
+
 
         public CreditCardModel(
             IPreferencePayment preferencePayment,
@@ -52,50 +55,65 @@ namespace MeuCrudCsharp.Pages.Payment
                 return RedirectToPage("/Subscription/Index"); // Volta para a página de planos
             }
 
-            // MUDANÇA 3: Lógica para buscar o valor e o ID da configuração
-            try
+            if (User.Identity is not ClaimsIdentity identity)
             {
-                // Usamos a capitalização correta para buscar no appsettings (Mensal, Anual)
-                var planConfigKey = $"MercadoPago:Plans:{Plano.Capitalize()}";
-
-                Valor = _configuration.GetValue<decimal>($"{planConfigKey}:Price");
-                PreapprovalPlanId = _configuration.GetValue<string>($"{planConfigKey}:Id");
-
-                // Validação para garantir que a configuração foi encontrada
-                if (Valor <= 0)
-                {
-                    throw new InvalidOperationException(
-                        $"O preço para o plano '{Plano}' não está configurado ou é inválido."
-                    );
-                }
-                if (Plano.ToLower() == "anual" && string.IsNullOrEmpty(PreapprovalPlanId))
-                {
-                    throw new InvalidOperationException(
-                        $"O PreapprovalPlanId para o plano '{Plano}' não está configurado."
-                    );
-                }
-
-                // Carrega a chave pública para o frontend
-                PublicKey = _configuration["MercadoPago:PUBLIC_KEY"];
-
-                // Cria a preferência de pagamento com o VALOR SEGURO
-                var preference = await _preferencePayment.CreatePreferenceAsync(Valor, User);
-                PreferenceId = preference.Id;
-
-                return Page();
+                _logger.LogWarning("Usuário não autenticado tentou acessar a página de pagamento.");
+                return RedirectToPage("/Account/Login"); // Redireciona para a página de login
             }
-            catch (Exception ex)
+            else
             {
-                _logger.LogError(
-                    ex,
-                    "Erro ao configurar a página de pagamento para o plano {Plano}",
-                    Plano
-                );
-                // Adicione uma mensagem de erro para o usuário, se desejar
-                TempData["ErrorMessage"] =
-                    "Não foi possível preparar seu pagamento. Tente novamente mais tarde.";
-                return RedirectToPage("/Subscription/Index");
+                user = new Users
+                {
+                    UserName = identity.Name,
+                    Email = identity.FindFirst(ClaimTypes.Email)?.Value,
+                    Id = identity.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                };
             }
+
+                // MUDANÇA 3: Lógica para buscar o valor e o ID da configuração
+                try
+                {
+                    // Usamos a capitalização correta para buscar no appsettings (Mensal, Anual)
+                    var planConfigKey = $"MercadoPago:Plans:{Plano.Capitalize()}";
+
+                    Valor = _configuration.GetValue<decimal>($"{planConfigKey}:Price");
+                    PreapprovalPlanId = _configuration.GetValue<string>($"{planConfigKey}:Id");
+
+                    // Validação para garantir que a configuração foi encontrada
+                    if (Valor <= 0)
+                    {
+                        throw new InvalidOperationException(
+                            $"O preço para o plano '{Plano}' não está configurado ou é inválido."
+                        );
+                    }
+                    if (Plano.ToLower() == "anual" && string.IsNullOrEmpty(PreapprovalPlanId))
+                    {
+                        throw new InvalidOperationException(
+                            $"O PreapprovalPlanId para o plano '{Plano}' não está configurado."
+                        );
+                    }
+
+                    // Carrega a chave pública para o frontend
+                    PublicKey = _configuration["MercadoPago:PUBLIC_KEY"];
+
+                    // Cria a preferência de pagamento com o VALOR SEGURO
+                    var preference = await _preferencePayment.CreatePreferenceAsync(Valor, User);
+                    PreferenceId = preference.Id;
+
+                    return Page();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(
+                        ex,
+                        "Erro ao configurar a página de pagamento para o plano {Plano}",
+                        Plano
+                    );
+                    // Adicione uma mensagem de erro para o usuário, se desejar
+                    TempData["ErrorMessage"] =
+                        "Não foi possível preparar seu pagamento. Tente novamente mais tarde.";
+                    return RedirectToPage("/Subscription/Index");
+                }
         }
     }
 
