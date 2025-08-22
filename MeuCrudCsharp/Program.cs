@@ -1,6 +1,3 @@
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
 using Hangfire;
 using Hangfire.Redis.StackExchange;
 using MercadoPago.Config;
@@ -27,6 +24,7 @@ using MeuCrudCsharp.Features.Subscriptions.Interfaces;
 using MeuCrudCsharp.Features.Subscriptions.Services;
 using MeuCrudCsharp.Features.Videos.Interfaces;
 using MeuCrudCsharp.Features.Videos.Service;
+using MeuCrudCsharp.Features.Videos.Services;
 using MeuCrudCsharp.Models;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -38,6 +36,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.StackExchangeRedis;
 using Microsoft.IdentityModel.Tokens;
 using StackExchange.Redis;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -131,6 +132,9 @@ builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
 builder.Services.AddScoped<IPlanService, PlanService>();
 builder.Services.AddScoped<ProcessPaymentNotificationJob>();
 builder.Services.AddScoped<INotificationPaymentService, NotificationPaymentService>();
+builder.Services.AddScoped<IFileStorageService, FileStorageService>();
+
+
 
 // 7. Hangfire Server
 // This adds the background processing server for Hangfire jobs.

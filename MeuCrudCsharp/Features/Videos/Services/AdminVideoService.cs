@@ -1,6 +1,4 @@
-using System;
-using System.IO;
-using System.Linq;
+﻿using System;
 using System.Threading.Tasks;
 using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Features.Caching;
@@ -8,56 +6,56 @@ using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.Videos.DTOs;
 using MeuCrudCsharp.Features.Videos.Interfaces;
 using MeuCrudCsharp.Models;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace MeuCrudCsharp.Features.Videos.Service
 {
     /// <summary>
-    /// Implements <see cref="IAdminVideoService"/> to provide administrative functionalities for video management.
-    /// This service handles CRUD operations for video metadata, file storage for thumbnails, and cache invalidation.
+    /// Implements <see cref="IAdminVideoService"/> to provide administrative functionalities
+    /// for video management. This service handles CRUD operations for video metadata,
+    /// file storage for thumbnails and video assets, and cache invalidation.
     /// </summary>
     public class AdminVideoService : IAdminVideoService
     {
         private readonly ApiDbContext _context;
-        private readonly IWebHostEnvironment _env;
         private readonly ICacheService _cacheService;
+        private readonly IFileStorageService _fileStorageService;
         private readonly ILogger<AdminVideoService> _logger;
         private const string VideosCacheVersionKey = "videos_cache_version";
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AdminVideoService"/> class.
         /// </summary>
-        /// <param name="context">The database context.</param>
-        /// <param name="env">The web hosting environment for file path information.</param>
-        /// <param name="cacheService">The caching service for performance optimization.</param>
-        /// <param name="logger">The logger for recording events and errors.</param>
+        /// <param name="context">The database context for accessing videos and courses.</param>
+        /// <param name="cacheService">The caching service for versioned cache entries.</param>
+        /// <param name="fileStorageService">The file storage service for saving and deleting thumbnails and video assets.</param>
+        /// <param name="logger">The logger for recording informational messages and errors.</param>
         public AdminVideoService(
             ApiDbContext context,
-            IWebHostEnvironment env,
             ICacheService cacheService,
+            IFileStorageService fileStorageService,
             ILogger<AdminVideoService> logger
         )
         {
             _context = context;
-            _env = env;
             _cacheService = cacheService;
+            _fileStorageService = fileStorageService;
             _logger = logger;
         }
 
         /// <inheritdoc />
         /// <remarks>
-        /// This method uses a version-based caching strategy. When video data changes, the cache version is updated,
-        /// effectively invalidating all cached pages of videos at once.
+        /// Uses a version-based caching strategy. Whenever a video is created, updated, or deleted,
+        /// <see cref="InvalidateVideosCache"/> is called to bump the version. All cache keys
+        /// include that version, ensuring stale entries are ignored until the next rebuild.
         /// </remarks>
         public async Task<PaginatedResultDto<VideoDto>> GetAllVideosAsync(int page, int pageSize)
         {
             var cacheVersion = await _cacheService.GetOrCreateAsync(
                 VideosCacheVersionKey,
                 () => Task.FromResult(Guid.NewGuid().ToString()),
-                absoluteExpireTime: TimeSpan.FromDays(30)
+                TimeSpan.FromDays(30)
             );
 
             var cacheKey = $"AdminVideos_v{cacheVersion}_Page{page}_Size{pageSize}";
@@ -67,283 +65,170 @@ namespace MeuCrudCsharp.Features.Videos.Service
                 async () =>
                 {
                     _logger.LogInformation(
-                        "Fetching videos from database (cache miss) for key: {CacheKey}",
-                        cacheKey
+                        "Cache miss for videos. Fetching page {Page} (size {Size}) from database.",
+                        page,
+                        pageSize
                     );
-                    try
-                    {
-                        var totalCount = await _context.Videos.CountAsync();
 
-                        var items = await _context
-                            .Videos.Include(v => v.Course)
-                            .OrderByDescending(v => v.UploadDate)
-                            .Skip((page - 1) * pageSize)
-                            .Take(pageSize)
-                            .Select(v => new VideoDto
-                            {
-                                Id = v.Id,
-                                Title = v.Title,
-                                Description = v.Description,
-                                StorageIdentifier = v.StorageIdentifier,
-                                UploadDate = v.UploadDate,
-                                Duration = v.Duration,
-                                Status = v.Status.ToString(),
-                                CourseName = v.Course.Name,
-                                ThumbnailUrl = v.ThumbnailUrl,
-                            })
-                            .ToListAsync();
+                    var totalCount = await _context.Videos.CountAsync();
+                    var items = await _context
+                        .Videos.AsNoTracking()
+                        .Include(v => v.Course)
+                        .OrderByDescending(v => v.UploadDate)
+                        .Skip((page - 1) * pageSize)
+                        .Take(pageSize)
+                        .Select(v => VideoMapper.ToDto(v))
+                        .ToListAsync();
 
-                        return new PaginatedResultDto<VideoDto>(items, totalCount, page, pageSize);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(
-                            ex,
-                            "Error fetching the list of videos from the database."
-                        );
-                        throw new AppServiceException(
-                            "An error occurred while querying for videos.",
-                            ex
-                        );
-                    }
+                    return new PaginatedResultDto<VideoDto>(items, totalCount, page, pageSize);
                 },
-                absoluteExpireTime: TimeSpan.FromMinutes(10)
+                TimeSpan.FromMinutes(10)
             );
         }
 
         /// <inheritdoc />
         public async Task<VideoDto> CreateVideoAsync(CreateVideoDto createDto)
         {
-            try
+            var course = await GetOrCreateCourseAsync(createDto.CourseName);
+            var thumbnailUrl = await _fileStorageService.SaveThumbnailAsync(
+                createDto.ThumbnailFile
+            );
+
+            var video = new Video
             {
-                var course = await _context.Courses.FirstOrDefaultAsync(c =>
-                    c.Name == createDto.CourseName
-                );
-                if (course == null)
-                {
-                    course = new Models.Course { Name = createDto.CourseName };
-                    _context.Courses.Add(course);
-                }
-                string? thumbnailUrl = await SaveThumbnailAsync(createDto.ThumbnailFile);
+                Title = createDto.Title,
+                Description = createDto.Description,
+                StorageIdentifier = createDto.StorageIdentifier,
+                CourseId = course.Id,
+                ThumbnailUrl = thumbnailUrl,
+                // PublicId é gerado automaticamente no model
+            };
 
-                var video = new Video
-                {
-                    Title = createDto.Title,
-                    Description = createDto.Description,
-                    StorageIdentifier = createDto.StorageIdentifier,
-                    Course = course,
-                    ThumbnailUrl = thumbnailUrl,
-                };
+            _context.Videos.Add(video);
+            await _context.SaveChangesAsync();
+            await InvalidateVideosCache();
 
-                _context.Videos.Add(video);
-                await _context.SaveChangesAsync();
-
-                await InvalidateVideosCache();
-
-                return new VideoDto
-                {
-                    Id = video.Id,
-                    Title = video.Title,
-                    Description = video.Description,
-                    StorageIdentifier = video.StorageIdentifier,
-                    UploadDate = video.UploadDate,
-                    Duration = video.Duration,
-                    Status = video.Status.ToString(),
-                    CourseName = course.Name,
-                    ThumbnailUrl = video.ThumbnailUrl,
-                };
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(
-                    ex,
-                    "Unexpected error while creating video '{VideoTitle}'.",
-                    createDto.Title
-                );
-                throw new AppServiceException("An error occurred while saving the new video.", ex);
-            }
+            // Atribui Course para que o mapper use o nome corretamente
+            video.Course = course;
+            return VideoMapper.ToDto(video);
         }
 
         /// <inheritdoc />
-        public async Task<VideoDto> UpdateVideoAsync(Guid id, UpdateVideoDto updateDto)
+        public async Task<VideoDto> UpdateVideoAsync(Guid publicId, UpdateVideoDto updateDto)
         {
-            try
+            var video = await FindVideoByPublicIdOrFailAsync(publicId);
+
+            if (updateDto.ThumbnailFile != null && updateDto.ThumbnailFile.Length > 0)
             {
-                var video = await _context
-                    .Videos.Include(v => v.Course)
-                    .FirstOrDefaultAsync(v => v.Id == id);
-                if (video == null)
-                    throw new ResourceNotFoundException(
-                        $"Video with ID {id} not found for update."
-                    );
-
-                if (updateDto.ThumbnailFile != null && updateDto.ThumbnailFile.Length > 0)
-                {
-                    if (!string.IsNullOrEmpty(video.ThumbnailUrl))
-                    {
-                        var relativePath = video
-                            .ThumbnailUrl.TrimStart('/')
-                            .Replace('/', Path.DirectorySeparatorChar);
-                        var oldThumbnailPath = Path.Combine(_env.WebRootPath, relativePath);
-
-                        try
-                        {
-                            if (File.Exists(oldThumbnailPath))
-                            {
-                                File.Delete(oldThumbnailPath);
-                                _logger.LogInformation(
-                                    "Old thumbnail '{Path}' deleted successfully.",
-                                    oldThumbnailPath
-                                );
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogWarning(
-                                ex,
-                                "Failed to delete old thumbnail at path: {Path}",
-                                oldThumbnailPath
-                            );
-                        }
-                    }
-
-                    video.ThumbnailUrl = await SaveThumbnailAsync(updateDto.ThumbnailFile);
-                }
-
-                video.Title = updateDto.Title;
-                video.Description = updateDto.Description;
-
-                await _context.SaveChangesAsync();
-                await InvalidateVideosCache();
-                _logger.LogInformation("Video {VideoId} updated successfully.", id);
-
-                return new VideoDto
-                {
-                    Id = video.Id,
-                    Title = video.Title,
-                    Description = video.Description,
-                    StorageIdentifier = video.StorageIdentifier,
-                    UploadDate = video.UploadDate,
-                    Duration = video.Duration,
-                    Status = video.Status.ToString(),
-                    CourseName = video.Course.Name,
-                    ThumbnailUrl = video.ThumbnailUrl,
-                };
-            }
-            catch (DbUpdateException ex)
-            {
-                _logger.LogError(ex, "Database error while updating video {VideoId}.", id);
-                throw new AppServiceException("An error occurred while saving video changes.", ex);
-            }
-        }
-
-        /// <inheritdoc />
-        public async Task DeleteVideoAsync(Guid id)
-        {
-            var video = await _context.Videos.FindAsync(id);
-            if (video == null)
-                throw new ResourceNotFoundException($"Video with ID {id} not found for deletion.");
-
-            try
-            {
-                var videoFolderPath = Path.Combine(
-                    _env.WebRootPath,
-                    "Videos",
-                    video.StorageIdentifier
-                );
-                if (Directory.Exists(videoFolderPath))
-                {
-                    Directory.Delete(videoFolderPath, recursive: true);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(
-                    ex,
-                    "Failed to delete the file folder for video {VideoId}. Database removal will be aborted.",
-                    id
-                );
-                throw new AppServiceException(
-                    "An error occurred while removing the physical video files.",
-                    ex
+                // Remove thumbnail antigo e armazena o novo
+                await _fileStorageService.DeleteThumbnailAsync(video.ThumbnailUrl);
+                video.ThumbnailUrl = await _fileStorageService.SaveThumbnailAsync(
+                    updateDto.ThumbnailFile
                 );
             }
 
-            try
-            {
-                _context.Videos.Remove(video);
-                await _context.SaveChangesAsync();
+            video.Title = updateDto.Title;
+            video.Description = updateDto.Description;
 
-                await InvalidateVideosCache();
+            await _context.SaveChangesAsync();
+            await InvalidateVideosCache();
 
-                _logger.LogInformation(
-                    "Video {VideoId} deleted from the database successfully.",
-                    id
-                );
-            }
-            catch (DbUpdateException ex)
-            {
-                _logger.LogError(ex, "Database error while deleting video {VideoId}.", id);
-                throw new AppServiceException(
-                    "An error occurred while removing the video from our system.",
-                    ex
-                );
-            }
+            _logger.LogInformation("Vídeo {VideoId} atualizado com sucesso.", video.Id);
+            return VideoMapper.ToDto(video);
         }
 
         /// <summary>
-        /// Saves a thumbnail file to the server and returns its relative URL path.
+        /// Deletes a video and its associated assets from storage and the database.
+        /// Also invalidates the video listing cache.
         /// </summary>
-        /// <param name="file">The thumbnail file to save.</param>
-        /// <returns>The relative URL path to the saved thumbnail, or null if no file was provided.</returns>
-        private async Task<string?> SaveThumbnailAsync(IFormFile? file)
+        /// <param name="publicId">The public identifier of the video to delete.</param>
+        /// <returns>A task representing the asynchronous operation.</returns>
+        /// <exception cref="ResourceNotFoundException">
+        /// Thrown if no video with the given <paramref name="publicId"/> exists.
+        /// </exception>
+        public async Task DeleteVideoAsync(Guid publicId)
         {
-            if (file == null || file.Length == 0)
-            {
-                return null;
-            }
+            var video = await FindVideoByPublicIdOrFailAsync(publicId, includeCourse: false);
 
-            var thumbnailsDirectory = Path.Combine(_env.WebRootPath, "thumbnails");
-            Directory.CreateDirectory(thumbnailsDirectory);
+            await _fileStorageService.DeleteVideoAssetsAsync(video.StorageIdentifier);
+            await _fileStorageService.DeleteThumbnailAsync(video.ThumbnailUrl);
 
-            var fileName = $"{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
-            var filePath = Path.Combine(thumbnailsDirectory, fileName);
+            _context.Videos.Remove(video);
+            await _context.SaveChangesAsync();
+            await InvalidateVideosCache();
 
-            await using (var stream = new FileStream(filePath, FileMode.Create))
-            {
-                await file.CopyToAsync(stream);
-            }
-
-            return $"/thumbnails/{fileName}";
+            _logger.LogInformation(
+                "Vídeo {VideoId} deletado com sucesso do banco de dados.",
+                video.Id
+            );
         }
 
         /// <summary>
-        /// Invalidates the video cache by updating the master cache version key.
+        /// Bumps the cache version for videos, effectively invalidating all existing
+        /// <c>GetAllVideosAsync</c> cache entries.
         /// </summary>
-        /// <exception cref="AppServiceException">Thrown if updating the cache version fails.</exception>
+        /// <returns>A task representing the asynchronous operation.</returns>
         private async Task InvalidateVideosCache()
         {
-            try
+            var newVersion = Guid.NewGuid().ToString();
+            await _cacheService.SetAsync(VideosCacheVersionKey, newVersion, TimeSpan.FromDays(30));
+            _logger.LogInformation(
+                "Cache de vídeos invalidado. Nova versão: {CacheVersion}",
+                newVersion
+            );
+        }
+
+        /// <summary>
+        /// Retrieves a <see cref="Video"/> entity by <paramref name="publicId"/>.
+        /// </summary>
+        /// <param name="publicId">The public identifier of the video.</param>
+        /// <param name="includeCourse">
+        /// If true, includes the related <see cref="Course"/> entity in the query.
+        /// </param>
+        /// <returns>The matching <see cref="Video"/> entity.</returns>
+        /// <exception cref="ResourceNotFoundException">
+        /// Thrown if no video with the given <paramref name="publicId"/> is found.
+        /// </exception>
+        private async Task<Video> FindVideoByPublicIdOrFailAsync(
+            Guid publicId,
+            bool includeCourse = true
+        )
+        {
+            var query = _context.Videos.AsQueryable();
+            if (includeCourse)
             {
-                var newVersion = Guid.NewGuid().ToString();
-                await _cacheService.SetAsync(
-                    VideosCacheVersionKey,
-                    newVersion,
-                    TimeSpan.FromDays(30)
-                );
-                _logger.LogInformation(
-                    "Videos cache invalidated. New version: {CacheVersion}",
-                    newVersion
+                query = query.Include(v => v.Course);
+            }
+
+            var video = await query.FirstOrDefaultAsync(v => v.PublicId == publicId);
+            if (video == null)
+            {
+                throw new ResourceNotFoundException(
+                    $"Vídeo com o PublicId {publicId} não foi encontrado."
                 );
             }
-            catch (Exception ex)
+
+            return video;
+        }
+
+        /// <summary>
+        /// Finds an existing <see cref="Course"/> by name or creates a new one if none exists.
+        /// </summary>
+        /// <param name="courseName">The name of the course to retrieve or create.</param>
+        /// <returns>
+        /// The existing or newly created <see cref="Course"/> entity.
+        /// </returns>
+        private async Task<Models.Course> GetOrCreateCourseAsync(string courseName)
+        {
+            var course = await _context.Courses.FirstOrDefaultAsync(c => c.Name == courseName);
+            if (course == null)
             {
-                _logger.LogError(ex, "Failed to invalidate videos cache (update version key).");
-                throw new AppServiceException(
-                    "An error occurred while clearing the videos cache.",
-                    ex
-                );
+                course = new Models.Course { Name = courseName };
+                _context.Courses.Add(course);
+                // SaveChangesAsync será chamado pela chamada de criação/atualização principal
             }
+
+            return course;
         }
     }
 }

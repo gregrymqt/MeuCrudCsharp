@@ -3,10 +3,13 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Text.RegularExpressions;
 using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Features.Exceptions;
+using MeuCrudCsharp.Features.Hubs;
 using MeuCrudCsharp.Features.Videos.Interfaces;
 using MeuCrudCsharp.Models;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -21,28 +24,28 @@ namespace MeuCrudCsharp.Features.Videos.Service
     {
         private readonly ILogger<VideoProcessingService> _logger;
         private readonly IServiceProvider _serviceProvider;
+        private readonly IHubContext<VideoProcessingHub> _hubContext; // ⭐️ 1. Injetar o HubContext
         private const string _ffmpegPath = "ffmpeg";
         private const string _ffprobePath = "ffprobe";
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="VideoProcessingService"/> class.
-        /// </summary>
-        /// <param name="logger">The logger for recording events and errors.</param>
-        /// <param name="serviceProvider">The service provider to create dependency scopes for background jobs.</param>
+        // Regex para capturar a informação de tempo (time=HH:mm:ss.ms) da saída do FFmpeg
+        private static readonly Regex FfmpegProgressRegex = new Regex(
+            @"time=(\d{2}):(\d{2}):(\d{2})\.(\d{2})",
+            RegexOptions.Compiled
+        );
+
         public VideoProcessingService(
             ILogger<VideoProcessingService> logger,
-            IServiceProvider serviceProvider
-        )
+            IServiceProvider serviceProvider,
+            IHubContext<VideoProcessingHub> hubContext
+        ) // ⭐️ 1. Receber no construtor
         {
             _logger = logger;
             _serviceProvider = serviceProvider;
+            _hubContext = hubContext; // ⭐️ 1. Armazenar a referência
         }
 
-        /// <inheritdoc />
-        /// <remarks>
-        /// This method creates a new dependency scope to safely interact with the database from a background thread.
-        /// It updates the video's status to 'Available' on success or 'Error' on failure.
-        /// </remarks>
+        // ✅ 2. O método principal agora orquestra as notificações do SignalR
         public async Task ProcessVideoToHlsAsync(
             string inputFilePath,
             string outputDirectory,
@@ -51,39 +54,58 @@ namespace MeuCrudCsharp.Features.Videos.Service
         {
             await using var scope = _serviceProvider.CreateAsyncScope();
             var context = scope.ServiceProvider.GetRequiredService<ApiDbContext>();
-            Video? video = null;
+            Video? video = await context.Videos.FirstOrDefaultAsync(v =>
+                v.StorageIdentifier == storageIdentifier
+            );
+
+            if (video == null)
+                throw new ResourceNotFoundException($"Vídeo {storageIdentifier} não encontrado.");
+
+            var groupName = $"processing-{storageIdentifier}";
 
             try
             {
-                video = await context.Videos.FirstOrDefaultAsync(v =>
-                    v.StorageIdentifier == storageIdentifier
-                );
-                if (video == null)
-                {
-                    throw new ResourceNotFoundException(
-                        $"Video with StorageIdentifier {storageIdentifier} not found for processing."
-                    );
-                }
+                await SendProgressUpdate(groupName, "Iniciando...", 0);
 
                 if (!File.Exists(inputFilePath))
-                {
-                    throw new FileNotFoundException($"Input file not found: {inputFilePath}");
-                }
+                    throw new FileNotFoundException(
+                        $"Arquivo de entrada não encontrado: {inputFilePath}"
+                    );
 
                 Directory.CreateDirectory(outputDirectory);
 
+                await SendProgressUpdate(groupName, "Obtendo duração do vídeo...", 5);
                 var duration = await GetVideoDurationAsync(inputFilePath);
+                video.Duration = duration; // Salva a duração no início
 
                 var manifestPath = Path.Combine(outputDirectory, "manifest.m3u8");
                 var arguments =
                     $"-i \"{inputFilePath}\" -c:v libx264 -c:a aac -hls_time 10 -hls_playlist_type vod -hls_segment_filename \"{Path.Combine(outputDirectory, "segment%03d.ts")}\" \"{manifestPath}\"";
 
-                await RunProcessAsync(_ffmpegPath, arguments);
+                // Define a função de callback que será executada para cada linha de progresso do FFmpeg
+                Func<string, Task> onProgress = rawFfmpegOutput =>
+                {
+                    var progress = ParseFfmpegProgress(rawFfmpegOutput, duration.TotalSeconds);
+                    if (progress.HasValue)
+                    {
+                        // Envia a porcentagem calculada via SignalR
+                        return SendProgressUpdate(groupName, "Convertendo...", progress.Value);
+                    }
+                    return Task.CompletedTask;
+                };
+
+                // Chama o processo FFmpeg passando o callback de progresso
+                await RunProcessWithProgressAsync(_ffmpegPath, arguments, onProgress);
 
                 video.Status = VideoStatus.Available;
-                video.Duration = duration;
+                await SendProgressUpdate(
+                    groupName,
+                    "Processamento concluído!",
+                    100,
+                    isComplete: true
+                );
                 _logger.LogInformation(
-                    "Video {StorageIdentifier} processed successfully.",
+                    "Vídeo {StorageIdentifier} processado com sucesso.",
                     storageIdentifier
                 );
             }
@@ -91,16 +113,14 @@ namespace MeuCrudCsharp.Features.Videos.Service
             {
                 _logger.LogError(
                     ex,
-                    "Critical failure while processing video {StorageIdentifier}.",
+                    "Falha crítica ao processar o vídeo {StorageIdentifier}.",
                     storageIdentifier
                 );
-
                 if (video != null)
-                {
                     video.Status = VideoStatus.Error;
-                }
 
-                throw;
+                await SendProgressUpdate(groupName, $"Erro: {ex.Message}", 100, isError: true);
+                throw; // Relança a exceção para que o Hangfire/job runner saiba que falhou
             }
             finally
             {
@@ -111,16 +131,10 @@ namespace MeuCrudCsharp.Features.Videos.Service
             }
         }
 
-        /// <summary>
-        /// Executes an external command-line process asynchronously.
-        /// </summary>
-        /// <param name="filePath">The path to the executable file (e.g., "ffmpeg").</param>
-        /// <param name="arguments">The command-line arguments to pass to the process.</param>
-        /// <returns>A tuple containing the standard output and standard error streams as strings.</returns>
-        /// <exception cref="AppServiceException">Thrown if the process fails to start or returns a non-zero exit code.</exception>
-        private async Task<(string StandardOutput, string StandardError)> RunProcessAsync(
+        private async Task RunProcessWithProgressAsync(
             string filePath,
-            string arguments
+            string arguments,
+            Func<string, Task> onProgress
         )
         {
             var processStartInfo = new ProcessStartInfo
@@ -133,39 +147,115 @@ namespace MeuCrudCsharp.Features.Videos.Service
                 CreateNoWindow = true,
             };
 
-            try
+            using var process = Process.Start(processStartInfo);
+            if (process == null)
+                throw new AppServiceException($"Não foi possível iniciar o processo '{filePath}'.");
+
+            while (!process.StandardError.EndOfStream)
             {
-                using var process = Process.Start(processStartInfo);
-                if (process == null)
+                var line = await process.StandardError.ReadLineAsync();
+                if (line != null)
                 {
-                    throw new AppServiceException($"Could not start the process for '{filePath}'.");
+                    await onProgress(line);
                 }
-
-                string output = await process.StandardOutput.ReadToEndAsync();
-                string error = await process.StandardError.ReadToEndAsync();
-                await process.WaitForExitAsync();
-
-                if (process.ExitCode != 0)
-                {
-                    throw new AppServiceException(
-                        $"Process '{filePath}' failed with exit code {process.ExitCode}. Error: {error}"
-                    );
-                }
-
-                return (output, error);
             }
-            catch (Win32Exception ex)
+
+            string error = await process.StandardError.ReadToEndAsync();
+            await process.WaitForExitAsync();
+
+            if (process.ExitCode != 0)
             {
-                _logger.LogError(
-                    ex,
-                    "Error starting process '{FileName}'. Verify that FFmpeg/FFprobe is installed and in the system's PATH.",
-                    filePath
-                );
                 throw new AppServiceException(
-                    $"External dependency '{filePath}' not found. Please check the installation.",
-                    ex
+                    $"Processo '{filePath}' falhou com código {process.ExitCode}. Erro: {error}"
                 );
             }
+        }
+
+        // ✅ CORRIGIDO: Método renomeado para maior clareza
+        private async Task<(
+            string StandardOutput,
+            string StandardError
+        )> RunProcessAndGetOutputAsync(string filePath, string arguments)
+        {
+            var processStartInfo = new ProcessStartInfo
+            {
+                FileName = filePath,
+                Arguments = arguments,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+            };
+
+            using var process = Process.Start(processStartInfo);
+            if (process == null)
+            {
+                throw new AppServiceException($"Não foi possível iniciar o processo '{filePath}'.");
+            }
+
+            var outputTask = process.StandardOutput.ReadToEndAsync();
+            var errorTask = process.StandardError.ReadToEndAsync();
+
+            await process.WaitForExitAsync();
+
+            // Verifica o código de saída ANTES de retornar, para garantir que o processo foi bem-sucedido
+            if (process.ExitCode != 0)
+            {
+                string error = await errorTask;
+                throw new AppServiceException(
+                    $"Processo '{filePath}' falhou com código {process.ExitCode}. Erro: {error}"
+                );
+            }
+
+            return (await outputTask, await errorTask);
+        }
+
+        // ✅ 4. Novo método para "traduzir" a saída do FFmpeg em porcentagem
+        private int? ParseFfmpegProgress(string ffmpegLine, double totalDurationSeconds)
+        {
+            if (totalDurationSeconds <= 0)
+                return null;
+
+            var match = FfmpegProgressRegex.Match(ffmpegLine);
+            if (match.Success)
+            {
+                // Extrai horas, minutos, segundos e milissegundos
+                var hours = int.Parse(match.Groups[1].Value);
+                var minutes = int.Parse(match.Groups[2].Value);
+                var seconds = int.Parse(match.Groups[3].Value);
+                var milliseconds = int.Parse(match.Groups[4].Value);
+
+                var processedTime = new TimeSpan(0, hours, minutes, seconds, milliseconds * 10);
+
+                // Calcula a porcentagem, garantindo que não passe de 99% (100% será enviado no final)
+                var progress = (int)((processedTime.TotalSeconds / totalDurationSeconds) * 100);
+                return Math.Min(99, progress);
+            }
+
+            return null;
+        }
+
+        // Método auxiliar para enviar notificações via Hub (o que já tínhamos)
+        private Task SendProgressUpdate(
+            string groupName,
+            string message,
+            int progress,
+            bool isComplete = false,
+            bool isError = false
+        )
+        {
+            return _hubContext
+                .Clients.Group(groupName)
+                .SendAsync(
+                    "ProgressUpdate",
+                    new
+                    {
+                        Message = message,
+                        Progress = progress,
+                        IsComplete = isComplete,
+                        IsError = isError,
+                    }
+                );
         }
 
         /// <summary>
@@ -178,15 +268,12 @@ namespace MeuCrudCsharp.Features.Videos.Service
             var arguments =
                 $"-v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 \"{inputFilePath}\"";
 
-            var (output, error) = await RunProcessAsync(_ffprobePath, arguments);
+            // A chamada agora é explícita e sem ambiguidades, corrigindo o erro
+            var (output, error) = await RunProcessAndGetOutputAsync(_ffprobePath, arguments);
 
             if (!string.IsNullOrEmpty(error))
             {
-                _logger.LogWarning(
-                    "ffprobe returned an error while getting duration for {InputPath}: {Error}",
-                    inputFilePath,
-                    error
-                );
+                _logger.LogWarning("ffprobe retornou um erro ao obter a duração: {Error}", error);
             }
 
             if (
@@ -202,8 +289,7 @@ namespace MeuCrudCsharp.Features.Videos.Service
             }
 
             _logger.LogWarning(
-                "Could not parse video duration from ffprobe output for: {InputPath}. Output was: '{Output}'",
-                inputFilePath,
+                "Não foi possível extrair a duração da saída do ffprobe: '{Output}'",
                 output
             );
             return TimeSpan.Zero;

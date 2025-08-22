@@ -13,6 +13,7 @@ namespace MeuCrudCsharp.Models
     }
 
     [Index(nameof(CourseId))]
+    [Index(nameof(PublicId), IsUnique = true)]
     public class Video
     {
         [Key]
@@ -24,7 +25,7 @@ namespace MeuCrudCsharp.Models
         public DateTime UploadDate { get; set; }
         public TimeSpan Duration { get; set; }
         public VideoStatus Status { get; set; }
-        public Guid CourseId { get; set; }
+        public int CourseId { get; set; }
         public virtual Course Course { get; set; }
 
         // NOVO: Adicione este campo

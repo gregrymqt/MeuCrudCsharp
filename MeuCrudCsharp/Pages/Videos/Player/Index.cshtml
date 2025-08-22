@@ -1,42 +1,37 @@
-﻿@page "{videoId}"
+﻿@page "{videoId:guid}"
 @using MeuCrudCsharp.Models
 @model MeuCrudCsharp.Pages.Videos.Player.IndexModel
 @{
-    // Define o título da aba do navegador com o título do vídeo
     ViewData["Title"] = Model.VideoData?.Title ?? "Vídeo";
 }
 
 <link href="~/css/Player/index.css" rel="stylesheet" asp-append-version="true" />
-
-<!-- 1. Importação da biblioteca HLS.js a partir de uma CDN -->
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 
-<!-- O título agora é dinâmico, vindo do banco de dados -->
 <h1>@Model.VideoData?.Title</h1>
 
 <div id="videoContainer">
     @if (Model.VideoData != null && Model.VideoData.Status == VideoStatus.Available)
     {
-        <!-- O elemento <video> onde o conteúdo será reproduzido -->
         <div id="videoPlaceholder"
              class="video-placeholder"
              style="background-image: url('@Model.VideoData?.ThumbnailUrl'); cursor: pointer;"
-             data-video-id="@Model.VideoData.Id">
+             data-video-id="@Model.VideoData.PublicId">
 
             <i class="fas fa-play play-icon-large"></i>
         </div>
-        <div class="video-details"></div>
-        <h2>Sobre este vídeo</h2>
-        <p>@Model.VideoData?.Description</p>
-        <div class="video-meta">
-            <span><strong>Curso:</strong> @Model.VideoData?.Course.Name</span>
-            <span><strong>Duração:</strong> @Model.VideoData?.Duration.ToString(@"hh\:mm\:ss")</span>
-        </div>
 
+        <div class="video-details">
+            <h2>Sobre este vídeo</h2>
+            <p>@Model.VideoData?.Description</p>
+            <div class="video-meta">
+                <span><strong>Curso:</strong> @Model.VideoData?.Course?.Name</span>
+                <span><strong>Duração:</strong> @Model.VideoData?.Duration.ToString(@"hh\:mm\:ss")</span>
+            </div>
+        </div>
     }
     else
     {
-        <!-- Mensagem exibida se o vídeo não estiver disponível -->
         <div class="status-message">
             <p>Este vídeo ainda está sendo processado ou não está disponível. Por favor, tente novamente mais tarde.</p>
         </div>

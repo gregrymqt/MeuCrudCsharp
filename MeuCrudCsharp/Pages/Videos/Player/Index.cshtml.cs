@@ -13,11 +13,10 @@ namespace MeuCrudCsharp.Pages.Videos.Player
     {
         private readonly ApiDbContext _context;
 
-        // Propriedade para receber o ID do vídeo da URL (graças ao @page "{videoId}")
+        // ✅ MUDANÇA 1: A propriedade agora é do tipo Guid para receber o PublicId
         [BindProperty(SupportsGet = true)]
-        public string? VideoId { get; set; }
+        public Guid VideoId { get; set; }
 
-        // Propriedades para enviar dados para o HTML
         public Video? VideoData { get; private set; }
         public Users? UserProfile { get; private set; }
 
@@ -28,30 +27,27 @@ namespace MeuCrudCsharp.Pages.Videos.Player
 
         public async Task<IActionResult> OnGetAsync()
         {
-            // --- ETAPA 1: Validar o Usuário (Lógica que você já tinha) ---
+            // --- ETAPA 1: Validar o Usuário (Permanece igual) ---
             var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
-
-            UserProfile = await _context
-                .Users.Include(u => u.Payments)
+            UserProfile = await _context.Users
+                .Include(u => u.Payments)
                 .FirstOrDefaultAsync(u => u.Id == userIdString);
 
             if (UserProfile == null || UserProfile.Payments.Any(p => p.Status == "rejected"))
             {
-                // Se não encontrar o usuário ou o pagamento foi rejeitado, nega o acesso.
-                // Você pode redirecionar para a página de pagamento aqui.
                 return Forbid();
             }
 
             // --- ETAPA 2: Validar e Buscar o Vídeo ---
-            if (string.IsNullOrEmpty(VideoId))
+            if (VideoId == Guid.Empty)
             {
-                return NotFound("O ID do vídeo não foi fornecido na URL.");
+                return NotFound("O ID do vídeo não foi fornecido ou é inválido.");
             }
 
-            // Busca o vídeo no banco usando o StorageIdentifier, que é o GUID da pasta
-            VideoData = await _context.Videos.FirstOrDefaultAsync(v =>
-                v.StorageIdentifier == VideoId
-            );
+            // ✅ MUDANÇA 2: A busca no banco agora é feita pelo PublicId
+            VideoData = await _context.Videos
+                .Include(v => v.Course) // Incluindo o curso para exibir o nome
+                .FirstOrDefaultAsync(v => v.PublicId == VideoId);
 
             if (VideoData == null)
             {
@@ -60,11 +56,9 @@ namespace MeuCrudCsharp.Pages.Videos.Player
 
             if (VideoData.Status != VideoStatus.Available)
             {
-                // Se o vídeo ainda está processando ou deu erro, não exibe.
-                return Page(); // Retorna a página, que pode mostrar uma mensagem de status.
+                return Page();
             }
 
-            // Se tudo estiver OK, permite que a página seja renderizada
             return Page();
         }
     }

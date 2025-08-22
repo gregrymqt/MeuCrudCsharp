@@ -314,29 +314,52 @@ document.addEventListener('DOMContentLoaded', function () {
                 throw new Error(errorData.message || 'An error occurred during upload.');
             }
             const result = await response.json();
+            const storageId = result.storageIdentifier;
 
-            Swal.close();
-            Swal.fire({
-                toast: true,
-                position: 'top-end',
-                icon: 'success',
-                title: 'Upload complete!',
-                showConfirmButton: false,
-                timer: 3000
+            // 3. UPLOAD TERMINOU. AGORA, CONECTA AO HUB PARA VER O PROCESSAMENTO
+            storageIdentifierInput.value = storageId;
+            uploadStatusDiv.innerHTML = `<p><strong>Aguardando início do processamento...</strong></p>`;
+
+            // Altera o modal para o status de processamento
+            Swal.update({
+                title: 'Processando Vídeo...',
+                text: 'Isso pode levar alguns minutos. Não feche esta página.'
             });
 
-            uploadStatusDiv.innerHTML = `<p style="color: #198754;"><strong>Upload complete!</strong> Now, please fill in the details below.</p>`;
-            storageIdentifierInput.value = result.storageIdentifier;
-            metadataFieldset.disabled = false;
-            saveButton.disabled = false;
+            // 4. Conecta ao Hub
+            const connection = new signalR.HubConnectionBuilder()
+                .withUrl("/videoProcessingHub") // Use a rota mapeada para o seu Hub
+                .build();
+
+
+            // 5. Ouve por mensagens de progresso do back-end
+            connection.on("ProgressUpdate", (data) => {
+                console.log(data); // Para debug
+                uploadStatusDiv.innerHTML = `<p><strong>Status:</strong> ${data.message} (${data.progress}%)</p>`;
+                Swal.update({ text: `${data.message} (${data.progress}%)` });
+
+                // Se o processo terminou (com sucesso ou erro)
+                if (data.isComplete || data.isError) {
+                    connection.stop(); // Desconecta do Hub
+
+                    if (data.isComplete) {
+                        Swal.fire('Sucesso!', 'Seu vídeo foi processado e está pronto.', 'success');
+                        metadataFieldset.disabled = false;
+                        saveButton.disabled = false;
+                    } else {
+                        Swal.fire('Erro!', `Ocorreu um erro durante o processamento: ${data.message}`, 'error');
+                    }
+                }
+            });
+
+            // 6. Inicia a conexão e se inscreve no grupo
+            await connection.start();
+            await connection.invoke("SubscribeToJobProgress", storageId);
+
         } catch (error) {
-            console.error('Upload error:', error);
-            Swal.fire({
-                icon: 'error',
-                title: 'Upload Error',
-                text: error.message,
-            });
-            uploadStatusDiv.innerHTML = `<p style="color: #dc3545;"><strong>Upload error:</strong> ${error.message}</p>`;
+            console.error('Erro:', error);
+            Swal.fire('Erro!', error.message, 'error');
+            uploadStatusDiv.innerHTML = `<p style="color: #dc3545;"><strong>Erro:</strong> ${error.message}</p>`;
         }
     });
 

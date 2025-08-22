@@ -19,8 +19,9 @@ namespace MeuCrudCsharp.Features.Courses.Services
     public class CourseService : ICourseService
     {
         private readonly ApiDbContext _context;
-        private readonly ILogger<CourseService> _logger;
         private readonly ICacheService _cacheService;
+        private readonly ILogger<CourseService> _logger;
+        private const string CoursesCacheVersionKey = "courses_cache_version";
 
         /// <summary>
         /// Inicializa uma nova instância da classe <see cref="CourseService"/>.
@@ -45,47 +46,21 @@ namespace MeuCrudCsharp.Features.Courses.Services
         /// <param name="id">O ID do curso a ser buscado.</param>
         /// <returns>O DTO do curso encontrado.</returns>
         /// <exception cref="ResourceNotFoundException">Lançada se o curso com o ID especificado não for encontrado.</exception>
-        public async Task<CourseDto?> GetCourseByIdAsync(Guid id)
+        public async Task<CourseDto?> GetCourseByIdAsync(Guid publicId)
         {
-            try
-            {
-                var courseDto = await _context
-                    .Courses.AsNoTracking()
-                    .Where(c => c.Id == id)
-                    .Select(c => new CourseDto
-                    {
-                        Id = c.Id,
-                        Name = c.Name,
-                        Description = c.Description,
-                        Videos = c
-                            .Videos.Select(v => new VideoDto
-                            {
-                                Id = v.Id,
-                                Title = v.Title,
-                                Description = v.Description,
-                                StorageIdentifier = v.StorageIdentifier,
-                                UploadDate = v.UploadDate,
-                                Duration = v.Duration,
-                                Status = v.Status.ToString(),
-                                CourseName = c.Name,
-                                ThumbnailUrl = v.ThumbnailUrl,
-                            })
-                            .ToList(),
-                    })
-                    .FirstOrDefaultAsync();
+            // A busca é feita diretamente pelo PublicId e já projeta para o DTO
+            var courseDto = await _context.Courses
+                .AsNoTracking()
+                .Where(c => c.PublicId == publicId)
+                .Include(c => c.Videos) // Inclui os vídeos para o mapeamento
+                .Select(c => CourseMapper.ToDtoWithVideos(c)) // Usa o Mapper
+                .FirstOrDefaultAsync();
 
-                if (courseDto == null)
-                {
-                    throw new ResourceNotFoundException($"Curso com ID {id} não encontrado.");
-                }
-
-                return courseDto;
-            }
-            catch (Exception ex)
+            if (courseDto == null)
             {
-                _logger.LogError(ex, "Erro ao buscar o curso com ID {CourseId}.", id);
-                throw new AppServiceException("Ocorreu um erro ao buscar o curso.", ex);
+                throw new ResourceNotFoundException($"Curso com ID {publicId} não encontrado.");
             }
+            return courseDto;
         }
 
         /// <summary>
@@ -95,64 +70,27 @@ namespace MeuCrudCsharp.Features.Courses.Services
         /// <param name="pageSize"></param>
         /// <returns></returns>
         /// <exception cref="AppServiceException"></exception>
-        public async Task<PaginatedResultDto<CourseDto>> GetCoursesWithVideosPaginatedAsync(
-            int pageNumber,
-            int pageSize
-        )
+        public async Task<PaginatedResultDto<CourseDto>> GetCoursesWithVideosPaginatedAsync(int pageNumber, int pageSize)
         {
-            try
-            {
-                // A chave de cache agora deve incluir a página e o tamanho
-                var cacheKey = $"CoursesWithVideos_Page{pageNumber}_Size{pageSize}";
-                return await _cacheService.GetOrCreateAsync(
-                    cacheKey,
-                    async () =>
-                    {
-                        var totalCount = await _context.Courses.CountAsync(); // Pega o total de cursos
+            var cacheVersion = await GetCacheVersionAsync();
+            var cacheKey = $"Courses_v{cacheVersion}_Page{pageNumber}_Size{pageSize}";
 
-                        var courses = await _context
-                            .Courses.AsNoTracking()
-                            .Include(c => c.Videos)
-                            .OrderBy(c => c.Name)
-                            .Skip((pageNumber - 1) * pageSize) // Pula os itens das páginas anteriores
-                            .Take(pageSize)
-                            .Select(c => new CourseDto
-                            {
-                                Id = c.Id,
-                                Name = c.Name,
-                                Description = c.Description,
-                                Videos = c
-                                    .Videos.Select(v => new VideoDto
-                                    {
-                                        Id = v.Id,
-                                        Title = v.Title,
-                                        Description = v.Description,
-                                        StorageIdentifier = v.StorageIdentifier,
-                                        UploadDate = v.UploadDate,
-                                        Duration = v.Duration,
-                                        Status = v.Status.ToString(),
-                                        CourseName = c.Name,
-                                        ThumbnailUrl = v.ThumbnailUrl,
-                                    })
-                                    .ToList(),
-                            })
-                            .ToListAsync();
-
-                        return new PaginatedResultDto<CourseDto>(
-                            courses,
-                            totalCount,
-                            pageNumber,
-                            pageSize
-                        );
-                    },
-                    TimeSpan.FromMinutes(10)
-                );
-            }
-            catch (Exception ex)
+            return await _cacheService.GetOrCreateAsync(cacheKey, async () =>
             {
-                _logger.LogError(ex, "Erro ao buscar cursos paginados.");
-                throw new AppServiceException("Ocorreu um erro ao buscar a lista de cursos.", ex);
-            }
+                _logger.LogInformation("Buscando cursos do banco (cache miss) para a chave: {CacheKey}", cacheKey);
+
+                var totalCount = await _context.Courses.CountAsync();
+                var courses = await _context.Courses
+                    .AsNoTracking()
+                    .Include(c => c.Videos)
+                    .OrderBy(c => c.Name)
+                    .Skip((pageNumber - 1) * pageSize)
+                    .Take(pageSize)
+                    .Select(c => CourseMapper.ToDtoWithVideos(c)) // Usa o Mapper
+                    .ToListAsync();
+
+                return new PaginatedResultDto<CourseDto>(courses, totalCount, pageNumber, pageSize);
+            }, TimeSpan.FromMinutes(10));
         }
 
         /// <summary>
@@ -163,45 +101,23 @@ namespace MeuCrudCsharp.Features.Courses.Services
         /// <exception cref="AppServiceException">Lançada se já existir um curso com o mesmo nome ou se ocorrer um erro inesperado.</exception>
         public async Task<CourseDto> CreateCourseAsync(CreateCourseDto createDto)
         {
-            try
+            if (await _context.Courses.AnyAsync(c => c.Name == createDto.Name))
             {
-                if (await _context.Courses.AnyAsync(c => c.Name == createDto.Name))
-                {
-                    throw new AppServiceException("Já existe um curso com este nome.");
-                }
-
-                var newCourse = new Models.Course
-                {
-                    // Correção: Garantir que valores não nulos sejam passados para o modelo.
-                    Name = createDto.Name!, // O atributo [Required] no DTO garante que Name não será nulo.
-                    Description = createDto.Description ?? string.Empty, // Se a descrição for nula, usa uma string vazia.
-                };
-
-                _context.Courses.Add(newCourse);
-                await _context.SaveChangesAsync();
-
-                await _cacheService.RemoveAsync("AllCoursesWithVideos");
-
-                _logger.LogInformation(
-                    "Novo curso '{CourseName}' criado com sucesso.",
-                    newCourse.Name
-                );
-                return new CourseDto
-                {
-                    Id = newCourse.Id,
-                    Name = newCourse.Name,
-                    Description = newCourse.Description,
-                };
+                throw new AppServiceException("Já existe um curso com este nome.");
             }
-            catch (Exception ex)
+
+            var newCourse = new Models.Course
             {
-                _logger.LogError(
-                    ex,
-                    "Erro inesperado ao criar o curso '{CourseName}'.",
-                    createDto.Name
-                );
-                throw new AppServiceException("Ocorreu um erro ao criar o curso.", ex);
-            }
+                Name = createDto.Name,
+                Description = createDto.Description ?? string.Empty,
+            };
+
+            _context.Courses.Add(newCourse);
+            await _context.SaveChangesAsync();
+            await InvalidateCoursesCacheAsync(); // Invalidação robusta
+
+            _logger.LogInformation("Novo curso '{CourseName}' criado com sucesso.", newCourse.Name);
+            return CourseMapper.ToDto(newCourse); // Usa o Mapper
         }
 
         /// <summary>
@@ -211,43 +127,18 @@ namespace MeuCrudCsharp.Features.Courses.Services
         /// <param name="updateDto">DTO com os novos dados do curso.</param>
         /// <returns>O DTO do curso atualizado.</returns>
         /// <exception cref="ResourceNotFoundException">Lançada se o curso com o ID especificado não for encontrado.</exception>
-        public async Task<CourseDto> UpdateCourseAsync(Guid id, UpdateCourseDto updateDto)
+        public async Task<CourseDto> UpdateCourseAsync(Guid publicId, UpdateCourseDto updateDto)
         {
-            var coursePrivate = await GetVideoByPublicIdAsync(id);
-            try
-            {
-                var course = await _context.Courses.FirstOrDefaultAsync(c => c.Id == coursePrivate.Id);
-                if (course == null)
-                {
-                    throw new ResourceNotFoundException(
-                        $"Curso com ID {id} não encontrado para atualização."
-                    );
-                }
+            var course = await FindCourseByPublicIdOrFailAsync(publicId);
 
-                // Correção: Garantir que valores não nulos sejam passados para o modelo.
-                course.Name = updateDto.Name!; // O [Required] garante que não será nulo.
-                course.Description = updateDto.Description ?? string.Empty; // Se a descrição for nula, usa uma string vazia.
-                await _context.SaveChangesAsync();
+            course.Name = updateDto.Name;
+            course.Description = updateDto.Description ?? string.Empty;
 
-                await _cacheService.RemoveAsync("AllCoursesWithVideos");
+            await _context.SaveChangesAsync();
+            await InvalidateCoursesCacheAsync(); // Invalidação robusta
 
-                _logger.LogInformation("Curso {CourseId} atualizado.", id);
-                return new CourseDto
-                {
-                    Id = course.Id,
-                    Name = course.Name,
-                    Description = course.Description,
-                };
-            }
-            catch (ResourceNotFoundException)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Erro ao atualizar o curso com ID {CourseId}.", id);
-                throw new AppServiceException("Ocorreu um erro ao atualizar o curso.", ex);
-            }
+            _logger.LogInformation("Curso {CourseId} atualizado.", publicId);
+            return CourseMapper.ToDto(course); // Usa o Mapper
         }
 
         /// <summary>
@@ -257,68 +148,53 @@ namespace MeuCrudCsharp.Features.Courses.Services
         /// <exception cref="ResourceNotFoundException">Lançada se o curso não for encontrado.</exception>
         /// <exception cref="AppServiceException">Lançada se o curso possuir vídeos associados, impedindo a exclusão.</exception>
         /// <remarks>A exclusão só é permitida se o curso não tiver nenhum vídeo vinculado.</remarks>
-        public async Task DeleteCourseAsync(Guid id)
+        public async Task DeleteCourseAsync(Guid publicId)
         {
-            var coursePrivate = await GetVideoByPublicIdAsync(id);
-            try
-            {
-                var course = await _context
-                    .Courses.Include(c => c.Videos)
-                    .FirstOrDefaultAsync(c => c.Id == coursePrivate.Id);
-
-                if (course == null)
-                {
-                    throw new ResourceNotFoundException(
-                        $"Curso com ID {id} não encontrado para deleção."
-                    );
-                }
-
-                if (course.Videos.Any())
-                {
-                    _logger.LogWarning(
-                        "Tentativa de deletar o curso {CourseId} que possui {VideoCount} vídeos.",
-                        id,
-                        course.Videos.Count
-                    );
-                    throw new AppServiceException(
-                        "Não é possível deletar um curso que possui vídeos associados. Por favor, remova os vídeos primeiro."
-                    );
-                }
-
-                _context.Courses.Remove(course);
-                await _context.SaveChangesAsync();
-
-                await _cacheService.RemoveAsync("AllCoursesWithVideos");
-
-                _logger.LogInformation("Curso {CourseId} deletado com sucesso.", id);
-            }
-            catch (ResourceNotFoundException)
-            {
-                throw;
-            }
-            catch (AppServiceException)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Erro ao deletar o curso com ID {CourseId}.", id);
-                throw new AppServiceException("Ocorreu um erro ao deletar o curso.", ex);
-            }
-        }
-
-        private async Task<Models.Course> GetVideoByPublicIdAsync(Guid publicId)
-        {
+            // Busca o curso incluindo os vídeos para a verificação
             var course = await _context.Courses
-                .FirstOrDefaultAsync(v => v.PublicId == publicId);
+                .Include(c => c.Videos)
+                .FirstOrDefaultAsync(c => c.PublicId == publicId);
 
             if (course == null)
             {
-                // Lançar uma exceção específica é uma ótima prática.
-                throw new AppServiceException($"Vídeo com o PublicId {publicId} não foi encontrado.");
+                throw new ResourceNotFoundException($"Curso com ID {publicId} não encontrado.");
             }
 
+            if (course.Videos.Any())
+            {
+                throw new AppServiceException("Não é possível deletar um curso que possui vídeos associados.");
+            }
+
+            _context.Courses.Remove(course);
+            await _context.SaveChangesAsync();
+            await InvalidateCoursesCacheAsync(); // Invalidação robusta
+
+            _logger.LogInformation("Curso {CourseId} deletado com sucesso.", publicId);
+        }
+
+        private async Task<Models.Course> FindCourseByPublicIdOrFailAsync(Guid publicId)
+        {
+            var course = await _context.Courses.FirstOrDefaultAsync(c => c.PublicId == publicId);
+            if (course == null)
+            {
+                throw new ResourceNotFoundException($"Curso com o PublicId {publicId} não foi encontrado.");
+            }
             return course;
+        }
+
+        // ✅ NOVO: Centraliza a lógica de invalidação de cache
+        private async Task InvalidateCoursesCacheAsync()
+        {
+            var newVersion = Guid.NewGuid().ToString();
+            await _cacheService.SetAsync(CoursesCacheVersionKey, newVersion, TimeSpan.FromDays(30));
+            _logger.LogInformation("Cache de cursos invalidado. Nova versão: {CacheVersion}", newVersion);
+        }
+
+        private Task<string> GetCacheVersionAsync()
+        {
+            return _cacheService.GetOrCreateAsync(CoursesCacheVersionKey,
+                () => Task.FromResult(Guid.NewGuid().ToString()),
+                TimeSpan.FromDays(30));
         }
     }
 
