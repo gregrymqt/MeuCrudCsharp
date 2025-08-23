@@ -6,7 +6,6 @@
 
 <!-- 1. Dependências -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 <link rel="stylesheet" href="~/css/Admin/index.css" asp-append-version="true" />
 
 
@@ -156,6 +155,8 @@
     </div>
 </div>
 
-<script src="~/js/admin/videos/index.js" asp-append-version="true"></script>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.1/signalr.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+
+<script src="~/js/admin/videos/videos-main.js" type="module" asp-append-version="true" defer></script>

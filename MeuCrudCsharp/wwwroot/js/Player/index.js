@@ -1,64 +1,44 @@
-﻿/**
- * @file Script for initializing the HLS (HTTP Live Streaming) video player.
- *
- * This script runs when the DOM is fully loaded. It identifies the video element,
- * constructs the HLS manifest URL using a video ID provided by the backend (via Razor),
- * and then attempts to initialize playback using the HLS.js library.
- *
- * If HLS.js is not supported, it checks for native browser support (common on Apple devices)
- * as a fallback. If neither option is available, an error is logged to the console.
+﻿// /js/video-player-main.js
+
+import { initializeAndPlayStream } from './services/videoPlayerService.js';
+
+/**
+ * Inicializa a lógica da página do player de vídeo.
  */
-document.addEventListener('DOMContentLoaded', function () {
-    const videoContainer = document.getElementById('videoContainer'); // O container geral
+function initializePage() {
+    const videoContainer = document.getElementById('videoContainer');
     const placeholder = document.getElementById('videoPlaceholder');
 
-    // Se o placeholder não existir, não faz nada.
     if (!placeholder) return;
 
-    // 1. Adiciona um ouvinte de evento de clique ao placeholder
-    placeholder.addEventListener('click', function () {
-        // Pega o ID do vídeo a partir do atributo data-*
+    // Adiciona o evento de clique ao placeholder.
+    // { once: true } garante que este evento só dispare uma vez.
+    placeholder.addEventListener('click', () => {
+        // 1. Pega os dados necessários do placeholder
         const videoId = placeholder.getAttribute('data-video-id');
+        if (!videoId) {
+            console.error('Atributo data-video-id não encontrado no placeholder.');
+            return;
+        }
 
-        // Remove o placeholder da tela
+        // 2. Esconde o placeholder
         placeholder.style.display = 'none';
 
-        // 2. Cria o elemento <video> dinamicamente
+        // 3. Cria o elemento <video> dinamicamente
         const videoElement = document.createElement('video');
         videoElement.id = 'videoPlayer';
         videoElement.controls = true;
-        videoElement.autoplay = true; // Importante para começar a tocar após o clique
+        videoElement.autoplay = true;
+        videoElement.playsInline = true; // Essencial para boa experiência em mobile
 
-        // Adiciona o novo elemento de vídeo ao container
-        videoContainer.prepend(videoElement); // Adiciona no início do container
+        // Adiciona o elemento de vídeo ao seu container
+        videoContainer.prepend(videoElement);
 
-        // 3. Executa a lógica de inicialização do HLS.js que você já tinha
-        initializePlayer(videoElement, videoId);
+        // 4. Usa o serviço para carregar e tocar o vídeo
+        initializeAndPlayStream(videoElement, videoId);
 
-    }, { once: true }); // O { once: true } remove o ouvinte após o primeiro clique.
+    }, { once: true });
+}
 
-    /**
-     * Função que contém a sua lógica original de inicialização do player.
-     * @param {HTMLVideoElement} videoEl - O elemento de vídeo recém-criado.
-     * @param {string} videoId - O ID do vídeo para montar a URL.
-     */
-    function initializePlayer(videoEl, videoId) {
-        const manifestUrl = `/api/videos/${videoId}/manifest.m3u8`;
-
-        if (Hls.isSupported()) {
-            const hls = new Hls();
-            hls.loadSource(manifestUrl);
-            hls.attachMedia(videoEl);
-            hls.on(Hls.Events.MANIFEST_PARSED, function () {
-                console.log("HLS manifest loaded, starting playback.");
-                videoEl.play(); // Garante o início da reprodução
-            });
-            // ... seu código de tratamento de erro ...
-        } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
-            videoEl.src = manifestUrl;
-            videoEl.play(); // Garante o início da reprodução
-        } else {
-            console.error("This browser does not support HLS video playback.");
-        }
-    }
-});
+// Garante que o script rode após o carregamento do HTML
+document.addEventListener('DOMContentLoaded', initializePage);

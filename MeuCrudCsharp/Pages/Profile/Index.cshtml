@@ -20,7 +20,6 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 <link rel="stylesheet" href="~/css/profile/index.css" asp-append-version="true" />
-<script src="https://sdk.mercadopago.com/js/v2"></script>
 <div class="profile-container" data-subscription-id="@userSubscriptionId">
     <aside class="profile-sidebar">
         <div class="sidebar-header">Minha Conta</div>
@@ -71,7 +70,7 @@
                     <div class="subscription-status-badge status-@subscription.Status?.ToLower()">
                         Plano: @subscription.PlanName (@subscription.Status)
                     </div>
-                    <a href="Pages/Courses/index" class="profile-cta-button">✨ Virar Premium</a>
+                    <a href="Pages/Courses/index" class="profile-cta-button">✨ Acessar Cursos</a>
 
                 }
                 else
@@ -205,6 +204,8 @@
 </div>
 
 @section Scripts {
-    <script src="~/js/profile/management.js" asp-append-version="true"></script>
+    <script src="https://sdk.mercadopago.com/js/v2"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="~/js/profile/management.js" asp-append-version="true" defer type="module"></script>
+
 }

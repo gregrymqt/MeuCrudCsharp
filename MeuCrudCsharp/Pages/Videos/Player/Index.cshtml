@@ -6,7 +6,6 @@
 }
 
 <link href="~/css/Player/index.css" rel="stylesheet" asp-append-version="true" />
-<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 
 <h1>@Model.VideoData?.Title</h1>
 
@@ -38,4 +37,5 @@
     }
 </div>
 
-<script src="~/js/Player/index.js" asp-append-version="true"></script>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+<script src="~/js/Player/video-player-main.js" type="module" asp-append-version="true" defer></script>

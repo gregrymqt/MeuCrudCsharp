@@ -31,15 +31,11 @@
     window.paymentConfig = {
         publicKey: '@Model.PublicKey',
         preferenceId: '@Model.PreferenceId',
-        preapprovalPlanId: '@Model.PreapprovalPlanId',
-        // O valor é preenchido pelo C# com base na URL
         amount: @Model.Valor.ToString(System.Globalization.CultureInfo.InvariantCulture),
-        // A URL agora inclui o valor como um parâmetro
         processPaymentUrl: '@Url.Page("/api/CreditCard/process-payment", "ProcessPayment")',
-        createSubscriptionUrl: '@Url.Page("/api/Subscriptions/Create")',
-		userId: '@Model.user.Id',
+        userId: '@Model.user.Id',
     };
 </script>
 
-<script src="~/js/credit_card.js" asp-append-version="true" defer></script>
+<script src="~/js/payment-main.js" type="module" asp-append-version="true" defer></script>
 
