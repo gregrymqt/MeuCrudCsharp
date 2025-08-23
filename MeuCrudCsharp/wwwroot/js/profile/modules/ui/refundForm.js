@@ -1,9 +1,12 @@
-﻿// /js/modules/ui/refundForm.js
-import { requestRefund } from '../api/subscriptionAPI.js';
+﻿import { requestRefund } from '../api/subscriptionAPI.js';
+import { initializeSignalR } from '../services/signalRService.js'; // Importe a função
 
 export function initializeRefundForm() {
     const refundForm = document.getElementById('form-request-refund');
-    if (!refundForm) return; // Se o formulário não existe na página, não faz nada.
+    if (!refundForm) return;
+
+    // Inicia a conexão com o Hub do SignalR assim que a página carrega
+    initializeSignalR();
 
     const refundStep1 = document.getElementById('refund-step-1');
     const refundStep2 = document.getElementById('refund-step-2');
@@ -37,9 +40,6 @@ export function initializeRefundForm() {
                 title: 'Não foi possível processar',
                 text: error.message
             });
-        } finally {
-            submitButton.disabled = false;
-            submitButton.textContent = 'Entendi e Desejo Solicitar o Reembolso';
-        }
+        } 
     });
 }

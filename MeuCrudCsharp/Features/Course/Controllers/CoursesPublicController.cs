@@ -33,23 +33,32 @@ namespace MeuCrudCsharp.Features.Courses.Controllers
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <param name="pageNumber"></param>
         /// <param name="pageSize"></param>
         /// <returns></returns>
-        [HttpGet("paginated")] 
-        public async Task<IActionResult> GetCoursesPaginated([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 5)
+        [HttpGet("paginated")]
+        public async Task<IActionResult> GetCoursesPaginated(
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 5
+        )
         {
             try
             {
-                var paginatedResult = await _courseService.GetCoursesWithVideosPaginatedAsync(pageNumber, pageSize);
+                var paginatedResult = await _courseService.GetCoursesWithVideosPaginatedAsync(
+                    pageNumber,
+                    pageSize
+                );
                 return Ok(paginatedResult);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Erro ao buscar cursos paginados.");
-                return StatusCode(500, new { message = "Não foi possível carregar os cursos no momento." });
+                return StatusCode(
+                    500,
+                    new { message = "Não foi possível carregar os cursos no momento." }
+                );
             }
         }
     }

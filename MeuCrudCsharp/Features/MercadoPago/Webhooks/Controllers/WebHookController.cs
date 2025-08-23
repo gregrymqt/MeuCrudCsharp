@@ -128,14 +128,11 @@ namespace MeuCrudCsharp.Features.MercadoPago.Webhooks.Controllers
                 _logger.LogWarning(
                     "A chave secreta do webhook (MercadoPago:WebhookSecret) não está configurada. Validação da assinatura ignorada."
                 );
-#if DEBUG
                 return true;
-#else
                 _logger.LogError(
                     "FALHA DE SEGURANÇA: WebhookSecret não configurado em ambiente de Produção."
                 );
                 return false;
-#endif
             }
 
             try

@@ -179,13 +179,23 @@
                             </div>
 
                             <div id="refund-step-2" style="display: none;">
+                                <div class="refund-processing-message">
+                                    <i class="fa-solid fa-spinner fa-spin"></i> <h4>Solicitação em Processamento!</h4>
+                                    <p>
+                                        Já recebemos seu pedido. Assim que o estorno for confirmado pela operadora,
+                                        você será notificado aqui e por e-mail.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div id="refund-step-3" style="display: none;">
                                 <div class="refund-confirmation-message">
                                     <i class="fa-solid fa-circle-check"></i>
-                                    <h4>Solicitação Recebida!</h4>
+                                    <h4>Reembolso Concluído!</h4>
                                     <p>
-                                        Fique tranquilo, já recebemos seu pedido e estamos processando seu reembolso. O valor será estornado em sua fatura do cartão de crédito em um prazo de 5 a 10 dias úteis, dependendo da operadora.
+                                        Seu reembolso foi processado com sucesso. O valor será estornado em sua fatura do cartão de crédito em um prazo de 5 a 10 dias úteis.
                                         <br><br>
-                                        Você receberá um e-mail de confirmação em breve.
+                                        Enviamos um e-mail com os detalhes da confirmação.
                                     </p>
                                 </div>
                             </div>
@@ -206,6 +216,7 @@
 @section Scripts {
     <script src="https://sdk.mercadopago.com/js/v2"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.1/signalr.min.js"></script>
     <script src="~/js/profile/management.js" asp-append-version="true" defer type="module"></script>
 
 }

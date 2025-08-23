@@ -1,3 +1,6 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
 using Hangfire;
 using Hangfire.Redis.StackExchange;
 using MercadoPago.Config;
@@ -12,6 +15,7 @@ using MeuCrudCsharp.Features.Emails.Services;
 using MeuCrudCsharp.Features.Hubs;
 using MeuCrudCsharp.Features.MercadoPago.Jobs; // Adicionado para os Jobs
 using MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces;
+using MeuCrudCsharp.Features.MercadoPago.Payments.Notification;
 using MeuCrudCsharp.Features.MercadoPago.Payments.Services;
 using MeuCrudCsharp.Features.Plans.Interfaces;
 using MeuCrudCsharp.Features.Plans.Services;
@@ -20,6 +24,7 @@ using MeuCrudCsharp.Features.Profiles.Admin.Services;
 using MeuCrudCsharp.Features.Profiles.UserAccount.Interfaces;
 using MeuCrudCsharp.Features.Profiles.UserAccount.Services;
 using MeuCrudCsharp.Features.Refunds.Interfaces;
+using MeuCrudCsharp.Features.Refunds.Notifications;
 using MeuCrudCsharp.Features.Refunds.Services;
 using MeuCrudCsharp.Features.Subscriptions.Interfaces;
 using MeuCrudCsharp.Features.Subscriptions.Services;
@@ -37,9 +42,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.StackExchangeRedis;
 using Microsoft.IdentityModel.Tokens;
 using StackExchange.Redis;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -50,6 +52,7 @@ builder.Services.AddControllers();
 builder.Services.AddRazorPages();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddSignalR();
 
 // 2. Main Database Configuration
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
@@ -132,10 +135,10 @@ builder.Services.AddScoped<IClientService, ClientService>();
 builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
 builder.Services.AddScoped<IPlanService, PlanService>();
 builder.Services.AddScoped<ProcessPaymentNotificationJob>();
-builder.Services.AddScoped<INotificationPaymentService, NotificationPaymentService>();
+builder.Services.AddScoped<INotificationPayment, NotificationPayment>();
 builder.Services.AddScoped<IFileStorageService, FileStorageService>();
-
-
+builder.Services.AddScoped<IRefundNotification, RefundNotification>();
+builder.Services.AddScoped<IMercadoPagoPaymentService, MercadoPagoPaymentService>();
 
 // 7. Hangfire Server
 // This adds the background processing server for Hangfire jobs.
@@ -255,6 +258,8 @@ using (var scope = app.Services.CreateScope())
 
 // SignalR
 app.MapHub<VideoProcessingHub>("/videoProcessingHub");
+app.MapHub<RefundProcessingHub>("/RefundProcessingHub");
+app.MapHub<PaymentProcessingHub>("/PaymentProcessingHub");
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();

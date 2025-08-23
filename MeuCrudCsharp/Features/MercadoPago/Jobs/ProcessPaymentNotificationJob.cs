@@ -4,6 +4,9 @@ using System.Threading.Tasks;
 using Hangfire;
 using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Features.Exceptions; // Nossas exceções
+using MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces;
+using MeuCrudCsharp.Features.MercadoPago.Payments.Notification;
+using MeuCrudCsharp.Features.Refunds.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -17,7 +20,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Jobs
     {
         private readonly ILogger<ProcessPaymentNotificationJob> _logger;
         private readonly ApiDbContext _context;
-        private readonly INotificationPaymentService _notificationPaymentService;
+        private readonly INotificationPayment _notificationPayment;
 
         /// <summary>
         /// Inicializa uma nova instância da classe <see cref="ProcessPaymentNotificationJob"/>.
@@ -28,12 +31,12 @@ namespace MeuCrudCsharp.Features.MercadoPago.Jobs
         public ProcessPaymentNotificationJob(
             ILogger<ProcessPaymentNotificationJob> logger,
             ApiDbContext context,
-            INotificationPaymentService notificationPaymentService
+            INotificationPayment notificationPayment
         )
         {
             _logger = logger;
             _context = context;
-            _notificationPaymentService = notificationPaymentService;
+            _notificationPayment = notificationPayment;
         }
 
         /// <summary>
@@ -98,7 +101,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Jobs
                     return;
                 }
 
-                await _notificationPaymentService.VerifyAndProcessNotificationAsync(
+                await _notificationPayment.VerifyAndProcessNotificationAsync(
                     pagamentoLocal.UserId,
                     pagamentoLocal.Id.ToString() // Passando o ID interno
                 );

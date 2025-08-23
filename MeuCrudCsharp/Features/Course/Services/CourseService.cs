@@ -1,4 +1,8 @@
-﻿using MeuCrudCsharp.Data;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Features.Course.DTOs;
 using MeuCrudCsharp.Features.Courses.Interfaces;
 using MeuCrudCsharp.Features.Exceptions;
@@ -6,10 +10,6 @@ using MeuCrudCsharp.Features.Videos.DTOs;
 using MeuCrudCsharp.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace MeuCrudCsharp.Features.Courses.Services
 {
@@ -49,8 +49,8 @@ namespace MeuCrudCsharp.Features.Courses.Services
         public async Task<CourseDto?> GetCourseByIdAsync(Guid publicId)
         {
             // A busca é feita diretamente pelo PublicId e já projeta para o DTO
-            var courseDto = await _context.Courses
-                .AsNoTracking()
+            var courseDto = await _context
+                .Courses.AsNoTracking()
                 .Where(c => c.PublicId == publicId)
                 .Include(c => c.Videos) // Inclui os vídeos para o mapeamento
                 .Select(c => CourseMapper.ToDtoWithVideos(c)) // Usa o Mapper
@@ -70,27 +70,42 @@ namespace MeuCrudCsharp.Features.Courses.Services
         /// <param name="pageSize"></param>
         /// <returns></returns>
         /// <exception cref="AppServiceException"></exception>
-        public async Task<PaginatedResultDto<CourseDto>> GetCoursesWithVideosPaginatedAsync(int pageNumber, int pageSize)
+        public async Task<PaginatedResultDto<CourseDto>> GetCoursesWithVideosPaginatedAsync(
+            int pageNumber,
+            int pageSize
+        )
         {
             var cacheVersion = await GetCacheVersionAsync();
             var cacheKey = $"Courses_v{cacheVersion}_Page{pageNumber}_Size{pageSize}";
 
-            return await _cacheService.GetOrCreateAsync(cacheKey, async () =>
-            {
-                _logger.LogInformation("Buscando cursos do banco (cache miss) para a chave: {CacheKey}", cacheKey);
+            return await _cacheService.GetOrCreateAsync(
+                cacheKey,
+                async () =>
+                {
+                    _logger.LogInformation(
+                        "Buscando cursos do banco (cache miss) para a chave: {CacheKey}",
+                        cacheKey
+                    );
 
-                var totalCount = await _context.Courses.CountAsync();
-                var courses = await _context.Courses
-                    .AsNoTracking()
-                    .Include(c => c.Videos)
-                    .OrderBy(c => c.Name)
-                    .Skip((pageNumber - 1) * pageSize)
-                    .Take(pageSize)
-                    .Select(c => CourseMapper.ToDtoWithVideos(c)) // Usa o Mapper
-                    .ToListAsync();
+                    var totalCount = await _context.Courses.CountAsync();
+                    var courses = await _context
+                        .Courses.AsNoTracking()
+                        .Include(c => c.Videos)
+                        .OrderBy(c => c.Name)
+                        .Skip((pageNumber - 1) * pageSize)
+                        .Take(pageSize)
+                        .Select(c => CourseMapper.ToDtoWithVideos(c)) // Usa o Mapper
+                        .ToListAsync();
 
-                return new PaginatedResultDto<CourseDto>(courses, totalCount, pageNumber, pageSize);
-            }, TimeSpan.FromMinutes(10));
+                    return new PaginatedResultDto<CourseDto>(
+                        courses,
+                        totalCount,
+                        pageNumber,
+                        pageSize
+                    );
+                },
+                TimeSpan.FromMinutes(10)
+            );
         }
 
         /// <summary>
@@ -151,8 +166,8 @@ namespace MeuCrudCsharp.Features.Courses.Services
         public async Task DeleteCourseAsync(Guid publicId)
         {
             // Busca o curso incluindo os vídeos para a verificação
-            var course = await _context.Courses
-                .Include(c => c.Videos)
+            var course = await _context
+                .Courses.Include(c => c.Videos)
                 .FirstOrDefaultAsync(c => c.PublicId == publicId);
 
             if (course == null)
@@ -162,7 +177,9 @@ namespace MeuCrudCsharp.Features.Courses.Services
 
             if (course.Videos.Any())
             {
-                throw new AppServiceException("Não é possível deletar um curso que possui vídeos associados.");
+                throw new AppServiceException(
+                    "Não é possível deletar um curso que possui vídeos associados."
+                );
             }
 
             _context.Courses.Remove(course);
@@ -177,7 +194,9 @@ namespace MeuCrudCsharp.Features.Courses.Services
             var course = await _context.Courses.FirstOrDefaultAsync(c => c.PublicId == publicId);
             if (course == null)
             {
-                throw new ResourceNotFoundException($"Curso com o PublicId {publicId} não foi encontrado.");
+                throw new ResourceNotFoundException(
+                    $"Curso com o PublicId {publicId} não foi encontrado."
+                );
             }
             return course;
         }
@@ -187,17 +206,19 @@ namespace MeuCrudCsharp.Features.Courses.Services
         {
             var newVersion = Guid.NewGuid().ToString();
             await _cacheService.SetAsync(CoursesCacheVersionKey, newVersion, TimeSpan.FromDays(30));
-            _logger.LogInformation("Cache de cursos invalidado. Nova versão: {CacheVersion}", newVersion);
+            _logger.LogInformation(
+                "Cache de cursos invalidado. Nova versão: {CacheVersion}",
+                newVersion
+            );
         }
 
         private Task<string> GetCacheVersionAsync()
         {
-            return _cacheService.GetOrCreateAsync(CoursesCacheVersionKey,
+            return _cacheService.GetOrCreateAsync(
+                CoursesCacheVersionKey,
                 () => Task.FromResult(Guid.NewGuid().ToString()),
-                TimeSpan.FromDays(30));
+                TimeSpan.FromDays(30)
+            );
         }
     }
-
-
 }
-

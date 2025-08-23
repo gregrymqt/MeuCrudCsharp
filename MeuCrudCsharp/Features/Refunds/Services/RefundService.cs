@@ -81,15 +81,12 @@ namespace MeuCrudCsharp.Features.Refunds.Services
 
             await RefundPaymentOnMercadoPagoAsync(payment.ExternalId);
 
-            subscription.Status = "blocked";
+            subscription.Status = "refund_pending";
             _context.Subscriptions.Update(subscription);
-
-            // Removing the payment record. An alternative could be to mark it as 'refunded'.
-            _context.Payments.Remove(payment);
 
             await _context.SaveChangesAsync();
             _logger.LogInformation(
-                "Refund processed and local data updated for user {UserId}",
+                "Refund request initiated for user {UserId}. Waiting for webhook confirmation.",
                 userId
             );
         }
