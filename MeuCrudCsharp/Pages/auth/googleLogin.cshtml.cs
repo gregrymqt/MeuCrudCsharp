@@ -8,8 +8,9 @@ namespace MeuCrudCsharp.Pages.auth
     [AllowAnonymous]
     public class googleLoginModel : PageModel
     {
-        // O construtor e a inje��o do AccountController foram removidos.
-        // A PageModel n�o deve chamar m�todos de um Controller diretamente.
+        // ✅ Adicione esta propriedade ao seu PageModel
+        [BindProperty(SupportsGet = true)]
+        public string? ReturnUrl { get; set; }
 
         public IActionResult OnGet()
         {
@@ -20,6 +21,7 @@ namespace MeuCrudCsharp.Pages.auth
                 // ou RedirectToPage se "/Index" for uma Razor Page.
                 return RedirectToAction("Index", "Home");
             }
+            ReturnUrl ??= Url.Content("~/");
 
             // Se n�o estiver logado, simplesmente renderiza a p�gina para que
             // o usu�rio possa clicar no bot�o de login.

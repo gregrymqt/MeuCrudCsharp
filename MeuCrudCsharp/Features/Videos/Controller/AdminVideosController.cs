@@ -1,3 +1,6 @@
+using System;
+using System.IO;
+using System.Threading.Tasks;
 using Hangfire;
 using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.Videos.DTOs;
@@ -7,9 +10,6 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using System;
-using System.IO;
-using System.Threading.Tasks;
 
 namespace MeuCrudCsharp.Features.Videos.Controller
 {
@@ -27,7 +27,8 @@ namespace MeuCrudCsharp.Features.Videos.Controller
             IAdminVideoService videoService,
             IBackgroundJobClient jobs,
             IWebHostEnvironment env,
-            ILogger<AdminVideosController> logger)
+            ILogger<AdminVideosController> logger
+        )
         {
             _videoService = videoService;
             _jobs = jobs;
@@ -35,9 +36,8 @@ namespace MeuCrudCsharp.Features.Videos.Controller
             _logger = logger;
         }
 
-
         /// <summary>
-        /// Recebe o arquivo de vídeo, salva em disco e dispara o processamento em background.
+        /// Recebe o arquivo de vï¿½deo, salva em disco e dispara o processamento em background.
         /// </summary>
         [HttpPost("upload")]
         public async Task<IActionResult> UploadVideoFile(IFormFile videoFile)
@@ -58,29 +58,30 @@ namespace MeuCrudCsharp.Features.Videos.Controller
                 svc.ProcessVideoToHlsAsync(inputPath, hlsPath, storageId)
             );
 
-            return Ok(new
-            {
-                Message = "Upload recebido. Vídeo será processado em segundo plano.",
-                StorageIdentifier = storageId
-            });
+            return Ok(
+                new
+                {
+                    Message = "Upload recebido. Vï¿½deo serï¿½ processado em segundo plano.",
+                    StorageIdentifier = storageId,
+                }
+            );
         }
 
-
         // <summary>
-        /// Lista vídeos paginados.
+        /// Lista vï¿½deos paginados.
         /// </summary>
         [HttpGet]
         public async Task<IActionResult> GetAllVideos(
             [FromQuery] int page = 1,
-            [FromQuery] int pageSize = 10)
+            [FromQuery] int pageSize = 10
+        )
         {
             var result = await _videoService.GetAllVideosAsync(page, pageSize);
             return Ok(result);
         }
 
-
         /// <summary>
-        /// Cria apenas a metadata do vídeo (depois do upload e processamento).
+        /// Cria apenas a metadata do vï¿½deo (depois do upload e processamento).
         /// </summary>
         [HttpPost]
         public async Task<IActionResult> CreateVideoMetadata([FromForm] CreateVideoDto dto)
@@ -89,21 +90,14 @@ namespace MeuCrudCsharp.Features.Videos.Controller
                 return BadRequest(ModelState);
 
             var created = await _videoService.CreateVideoAsync(dto);
-            return CreatedAtAction(
-                nameof(GetAllVideos),
-                new { id = created.Id },
-                created
-            );
+            return CreatedAtAction(nameof(GetAllVideos), new { id = created.Id }, created);
         }
 
-
         /// <summary>
-        /// Atualiza título, descrição e thumbnail de um vídeo já existente.
+        /// Atualiza tï¿½tulo, descriï¿½ï¿½o e thumbnail de um vï¿½deo jï¿½ existente.
         /// </summary>
         [HttpPut("{id:guid}")]
-        public async Task<IActionResult> UpdateVideo(
-            Guid id,
-            [FromForm] UpdateVideoDto dto)
+        public async Task<IActionResult> UpdateVideo(Guid id, [FromForm] UpdateVideoDto dto)
         {
             try
             {
@@ -116,9 +110,8 @@ namespace MeuCrudCsharp.Features.Videos.Controller
             }
         }
 
-
         /// <summary>
-        /// Remove um vídeo, seus ativos (HLS, arquivos) e invalida cache.
+        /// Remove um vï¿½deo, seus ativos (HLS, arquivos) e invalida cache.
         /// </summary>
         [HttpDelete("{id:guid}")]
         public async Task<IActionResult> DeleteVideo(Guid id)
@@ -126,13 +119,12 @@ namespace MeuCrudCsharp.Features.Videos.Controller
             try
             {
                 await _videoService.DeleteVideoAsync(id);
-                return Ok(new { Message = "Vídeo deletado com sucesso." });
+                return Ok(new { Message = "Vï¿½deo deletado com sucesso." });
             }
             catch (ResourceNotFoundException ex)
             {
                 return NotFound(new { ex.Message });
             }
         }
-
     }
 }

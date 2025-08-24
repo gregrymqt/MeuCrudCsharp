@@ -131,7 +131,21 @@ namespace MeuCrudCsharp.Features.Auth
                         AvatarUrl = avatar ?? string.Empty,
                         EmailConfirmed = true,
                     };
-                    await _userManager.CreateAsync(user);
+                    var result = await _userManager.CreateAsync(user);
+                    if (!result.Succeeded)
+                    {
+                        // Se a criação falhar, lance uma exceção para não continuar
+                        throw new InvalidOperationException(
+                            $"Não foi possível criar o usuário: {string.Join(", ", result.Errors.Select(e => e.Description))}"
+                        );
+                    }
+
+                    // ✅ SOLUÇÃO: ATRIBUA UM PAPEL PADRÃO AO NOVO USUÁRIO
+                    _logger.LogInformation(
+                        "Novo usuário {Email} criado. Atribuindo papel 'User'.",
+                        user.Email
+                    );
+                    await _userManager.AddToRoleAsync(user, "User");
                 }
                 // Associa o login do Google à conta encontrada ou recém-criada
                 await _userManager.AddLoginAsync(
@@ -142,6 +156,11 @@ namespace MeuCrudCsharp.Features.Auth
 
             // Gera o token JWT
             var jwtString = await GenerateJwtTokenAsync(user);
+
+            // ✅ LOG DE DEBUG 1
+            _logger.LogInformation(
+                "Token JWT gerado com sucesso. Preparando para adicionar ao cookie."
+            );
 
             // Adiciona o cookie JWT à resposta
             httpContext.Response.Cookies.Append(
@@ -156,9 +175,13 @@ namespace MeuCrudCsharp.Features.Auth
                 }
             );
 
-            _logger.LogInformation("Usuário {UserId} logado com sucesso via Google.", user.Id);
+            // ✅ LOG DE DEBUG 2
+            _logger.LogInformation(
+                "Cookie 'jwt' adicionado à resposta com sucesso para o usuário {UserId}.",
+                user.Id
+            );
 
-            // Retorna o usuário processado
+            _logger.LogInformation("Usuário {UserId} logado com sucesso via Google.", user.Id);
             return user;
         }
     }

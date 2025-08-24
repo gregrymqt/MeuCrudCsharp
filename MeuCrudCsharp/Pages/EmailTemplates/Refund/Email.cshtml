@@ -67,16 +67,26 @@
                     </tr>
 
                     <tr>
-                        <td style="padding: 20px 30px; background-color: #eeeeee;">
-                            <p style="color: #888888; font-size: 12px; text-align: center; margin: 0;">
-                                Se você tiver qualquer dúvida, basta responder a este e-mail ou entrar em contato com nosso suporte.
-                                <br><br>
-                                © @DateTime.Now.Year Nome da Sua Empresa. Todos os direitos reservados.
-                                <br>
-                                Seu Endereço, Cidade, Estado
-                            </p>
-                        </td>
-                    </tr>
+    <td align="center" style="padding: 30px 0; background-color: #0056b3; color: #ffffff;">
+        <a href="@Model.SiteUrl" target="_blank">
+            <img src="https://via.placeholder.com/150x50.png?text=SuaLogo" alt="Logo da Empresa" width="150" style="display: block;" />
+        </a>
+    </td>
+</tr>
+
+<tr>
+    <td style="padding: 20px 30px; background-color: #eeeeee;">
+        <p style="color: #888888; font-size: 12px; text-align: center; margin: 0;">
+            Se você tiver qualquer dúvida, basta responder a este e-mail ou entrar em contato com nosso suporte.
+            <br><br>
+            <a href="@Model.SiteUrl" target="_blank" style="color: #888888;">Voltar ao site</a>
+            <br><br>
+            © @DateTime.Now.Year Nome da Sua Empresa. Todos os direitos reservados.
+            <br>
+            Seu Endereço, Cidade, Estado
+        </p>
+    </td>
+</tr>
                 </table>
             </td>
         </tr>

@@ -1,4 +1,6 @@
-﻿@inject SignInManager<Users> SignInManager
+﻿@using MeuCrudCsharp.Models
+@using Microsoft.AspNetCore.Identity
+@inject SignInManager<Users> SignInManager
 @{
     var hasExternalLogins = (await SignInManager.GetExternalAuthenticationSchemesAsync()).Any();
 }

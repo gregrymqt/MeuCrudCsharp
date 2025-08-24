@@ -41,239 +41,277 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.StackExchangeRedis;
 using Microsoft.IdentityModel.Tokens;
+using Serilog;
 using StackExchange.Redis;
 
-var builder = WebApplication.CreateBuilder(args);
+// Isso garante que até mesmo os erros de inicialização do host possam ser logados.
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Debug() // Define o nível mínimo de log a ser capturado (Debug, Info, Warning, Error, etc.)
+    .MinimumLevel.Override("Microsoft", Serilog.Events.LogEventLevel.Warning) // Reduz o ruído dos logs internos do ASP.NET Core
+    .Enrich.FromLogContext()
+    .WriteTo.Console() // Continua escrevendo no console, como já faz hoje
+    .WriteTo.File(
+        "Log/log-.txt",
+        rollingInterval: RollingInterval.Day,
+        shared: true, // <-- A MUDANÇA MÁGICA ESTÁ AQUI
+        flushToDiskInterval: TimeSpan.FromSeconds(1), // É bom adicionar isso quando 'shared' é true
+        outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}"
+    )
+    .CreateLogger();
 
-// --- Service Registration (Dependency Injection) ---
-
-// 1. Core ASP.NET Core Services
-builder.Services.AddControllers();
-builder.Services.AddRazorPages();
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-builder.Services.AddSignalR();
-
-// 2. Main Database Configuration
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-builder.Services.AddDbContext<ApiDbContext>(options => options.UseSqlServer(connectionString));
-
-// 3. ASP.NET Core Identity Configuration
-builder
-    .Services.AddDefaultIdentity<Users>(options =>
-    {
-        // Optional password settings, etc.
-        options.SignIn.RequireConfirmedAccount = false;
-    })
-    .AddRoles<IdentityRole>() // Adds support for Roles
-    .AddEntityFrameworkStores<ApiDbContext>();
-
-// 4. In-Memory Cache
-// Registering this is useful as the custom CacheService implementation depends on it.
-builder.Services.AddMemoryCache();
-
-// 5. Caching & Background Job Configuration (Conditional Redis vs. In-Memory)
-var redisConnectionString = builder.Configuration.GetConnectionString("Redis");
-
-if (!string.IsNullOrEmpty(redisConnectionString))
+try
 {
-    // --- PRODUCTION ENVIRONMENT (with Redis) ---
-    Console.WriteLine("--> Usando Redis para Cache Distribuído e Hangfire.");
+    Log.Information("Iniciando a aplicação...");
 
-    // 1. Register Redis implementation for the IDistributedCache abstraction.
-    builder.Services.AddStackExchangeRedisCache(options =>
+    var builder = WebApplication.CreateBuilder(args);
+
+    builder.Host.UseSerilog();
+
+    // --- Service Registration (Dependency Injection) ---
+
+    // 1. Core ASP.NET Core Services
+    builder.Services.AddControllers();
+    builder.Services.AddEndpointsApiExplorer();
+    builder.Services.AddSwaggerGen();
+    builder.Services.AddSignalR();
+
+    // 2. Main Database Configuration
+    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+    builder.Services.AddDbContext<ApiDbContext>(options => options.UseSqlServer(connectionString));
+
+    // 3. ASP.NET Core Identity Configuration
+    builder
+        .Services.AddIdentity<Users, IdentityRole>(options =>
+        {
+            options.SignIn.RequireConfirmedAccount = true;
+        })
+        .AddEntityFrameworkStores<ApiDbContext>()
+        .AddDefaultTokenProviders();
+
+    builder.Services.ConfigureApplicationCookie(options =>
     {
-        options.Configuration = redisConnectionString;
-        options.InstanceName = "MeuApp_"; // Optional prefix for keys in Redis
+        options.LoginPath = "/Auth/GoogleLogin";
+        options.LogoutPath = "/Auth/Logout";
+        options.AccessDeniedPath = "/Auth/AccessDenied";
     });
 
-    // 2. Configure Hangfire to use Redis.
-    builder.Services.AddHangfire(config =>
-        config
-            .UseSimpleAssemblyNameTypeSerializer()
-            .UseRecommendedSerializerSettings()
-            .UseRedisStorage(redisConnectionString)
+    // 4. In-Memory Cache
+    // Registering this is useful as the custom CacheService implementation depends on it.
+    builder.Services.AddMemoryCache();
+
+    builder.Services.AddHangfireServer();
+
+    // 5. Caching & Background Job Configuration (Conditional Redis vs. In-Memory)
+    var redisConnectionString = builder.Configuration.GetConnectionString("Redis");
+
+    if (!string.IsNullOrEmpty(redisConnectionString))
+    {
+        // --- PRODUCTION ENVIRONMENT (with Redis) ---
+        Console.WriteLine("--> Usando Redis para Cache Distribuído e Hangfire.");
+
+        // 1. Register Redis implementation for the IDistributedCache abstraction.
+        builder.Services.AddStackExchangeRedisCache(options =>
+        {
+            options.Configuration = redisConnectionString;
+            options.InstanceName = "MeuApp_"; // Optional prefix for keys in Redis
+        });
+
+        // 2. Configure Hangfire to use Redis.
+        builder.Services.AddHangfire(config =>
+            config
+                .UseSimpleAssemblyNameTypeSerializer()
+                .UseRecommendedSerializerSettings()
+                .UseRedisStorage(redisConnectionString)
+        );
+    }
+    else
+    {
+        // --- DEVELOPMENT ENVIRONMENT (without Redis) ---
+        Console.WriteLine("--> Usando Cache em Memória para Cache Distribuído e Hangfire.");
+
+        // 1. Register the IN-MEMORY implementation for the IDistributedCache abstraction.
+        //    This allows the CacheService to work without a running Redis instance.
+        builder.Services.AddDistributedMemoryCache();
+
+        // 2. Configure Hangfire to use in-memory storage.
+        builder.Services.AddHangfire(config =>
+            config
+                .UseSimpleAssemblyNameTypeSerializer()
+                .UseRecommendedSerializerSettings()
+                .UseInMemoryStorage()
+        );
+    }
+
+    MercadoPagoConfig.AccessToken = builder.Configuration["MercadoPago:AccessToken"];
+
+    // 6. Custom Application Services
+    builder.Services.AddScoped<ICacheService, CacheService>();
+    builder.Services.AddScoped<IAppAuthService, AppAuthService>();
+    builder.Services.AddScoped<ICreditCardPaymentService, CreditCardPaymentService>();
+    builder.Services.AddScoped<IPreferencePayment, PreferencePaymentService>();
+    builder.Services.AddScoped<IQueueService, BackgroundJobQueueService>();
+    builder.Services.AddScoped<IEmailSenderService, SendGridEmailSenderService>();
+    builder.Services.AddScoped<IRazorViewToStringRenderer, RazorViewToStringRenderer>();
+    builder.Services.AddScoped<IAdminVideoService, AdminVideoService>();
+    builder.Services.AddScoped<IAdminStudentService, AdminStudentService>();
+    builder.Services.AddScoped<IUserAccountService, UserAccountService>();
+    builder.Services.AddScoped<IVideoProcessingService, VideoProcessingService>();
+    builder.Services.AddScoped<ICourseService, CourseService>();
+    builder.Services.AddScoped<IRefundService, RefundService>();
+    builder.Services.AddScoped<IClientService, ClientService>();
+    builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
+    builder.Services.AddScoped<IPlanService, PlanService>();
+    builder.Services.AddScoped<ProcessPaymentNotificationJob>();
+    builder.Services.AddScoped<IPaymentNotificationService, PaymentNotificationService>();
+    builder.Services.AddScoped<IFileStorageService, FileStorageService>();
+    builder.Services.AddScoped<IRefundNotification, RefundNotification>();
+    builder.Services.AddScoped<IMercadoPagoPaymentService, MercadoPagoPaymentService>();
+    builder.Services.AddScoped<INotificationPayment, NotificationPayment>();
+
+    builder.Services.Configure<SendGridSettings>(
+        builder.Configuration.GetSection(SendGridSettings.SectionName)
     );
-}
-else
-{
-    // --- DEVELOPMENT ENVIRONMENT (without Redis) ---
-    Console.WriteLine("--> Usando Cache em Memória para Cache Distribuído e Hangfire.");
 
-    // 1. Register the IN-MEMORY implementation for the IDistributedCache abstraction.
-    //    This allows the CacheService to work without a running Redis instance.
-    builder.Services.AddDistributedMemoryCache();
-
-    // 2. Configure Hangfire to use in-memory storage.
-    builder.Services.AddHangfire(config =>
-        config
-            .UseSimpleAssemblyNameTypeSerializer()
-            .UseRecommendedSerializerSettings()
-            .UseInMemoryStorage()
-    );
-}
-
-MercadoPagoConfig.AccessToken = builder.Configuration["MercadoPago:AccessToken"];
-
-// 6. Custom Application Services
-builder.Services.AddScoped<ICacheService, CacheService>();
-builder.Services.AddScoped<IAppAuthService, AppAuthService>();
-builder.Services.AddScoped<ICreditCardPayments, CreditCardPaymentService>();
-builder.Services.AddScoped<IPreferencePayment, PreferencePaymentService>();
-builder.Services.AddScoped<IQueueService, BackgroundJobQueueService>();
-builder.Services.AddScoped<IEmailSenderService, SendGridEmailSenderService>();
-builder.Services.AddScoped<IRazorViewToStringRenderer, RazorViewToStringRenderer>();
-builder.Services.AddScoped<IAdminVideoService, AdminVideoService>();
-builder.Services.AddScoped<IAdminStudentService, AdminStudentService>();
-builder.Services.AddScoped<IUserAccountService, UserAccountService>();
-builder.Services.AddScoped<IVideoProcessingService, VideoProcessingService>();
-builder.Services.AddScoped<ICourseService, CourseService>();
-builder.Services.AddHttpContextAccessor();
-builder.Services.AddHttpClient();
-builder.Services.AddScoped<IRefundService, RefundService>();
-builder.Services.AddScoped<IClientService, ClientService>();
-builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
-builder.Services.AddScoped<IPlanService, PlanService>();
-builder.Services.AddScoped<ProcessPaymentNotificationJob>();
-builder.Services.AddScoped<INotificationPayment, NotificationPayment>();
-builder.Services.AddScoped<IFileStorageService, FileStorageService>();
-builder.Services.AddScoped<IRefundNotification, RefundNotification>();
-builder.Services.AddScoped<IMercadoPagoPaymentService, MercadoPagoPaymentService>();
-
-// 7. Hangfire Server
-// This adds the background processing server for Hangfire jobs.
-// It must come after Hangfire has been configured (AddHangfire).
-builder.Services.AddHangfireServer();
-
-builder.Services.Configure<SendGridSettings>(
-    builder.Configuration.GetSection(SendGridSettings.SectionName)
-);
-
-// --- Authentication Configuration ---
-builder
-    .Services.AddAuthentication(options =>
-    {
-        // O esquema padrão para autenticar e desafiar o usuário será o JWT.
-        // A aplicação vai primariamente procurar por um JWT válido.
-        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-    })
-    .AddCookie(options =>
-    {
-        // O handler de cookie é usado internamente pelo Google para o processo de redirecionamento (OAuth).
-        // Não será o método principal de autenticação da sessão do usuário.
-        options.Cookie.Name = "ExternalLoginCookie";
-    })
-    .AddJwtBearer(options =>
-    {
-        var jwtKey = builder.Configuration["Jwt:Key"];
-        if (string.IsNullOrEmpty(jwtKey))
+    // --- Authentication Configuration ---
+    builder
+        .Services.AddAuthentication()
+        .AddGoogle(options =>
         {
-            throw new InvalidOperationException(
-                "A chave JWT (Jwt:Key) não foi encontrada na configuração."
-            );
-        }
-
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)), // Usa a variável validada
-            ValidateIssuer = false,
-            ValidateAudience = false,
-        };
-        // Evento para ler o token JWT do cookie que vamos criar.
-        options.Events = new JwtBearerEvents
-        {
-            OnMessageReceived = context =>
+            // Validação das credenciais (continua igual)
+            string? clientId = builder.Configuration["Google:ClientId"];
+            string? clientSecret = builder.Configuration["Google:ClientSecret"];
+            if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
             {
-                if (context.Request.Cookies.TryGetValue("jwt", out var token))
-                {
-                    context.Token = token;
-                }
-                return Task.CompletedTask;
-            },
-        };
-    })
-    // DENTRO DO SEU PROGRAM.CS
+                throw new InvalidOperationException(
+                    "As credenciais do Google não foram encontradas."
+                );
+            }
+            options.ClientId = clientId;
+            options.ClientSecret = clientSecret;
 
-    .AddGoogle(options =>
-    {
-        // Validação das credenciais (continua igual)
-        string? clientId = builder.Configuration["Google:ClientId"];
-        string? clientSecret = builder.Configuration["Google:ClientSecret"];
-        if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
+            // ✅ MUDANÇA CRÍTICA:
+            // Diz ao Google para usar o esquema de cookie temporário do ASP.NET Identity.
+            options.SignInScheme = IdentityConstants.ExternalScheme;
+        })
+        .AddJwtBearer(options =>
         {
-            throw new InvalidOperationException("As credenciais do Google não foram encontradas.");
-        }
-        options.ClientId = clientId;
-        options.ClientSecret = clientSecret;
+            var jwtKey = builder.Configuration["Jwt:Key"];
+            if (string.IsNullOrEmpty(jwtKey))
+            {
+                throw new InvalidOperationException(
+                    "A chave JWT (Jwt:Key) não foi encontrada na configuração."
+                );
+            }
 
-        // ✅ MUDANÇA CRÍTICA:
-        // Diz ao Google para usar o esquema de cookie temporário do ASP.NET Identity.
-        options.SignInScheme = IdentityConstants.ExternalScheme;
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+                ValidateIssuer = false,
+                ValidateAudience = false,
+            };
+
+            // Evento para ler o token JWT do cookie
+            options.Events = new JwtBearerEvents
+            {
+                OnMessageReceived = context =>
+                {
+                    if (context.Request.Cookies.TryGetValue("jwt", out var token))
+                    {
+                        context.Token = token;
+                    }
+                    return Task.CompletedTask;
+                },
+            };
+        });
+
+    builder.Services.AddAuthorization(options =>
+    {
+        options.AddPolicy(
+            "RequireJwtToken",
+            policy =>
+            {
+                policy.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme);
+                policy.RequireAuthenticatedUser();
+            }
+        );
     });
 
-builder.Services.AddAuthorization(options =>
-{
-    options.AddPolicy(
-        "RequireJwtToken",
-        policy =>
-        {
-            policy.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme);
-            policy.RequireAuthenticatedUser();
-        }
-    );
-});
-
-builder.Services.AddControllersWithViews(options =>
-{
-    options.Filters.Add(
-        new Microsoft.AspNetCore.Mvc.Authorization.AuthorizeFilter("RequireJwtToken")
-    );
-});
-
-// --- HTTP Request Pipeline Configuration ---
-var app = builder.Build();
-
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
-
-// Seed initial roles (e.g., Admin, User) on application startup.
-using (var scope = app.Services.CreateScope())
-{
-    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-    string[] roles = { "Admin", "User", "Manager" };
-
-    foreach (var role in roles)
+    builder.Services.AddControllersWithViews(options =>
     {
-        if (!await roleManager.RoleExistsAsync(role))
+        options.Filters.Add(
+            new Microsoft.AspNetCore.Mvc.Authorization.AuthorizeFilter("RequireJwtToken")
+        );
+    });
+
+    builder.Services.AddRazorPages(options =>
+    {
+        options.Conventions.AuthorizeFolder("/", "RequireJwtToken");
+        options.Conventions.AllowAnonymousToPage("/Auth/GoogleLogin");
+        options.Conventions.AllowAnonymousToPage("/Auth/ExternalLogin");
+        options.Conventions.AllowAnonymousToPage("/Auth/Logout");
+        // Adicione outras páginas públicas aqui, como a Index
+        options.Conventions.AllowAnonymousToPage("/Index");
+    });
+
+    builder.Services.Configure<RedirectSettings>(builder.Configuration.GetSection("Redirect"));
+    builder.Services.Configure<PaymentSettings>(builder.Configuration.GetSection("Payment"));
+
+    builder.Services.AddHttpContextAccessor();
+    builder.Services.AddHttpClient();
+
+    // --- HTTP Request Pipeline Configuration ---
+    var app = builder.Build();
+
+    if (app.Environment.IsDevelopment())
+    {
+        app.UseSwagger();
+        app.UseSwaggerUI();
+    }
+
+    // Seed initial roles (e.g., Admin, User) on application startup.
+    using (var scope = app.Services.CreateScope())
+    {
+        var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+        string[] roles = { "Admin", "User", "Manager" };
+
+        foreach (var role in roles)
         {
-            await roleManager.CreateAsync(new IdentityRole(role));
+            if (!await roleManager.RoleExistsAsync(role))
+            {
+                await roleManager.CreateAsync(new IdentityRole(role));
+            }
         }
     }
+
+    // SignalR
+    app.MapHub<VideoProcessingHub>("/videoProcessingHub");
+    app.MapHub<RefundProcessingHub>("/RefundProcessingHub");
+    app.MapHub<PaymentProcessingHub>("/PaymentProcessingHub");
+
+    app.UseHttpsRedirection();
+    app.UseStaticFiles();
+    app.UseRouting();
+
+    // Order is important: Authentication must come before Authorization.
+    app.UseAuthentication();
+    app.UseAuthorization();
+
+    // Add the Hangfire Dashboard (accessible at /hangfire).
+    app.UseHangfireDashboard();
+
+    app.MapRazorPages();
+    app.MapControllers();
+    app.MapControllerRoute(name: "default", pattern: "{controller=Home}/{action=Index}/{id?}");
+
+    app.Run();
 }
-
-// SignalR
-app.MapHub<VideoProcessingHub>("/videoProcessingHub");
-app.MapHub<RefundProcessingHub>("/RefundProcessingHub");
-app.MapHub<PaymentProcessingHub>("/PaymentProcessingHub");
-
-app.UseHttpsRedirection();
-app.UseStaticFiles();
-app.UseRouting();
-
-// Order is important: Authentication must come before Authorization.
-app.UseAuthentication();
-app.UseAuthorization();
-
-// Add the Hangfire Dashboard (accessible at /hangfire).
-app.UseHangfireDashboard();
-
-app.MapRazorPages();
-app.MapControllers();
-app.MapControllerRoute(name: "default", pattern: "{controller=Home}/{action=Index}/{id?}");
-
-app.Run();
+catch (Exception ex)
+{
+    Log.Fatal(ex, "A aplicação falhou ao iniciar.");
+}
+finally
+{
+    // ✅ 3. Garantir que os logs sejam salvos antes de a aplicação fechar
+    Log.CloseAndFlush();
+}

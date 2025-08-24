@@ -20,7 +20,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Controllers
     {
         private const string IDEMPOTENCY_PREFIX = "CreditCardPayment";
         private readonly ICacheService _cacheService;
-        private readonly ICreditCardPayments _creditCardPaymentService;
+        private readonly ICreditCardPaymentService _creditCardPaymentService;
 
         /// <summary>
         /// Inicializa uma nova instância da classe <see cref="CreditCardController"/>.
@@ -29,7 +29,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Controllers
         /// <param name="creditCardPaymentService">O serviço que processa a lógica de pagamento com cartão de crédito.</param>
         public CreditCardController(
             ICacheService cacheService,
-            ICreditCardPayments creditCardPaymentService
+            ICreditCardPaymentService creditCardPaymentService
         )
         {
             _cacheService = cacheService;

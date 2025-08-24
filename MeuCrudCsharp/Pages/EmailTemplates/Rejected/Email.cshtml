@@ -1,13 +1,100 @@
 ﻿@model MeuCrudCsharp.Features.Emails.ViewModels.RejectionEmailViewModel
 
 <!DOCTYPE html>
-<html>
+<html lang="pt-br">
+
 <head>
-    <title>Pagamento Rejeitado</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Problema no Pagamento</title>
 </head>
-<body>
-    <h1>Atenção, @Model.UserName.</h1>
-    <p>Ocorreu um problema com o seu pagamento de ID <strong>@Model.PaymentId</strong> e ele foi rejeitado.</p>
-    <p>Por favor, entre em contato com o suporte.</p>
+
+<body style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: Arial, sans-serif;">
+
+    <span
+        style="display: none; font-size: 1px; color: #f4f4f4; line-height: 1px; max-height: 0px; max-width: 0px; opacity: 0; overflow: hidden;">
+        Não se preocupe, vamos te ajudar a resolver isso.
+    </span>
+
+    <table align="center" border="0" cellpadding="0" cellspacing="0" width="100%" style="border-collapse: collapse;">
+        <tr>
+            <td align="center" style="padding: 20px 0;">
+                <table align="center" border="0" cellpadding="0" cellspacing="0" width="600"
+                    style="border-collapse: collapse; border: 1px solid #cccccc; background-color: #ffffff; max-width: 600px;">
+
+                    <tr>
+                        <td align="center" style="padding: 30px 0; background-color: #ffc107; color: #333333;">
+                            <a href="@Model.SiteUrl" target="_blank">
+                                <img src="https://via.placeholder.com/150x50.png?text=SuaLogo" alt="Logo da Empresa"
+                                    width="150" style="display: block;" />
+                            </a>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td style="padding: 40px 30px;">
+                            <h1 style="color: #333333; font-size: 24px; margin: 0 0 20px 0;">⚠️ Atenção: Pagamento não
+                                processado</h1>
+
+                            <p style="color: #555555; font-size: 16px; line-height: 1.5; margin: 0 0 15px 0;">
+                                Olá, <strong>@Model.UserName</strong>,
+                            </p>
+
+                            <p style="color: #555555; font-size: 16px; line-height: 1.5; margin: 0 0 25px 0;">
+                                Não foi possível processar a sua tentativa de pagamento. Não se preocupe, isso é comum e
+                                geralmente fácil de resolver.
+                            </p>
+
+                            <table border="0" cellpadding="0" cellspacing="0" width="100%"
+                                style="border-collapse: collapse; background-color: #f9f9f9; border: 1px solid #eeeeee; border-radius: 5px; margin-bottom: 25px;">
+                                <tr>
+                                    <td style="padding: 20px;">
+                                        <p style="color: #333333; font-size: 16px; line-height: 1.5; margin: 0;">
+                                            <strong>ID da Tentativa:</strong> @Model.PaymentId <br>
+                                            <strong>Status:</strong> <span
+                                                style="color: #dc3545; font-weight: bold;">Recusado</span>
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <h2 style="color: #333333; font-size: 20px; margin: 0 0 10px 0;">O que fazer agora?</h2>
+                            <p style="color: #555555; font-size: 16px; line-height: 1.5; margin: 0 0 30px 0;">
+                                Isso pode acontecer por diversos motivos, como dados do cartão digitados incorretamente,
+                                falta de saldo ou uma recusa do próprio banco. Por favor, verifique seus dados e tente
+                                novamente.
+                            </p>
+
+                            <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                                <tr>
+                                    <td align="center">
+                                        <a href="@Model.PaymentPageUrl" target="_blank"
+                                            style="display: inline-block; padding: 12px 25px; background-color: #007bff; color: #ffffff; text-decoration: none; border-radius: 5px; font-size: 16px; font-weight: bold;">
+                                            Verificar Dados e Tentar Novamente
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td style="padding: 20px 30px; background-color: #eeeeee;">
+                            <p style="color: #888888; font-size: 12px; text-align: center; margin: 0;">
+                                Se o problema persistir, sugerimos entrar em contato com seu banco ou com nosso suporte.
+                                Estamos aqui para ajudar!
+                                <br><br>
+                                <a href="@Model.SiteUrl" target="_blank" style="color: #888888;">Voltar ao site</a>
+                                <br><br>
+                                © @DateTime.Now.Year Nome da Sua Empresa. Todos os direitos reservados.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+
 </body>
+
 </html>

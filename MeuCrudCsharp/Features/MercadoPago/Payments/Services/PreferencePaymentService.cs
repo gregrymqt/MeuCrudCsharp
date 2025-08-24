@@ -10,6 +10,7 @@ using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
 {
@@ -21,6 +22,8 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
         private readonly IConfiguration _configuration;
         private readonly ILogger<PreferencePaymentService> _logger;
 
+        private readonly RedirectSettings _redirectSettings;
+
         /// <summary>
         /// Inicializa uma nova instância da classe <see cref="PreferencePaymentService"/>.
         /// </summary>
@@ -28,11 +31,13 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
         /// <param name="logger">O serviço de logging.</param>
         public PreferencePaymentService(
             IConfiguration configuration,
-            ILogger<PreferencePaymentService> logger
+            ILogger<PreferencePaymentService> logger,
+            IOptions<RedirectSettings> redirectSettings
         )
         {
             _configuration = configuration;
             _logger = logger;
+            _redirectSettings = redirectSettings.Value;
         }
 
         /// <inheritdoc />
@@ -68,7 +73,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
                 requestOptions.CustomHeaders.Add("x-idempotency-key", Guid.NewGuid().ToString());
 
                 var baseUrl =
-                    _configuration["Redirect:Url"]
+                    _redirectSettings.Url
                     ?? throw new InvalidOperationException(
                         "A URL de redirecionamento não está configurada."
                     );

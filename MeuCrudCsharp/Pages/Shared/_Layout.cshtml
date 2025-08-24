@@ -1,4 +1,13 @@
-﻿<!DOCTYPE html>
+﻿@{
+    // Obtém o nome da página atual, limpa e formata para ser uma classe CSS
+    var pageName = ViewContext.RouteData.Values["page"]?.ToString() ?? "index";
+    var pageClass = pageName.TrimStart('/').Replace('/', '-').ToLower();
+    if (string.IsNullOrEmpty(pageClass))
+    {
+        pageClass = "index"; // Garante que a home page tenha a classe 'index'
+    }
+}
+<!DOCTYPE html>
 <html lang="pt-br">
 
 <head>
@@ -15,7 +24,7 @@
 
     <link rel="stylesheet" href="~/css/layout/index.css" asp-append-version="true" />
 </head>
-<body>
+<body class="page-@pageClass">
     <header class="site-header">
         <nav class="main-nav container">
             <a class="nav-logo" asp-page="/Index">
@@ -37,7 +46,7 @@
                 </div>
             </div>
 
-            <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation" aria-controls="nav-menu">
+            <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation">
                 <i class="fas fa-bars"></i>
             </button>
         </nav>

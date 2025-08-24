@@ -7,7 +7,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces
     /// Defines the contract for a service that processes credit card payments,
     /// handling both one-time payments and subscription creation.
     /// </summary>
-    public interface ICreditCardPayments
+    public interface ICreditCardPaymentService
     {
         /// <summary>
         /// Creates a new payment or a new subscription based on the request data.

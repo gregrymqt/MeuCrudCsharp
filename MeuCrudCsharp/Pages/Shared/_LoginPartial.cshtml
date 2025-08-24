@@ -18,13 +18,17 @@
                 <i class="fas fa-user-circle"></i> Meu Perfil
             </a>
             <div class="dropdown-divider"></div>
-            <a href="/Account/Logout" class="dropdown-item">
-                <i class="fas fa-sign-out-alt"></i> Sair
-            </a>
+
+           <form asp-area="Identify" asp-page="/Account/Logout" method="post" class="form-logout">
+                <button type="submit" class="dropdown-item logout-button">
+                    <i class="fas fa-sign-out-alt"></i> Sair
+                </button>
+            </form>
+
         </div>
     </div>
 }
 else
 {
-    <a class="btn btn-primary" href="/Account/Login">Entrar</a>
+    <a class="btn btn-primary" href="/Auth/GoogleLogin">Entrar</a>
 }
