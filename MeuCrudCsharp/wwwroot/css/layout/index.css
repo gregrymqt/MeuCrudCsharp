@@ -183,6 +183,172 @@ ul {
 .social-icons a:hover { color: var(--primary-color); }
 .footer-bottom { text-align: center; padding: 1.5rem 0; margin-top: 2rem; border-top: 1px solid var(--border-color); font-size: 0.9rem; }
 
+/* --- ESTILOS DO COMPONENTE DE LOGIN (_LoginPartial.cshtml) --- */
+
+/* --- 1. BOTÃO PRINCIPAL DE ENTRAR (ESTADO DESLOGADO) --- */
+.nav-user .btn-primary {
+    background-color: var(--primary-color);
+    color: var(--text-light);
+    border: none;
+    padding: 0.6rem 1.2rem;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background-color var(--transition-speed), transform var(--transition-speed);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.nav-user .btn-primary:hover {
+    background-color: var(--primary-hover);
+    transform: translateY(-2px); /* Efeito sutil de elevação */
+    box-shadow: 0 4px 8px var(--shadow-color);
+}
+.user-dropdown {
+    position: relative; /* Contexto para o menu dropdown */
+    display: inline-block;
+}
+
+.user-info-button {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    background-color: transparent;
+    border: 1px solid transparent; /* Bordas transparentes para manter o tamanho */
+    padding: 0.4rem 0.8rem;
+    border-radius: 50px; /* Bordas arredondadas (estilo "pill") */
+    cursor: pointer;
+    transition: background-color var(--transition-speed), border-color var(--transition-speed);
+    font-family: inherit;
+    font-size: 0.95rem;
+    color: var(--text-dark);
+}
+
+.user-info-button:hover,
+.user-info-button[aria-expanded="true"] {
+    background-color: var(--background-grey);
+    border-color: var(--border-color);
+}
+
+/* Avatar do usuário */
+.user-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover; /* Garante que a imagem não se estique */
+    border: 2px solid var(--border-color);
+}
+
+/* Seta para baixo no dropdown */
+.dropdown-caret {
+    font-size: 0.8rem;
+    transition: transform var(--transition-speed);
+}
+
+/* Gira a seta quando o menu está aberto */
+.user-info-button[aria-expanded="true"] .dropdown-caret {
+    transform: rotate(180deg);
+}
+
+.dropdown-menu {
+    /* Posicionamento e estado inicial */
+    position: absolute;
+    top: calc(100% + 10px); /* Abaixo do botão com um pequeno espaço */
+    right: 0;
+    background-color: var(--background-light);
+    border-radius: 8px;
+    box-shadow: 0 8px 16px var(--shadow-color);
+    border: 1px solid var(--border-color);
+    width: 220px;
+    padding: 0.5rem 0;
+    z-index: 1100;
+
+    /* Animação de entrada */
+    opacity: 0;
+    transform: translateY(10px);
+    visibility: hidden;
+    transition: opacity var(--transition-speed) ease, transform var(--transition-speed) ease, visibility var(--transition-speed);
+}
+
+/* Estado visível do menu */
+.dropdown-menu.show {
+    opacity: 1;
+    transform: translateY(0);
+    visibility: visible;
+}
+
+/* Itens individuais do menu */
+.dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 0.75rem 1.25rem;
+    color: var(--text-dark);
+    font-size: 0.95rem;
+    background-color: transparent;
+    border: none;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+}
+
+.dropdown-item:hover {
+    background-color: var(--background-grey);
+    color: var(--primary-color);
+}
+
+.dropdown-item.disabled {
+    color: var(--secondary-color);
+    pointer-events: none; /* Desativa cliques */
+    background-color: transparent;
+}
+
+/* Ícones dentro dos itens */
+.dropdown-item i {
+    width: 16px;
+    text-align: center;
+    color: var(--secondary-color);
+}
+
+.dropdown-item:hover i {
+    color: var(--primary-color);
+}
+
+/* Divisor horizontal no menu */
+.dropdown-divider {
+    height: 1px;
+    background-color: var(--border-color);
+    margin: 0.5rem 0;
+}
+
+.form-logout {
+    margin: 0;
+    padding: 0;
+}
+
+.nav-menu .user-dropdown {
+    /* Garante que o container ocupe toda a largura */
+    display: block; 
+}
+
+.nav-menu .dropdown-menu {
+    /* Remove o posicionamento relativo à direita */
+    right: auto;
+    left: 0;
+    
+    /* A Mágica: posiciona o menu ACIMA do botão */
+    top: auto;
+    bottom: calc(100% + 10px);
+
+    /* Ajuste na animação para vir de baixo para cima */
+    transform-origin: bottom left;
+    transform: translateY(-10px);
+}
+
+.nav-menu .dropdown-menu.show {
+    transform: translateY(0);
+}
 
 /* --- 6. ESTILOS PARA DESKTOP (BREAKPOINT) --- */
 @media (min-width: 992px) {

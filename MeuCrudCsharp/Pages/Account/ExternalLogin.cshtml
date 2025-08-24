@@ -1,5 +1,5 @@
 ﻿@page
-@model MeuCrudCsharp.Pages.auth.googleLoginModel
+@model MeuCrudCsharp.Pages.Account.ExternalLoginModel
 @{
     ViewData["Title"] = "Login";
 }
@@ -11,11 +11,7 @@
         <h1 class="login-title">Login</h1>
         <p class="login-subtitle">Use sua conta do Google para continuar.</p>
 
-        <form id="external-account" 
-              asp-area="Identify" 
-              asp-page="/Account/ExternalLogin" 
-              asp-route-returnUrl="@Model.ReturnUrl" 
-              method="post">
+        <form id="external-account" asp-route-returnUrl="@Model.ReturnUrl" method="post">
             <div>
                 <button type="submit" class="google-button" name="provider" value="Google" title="Entrar usando sua conta do Google">
                     <svg viewBox="0 0 24 24">

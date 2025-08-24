@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
-namespace MeuCrudCsharp.Pages.Auth
+namespace MeuCrudCsharp.Pages.Account
 {
     public class LogoutModel : PageModel
     {

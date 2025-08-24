@@ -8,27 +8,28 @@
 
     <div class="user-dropdown">
         <button class="user-info-button" id="user-dropdown-button" aria-haspopup="true" aria-expanded="false">
-            <img src="@(User.FindFirst("AvatarUrl")?.Value ?? "/images/default-avatar.png")" alt="Avatar" class="user-avatar" />
+            <img src="@(User.FindFirst("AvatarUrl")?.Value ?? "/images/default-avatar.png")" alt="Avatar"
+                class="user-avatar" />
             <span>@User.Identity.Name</span>
             <i class="fas fa-chevron-down dropdown-caret"></i>
         </button>
 
         <div class="dropdown-menu" id="user-dropdown-menu">
-            <a asp-page="/Profile/Index" class="dropdown-item @(isProfilePage ? "disabled" : "")" aria-disabled="@isProfilePage">
+            <a asp-page="/Profile/Index" class="dropdown-item @(isProfilePage ? "disabled" : "")"
+                aria-disabled="@isProfilePage">
                 <i class="fas fa-user-circle"></i> Meu Perfil
             </a>
             <div class="dropdown-divider"></div>
 
-           <form asp-area="Identify" asp-page="/Account/Logout" method="post" class="form-logout">
+            <form asp-page="/Account/Logout" method="post" class="form-logout">
                 <button type="submit" class="dropdown-item logout-button">
                     <i class="fas fa-sign-out-alt"></i> Sair
                 </button>
             </form>
-
         </div>
     </div>
 }
 else
 {
-    <a class="btn btn-primary" href="/Auth/GoogleLogin">Entrar</a>
+    <a class="btn btn-primary" asp-page="/Account/ExternalLogin" asp-route-returnUrl="/Profile/Index">Entrar</a>
 }

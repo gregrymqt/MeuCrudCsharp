@@ -1,340 +1,358 @@
-/* ==========================================================================
-   1. Estilos Gerais do Layout do Perfil
-   ========================================================================== */
-
-/* Esconde as seções de conteúdo por padrão */
-.main-section {
-    display: none;
-    width: 100%;
+/* --- 1. CONFIGURAÇÕES GLOBAIS E VARIÁVEIS --- */
+:root {
+    /* Cores */
+    --primary-color: #6a11cb;
+    --primary-gradient: linear-gradient(135deg, #2575fc, #6a11cb);
+    --secondary-color: #f8f9fa;
+    --text-dark: #212529;
+    --text-light: #6c757d;
+    --border-color: #dee2e6;
+    --background-color: #ffffff;
+    --success-color: #28a745;
+    --warning-color: #ffc107;
+    --danger-color: #dc3545;
+    --info-color: #17a2b8;
+    
+    /* Fontes e Espaçamentos */
+    --base-font-family: 'Inter', sans-serif;
+    --base-font-size: 16px;
+    --border-radius: 8px;
+    --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    --transition-speed: 0.3s ease;
 }
 
-    /* Mostra a seção que está ativa */
-    .main-section.active {
-        display: block;
-    }
-
-/* Alerta para mensagens de erro/sucesso */
-.alert {
-    padding: 15px;
-    margin-bottom: 20px;
-    border: 1px solid transparent;
-    border-radius: 8px;
-    width: 100%;
+/* --- 2. RESET BÁSICO E ESTILOS GERAIS --- */
+body {
+    background-color: var(--secondary-color);
+    font-family: var(--base-font-family);
+    font-size: var(--base-font-size);
+    color: var(--text-dark);
+    line-height: 1.6;
+    margin: 0;
 }
 
-    .alert.alert-danger {
-        color: #721c24;
-        background-color: #f8d7da;
-        border-color: #f5c6cb;
-    }
-
-/* ==========================================================================
-   2. Estilos do Cartão de Perfil e Status da Assinatura
-   ========================================================================== */
-
-.profile-card .subscription-status-badge {
-    margin-top: 15px;
-    display: inline-block;
-    padding: 6px 16px;
-    border-radius: 20px;
-    font-size: 14px;
-    font-weight: 500;
-    color: white;
-    text-transform: capitalize;
-}
-
-/* Cores do emblema principal de status */
-.profile-card .status-ativo,
-.profile-card .status-authorized {
-    background-color: #28a745;
-}
-
-.profile-card .status-pausado {
-    background-color: #ffc107;
-    color: #212529;
-}
-
-.profile-card .status-cancelado {
-    background-color: #6c757d;
-}
-
-.profile-card .status-none {
-    background-color: #17a2b8;
-}
-
-
-/* ==========================================================================
-   3. Estilos da Aba "Gerenciar Assinatura"
-   ========================================================================== */
-
-#subscription-content h2 {
-    color: #333;
+h1, h2, h3 {
     font-weight: 600;
-    margin-bottom: 8px;
+    line-height: 1.3;
 }
 
-#subscription-content > p {
-    color: #666;
-    margin-bottom: 24px;
-}
-
-/* Caixa com detalhes da assinatura */
-.subscription-details {
-    background-color: #f8f9fa;
-    border: 1px solid #e9ecef;
-    border-radius: 8px;
-    padding: 20px;
-    margin-bottom: 24px;
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 15px;
-}
-
-    .subscription-details div {
-        font-size: 15px;
-        color: #495057;
-    }
-
-    .subscription-details strong {
-        color: #212529;
-        margin-right: 8px;
-    }
-
-/* Estilos do Acordeão */
-.accordion {
-    width: 100%;
-    max-width: 700px;
-    border-radius: 8px;
-    overflow: hidden;
-    border: 1px solid #dee2e6;
-}
-
-.accordion-item {
-    border-bottom: 1px solid #dee2e6;
-}
-
-    .accordion-item:last-child {
-        border-bottom: none;
-    }
-
-.accordion-header {
-    width: 100%;
-    background-color: #f8f9fa;
-    border: none;
-    padding: 15px 20px;
-    font-size: 16px;
-    font-weight: 500;
-    text-align: left;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-    position: relative;
-    color: #343a40;
-}
-
-    .accordion-header:hover {
-        background-color: #e9ecef;
-    }
-
-    .accordion-header::after {
-        content: '\f078'; /* Ícone de seta para baixo (Font Awesome) */
-        font-family: 'Font Awesome 6 Free';
-        font-weight: 900;
-        position: absolute;
-        right: 20px;
-        top: 50%;
-        transform: translateY(-50%);
-        transition: transform 0.3s ease;
-    }
-
-    .accordion-header.active::after {
-        transform: translateY(-50%) rotate(180deg);
-    }
-
-.accordion-body {
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.4s ease-out, padding 0.4s ease-out;
-    background-color: #fff;
-    padding: 0 20px;
-}
-
-    .accordion-body.active {
-        padding: 20px;
-        max-height: 500px; /* Altura suficiente para o conteúdo */
-    }
-
-    .accordion-body p {
-        margin-top: 0;
-        color: #666;
-    }
-
-/* Estilos do Formulário dentro do Acordeão */
-.subscription-form {
+/* --- 3. LAYOUT PRINCIPAL (MOBILE-FIRST) --- */
+.profile-container {
     display: flex;
-    flex-direction: column;
-    gap: 15px;
+    flex-direction: column; /* Layout de coluna para mobile */
+    max-width: 1200px;
+    margin: 1.5rem auto;
+    padding: 0 1rem;
 }
 
-    .subscription-form button {
-        align-self: flex-start;
-        padding: 10px 20px;
-        border: none;
-        border-radius: 6px;
-        color: white;
-        font-weight: 500;
-        cursor: pointer;
-        transition: background-color 0.2s;
-    }
-
-/* Botões de Ação Específicos */
-.btn-danger {
-    background-color: #dc3545;
+/* --- 4. SIDEBAR / NAVEGAÇÃO MOBILE --- */
+.profile-sidebar {
+    background-color: var(--background-color);
+    border-radius: var(--border-radius);
+    margin-bottom: 1.5rem;
+    box-shadow: var(--card-shadow);
 }
 
-    .btn-danger:hover {
-        background-color: #c82333;
-    }
-
-.btn-warning {
-    background-color: #ffc107;
-    color: #212529;
+.sidebar-header {
+    display: none; /* Escondido em mobile para um visual mais limpo */
 }
 
-    .btn-warning:hover {
-        background-color: #e0a800;
-    }
-
-.btn-success {
-    background-color: #28a745;
+.sidebar-nav ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex; /* Cria as abas horizontais no mobile */
+    overflow-x: auto; /* Permite rolar se não couber na tela */
+    border-bottom: 1px solid var(--border-color);
 }
 
-    .btn-success:hover {
-        background-color: #218838;
-    }
+.sidebar-nav li {
+    flex-shrink: 0; /* Impede que os itens encolham */
+}
 
-.text-danger {
-    color: #c82333;
+.sidebar-nav a {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem;
     font-weight: 500;
+    font-size: 0.9rem;
+    color: var(--text-light);
+    text-decoration: none;
+    border-bottom: 3px solid transparent;
+    transition: all var(--transition-speed);
 }
 
+.sidebar-nav a:hover {
+    color: var(--text-dark);
+}
 
-/* ==========================================================================
-   4. Estilos da Aba "Histórico de Pagamentos"
-   ========================================================================== */
+.sidebar-nav a.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+}
 
-#payment-history-content h2 {
-    color: #333;
+.sidebar-nav ul:last-of-type {
+    display: none; /* Esconde o botão 'Sair' da navegação de abas mobile */
+}
+
+/* --- 5. CONTEÚDO PRINCIPAL E SEÇÕES --- */
+.profile-main-content {
+    background-color: var(--background-color);
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    box-shadow: var(--card-shadow);
+}
+
+.main-section {
+    display: none; /* Todas as seções são escondidas por padrão */
+    animation: fadeIn 0.5s ease;
+}
+
+.main-section.active {
+    display: block; /* Apenas a seção ativa é mostrada */
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* --- 6. ESTILOS DE COMPONENTES --- */
+
+/* CARD DE PERFIL */
+.profile-card {
+    text-align: center;
+    padding: 1rem 0;
+}
+
+.profile-picture {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 4px solid var(--background-color);
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+    margin-bottom: 1rem;
+}
+
+.profile-name {
+    font-size: 1.8rem;
+    margin-bottom: 0.25rem;
+}
+
+.profile-email {
+    color: var(--text-light);
+    font-size: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.subscription-status-badge {
+    display: inline-block;
+    padding: 0.4rem 1rem;
+    border-radius: 20px;
+    font-weight: 500;
+    margin-bottom: 1.5rem;
+    font-size: 0.9rem;
+}
+
+.profile-cta-button {
+    display: inline-block;
+    background: var(--primary-gradient);
+    color: white;
+    padding: 0.8rem 2rem;
+    border-radius: 50px;
     font-weight: 600;
-    margin-bottom: 20px;
+    text-decoration: none;
+    transition: transform var(--transition-speed);
 }
 
+.profile-cta-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(106, 17, 203, 0.3);
+}
+
+/* TABELA DE PAGAMENTOS */
 .payment-history-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 15px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-    border-radius: 8px;
+    font-size: 0.9rem;
+}
+
+.payment-history-table th, .payment-history-table td {
+    padding: 0.8rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.payment-history-table th {
+    background-color: var(--secondary-color);
+    font-weight: 600;
+}
+
+/* BADGES DE STATUS */
+.status-badge, .subscription-status-badge {
+    padding: 0.3rem 0.8rem;
+    border-radius: 15px;
+    font-weight: 500;
+    color: white;
+    text-transform: capitalize;
+}
+
+.status-ativo, .status-authorized, .status-approved { background-color: var(--success-color); }
+.status-pausado, .status-pending { background-color: var(--warning-color); color: var(--text-dark); }
+.status-cancelado, .status-cancelled, .status-rejected { background-color: var(--danger-color); }
+.status-none { background-color: var(--text-light); color: var(--text-dark); }
+
+/* GERENCIAMENTO DE ASSINATURA */
+.subscription-details {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    background-color: var(--secondary-color);
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    margin-bottom: 1.5rem;
+}
+
+/* ACCORDION (Sanfona) */
+.accordion-item {
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    margin-bottom: 0.75rem;
     overflow: hidden;
 }
 
-    .payment-history-table th, .payment-history-table td {
-        border-bottom: 1px solid #dee2e6;
-        padding: 12px 15px;
-        text-align: left;
-    }
+.accordion-header {
+    width: 100%;
+    background-color: transparent;
+    border: none;
+    padding: 1rem;
+    font-size: 1rem;
+    font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color var(--transition-speed);
+    position: relative;
+}
 
-    .payment-history-table thead th {
-        background-color: #f8f9fa;
-        font-weight: 600;
-        color: #495057;
-    }
+/* Ícone de seta (chevron) para indicar que é clicável */
+.accordion-header::after {
+    content: '\f078'; /* Código do ícone de chevron para baixo do Font Awesome */
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    transition: transform var(--transition-speed);
+}
 
-    .payment-history-table tbody tr:last-child td {
-        border-bottom: none;
-    }
+.accordion-header:hover {
+    background-color: var(--secondary-color);
+}
 
-    .payment-history-table tbody tr:hover {
-        background-color: #f1f3f5;
-    }
+.accordion-body {
+    padding: 0 1rem 1rem 1rem;
+    display: none; /* Escondido por padrão, controlado via JS */
+}
 
-/* Emblemas de Status para a Tabela */
-.status-badge {
-    padding: 4px 10px;
-    border-radius: 12px;
-    font-size: 12px;
-    font-weight: 600;
+.accordion-item.active .accordion-body {
+    display: block;
+}
+
+.accordion-item.active .accordion-header::after {
+    transform: translateY(-50%) rotate(180deg); /* Gira a seta para cima */
+}
+
+/* BOTÕES DE AÇÃO */
+.btn-danger, .btn-warning, .btn-success {
+    padding: 0.7rem 1.5rem;
+    border: none;
+    border-radius: var(--border-radius);
     color: white;
-    text-transform: capitalize;
-    display: inline-block;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity var(--transition-speed);
 }
 
-    .status-badge.status-aprovado {
-        background-color: #28a745;
-    }
+.btn-danger { background-color: var(--danger-color); }
+.btn-warning { background-color: var(--warning-color); color: var(--text-dark); }
+.btn-success { background-color: var(--success-color); }
+.btn-danger:hover, .btn-warning:hover, .btn-success:hover { opacity: 0.85; }
 
-    .status-badge.status-pendente {
-        background-color: #ffc107;
-        color: #212529;
-    }
+.text-danger { color: var(--danger-color); font-weight: 500; }
 
-    .status-badge.status-recusado {
-        background-color: #dc3545;
-    }
-
-    .status-badge.status-cancelado {
-        background-color: #6c757d;
-    }
-
-    .status-badge.status-reembolsado {
-        background-color: #17a2b8;
-    }
-
-
-/* ======================================================= */
-/* CSS PARA A SEÇÃO DE REEMBOLSO                           */
-/* ======================================================= */
-
-.refund-confirmation-message {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+/* MENSAGENS DE REEMBOLSO */
+.refund-processing-message, .refund-confirmation-message {
     text-align: center;
-    padding: 25px 20px;
-    background-color: #f0fdf4; /* Verde bem claro */
-    border: 1px solid #bbf7d0; /* Borda verde clara */
-    border-radius: 8px;
-    margin-top: 15px;
+    padding: 2rem;
+    background-color: var(--secondary-color);
+    border-radius: var(--border-radius);
 }
+.refund-processing-message i, .refund-confirmation-message i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+.refund-processing-message i { color: var(--info-color); }
+.refund-confirmation-message i { color: var(--success-color); }
 
-    .refund-confirmation-message .fa-circle-check {
-        font-size: 48px;
-        color: #22c55e; /* Verde vibrante */
-        margin-bottom: 15px;
+/* --- 7. MEDIA QUERY PARA DESKTOP --- */
+@media (min-width: 768px) {
+    .profile-container {
+        flex-direction: row; /* Layout de linha para desktop */
+        gap: 2rem;
+        padding: 0 2rem;
+        margin-top: 2rem;
     }
 
-    .refund-confirmation-message h4 {
-        font-family: 'Inter', sans-serif;
-        font-size: 1.25rem;
+    /* SIDEBAR DESKTOP */
+    .profile-sidebar {
+        flex: 0 0 250px; /* Largura fixa para a sidebar */
+        margin-bottom: 0;
+    }
+
+    .sidebar-header {
+        display: block; /* Mostra o título "Minha Conta" */
+        padding: 1.5rem;
+        font-size: 1.2rem;
         font-weight: 600;
-        color: #166534; /* Verde escuro */
-        margin: 0 0 10px 0;
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .sidebar-nav ul {
+        flex-direction: column; /* Volta a ser uma lista vertical */
+        border-bottom: none;
+        padding: 1rem 0;
     }
 
-    .refund-confirmation-message p {
-        font-family: 'Inter', sans-serif;
-        font-size: 0.95rem;
-        color: #1f2937; /* Cinza escuro, para boa legibilidade */
-        line-height: 1.6;
-        max-width: 500px; /* Evita que o texto fique muito largo em telas grandes */
+    .sidebar-nav ul:last-of-type {
+        display: block; /* Mostra o botão 'Sair' */
+        border-top: 1px solid var(--border-color);
+        margin-top: 1rem;
     }
 
-.refund-error-message {
-    background-color: #f8d7da;
-    color: #721c24;
-    border: 1px solid #f5c6cb;
-    border-radius: 4px;
-    padding: 10px 15px;
-    margin-bottom: 15px;
-    text-align: center;
-    font-size: 0.9rem;
+    .sidebar-nav a {
+        padding: 0.8rem 1.5rem;
+        border-left: 3px solid transparent;
+        border-bottom: none;
+        border-radius: 0 5px 5px 0;
+    }
+
+    .sidebar-nav a.active {
+        background-color: #f1e4ff;
+        color: var(--primary-color);
+        border-left-color: var(--primary-color);
+        border-bottom-color: transparent;
+    }
+
+    /* CONTEÚDO PRINCIPAL DESKTOP */
+    .profile-main-content {
+        flex-grow: 1; /* Ocupa o espaço restante */
+        padding: 2rem;
+    }
+
+    .subscription-details {
+        grid-template-columns: repeat(2, 1fr); /* 2 colunas para os detalhes */
+    }
 }

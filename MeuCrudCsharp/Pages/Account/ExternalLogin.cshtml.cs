@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
-namespace MeuCrudCsharp.Areas.Identity.Pages.Account
+namespace MeuCrudCsharp.Pages.Account
 {
     [AllowAnonymous]
     public class ExternalLoginModel : PageModel
@@ -35,7 +35,8 @@ namespace MeuCrudCsharp.Areas.Identity.Pages.Account
         [BindProperty]
         public InputModel Input { get; set; } = new();
         public string? ProviderDisplayName { get; set; }
-        public string? ReturnUrl { get; set; }
+        [BindProperty(SupportsGet = true)]
+        public string ReturnUrl { get; set; }
 
         [TempData]
         public string? ErrorMessage { get; set; }
@@ -48,7 +49,10 @@ namespace MeuCrudCsharp.Areas.Identity.Pages.Account
         }
 
         // Este método apenas redireciona se alguém tentar acessar a página diretamente.
-        public IActionResult OnGet() => RedirectToPage("./Login");
+        public void OnGet(string returnUrl = null!)
+        {
+            ReturnUrl = returnUrl ?? Url.Content("~/");
+        }
 
         // Este é o método que o seu AccountController chama para iniciar o fluxo.
         public IActionResult OnPost(string provider, string? returnUrl = null)
@@ -75,14 +79,14 @@ namespace MeuCrudCsharp.Areas.Identity.Pages.Account
             if (remoteError != null)
             {
                 ErrorMessage = $"Erro do provedor externo: {remoteError}";
-                return RedirectToPage("./Login", new { ReturnUrl = returnUrl });
+                return RedirectToPage("./Auth/GoogleLogin", new { ReturnUrl = returnUrl });
             }
 
             var info = await _signInManager.GetExternalLoginInfoAsync();
             if (info == null)
             {
                 ErrorMessage = "Erro ao carregar informações de login externo.";
-                return RedirectToPage("./Login", new { ReturnUrl = returnUrl });
+                return RedirectToPage("./Auth/GoogleLogin", new { ReturnUrl = returnUrl });
             }
 
             try
@@ -110,7 +114,7 @@ namespace MeuCrudCsharp.Areas.Identity.Pages.Account
                     "Ocorreu um erro durante o processo de SignInWithGoogleAsync."
                 );
                 ErrorMessage = "Ocorreu um erro inesperado durante o login. Tente novamente.";
-                return RedirectToPage("./Login");
+                return RedirectToPage("./Auth/GoogleLogin");
             }
         }
     }

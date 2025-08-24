@@ -1,7 +1,6 @@
 ﻿// /js/main.js
-
 import { initializeMercadoPago } from './modules/mercadopagoManager.js';
-import { initializeTabNavigation } from './modules/ui/navigation.js';
+import { initializeTabNavigation, initializeAccordion } from './modules/ui/navigation.js';
 import { initializeRefundForm } from './modules/ui/refundForm.js';
 import { initializeCardAccordions, initializeReactivationForm } from './modules/subscriptionManager.js';
 
@@ -12,6 +11,7 @@ function main() {
 
     // 2. Inicializa os componentes de UI
     initializeTabNavigation();
+    initializeAccordion();
     initializeRefundForm();
 
     // 3. Inicializa funcionalidades que dependem do SDK do MP

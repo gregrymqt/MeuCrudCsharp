@@ -37,6 +37,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authentication.OAuth;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.StackExchangeRedis;
@@ -90,9 +91,10 @@ try
 
     builder.Services.ConfigureApplicationCookie(options =>
     {
-        options.LoginPath = "/Auth/GoogleLogin";
-        options.LogoutPath = "/Auth/Logout";
-        options.AccessDeniedPath = "/Auth/AccessDenied";
+        // ✅ CORREÇÃO: Remova "/Identify" dos caminhos
+        options.LoginPath = "/Account/ExternalLogin";
+        options.LogoutPath = "/Account/Logout";
+        options.AccessDeniedPath = "/Account/AccessDenied"; // Se você usar esta página, mova-a também
     });
 
     // 4. In-Memory Cache
@@ -237,21 +239,19 @@ try
         );
     });
 
-    builder.Services.AddControllersWithViews(options =>
-    {
-        options.Filters.Add(
-            new Microsoft.AspNetCore.Mvc.Authorization.AuthorizeFilter("RequireJwtToken")
-        );
-    });
+    builder.Services.AddControllersWithViews();
 
     builder.Services.AddRazorPages(options =>
     {
+        // 1. REGRA GERAL: Proteger TODAS as páginas por padrão.
         options.Conventions.AuthorizeFolder("/", "RequireJwtToken");
-        options.Conventions.AllowAnonymousToPage("/Auth/GoogleLogin");
-        options.Conventions.AllowAnonymousToPage("/Auth/ExternalLogin");
-        options.Conventions.AllowAnonymousToPage("/Auth/Logout");
-        // Adicione outras páginas públicas aqui, como a Index
+
+        // 2. EXCEÇÕES: Permitir acesso anônimo às páginas públicas.
         options.Conventions.AllowAnonymousToPage("/Index");
+
+        // ✅ CORREÇÃO: Aponte para os novos caminhos, sem usar AllowAnonymousToAreaPage
+        options.Conventions.AllowAnonymousToPage("/Account/ExternalLogin");
+        options.Conventions.AllowAnonymousToPage("/Account/Logout");
     });
 
     builder.Services.Configure<RedirectSettings>(builder.Configuration.GetSection("Redirect"));
@@ -260,8 +260,35 @@ try
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddHttpClient();
 
+    builder.Services.Configure<CookiePolicyOptions>(options =>
+    {
+        options.MinimumSameSitePolicy = SameSiteMode.Lax; // Use Lax em vez de Strict para o fluxo de login externo
+        options.OnAppendCookie = cookieContext =>
+        {
+            // Aplica SameSite=None apenas para os cookies de correlação e nonce do login externo
+            if (
+                cookieContext.CookieName.StartsWith(".AspNetCore.Correlation.")
+                || cookieContext.CookieName.StartsWith(".AspNetCore.OpenIdConnect.Nonce.")
+            )
+            {
+                cookieContext.CookieOptions.SameSite = SameSiteMode.None;
+            }
+        };
+    });
+
+    // 2. CONFIGURA A APLICAÇÃO PARA CONFIAR EM HEADERS DE PROXY (ESSENCIAL PARA NGROK)
+    builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    {
+        options.ForwardedHeaders =
+            ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    });
+
     // --- HTTP Request Pipeline Configuration ---
     var app = builder.Build();
+
+    app.UseForwardedHeaders();
+
+    app.UseCookiePolicy();
 
     if (app.Environment.IsDevelopment())
     {
