@@ -253,12 +253,23 @@ h1, h2, h3 {
 }
 
 .accordion-body {
-    padding: 0 1rem 1rem 1rem;
-    display: none; /* Escondido por padrão, controlado via JS */
+    /* Começa com altura zero, escondido mas pronto para animar */
+    max-height: 0;
+    overflow: hidden;
+
+    /* A transição suave que será aplicada à propriedade max-height */
+    transition: max-height 0.35s ease-out, padding 0.35s ease-out;
+    
+    /* Removemos o padding quando está fechado para a animação ficar perfeita */
+    padding: 0 1rem; 
 }
 
 .accordion-item.active .accordion-body {
-    display: block;
+    /* Expande para uma altura suficiente para caber o conteúdo */
+    max-height: 500px; /* Use um valor alto o suficiente para o seu maior conteúdo */
+
+    /* Retorna o padding para dar espaço ao conteúdo */
+    padding: 1rem;
 }
 
 .accordion-item.active .accordion-header::after {

@@ -43,9 +43,11 @@
             </ul>
             <ul>
                 <li>
-                    <a href="/logout">
-                        <i class="fa-solid fa-arrow-right-from-bracket"></i> Sair
-                    </a>
+                    <form asp-page="/Account/Logout" method="post">
+                        <button type="submit" class="btn btn-link">
+                            <i class="fa-solid fa-arrow-right-from-bracket"></i> Sair
+                        </button>
+                    </form>
                 </li>
             </ul>
         </nav>

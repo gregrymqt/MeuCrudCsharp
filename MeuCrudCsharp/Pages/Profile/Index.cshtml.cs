@@ -40,24 +40,20 @@ namespace MeuCrudCsharp.Pages.Profile
 
             try
             {
-                // MUDANÇA 2: Buscamos os dados em paralelo para melhor performance
-                var userProfileTask = _userAccountService.GetUserProfileAsync(userIdString);
-                var subscriptionTask = _userAccountService.GetUserSubscriptionDetailsAsync(
+                // Bloco CORRIGIDO e SEGURO
+                var userProfile = await _userAccountService.GetUserProfileAsync(userIdString);
+                var subscription = await _userAccountService.GetUserSubscriptionDetailsAsync(
                     userIdString
                 );
-                var paymentHistoryTask = _userAccountService.GetUserPaymentHistoryAsync(
+                var paymentHistory = await _userAccountService.GetUserPaymentHistoryAsync(
                     userIdString
                 );
 
-                // Aguarda todas as tarefas serem concluídas
-                await Task.WhenAll(userProfileTask, subscriptionTask, paymentHistoryTask);
-
-                // Monta o ViewModel com os resultados
                 ViewModel = new ProfileViewModel
                 {
-                    UserProfile = await userProfileTask,
-                    Subscription = await subscriptionTask,
-                    PaymentHistory = await paymentHistoryTask,
+                    UserProfile = userProfile,
+                    Subscription = subscription,
+                    PaymentHistory = paymentHistory,
                 };
 
                 return Page();

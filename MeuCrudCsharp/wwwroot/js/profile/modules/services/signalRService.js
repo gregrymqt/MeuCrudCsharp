@@ -1,7 +1,4 @@
-﻿// /js/modules/services/signalRService.js
-import * as signalR from "@microsoft/signalr";
-
-let connection = null;
+﻿let connection = null;
 
 export function initializeSignalR() {
     if (connection) return;

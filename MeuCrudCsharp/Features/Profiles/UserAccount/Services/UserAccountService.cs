@@ -143,7 +143,7 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
         }
 
         /// <inheritdoc />
-        public async Task<IEnumerable<Models.Payments>> GetUserPaymentHistoryAsync(string userId)
+        public async Task<IEnumerable<Payments>> GetUserPaymentHistoryAsync(string userId)
         {
             try
             {

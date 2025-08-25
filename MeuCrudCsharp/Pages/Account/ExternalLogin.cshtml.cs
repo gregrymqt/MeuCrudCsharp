@@ -35,6 +35,7 @@ namespace MeuCrudCsharp.Pages.Account
         [BindProperty]
         public InputModel Input { get; set; } = new();
         public string? ProviderDisplayName { get; set; }
+
         [BindProperty(SupportsGet = true)]
         public string ReturnUrl { get; set; }
 
@@ -105,7 +106,7 @@ namespace MeuCrudCsharp.Pages.Account
                 await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
 
                 // E redireciona o usuário.
-                return LocalRedirect(returnUrl);
+                return RedirectToPage("/Account/LoginSuccess", new { ReturnUrl = returnUrl });
             }
             catch (Exception ex)
             {
