@@ -13,9 +13,13 @@
     <aside class="admin-sidebar">
         <div class="sidebar-header">Gerenciamento</div>
         <ul class="sidebar-nav">
-            <li><a href="#" id="nav-plans" class="sidebar-link active"><i class="fas fa-tags"></i> Gerenciar Planos</a></li>
+            <li><a href="#" id="nav-plans" class="sidebar-link active"><i class="fas fa-tags"></i> Gerenciar Planos</a>
+            </li>
+            <li><a href="#" id="nav-courses" class="sidebar-link active"><i class="fas fa-tags"></i> Gerenciar Cursos</a>
+            </li>
             <li><a href="#" id="nav-students" class="sidebar-link"><i class="fas fa-users"></i> Alunos</a></li>
-            <li><a href="#" id="nav-subscriptions" class="sidebar-link"><i class="fas fa-cogs"></i> Gerenciar Assinaturas</a></li>
+            <li><a href="#" id="nav-subscriptions" class="sidebar-link"><i class="fas fa-cogs"></i> Gerenciar
+                    Assinaturas</a></li>
         </ul>
     </aside>
 
@@ -31,7 +35,8 @@
                         <div class="form-grid">
                             <div class="form-group">
                                 <label for="course-name-new">Nome do Curso</label>
-                                <input type="text" id="course-name-new" class="form-control" required placeholder="Ex: Dominando C#">
+                                <input type="text" id="course-name-new" class="form-control" required
+                                    placeholder="Ex: Dominando C#">
                             </div>
                             <div class="form-group">
                                 <label for="course-description-new">Descrição do Curso</label>
@@ -48,7 +53,8 @@
                 <div class="list-section">
                     <h2>Cursos Existentes</h2>
                     <div class="form-group">
-                        <input type="text" id="search-course-input" class="form-control" placeholder="Buscar curso por nome ou ID...">
+                        <input type="text" id="search-course-input" class="form-control"
+                            placeholder="Buscar curso por nome ou ID...">
                     </div>
                     <table class="table">
                         <thead>
@@ -76,7 +82,8 @@
                         <div class="form-grid">
                             <div class="form-group">
                                 <label for="plan-reason">Nome do Plano (Motivo)</label>
-                                <input type="text" id="plan-reason" class="form-control" placeholder="Ex: Acesso Mensal Premium" required>
+                                <input type="text" id="plan-reason" class="form-control"
+                                    placeholder="Ex: Acesso Mensal Premium" required>
                             </div>
                             <div class="form-group">
                                 <label for="plan-type">Tipo de Plano</label>
@@ -87,7 +94,8 @@
                             </div>
                             <div class="form-group">
                                 <label for="plan-amount">Valor (R$)</label>
-                                <input type="number" id="plan-amount" class="form-control" step="0.01" placeholder="Ex: 49.90" required>
+                                <input type="number" id="plan-amount" class="form-control" step="0.01"
+                                    placeholder="Ex: 49.90" required>
                             </div>
                         </div>
                         <button type="submit" class="btn btn-primary">Criar Plano no Mercado Pago</button>
@@ -125,10 +133,17 @@
                 <h2>Lista de Alunos</h2>
                 <table class="table">
                     <thead>
-                        <tr><th>Nome</th><th>Email</th><th>Status Assinatura</th><th>Data de Cadastro</th></tr>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Email</th>
+                            <th>Status Assinatura</th>
+                            <th>Data de Cadastro</th>
+                        </tr>
                     </thead>
                     <tbody id="students-table-body">
-                        <tr><td colspan="4" style="text-align: center;">Carregando alunos...</td></tr>
+                        <tr>
+                            <td colspan="4" style="text-align: center;">Carregando alunos...</td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
@@ -152,23 +167,29 @@
                         <div class="form-group">
                             <label for="search-id">Buscar por ID da Assinatura ou Email do Aluno</label>
                             <div class="input-group">
-                                <input type="text" id="search-id" class="form-control" placeholder="ID ou email..." required>
+                                <input type="text" id="search-id" class="form-control" placeholder="ID ou email..."
+                                    required>
                                 <button type="submit" class="btn btn-primary">Buscar</button>
                             </div>
                         </div>
                     </form>
                     <form id="form-update-value" class="action-form">
-                        <div class="form-group"><label for="update-value-id">ID da Assinatura</label><input type="text" id="update-value-id" class="form-control" required></div>
-                        <div class="form-group"><label for="update-value-amount">Novo Valor (R$)</label><input type="number" id="update-value-amount" class="form-control" step="0.01" required></div>
+                        <div class="form-group"><label for="update-value-id">ID da Assinatura</label><input type="text"
+                                id="update-value-id" class="form-control" required></div>
+                        <div class="form-group"><label for="update-value-amount">Novo Valor (R$)</label><input
+                                type="number" id="update-value-amount" class="form-control" step="0.01" required></div>
                         <button type="submit" class="btn btn-warning">Alterar Valor</button>
                     </form>
                     <form id="form-pause-cancel" class="action-form">
-                        <div class="form-group"><label for="pause-cancel-id">ID da Assinatura</label><input type="text" id="pause-cancel-id" class="form-control" required></div>
+                        <div class="form-group"><label for="pause-cancel-id">ID da Assinatura</label><input type="text"
+                                id="pause-cancel-id" class="form-control" required></div>
                         <button type="submit" name="status" value="paused" class="btn btn-secondary">Pausar</button>
                         <button type="submit" name="status" value="cancelled" class="btn btn-danger">Cancelar</button>
                     </form>
                     <form id="form-reactivate" class="action-form">
-                        <div class="form-group"><label for="reactivate-id">ID da Assinatura (deve estar pausada)</label><input type="text" id="reactivate-id" class="form-control" required></div>
+                        <div class="form-group"><label for="reactivate-id">ID da Assinatura (deve estar
+                                pausada)</label><input type="text" id="reactivate-id" class="form-control" required>
+                        </div>
                         <button type="submit" class="btn btn-success">Reativar Assinatura</button>
                     </form>
                 </div>
@@ -179,7 +200,7 @@
     </main>
 </div>
 
-<div id="edit-course-modal" class="modal">
+<div id="edit-course-modal" class="modal" style="display: none;">
     <div class="modal-content">
         <div class="modal-header">
             <h3 class="modal-title">Editar Curso</h3>
@@ -200,7 +221,7 @@
     </div>
 </div>
 
-<div id="edit-plan-modal" class="modal">
+<div id="edit-plan-modal" class="modal" style="display: none;">
     <div class="modal-content">
         <div class="modal-header">
             <h3 class="modal-title">Editar Plano</h3>
@@ -226,7 +247,8 @@
                 </div>
                 <div class="form-group">
                     <label for="edit-plan-back-url">URL de Retorno</label>
-                    <input type="url" id="edit-plan-back-url" class="form-control" placeholder="https://seusite.com/retorno">
+                    <input type="url" id="edit-plan-back-url" class="form-control"
+                        placeholder="https://seusite.com/retorno">
                 </div>
             </div>
             <button type="submit" class="btn btn-primary">Salvar Alterações</button>

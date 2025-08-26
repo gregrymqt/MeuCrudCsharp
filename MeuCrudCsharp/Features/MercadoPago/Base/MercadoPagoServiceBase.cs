@@ -1,7 +1,9 @@
 ﻿using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using MercadoPago.Client;
+using MercadoPago.Config;
 using MeuCrudCsharp.Features.Exceptions;
 using Microsoft.Extensions.Logging;
 
@@ -49,20 +51,27 @@ namespace MeuCrudCsharp.Features.MercadoPago.Base
         )
             where T : class
         {
-            var requestOptions = new RequestOptions();
             var request = new HttpRequestMessage(
                 method,
                 new Uri($"https://api.mercadopago.com{endpoint}")
             );
             request.Headers.Authorization = new AuthenticationHeaderValue(
                 "Bearer",
-                requestOptions.AccessToken
+                MercadoPagoConfig.AccessToken
             );
             request.Headers.Add("X-Idempotency-Key", Guid.NewGuid().ToString());
 
             if (payload != null)
             {
-                var jsonContent = JsonSerializer.Serialize(payload);
+                // Usando as opções de serialização padrão do ASP.NET Core para consistência
+                var jsonContent = JsonSerializer.Serialize(
+                    payload,
+                    new JsonSerializerOptions
+                    {
+                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+                    }
+                );
                 request.Content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
             }
 
@@ -79,6 +88,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Base
                         endpoint,
                         responseBody
                     );
+                    // Lança a exceção para ser tratada pelas camadas superiores (Controller, etc.)
                     throw new HttpRequestException(
                         $"Erro na API do Mercado Pago: {responseBody}",
                         null,

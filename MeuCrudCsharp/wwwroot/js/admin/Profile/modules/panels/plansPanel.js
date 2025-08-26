@@ -6,6 +6,7 @@ import { openModal, closeModal } from '../ui/modals.js';
 // --- Seletores de DOM ---
 const plansTableBody = document.getElementById('plans-table-body');
 const createPlanForm = document.getElementById('create-plan-form');
+const createPlanStatus = document.getElementById('create-plan-status');
 const editModal = document.getElementById('edit-plan-modal');
 const editForm = document.getElementById('edit-plan-form');
 const editPlanId = document.getElementById('edit-plan-id');
@@ -46,7 +47,7 @@ async function handlePlanDelete(planId) {
     });
     if (result.isConfirmed) {
         try {
-            await api.deletePlan(planId);
+            await api.deletePlan(planId, token);
             api.invalidateCache('allPlans');
             await loadPlans();
             Swal.fire('Excluído!', 'O plano foi excluído.', 'success');
@@ -93,54 +94,46 @@ export function initializePlansPanel() {
         }
     });
 
-    createPlanForm?.addEventListener('submit', async function (e) {
-        e.preventDefault();
-        const saveButton = createPlanForm.querySelector('button[type="submit"]');
-        saveButton.disabled = true;
-        saveButton.textContent = 'Creating...';
-        createPlanStatus.innerHTML = '<p>Sending data to payment provider...</p>';
+    // SEU MÉTODO addEventListener CORRIGIDO
+createPlanForm?.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    const saveButton = createPlanForm.querySelector('button[type="submit"]');
+    saveButton.disabled = true;
+    saveButton.textContent = 'Creating...';
+    const planData = {
+        reason: document.getElementById('plan-reason').value,
+        autoRecurring: {
+            frequency: 1,
+            frequencyType: document.getElementById('plan-type').value,
+            transactionAmount: parseFloat(document.getElementById('plan-amount').value),
+        },
+        backUrl: "https://b1027b9a8e2b.ngrok-free.app/"
+    };
 
-        const planData = {
-            reason: document.getElementById('plan-reason').value,
-            autoRecurring: {
-                frequency: 1, // Fixed to 1 for simplicity
-                frequencyType: document.getElementById('plan-type').value,
-                transactionAmount: parseFloat(document.getElementById('plan-amount').value),
-            },
-            backUrl: "https://www.yoursite.com/confirmation" // Return URL
-        };
-        try {
-            // Faz a chamada real para a sua API de backend
-            const response = await fetch('/api/admin/plans', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(planData)
-            });
-            const result = await response.json();
-            if (!response.ok) {
-                throw new Error(result.message || 'An error occurred while creating the plan.');
-            }
-            await Swal.fire({
-                title: 'Success!',
-                text: `Plan created successfully! ID: ${result.id}`,
-                icon: 'success'
-            });
+    try {
+        // NOVO: Passa o token encontrado para a função da API
+        const result = await api.createPlan(planData);
 
-            createPlanForm.reset();
-            await loadPlans();
-        } catch (error) {
-            Swal.fire({
-                title: 'Error!',
-                text: error.message,
-                icon: 'error'
-            });
-        } finally {
-            saveButton.disabled = false;
-            saveButton.textContent = 'Create Plan';
-        }
-    });
+        await Swal.fire({
+            title: 'Success!',
+            text: `Plan created successfully! ID: ${result.id}`,
+            icon: 'success'
+        });
+
+        createPlanForm.reset();
+        await loadPlans();
+
+    } catch (error) {
+        Swal.fire({
+            title: 'Error!',
+            text: error.message,
+            icon: 'error'
+        });
+    } finally {
+        saveButton.disabled = false;
+        saveButton.textContent = 'Create Plan';
+    }
+});
 
     editForm?.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -148,7 +141,7 @@ export function initializePlansPanel() {
         const submitButton = editForm.querySelector('button[type="submit"]');
         submitButton.disabled = true;
         submitButton.textContent = 'Saving...';
-
+        
         const updatedData = {
             reason: editPlanReason.value,
             back_url: editPlanBackUrl.value,
@@ -158,20 +151,11 @@ export function initializePlansPanel() {
         };
 
         try {
-            const response = await fetch(`${API_PLANS_URL}/${planId}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(updatedData)
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => null);
-                throw new Error(errorData?.message || 'Failed to update the plan.');
-            }
+            const response = await api.updatePlan(planId, updatedData, token);
 
             Swal.fire({
                 title: 'Success!',
-                text: 'Plan updated successfully!',
+                text: `Plan updated successfully! Name: ${response.Name}`,
                 icon: 'success',
                 timer: 2000,
                 showConfirmButton: false

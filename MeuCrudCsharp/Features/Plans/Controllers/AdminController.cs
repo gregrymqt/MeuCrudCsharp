@@ -13,17 +13,17 @@ namespace MeuCrudCsharp.Features.Plans.Controllers
     /// Requires 'Admin' role for access.
     /// </summary>
     [ApiController]
-    [Route("api/admin/plans")]
+    [Route("api/[controller]")]
     [Authorize(Roles = "Admin")]
-    public class AdminPlansController : ControllerBase
+    public class AdminController : ControllerBase
     {
         private readonly IPlanService _planService;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="AdminPlansController"/> class.
+        /// Initializes a new instance of the <see cref="AdminController"/> class.
         /// </summary>
         /// <param name="planService">The service responsible for plan business logic.</param>
-        public AdminPlansController(IPlanService planService)
+        public AdminController(IPlanService planService)
         {
             _planService = planService;
         }
@@ -36,7 +36,7 @@ namespace MeuCrudCsharp.Features.Plans.Controllers
         /// <response code="401">If the user is not authenticated.</response>
         /// <response code="403">If the user is not in the 'Admin' role.</response>
         /// <response code="500">If an unexpected server error occurs.</response>
-        [HttpGet]
+        [HttpGet("plans")]
         public async Task<IActionResult> GetPlans()
         {
             try
@@ -64,14 +64,14 @@ namespace MeuCrudCsharp.Features.Plans.Controllers
         /// <response code="401">If the user is not authenticated.</response>
         /// <response code="403">If the user is not in the 'Admin' role.</response>
         /// <response code="500">If an unexpected server error occurs.</response>
-        [HttpPost]
+        [HttpPost("plans")]
         public async Task<IActionResult> CreatePlan([FromBody] CreatePlanDto createDto)
         {
             try
             {
                 var newPlan = await _planService.CreatePlanAsync(createDto);
                 // Assuming a 'GetPlanById' method exists for the CreatedAtAction response.
-                return CreatedAtAction("GetPlanById", new { id = newPlan.Id }, newPlan);
+                return CreatedAtAction("getPlanById", new { id = newPlan.Id }, newPlan);
             }
             catch (AppServiceException ex)
             {
@@ -94,7 +94,7 @@ namespace MeuCrudCsharp.Features.Plans.Controllers
         /// <response code="403">If the user is not in the 'Admin' role.</response>
         /// <response code="404">If a plan with the specified ID is not found.</response>
         /// <response code="500">If an unexpected server error occurs.</response>
-        [HttpPut("{id}")]
+        [HttpPut("plans/{id}")]
         public async Task<IActionResult> UpdatePlan(string id, [FromBody] UpdatePlanDto updateDto)
         {
             try
@@ -124,7 +124,7 @@ namespace MeuCrudCsharp.Features.Plans.Controllers
         /// <response code="403">If the user is not in the 'Admin' role.</response>
         /// <response code="404">If a plan with the specified ID is not found.</response>
         /// <response code="500">If an unexpected server error occurs.</response>
-        [HttpDelete("{id}")]
+        [HttpDelete("plans/{id}")]
         public async Task<IActionResult> DeletePlan(string id)
         {
             try

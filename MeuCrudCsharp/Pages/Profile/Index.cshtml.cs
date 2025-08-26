@@ -4,8 +4,10 @@ using System.Threading.Tasks;
 using MeuCrudCsharp.Features.Exceptions; // Importando nossas exceções customizadas
 using MeuCrudCsharp.Features.Profiles.UserAccount.Interfaces;
 using MeuCrudCsharp.Features.Profiles.UserAccount.ViewModels;
+using MeuCrudCsharp.Models;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Logging; // MUDANÇA 1: Adicionando o Logger
@@ -17,26 +19,39 @@ namespace MeuCrudCsharp.Pages.Profile
     {
         private readonly IUserAccountService _userAccountService;
         private readonly ILogger<IndexModel> _logger; // MUDANÇA 1
+        private readonly UserManager<Users> _userManager;
 
         public ProfileViewModel ViewModel { get; private set; } = new(); // Inicializa para evitar nulos
 
-        public IndexModel(IUserAccountService userAccountService, ILogger<IndexModel> logger) // MUDANÇA 1
+        // Propriedade para a View saber se o usuário é um administrador
+        public bool IsAdmin { get; private set; }
+
+        public IndexModel(
+            IUserAccountService userAccountService,
+            ILogger<IndexModel> logger,
+            UserManager<Users> userManager
+        ) // MUDANÇA 1
         {
             _userAccountService = userAccountService;
             _logger = logger;
+            _userManager = userManager;
         }
 
         public async Task<IActionResult> OnGetAsync()
         {
             var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var user = await _userManager.FindByIdAsync(userIdString);
 
-            if (string.IsNullOrEmpty(userIdString))
+            if (user == null)
             {
-                _logger.LogWarning(
-                    "Tentativa de acesso à página de perfil com um ID de usuário inválido no cookie."
+                throw new ResourceNotFoundException(
+                    $"Usuário autenticado com ID {userIdString} não foi encontrado."
                 );
-                return Unauthorized();
             }
+
+            IsAdmin = (await _userManager.GetRolesAsync(user)).Any(r =>
+                r.Equals("Admin", StringComparison.OrdinalIgnoreCase)
+            );
 
             try
             {

@@ -254,8 +254,6 @@ ul {
 .dropdown-menu {
     /* Posicionamento e estado inicial */
     position: absolute;
-    top: calc(100% + 10px); /* Abaixo do botão com um pequeno espaço */
-    right: 0;
     background-color: var(--background-light);
     border-radius: 8px;
     box-shadow: 0 8px 16px var(--shadow-color);
@@ -264,11 +262,18 @@ ul {
     padding: 0.5rem 0;
     z-index: 1100;
 
-    /* Animação de entrada */
+    /* Animação */
     opacity: 0;
-    transform: translateY(10px);
     visibility: hidden;
     transition: opacity var(--transition-speed) ease, transform var(--transition-speed) ease, visibility var(--transition-speed);
+
+    /* --- COMPORTAMENTO MOBILE (ABRIR PARA CIMA) --- */
+    right: auto;
+    left: 0;
+    bottom: calc(100% + 10px); /* Posiciona ACIMA do botão */
+    top: auto; /* Garante que 'top' não interfira */
+    transform: translateY(10px); /* Animação vem de cima para baixo (efeito visual) */
+    transform-origin: bottom left;
 }
 
 /* Estado visível do menu */
@@ -391,15 +396,27 @@ ul {
         border-top: none;
         padding-top: 0;
     }
+    
+    /* --- Dropdown do Usuário para Desktop --- */
 
-    .footer-grid {
-        display: grid;
-        grid-template-columns: 2fr 1fr 1fr 1fr;
-        gap: 2rem;
-        text-align: left;
+    /* ✅ A MUDANÇA: Tornamos o seletor mais específico para vencer a regra do mobile */
+    .nav-user .dropdown-menu {
+        /* Garante que o menu abra PARA BAIXO */
+        top: calc(100% + 10px);
+        bottom: auto; /* Reseta a propriedade 'bottom' */
+
+        /* Alinha o menu à direita */
+        right: 0;
+        left: auto;
+
+        /* Opcional: Melhora a animação */
+        transform-origin: top right;
     }
 
-    .footer-links ul, .social-icons {
-        justify-content: flex-start;
+    /* Opcional, mas recomendado: Ajusta a animação para desktop */
+    .nav-user .dropdown-menu.show {
+        transform: translateY(0);
     }
+    
+    /* ... (outros estilos de desktop como .footer-grid) ... */
 }

@@ -2,6 +2,7 @@
 import { createVideoHubConnection } from '../services/signalRService.js';
 import { setupModal, setupThumbnailPreview } from './commonUI.js';
 
+
 // --- Estado do Painel ---
 let crudState = { currentPage: 1, isLoading: false, allDataLoaded: false };
 
@@ -48,6 +49,7 @@ async function loadData() {
     crudState.isLoading = true;
 
     try {
+
         const paginatedResult = await api.getPaginatedVideos(crudState.currentPage);
         const videos = paginatedResult.items;
 
@@ -81,6 +83,7 @@ function closeEditVideoModal() {
 }
 
 async function handleVideoDelete(videoId) {
+
     const result = await Swal.fire({
         title: 'Are you sure?',
         text: "This action cannot be undone.",
@@ -91,15 +94,15 @@ async function handleVideoDelete(videoId) {
         confirmButtonText: 'Yes, delete it!',
         cancelButtonText: 'Cancel'
     });
-if (result.isConfirmed) {
-    try {
-        const response = await api.deleteVideo(videoId);
-        Swal.fire('Excluído!', response.message, 'success');
-        document.dispatchEvent(new CustomEvent('reloadAllVideos'));
-    } catch (error) {
-        Swal.fire('Erro!', error.message, 'error');
+    if (result.isConfirmed) {
+        try {
+            const response = await api.deleteVideo(videoId);
+            Swal.fire('Excluído!', response.message, 'success');
+            document.dispatchEvent(new CustomEvent('reloadAllVideos'));
+        } catch (error) {
+            Swal.fire('Erro!', error.message, 'error');
+        }
     }
-}
 }
 
 async function loadCoursesIntoSelect() {
@@ -176,19 +179,11 @@ export function initializeCrudPanel() {
         const formData = new FormData(createForm);
 
         try {
-            const response = await fetch('/api/admin/videos', {
-                method: 'POST',
-                body: formData
-            });
-            if (!response.ok) {
-                const errorData = await response.json();
-                const errorMessages = Object.values(errorData.errors || {}).flat().join('\n');
-                throw new Error(errorMessages || errorData.message || 'An error occurred while saving the data.');
-            }
+            const response = await api.saveVideoMetadata(formData);
 
             await Swal.fire({
                 title: 'Success!',
-                text: 'Video registered successfully!',
+                text: `Video registered successfully! ${response.videoId}`,
                 icon: 'success'
             });
 
@@ -216,18 +211,11 @@ export function initializeCrudPanel() {
         const formData = new FormData(editForm);
 
         try {
-            const response = await fetch(`/api/admin/videos/${videoId}`, {
-                method: 'PUT',
-                body: formData
-            });
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Failed to update the video.');
-            }
+            const response = await api.updateVideoMetadata(videoId, formData);
 
             Swal.fire({
                 title: 'Updated!',
-                text: 'Video updated successfully!',
+                text: `Video updated successfully! ${response.videoId}`,
                 icon: 'success',
                 timer: 2000,
                 showConfirmButton: false

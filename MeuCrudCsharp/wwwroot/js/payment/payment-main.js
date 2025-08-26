@@ -6,11 +6,11 @@ import { createPaymentHubConnection } from './modules/services/signalRService.js
 import { processPayment } from './modules/api/paymentAPI.js';
 
 /**
- * Função principal que orquestra o processo de pagamento.
- * @param {object} formData - Dados do formulário do Brick.
+ * Funï¿½ï¿½o principal que orquestra o processo de pagamento.
+ * @param {object} formData - Dados do formulï¿½rio do Brick.
  */
 async function handlePaymentSubmit({ formData }) {
-    UI.showLoading("Conectando ao serviço de pagamento...");
+    UI.showLoading("Conectando ao serviï¿½o de pagamento...");
 
     let hubConnection;
 
@@ -38,7 +38,7 @@ async function handlePaymentSubmit({ formData }) {
         console.log("Conectado ao Hub! Enviando pagamento para o back-end...");
         UI.showLoading("Processando seu pagamento...");
 
-        // A chamada à API agora só inicia o processo, o resto é via SignalR
+        // A chamada Ã  API agora sÃ³ inicia o processo, o resto Ã© via SignalR
         await processPayment(formData);
 
     } catch (error) {
@@ -49,15 +49,15 @@ async function handlePaymentSubmit({ formData }) {
 }
 
 /**
- * Inicializa a página de pagamento.
+ * Inicializa a pï¿½gina de pagamento.
  */
 function initializePage() {
     if (typeof MercadoPago === 'undefined' || typeof signalR === 'undefined') {
-        UI.showError('Falha ao carregar dependências essenciais (Mercado Pago ou SignalR).');
+        UI.showError('Falha ao carregar dependï¿½ncias essenciais (Mercado Pago ou SignalR).');
         return;
     }
     if (!window.paymentConfig?.publicKey || !window.paymentConfig?.preferenceId) {
-        UI.showError('Erro de configuração: Chave pública ou ID de preferência não encontrados.');
+        UI.showError('Erro de configuraï¿½ï¿½o: Chave pï¿½blica ou ID de preferï¿½ncia nï¿½o encontrados.');
         return;
     }
 
@@ -65,7 +65,7 @@ function initializePage() {
 
     const brickCallbacks = {
         onReady: () => {
-            console.log("Payment Brick está pronto.");
+            console.log("Payment Brick estï¿½ pronto.");
             UI.showPaymentForm();
         },
         onSubmit: handlePaymentSubmit,

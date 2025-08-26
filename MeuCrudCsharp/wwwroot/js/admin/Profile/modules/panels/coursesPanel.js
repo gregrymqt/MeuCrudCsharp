@@ -44,16 +44,16 @@ async function handleCourseDelete(courseId) {
         confirmButtonText: 'Yes, delete it!',
         cancelButtonText: 'Cancel'
     });
-if (result.isConfirmed) {
-    try {
-        await api.deleteCourse(courseId);
-        api.invalidateCache('allCourses');
-        await loadCourses();
-        Swal.fire('Excluído!', 'O curso foi excluído.', 'success');
-    } catch (error) {
-        Swal.fire('Erro!', error.message, 'error');
+    if (result.isConfirmed) {
+        try {
+            await api.deleteCourse(courseId);
+            api.invalidateCache('allCourses');
+            await loadCourses();
+            Swal.fire('Excluído!', 'O curso foi excluído.', 'success');
+        } catch (error) {
+            Swal.fire('Erro!', error.message, 'error');
+        }
     }
-}
 }
 
 function openEditCourseModal(course) {
@@ -100,27 +100,18 @@ export function initializeCoursesPanel() {
         };
 
         try {
-            const response = await fetch(API_COURSES_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(courseData)
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Failed to create the course.');
-            }
+            const response = await api.createCourse(courseData);
 
             Swal.fire({
                 title: 'Success!',
-                text: 'Course created successfully!',
+                text: `Course created successfully! ID: ${response.id}`,
                 icon: 'success',
                 timer: 2000,
                 showConfirmButton: false
             });
 
             createCourseForm.reset();
-            await loadCourses(); 
+            await loadCourses();
 
         } catch (error) {
             console.error('Error creating course:', error);
@@ -148,20 +139,11 @@ export function initializeCoursesPanel() {
         };
 
         try {
-            const response = await fetch(`${API_COURSES_URL}/${courseId}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(updatedData)
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Failed to update the course.');
-            }
+            const response = await api.updateCourse(courseId, updatedData);
 
             Swal.fire({
                 title: 'Updated!',
-                text: 'Course updated successfully.',
+                text: `Course updated successfully! ID: ${response.id}`,
                 icon: 'success',
                 timer: 2000,
                 showConfirmButton: false

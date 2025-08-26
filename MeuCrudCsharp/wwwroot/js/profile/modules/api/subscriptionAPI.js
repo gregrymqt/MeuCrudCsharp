@@ -1,55 +1,85 @@
 ﻿// /js/modules/api/subscriptionAPI.js
 
+// Importa a função que busca o token. Ajuste o caminho se for diferente.
+import { getAuthToken } from '../../../../token/getTokens.js';
+
 /**
- * Envia um novo token de cartão para o back-end para atualizar a assinatura.
+ * NOVO: Função central e automática para todas as chamadas de API deste módulo.
+ * Pega o token automaticamente e lida com toda a lógica de requisição e resposta.
+ * @param {string} url - O endpoint da API.
+ * @param {object} options - Opções do fetch (method, body, etc.).
+ * @returns {Promise<any>} - A resposta da API em formato JSON.
+ */
+async function apiFetch(url, options = {}) {
+    // 1. Pega o token automaticamente.
+    const token = getAuthToken();
+
+    // 2. Configura os cabeçalhos.
+    const headers = { ...options.headers };
+    
+    // 3. Adiciona o token ao cabeçalho SOMENTE se ele existir.
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    if (options.body && (options.method === 'POST' || options.method === 'PUT')) {
+        headers['Content-Type'] = 'application/json';
+    }
+
+    // 4. Realiza a chamada fetch
+    const response = await fetch(url, { ...options, headers });
+
+    // 5. Lida com a resposta
+    // Lida com sucesso sem corpo de resposta (ex: 204 No Content)
+    if (response.status === 204) {
+        return null;
+    }
+
+    const contentType = response.headers.get("content-type");
+    if (!contentType || !contentType.includes("application/json")) {
+        const text = await response.text();
+        console.error("Resposta inesperada do servidor:", text);
+        throw new Error(`O servidor respondeu com um formato inesperado (não-JSON). Status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    
+    if (!response.ok) {
+        const errorMessage = data.message || `Erro na API. Status: ${response.status}`;
+        throw new Error(errorMessage);
+    }
+
+    return data;
+}
+
+/**
+ * REATORADO: Envia um novo token de cartão para o back-end para atualizar a assinatura.
  * @param {object} payload - O corpo da requisição, geralmente contendo o newCardToken.
  * @returns {Promise<object>} - A resposta JSON do servidor.
  */
-export async function updateSubscriptionCard(payload) {
-    const response = await fetch('/api/user/subscription/card', {
+export function updateSubscriptionCard(payload) {
+    return apiFetch('/api/user/subscription/card', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
     });
-
-    if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Falha ao atualizar a assinatura.');
-    }
-    return response.json();
 }
 
 /**
- * Envia uma requisição para reativar a assinatura do usuário.
+ * REATORADO: Envia uma requisição para reativar a assinatura do usuário.
  * @returns {Promise<object>} - A resposta JSON do servidor.
  */
-export async function reactivateSubscription() {
-    const response = await fetch('/api/user/subscription/reactivate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+export function reactivateSubscription() {
+    return apiFetch('/api/user/subscription/reactivate', {
+        method: 'POST'
     });
-
-    if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Não foi possível reativar a assinatura.');
-    }
-    return response.json();
 }
 
 /**
- * Envia uma requisição para solicitar o reembolso.
- * @returns {Promise<object>} - A resposta JSON do servidor.
+ * REATORADO: Envia uma requisição para solicitar o reembolso.
+ * @returns {Promise<object|null>} - A resposta do servidor.
  */
-export async function requestRefund() {
-    const response = await fetch('/api/profile/request-refund', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+export function requestRefund() {
+    return apiFetch('/api/profile/request-refund', {
+        method: 'POST'
     });
-
-    if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Ocorreu um erro ao solicitar o reembolso.');
-    }
-    // Retorna um objeto de sucesso, já que o corpo da resposta pode estar vazio em um 200 OK.
-    return { success: true };
 }

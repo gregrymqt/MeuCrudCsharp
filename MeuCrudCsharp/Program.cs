@@ -89,12 +89,42 @@ try
         .AddEntityFrameworkStores<ApiDbContext>()
         .AddDefaultTokenProviders();
 
+    // Substitua o seu "builder.Services.ConfigureApplicationCookie" por este bloco completo:
     builder.Services.ConfigureApplicationCookie(options =>
     {
-        // ✅ CORREÇÃO: Remova "/Identify" dos caminhos
         options.LoginPath = "/Account/ExternalLogin";
         options.LogoutPath = "/Account/Logout";
-        options.AccessDeniedPath = "/Account/AccessDenied"; // Se você usar esta página, mova-a também
+        options.AccessDeniedPath = "/Account/AccessDenied";
+
+        // --- LÓGICA ADICIONAL PARA APIs ---
+        options.Events.OnRedirectToLogin = context =>
+        {
+            // Se a requisição for para um caminho de API...
+            if (context.Request.Path.StartsWithSegments("/api"))
+            {
+                // ...não redirecione. Apenas retorne o status 401.
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                return Task.CompletedTask;
+            }
+
+            // Para qualquer outra requisição, mantenha o redirecionamento padrão.
+            context.Response.Redirect(context.RedirectUri);
+            return Task.CompletedTask;
+        };
+
+        options.Events.OnRedirectToAccessDenied = context =>
+        {
+            // Faz o mesmo para quando o usuário está logado mas não tem a permissão (role)
+            if (context.Request.Path.StartsWithSegments("/api"))
+            {
+                // Retorna 403 Forbidden
+                context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                return Task.CompletedTask;
+            }
+
+            context.Response.Redirect(context.RedirectUri);
+            return Task.CompletedTask;
+        };
     });
 
     // 4. In-Memory Cache
@@ -174,6 +204,8 @@ try
         builder.Configuration.GetSection(SendGridSettings.SectionName)
     );
 
+    JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
+
     // --- Authentication Configuration ---
     builder
         .Services.AddAuthentication()
@@ -211,17 +243,34 @@ try
                 IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
                 ValidateIssuer = false,
                 ValidateAudience = false,
+
+                NameClaimType = ClaimTypes.Name, // http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name
+                RoleClaimType = ClaimTypes.Role, // http://schemas.microsoft.com/ws/2008/06/identity/claims/role
             };
 
-            // Evento para ler o token JWT do cookie
+            // EM .AddJwtBearer(options => ...
             options.Events = new JwtBearerEvents
             {
                 OnMessageReceived = context =>
                 {
-                    if (context.Request.Cookies.TryGetValue("jwt", out var token))
+                    // 1. Tenta pegar o token do cabeçalho de autorização.
+                    //    Isto é para as chamadas de API feitas pelo seu JavaScript (fetch).
+                    string authorization = context.Request.Headers["Authorization"];
+                    if (!string.IsNullOrEmpty(authorization) && authorization.StartsWith("Bearer "))
                     {
-                        context.Token = token;
+                        context.Token = authorization.Substring("Bearer ".Length).Trim();
+                        // Se encontrou no header, o trabalho está feito.
+                        return Task.CompletedTask;
                     }
+
+                    // 2. Se não encontrou no cabeçalho, tenta pegar do cookie.
+                    //    Isto é para a navegação normal entre Razor Pages, onde o navegador
+                    //    envia o cookie automaticamente.
+                    if (context.Request.Cookies.TryGetValue("jwt", out var tokenFromCookie))
+                    {
+                        context.Token = tokenFromCookie;
+                    }
+
                     return Task.CompletedTask;
                 },
             };

@@ -5,7 +5,7 @@ import { renderCourseRows, renderCarousel } from './modules/ui/courseTemplates.j
 import { renderContinueWatchingSection } from './modules/ui/continueWatching.js';
 import { initializeCarousel } from './modules/services/swiperService.js';
 
-// --- Estado da Página ---
+// --- Estado da Pï¿½gina ---
 let currentPage = 1;
 const pageSize = 5;
 let isLoading = false;
@@ -17,7 +17,7 @@ const coursesContainer = document.getElementById('courses-section-container');
 const pageLoader = document.getElementById('page-loader');
 
 /**
- * Função principal que busca e renderiza os cursos.
+ * Funï¿½ï¿½o principal que busca e renderiza os cursos.
  */
 async function loadCourses() {
     if (isLoading || !hasMorePages) return;
@@ -62,7 +62,7 @@ function setupInfiniteScroll() {
 }
 
 /**
- * Função de inicialização da página.
+ * Funï¿½ï¿½o de inicializaï¿½ï¿½o da pï¿½gina.
  */
 function initPage() {
     renderContinueWatchingSection(coursesContainer);

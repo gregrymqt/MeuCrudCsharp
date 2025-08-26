@@ -68,6 +68,7 @@ namespace MeuCrudCsharp.Features.Auth
                 new Claim(JwtRegisteredClaimNames.Email, user.Email ?? string.Empty),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
                 new Claim(ClaimTypes.Name, user.Name ?? string.Empty),
+                new Claim("AvatarUrl", user.AvatarUrl ?? string.Empty),
             };
 
             foreach (var role in userRoles)
@@ -168,10 +169,10 @@ namespace MeuCrudCsharp.Features.Auth
                 jwtString,
                 new CookieOptions
                 {
-                    HttpOnly = true,
-                    Secure = httpContext.Request.IsHttps,
-                    SameSite = SameSiteMode.Strict,
-                    Expires = DateTime.UtcNow.AddHours(8),
+                    HttpOnly = true, // Impede o acesso via JavaScript (essencial para segurança)
+                    Expires = DateTime.UtcNow.AddDays(7), // Defina a expiração
+                    Secure = true, // Enviar apenas em HTTPS
+                    SameSite = SameSiteMode.Strict, // Melhora a proteção contra ataques CSRF
                 }
             );
 

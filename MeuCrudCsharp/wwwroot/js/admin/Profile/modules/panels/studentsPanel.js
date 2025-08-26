@@ -1,5 +1,6 @@
 ﻿import * as api from '../api/adminAPI.js';
 
+
 const studentsTableBody = document.getElementById('students-table-body');
 
 function renderStudentsTable(students) {
