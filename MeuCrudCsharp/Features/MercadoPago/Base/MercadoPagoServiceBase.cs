@@ -55,6 +55,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Base
                 method,
                 new Uri($"https://api.mercadopago.com{endpoint}")
             );
+            
             request.Headers.Authorization = new AuthenticationHeaderValue(
                 "Bearer",
                 MercadoPagoConfig.AccessToken

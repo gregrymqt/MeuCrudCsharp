@@ -1,8 +1,5 @@
 ﻿// /js/modules/api/coursesAPI.js
 
-// Importa a função que busca o token. Ajuste o caminho se necessário.
-import { getAuthToken } from '../../../../token/getTokens.js';
-
 /**
  * NOVO: Função central e automática para todas as chamadas de API deste módulo.
  * Pega o token automaticamente e lida com toda a lógica de requisição e resposta.
@@ -11,16 +8,8 @@ import { getAuthToken } from '../../../../token/getTokens.js';
  * @returns {Promise<any>} - A resposta da API em formato JSON.
  */
 async function apiFetch(url, options = {}) {
-    // 1. Pega o token automaticamente.
-    const token = getAuthToken();
-
     // 2. Configura os cabeçalhos.
     const headers = { ...options.headers };
-    
-    // 3. Adiciona o token ao cabeçalho SOMENTE se ele existir.
-    if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-    }
 
     // Adiciona Content-Type automaticamente se houver corpo na requisição
     if (options.body && (options.method === 'POST' || options.method === 'PUT')) {
@@ -28,7 +17,11 @@ async function apiFetch(url, options = {}) {
     }
 
     // 4. Realiza a chamada fetch
-    const response = await fetch(url, { ...options, headers });
+    const response = await fetch(url, {
+        ...options,
+        headers,
+        credentials: 'include',
+    });
 
     // 5. Lida com a resposta (lógica robusta que já usamos)
     if (response.status === 204) { // Sucesso sem conteúdo

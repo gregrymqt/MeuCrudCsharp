@@ -48,7 +48,8 @@ using StackExchange.Redis;
 // Isso garante que até mesmo os erros de inicialização do host possam ser logados.
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Debug() // Define o nível mínimo de log a ser capturado (Debug, Info, Warning, Error, etc.)
-    .MinimumLevel.Override("Microsoft", Serilog.Events.LogEventLevel.Warning) // Reduz o ruído dos logs internos do ASP.NET Core
+    .MinimumLevel
+    .Override("Microsoft", Serilog.Events.LogEventLevel.Warning) // Reduz o ruído dos logs internos do ASP.NET Core
     .Enrich.FromLogContext()
     .WriteTo.Console() // Continua escrevendo no console, como já faz hoje
     .WriteTo.File(
@@ -82,10 +83,7 @@ try
 
     // 3. ASP.NET Core Identity Configuration
     builder
-        .Services.AddIdentity<Users, IdentityRole>(options =>
-        {
-            options.SignIn.RequireConfirmedAccount = true;
-        })
+        .Services.AddIdentity<Users, IdentityRole>(options => { options.SignIn.RequireConfirmedAccount = true; })
         .AddEntityFrameworkStores<ApiDbContext>()
         .AddDefaultTokenProviders();
 
@@ -174,7 +172,22 @@ try
         );
     }
 
-    MercadoPagoConfig.AccessToken = builder.Configuration["MercadoPago:AccessToken"];
+    var mercadoPagoAccessToken = builder.Configuration["MercadoPago:AccessToken"];
+
+    MercadoPagoConfig.AccessToken = mercadoPagoAccessToken;
+
+    if (string.IsNullOrEmpty(MercadoPagoConfig.AccessToken))
+    {
+        Log.Fatal(
+            "FALHA CRÍTICA: O Access Token do Mercado Pago (MercadoPago:AccessToken) não foi encontrado na configuração. A aplicação será encerrada.");
+
+        throw new InvalidOperationException(
+            "O Access Token do Mercado Pago é uma configuração obrigatória e não foi encontrada.");
+    }
+    else
+    {
+        Log.Information("Access Token do Mercado Pago carregado com sucesso.");
+    }
 
     // 6. Custom Application Services
     builder.Services.AddScoped<ICacheService, CacheService>();
@@ -220,6 +233,7 @@ try
                     "As credenciais do Google não foram encontradas."
                 );
             }
+
             options.ClientId = clientId;
             options.ClientSecret = clientSecret;
 
@@ -248,31 +262,19 @@ try
                 RoleClaimType = ClaimTypes.Role, // http://schemas.microsoft.com/ws/2008/06/identity/claims/role
             };
 
-            // EM .AddJwtBearer(options => ...
             options.Events = new JwtBearerEvents
             {
                 OnMessageReceived = context =>
                 {
-                    // 1. Tenta pegar o token do cabeçalho de autorização.
-                    //    Isto é para as chamadas de API feitas pelo seu JavaScript (fetch).
-                    string authorization = context.Request.Headers["Authorization"];
-                    if (!string.IsNullOrEmpty(authorization) && authorization.StartsWith("Bearer "))
-                    {
-                        context.Token = authorization.Substring("Bearer ".Length).Trim();
-                        // Se encontrou no header, o trabalho está feito.
-                        return Task.CompletedTask;
-                    }
-
-                    // 2. Se não encontrou no cabeçalho, tenta pegar do cookie.
-                    //    Isto é para a navegação normal entre Razor Pages, onde o navegador
-                    //    envia o cookie automaticamente.
+                    // Se o front-end não enviar o cabeçalho (o que acontecerá agora),
+                    // o back-end procurará o token diretamente no cookie.
                     if (context.Request.Cookies.TryGetValue("jwt", out var tokenFromCookie))
                     {
                         context.Token = tokenFromCookie;
                     }
 
                     return Task.CompletedTask;
-                },
+                }
             };
         });
 
@@ -325,6 +327,24 @@ try
         };
     });
 
+    var myAllowSpecificOrigins = "_myAllowSpecificOrigins";
+
+// 1. ADICIONE A DEFINIÇÃO DA POLÍTICA DE CORS AQUI
+    builder.Services.AddCors(options =>
+    {
+        options.AddPolicy(name: myAllowSpecificOrigins,
+            policy =>
+            {
+                policy.WithOrigins(
+                        "https://074f5d6c3d9e.ngrok-free.app",
+                        "http://localhost:5045"
+                    )
+                    .AllowAnyHeader()
+                    .AllowAnyMethod()
+                    .AllowCredentials();
+            });
+    });
+
     // 2. CONFIGURA A APLICAÇÃO PARA CONFIAR EM HEADERS DE PROXY (ESSENCIAL PARA NGROK)
     builder.Services.Configure<ForwardedHeadersOptions>(options =>
     {
@@ -367,6 +387,7 @@ try
 
     app.UseHttpsRedirection();
     app.UseStaticFiles();
+    app.UseCors(myAllowSpecificOrigins);
     app.UseRouting();
 
     // Order is important: Authentication must come before Authorization.

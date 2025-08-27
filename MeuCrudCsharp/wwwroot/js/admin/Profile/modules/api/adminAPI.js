@@ -1,7 +1,6 @@
 ﻿// /js/admin/modules/api/adminAPI.js
 
 // NOVO: Importa a função que busca o token. Ajuste o caminho se necessário.
-import { getAuthToken } from '../../../../token/getTokens.js';
 
 const cache = new Map();
 
@@ -12,21 +11,19 @@ const cache = new Map();
  * @returns {Promise<any>} - A resposta da API em formato JSON.
  */
 async function apiFetch(url, options = {}) {
-    // 1. Pega o token automaticamente
-    const token = getAuthToken();
-
     // 2. Configura os cabeçalhos
     const headers = { ...options.headers };
-    if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-    }
 
     if (options.body && (options.method === 'POST' || options.method === 'PUT')) {
         headers['Content-Type'] = 'application/json';
     }
 
     // 3. Realiza a chamada fetch
-    const response = await fetch(url, { ...options, headers });
+    const response = await fetch(url, {
+        ...options,
+        headers,
+        credentials: 'include',
+    });
 
     // 4. Lida com a resposta
     if (response.status === 204) {
@@ -65,7 +62,7 @@ async function fetchAndCache(cacheKey, url, options = {}) {
 
 // --- API de Planos ---
 // REATORADO: As funções não precisam mais do parâmetro 'token'.
-export const getPlans = (forceRefresh = false) => fetchAndCache('allPlans', '/api/admin/plans', { force: forceRefresh });
+export const getPlans = (forceRefresh = false) => fetchAndCache('allPlans', '/api/plans', { force: forceRefresh });
 export const getPlanById = (id) => apiFetch(`/api/admin/plans/${id}`);
 export const createPlan = (planData) => apiFetch('/api/admin/plans', { method: 'POST', body: JSON.stringify(planData) });
 export const updatePlan = (id, planData) => apiFetch(`/api/admin/plans/${id}`, { method: 'PUT', body: JSON.stringify(planData) });

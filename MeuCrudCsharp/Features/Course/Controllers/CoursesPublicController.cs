@@ -12,7 +12,8 @@ namespace MeuCrudCsharp.Features.Courses.Controllers
     /// </summary>
     [ApiController]
     [Route("api/courses")]
-    [AllowAnonymous]
+    [Authorize]
+    [IgnoreAntiforgeryToken]
     public class PublicCoursesController : ControllerBase
     {
         private readonly ICourseService _courseService;

@@ -36,4 +36,7 @@
   <ItemGroup>
     <Folder Include="wwwroot\js\admin\Profile\modules\" />
   </ItemGroup>
+  <ItemGroup>
+    <_ContentIncludedByDefault Remove="wwwroot\js\token\getTokens.js" />
+  </ItemGroup>
 </Project>

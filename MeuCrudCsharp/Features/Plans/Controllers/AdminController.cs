@@ -15,6 +15,7 @@ namespace MeuCrudCsharp.Features.Plans.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Authorize(Roles = "Admin")]
+    [IgnoreAntiforgeryToken]
     public class AdminController : ControllerBase
     {
         private readonly IPlanService _planService;
@@ -26,32 +27,6 @@ namespace MeuCrudCsharp.Features.Plans.Controllers
         public AdminController(IPlanService planService)
         {
             _planService = planService;
-        }
-
-        /// <summary>
-        /// Retrieves all active subscription plans.
-        /// </summary>
-        /// <returns>A list of active plans.</returns>
-        /// <response code="200">Returns the list of active plans.</response>
-        /// <response code="401">If the user is not authenticated.</response>
-        /// <response code="403">If the user is not in the 'Admin' role.</response>
-        /// <response code="500">If an unexpected server error occurs.</response>
-        [HttpGet("plans")]
-        public async Task<IActionResult> GetPlans()
-        {
-            try
-            {
-                var plans = await _planService.GetActivePlansAsync();
-                return Ok(plans);
-            }
-            catch (Exception)
-            {
-                // In a real application, you would log the exception details.
-                return StatusCode(
-                    500,
-                    new { message = "An unexpected error occurred while fetching plans." }
-                );
-            }
         }
 
         /// <summary>

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using MeuCrudCsharp.Features.Plans.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 
@@ -9,8 +10,10 @@ namespace MeuCrudCsharp.Features.Plans.Controllers
     /// <summary>
     /// Provides public, unauthenticated access to view subscription plans.
     /// </summary>
+    [Authorize]
     [ApiController]
     [Route("api/plans")]
+    [IgnoreAntiforgeryToken]
     public class PublicPlansController : ControllerBase
     {
         private readonly IPlanService _planService;

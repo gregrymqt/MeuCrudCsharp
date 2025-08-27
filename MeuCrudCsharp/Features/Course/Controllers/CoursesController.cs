@@ -11,6 +11,7 @@ namespace MeuCrudCsharp.Features.Courses.Controllers
     [ApiController]
     [Route("api/admin/courses")]
     [Authorize(Roles = "Admin")]
+    [IgnoreAntiforgeryToken]
     public class CoursesController : ControllerBase
     {
         private readonly ICourseService _courseService;
