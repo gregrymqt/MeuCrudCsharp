@@ -107,6 +107,7 @@ createPlanForm?.addEventListener('submit', async function (e) {
             frequencyType: document.getElementById('plan-type').value,
             transactionAmount: parseFloat(document.getElementById('plan-amount').value),
         },
+        description: document.getElementById('plan-description').value,
         backUrl: "https://b1027b9a8e2b.ngrok-free.app/"
     };
 

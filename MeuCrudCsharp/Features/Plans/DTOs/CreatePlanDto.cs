@@ -37,5 +37,9 @@ namespace MeuCrudCsharp.Features.Plans.DTOs
         /// </summary>
         [Required(ErrorMessage = "The external plan ID is required.")]
         public string? ExternalPlanId { get; set; }
+        
+        [JsonPropertyName("description")]
+        [Required(ErrorMessage = "The description is required.")]
+        public string? Description { get; set; }
     }
 }

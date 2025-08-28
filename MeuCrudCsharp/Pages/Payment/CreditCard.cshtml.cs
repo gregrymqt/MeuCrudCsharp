@@ -1,6 +1,7 @@
 using System;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using MeuCrudCsharp.Features.MercadoPago.Payments.Controllers;
 using MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces;
 using MeuCrudCsharp.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -14,7 +15,7 @@ namespace MeuCrudCsharp.Pages.Payment
     [Authorize]
     public class CreditCardModel : PageModel
     {
-        private readonly IPreferencePayment _preferencePayment;
+        private readonly PreferenceController _preferenceController;
         private readonly IConfiguration _configuration;
         private readonly ILogger<CreditCardModel> _logger; // MUDANÇA 1: Adicionando Logger
 
@@ -30,12 +31,12 @@ namespace MeuCrudCsharp.Pages.Payment
 
 
         public CreditCardModel(
-            IPreferencePayment preferencePayment,
+            PreferenceController preferenceController,
             IConfiguration configuration,
             ILogger<CreditCardModel> logger
         ) // MUDANÇA 1
         {
-            _preferencePayment = preferencePayment;
+            _preferenceController = preferenceController;
             _configuration = configuration;
             _logger = logger;
         }
@@ -97,8 +98,8 @@ namespace MeuCrudCsharp.Pages.Payment
                     PublicKey = _configuration["MercadoPago:PUBLIC_KEY"];
 
                     // Cria a preferência de pagamento com o VALOR SEGURO
-                    var preference = await _preferencePayment.CreatePreferenceAsync(Valor, User);
-                    PreferenceId = preference.Id;
+                    var preferenceID = await _preferenceController.Create(Valor);
+                    PreferenceId = preferenceID.ToString();
 
                     return Page();
                 }

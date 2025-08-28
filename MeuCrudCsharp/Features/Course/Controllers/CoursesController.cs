@@ -1,18 +1,17 @@
 using System;
 using System.Threading.Tasks;
+using MeuCrudCsharp.Features.Base;
 using MeuCrudCsharp.Features.Course.DTOs;
 using MeuCrudCsharp.Features.Courses.Interfaces;
 using MeuCrudCsharp.Features.Exceptions;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MeuCrudCsharp.Features.Courses.Controllers
 {
-    [ApiController]
-    [Route("api/admin/courses")]
     [Authorize(Roles = "Admin")]
-    [IgnoreAntiforgeryToken]
-    public class CoursesController : ControllerBase
+    public class CoursesController : ApiControllerBase 
     {
         private readonly ICourseService _courseService;
 
@@ -22,7 +21,7 @@ namespace MeuCrudCsharp.Features.Courses.Controllers
         }
 
         // ✅ CORRIGIDO: Agora suporta paginação
-        [HttpGet]
+        [HttpGet("admin")]
         public async Task<IActionResult> GetCoursesPaginated(
             [FromQuery] int pageNumber = 1,
             [FromQuery] int pageSize = 10
@@ -48,7 +47,7 @@ namespace MeuCrudCsharp.Features.Courses.Controllers
         }
 
         // ✅ Perfeito, nenhuma alteração necessária
-        [HttpGet("{id:guid}")]
+        [HttpGet("/admin/{id:guid}")]
         public async Task<IActionResult> GetCourseById(Guid id)
         {
             try
@@ -63,7 +62,7 @@ namespace MeuCrudCsharp.Features.Courses.Controllers
         }
 
         // ✅ Perfeito, nenhuma alteração necessária
-        [HttpPost]
+        [HttpPost("admin")]
         public async Task<IActionResult> CreateCourse([FromBody] CreateCourseDto createDto)
         {
             try
@@ -78,7 +77,7 @@ namespace MeuCrudCsharp.Features.Courses.Controllers
         }
 
         // ✅ Perfeito, nenhuma alteração necessária
-        [HttpPut("{id:guid}")]
+        [HttpPut("/admin/{id:guid}")]
         public async Task<IActionResult> UpdateCourse(Guid id, [FromBody] UpdateCourseDto updateDto)
         {
             try
@@ -97,7 +96,7 @@ namespace MeuCrudCsharp.Features.Courses.Controllers
         }
 
         // ✅ Perfeito, nenhuma alteração necessária
-        [HttpDelete("{id:guid}")]
+        [HttpDelete("/admin/{id:guid}")]
         public async Task<IActionResult> DeleteCourse(Guid id)
         {
             try

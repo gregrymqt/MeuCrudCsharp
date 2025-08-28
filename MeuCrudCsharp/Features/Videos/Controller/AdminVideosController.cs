@@ -2,9 +2,11 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using Hangfire;
+using MeuCrudCsharp.Features.Base;
 using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.Videos.DTOs;
 using MeuCrudCsharp.Features.Videos.Interfaces;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -13,10 +15,8 @@ using Microsoft.Extensions.Logging;
 
 namespace MeuCrudCsharp.Features.Videos.Controller
 {
-    [ApiController]
-    [Route("api/admin/videos")]
     [Authorize(Roles = "Admin")]
-    public class AdminVideosController : ControllerBase
+    public class AdminVideosController : ApiControllerBase
     {
         private readonly IAdminVideoService _videoService;
         private readonly IBackgroundJobClient _jobs;

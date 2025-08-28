@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Threading.Tasks;
+using MeuCrudCsharp.Features.Base;
 using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.Subscriptions.DTOs;
 using MeuCrudCsharp.Features.Subscriptions.Interfaces;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -14,10 +16,8 @@ namespace MeuCrudCsharp.Features.Subscriptions.Controllers
     /// Manages administrative operations for subscriptions, such as searching and updating.
     /// Requires 'Admin' role for access.
     /// </summary>
-    [ApiController]
-    [Route("api/admin/subscriptions")]
     [Authorize(Roles = "Admin")]
-    public class AdminSubscriptionsController : ControllerBase
+    public class AdminSubscriptionsController : ApiControllerBase
     {
         private readonly ISubscriptionService _subscriptionService;
         private readonly ILogger<AdminSubscriptionsController> _logger;

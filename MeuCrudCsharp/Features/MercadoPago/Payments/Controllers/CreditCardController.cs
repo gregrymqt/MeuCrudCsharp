@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Threading.Tasks;
 using MercadoPago.Error;
+using MeuCrudCsharp.Features.Base;
 using MeuCrudCsharp.Features.Caching;
 using MeuCrudCsharp.Features.MercadoPago.Payments.Dtos;
 using MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -14,9 +16,8 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Controllers
     /// Implementa um mecanismo de idempotência para garantir que uma mesma requisição
     /// de pagamento não seja processada múltiplas vezes.
     /// </summary>
-    [ApiController]
-    [Route("api/[controller]")]
-    public class CreditCardController : ControllerBase
+    /// 
+    public class CreditCardController : ApiControllerBase
     {
         private const string IDEMPOTENCY_PREFIX = "CreditCardPayment";
         private readonly ICacheService _cacheService;

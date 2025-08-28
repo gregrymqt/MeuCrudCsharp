@@ -59,21 +59,24 @@ export function updateSubscriptionCard(payload) {
 }
 
 /**
- * REATORADO: Envia uma requisição para reativar a assinatura do usuário.
- * @returns {Promise<object>} - A resposta JSON do servidor.
- */
-export function reactivateSubscription() {
-    return apiFetch('/api/user/subscription/reactivate', {
-        method: 'POST'
-    });
-}
-
-/**
  * REATORADO: Envia uma requisição para solicitar o reembolso.
  * @returns {Promise<object|null>} - A resposta do servidor.
  */
 export function requestRefund() {
-    return apiFetch('/api/profile/request-refund', {
+    return apiFetch('/api/refunds/request-refund', {
         method: 'POST'
+    });
+}
+
+
+/**
+ *  Função única para atualizar o status da assinatura.
+ * @param {string} status - O novo status a ser enviado ('paused', 'authorized', 'cancelled').
+ * @returns {Promise<object>} - A resposta JSON do servidor.
+ */
+export function updateSubscriptionStatus(status) {
+    return apiFetch('/api/user/subscription/status', {
+        method: 'PUT',
+        body: JSON.stringify({ status: status })
     });
 }

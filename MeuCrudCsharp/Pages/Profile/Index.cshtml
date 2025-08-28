@@ -152,7 +152,7 @@
                         <button class="accordion-header">Pausar ou Reativar Assinatura</button>
                         <div class="accordion-body">
                             @if (subscription.Status?.ToLower() == "ativo" || subscription.Status?.ToLower() ==
-                                                    "autorizado")
+                                 "autorizado")
                             {
                                 <p>Pausar sua assinatura impede cobranças futuras até que você a reative.</p>
                                 <form id="form-pause-subscription" class="subscription-form">
@@ -168,17 +168,20 @@
                             }
                         </div>
                     </div>
-                    <div class="accordion-item">
-                        <button class="accordion-header">Cancelar Assinatura</button>
-                        <div class="accordion-body">
-                            <p class="text-danger">Atenção: Esta ação não pode ser desfeita. Você perderá o acesso aos
-                                benefícios no final do ciclo de faturamento atual.</p>
-                            <form id="form-cancel-subscription" class="subscription-form">
-                                <button type="submit" class="btn-danger">Quero Cancelar Minha Assinatura</button>
-                            </form>
+                    @if (subscription.Status?.ToLower() == "ativo" || subscription.Status?.ToLower() ==
+                         "autorizado")
+                    {
+                        <div class="accordion-item">
+                            <button class="accordion-header">Cancelar Assinatura</button>
+                            <div class="accordion-body">
+                                <p class="text-danger">Atenção: Esta ação não pode ser desfeita. Você perderá o acesso aos
+                                    benefícios no final do ciclo de faturamento atual.</p>
+                                <form id="form-cancel-subscription" class="subscription-form">
+                                    <button type="submit" class="btn-danger">Quero Cancelar Minha Assinatura</button>
+                                </form>
+                            </div>
                         </div>
-                    </div>
-
+                    }
                     <div class="accordion-item">
                         <button class="accordion-header">Solicitar Reembolso</button>
                         <div class="accordion-body">

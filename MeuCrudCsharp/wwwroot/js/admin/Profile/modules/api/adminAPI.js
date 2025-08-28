@@ -4,6 +4,29 @@
 
 const cache = new Map();
 
+let antiforgeryToken = null;
+let antiforgeryHeaderName = null;
+
+/**
+ * Função para buscar o token Antiforgery do back-end na primeira vez.
+ */
+async function ensureAntiforgeryToken() {
+    if (!antiforgeryToken) {
+        try {
+            // Chama o novo endpoint que criamos no back-end
+            const response = await fetch('/api/antiforgery/token', { credentials: 'include' });
+            if (response.ok) {
+                const data = await response.json();
+                antiforgeryToken = data.token;
+                antiforgeryHeaderName = data.headerName;
+                console.log("Token Antiforgery obtido com sucesso.");
+            }
+        } catch (error) {
+            console.error("Falha ao obter o token Antiforgery:", error);
+        }
+    }
+}
+
 /**
  * REATORADO: Função central que busca o token automaticamente.
  * @param {string} url - O endpoint da API.
@@ -11,18 +34,24 @@ const cache = new Map();
  * @returns {Promise<any>} - A resposta da API em formato JSON.
  */
 async function apiFetch(url, options = {}) {
-    // 2. Configura os cabeçalhos
+    await ensureAntiforgeryToken();
+
     const headers = { ...options.headers };
 
-    if (options.body && (options.method === 'POST' || options.method === 'PUT')) {
+    // Adiciona o Content-Type para POST/PUT
+    if (options.body && (options.method === 'POST' || options.method === 'PUT' || options.method === 'DELETE')) {
         headers['Content-Type'] = 'application/json';
+
+        // ADICIONA O HEADER ANTIFORGERY AQUI!
+        if (antiforgeryToken && antiforgeryHeaderName) {
+            headers[antiforgeryHeaderName] = antiforgeryToken;
+        }
     }
 
-    // 3. Realiza a chamada fetch
     const response = await fetch(url, {
         ...options,
         headers,
-        credentials: 'include',
+        credentials: 'include'
     });
 
     // 4. Lida com a resposta
@@ -62,7 +91,7 @@ async function fetchAndCache(cacheKey, url, options = {}) {
 
 // --- API de Planos ---
 // REATORADO: As funções não precisam mais do parâmetro 'token'.
-export const getPlans = (forceRefresh = false) => fetchAndCache('allPlans', '/api/plans', { force: forceRefresh });
+export const getPlans = (forceRefresh = false) => fetchAndCache('allPlans', '/api/PublicPlans', { force: forceRefresh });
 export const getPlanById = (id) => apiFetch(`/api/admin/plans/${id}`);
 export const createPlan = (planData) => apiFetch('/api/admin/plans', { method: 'POST', body: JSON.stringify(planData) });
 export const updatePlan = (id, planData) => apiFetch(`/api/admin/plans/${id}`, { method: 'PUT', body: JSON.stringify(planData) });
@@ -70,20 +99,20 @@ export const deletePlan = (id) => apiFetch(`/api/admin/plans/${id}`, { method: '
 
 
 // --- API de Cursos ---
-export const getCourses = (forceRefresh = false) => fetchAndCache('allCourses', '/api/admin/courses', { force: forceRefresh });
-export const createCourse = (courseData) => apiFetch('/api/admin/courses', { method: 'POST', body: JSON.stringify(courseData) });
-export const updateCourse = (id, courseData) => apiFetch(`/api/admin/courses/${id}`, { method: 'PUT', body: JSON.stringify(courseData) });
-export const deleteCourse = (id) => apiFetch(`/api/admin/courses/${id}`, { method: 'DELETE' });
+export const getCourses = (forceRefresh = false) => fetchAndCache('allCourses', '/api/course/admin', { force: forceRefresh });
+export const createCourse = (courseData) => apiFetch('/api/courses/admin', { method: 'POST', body: JSON.stringify(courseData) });
+export const updateCourse = (id, courseData) => apiFetch(`/api/courses/admin/${id}`, { method: 'PUT', body: JSON.stringify(courseData) });
+export const deleteCourse = (id) => apiFetch(`/api/courses/admin/${id}`, { method: 'DELETE' });
 
 
 // --- API de Alunos ---
-export const getStudents = (forceRefresh = false) => fetchAndCache('allStudents', '/api/admin/students', { force: forceRefresh });
+export const getStudents = (forceRefresh = false) => fetchAndCache('allStudents', '/api/AdminStudents', { force: forceRefresh });
 
 
 // --- API de Assinaturas ---
-export const searchSubscription = (query) => apiFetch(`/api/admin/subscriptions/search?query=${encodeURIComponent(query)}`);
-export const updateSubscriptionValue = (id, amount) => apiFetch(`/api/admin/subscriptions/${id}/value`, { method: 'PUT', body: JSON.stringify({ transactionAmount: amount }) });
-export const updateSubscriptionStatus = (id, status) => apiFetch(`/api/admin/subscriptions/${id}/status`, { method: 'PUT', body: JSON.stringify({ status: status }) });
+export const searchSubscription = (query) => apiFetch(`/api/AdminSubscriptions/subscriptions/search?query=${encodeURIComponent(query)}`);
+export const updateSubscriptionValue = (id, amount) => apiFetch(`/api/admin/AdminSubscriptions/${id}/value`, { method: 'PUT', body: JSON.stringify({ transactionAmount: amount }) });
+export const updateSubscriptionStatus = (id, status) => apiFetch(`/api/admin/AdminSubscriptions/${id}/status`, { method: 'PUT', body: JSON.stringify({ status: status }) });
 
 
 // --- Função de Cache ---

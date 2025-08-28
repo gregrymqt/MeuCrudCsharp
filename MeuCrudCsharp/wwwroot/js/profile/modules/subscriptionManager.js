@@ -1,5 +1,5 @@
 ﻿// /js/modules/subscriptionManager.js
-import { updateSubscriptionCard, reactivateSubscription } from './api/subscriptionAPI.js';
+import { updateSubscriptionCard, reactivateSubscription, cancelSubscription } from './api/subscriptionAPI.js';
 import { createAndRenderCardBrick } from './mercadopagoManager.js';
 
 let primaryBrickRendered = false;
@@ -16,8 +16,7 @@ async function handleCardUpdate(formData) {
             timer: 2000,
             showConfirmButton: false
         });
-        // Opcional: recarregar a página para refletir as mudanças.
-        // setTimeout(() => location.reload(), 2200);
+        setTimeout(() => location.reload(), 2200);
     } catch (error) {
         Swal.fire({
             icon: 'error',
@@ -60,9 +59,8 @@ export function initializeCardAccordions() {
     });
 }
 
-// Inicializa o formulário de reativação de assinatura
-export function initializeReactivationForm() {
-    const form = document.getElementById('form-reactivate-subscription');
+async function initializeSubscriptionActionForm(options) {
+    const form = document.getElementById(options.formId);
     if (!form) return;
 
     form.addEventListener('submit', async (e) => {
@@ -70,31 +68,82 @@ export function initializeReactivationForm() {
         const submitButton = e.target.querySelector('button[type="submit"]');
 
         const result = await Swal.fire({
-            title: 'Reativar Assinatura?',
-            text: 'A cobrança será retomada no próximo ciclo.',
-            icon: 'question',
+            title: options.confirmTitle,
+            text: options.confirmText,
+            icon: options.icon,
             showCancelButton: true,
-            confirmButtonText: 'Sim, reativar!',
-            cancelButtonText: 'Cancelar'
+            confirmButtonText: options.confirmButtonText,
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: options.confirmButtonColor || '#3085d6',
+            cancelButtonColor: options.cancelButtonColor || '#aaa'
         });
 
         if (!result.isConfirmed) return;
 
+        const originalButtonText = submitButton.textContent;
         submitButton.disabled = true;
-        submitButton.textContent = 'Reativando...';
+        submitButton.textContent = `${options.verb}ndo...`;
 
         try {
-            await reactivateSubscription();
+            // Chama a função de API genérica com o status correto
+            await updateSubscriptionStatus(options.status);
+
             await Swal.fire({
                 icon: 'success',
-                title: 'Reativada!',
-                text: 'Sua assinatura foi reativada com sucesso.'
+                title: options.successTitle,
+                text: options.successText
             });
             location.reload();
         } catch (error) {
             Swal.fire({ icon: 'error', title: 'Erro!', text: error.message });
             submitButton.disabled = false;
-            submitButton.textContent = 'Reativar Assinatura';
+            submitButton.textContent = originalButtonText;
         }
+    });
+}
+
+/**
+ * ✅ 3. FUNÇÃO PÚBLICA E UNIFICADA
+ * Procura e inicializa todos os formulários de gerenciamento de assinatura na página.
+ */
+export function initializeSubscriptionForms() {
+    // Configura o formulário de reativação
+    initializeSubscriptionActionForm({
+        formId: 'form-reactivate-subscription',
+        status: 'authorized', // Status enviado para a API
+        verb: 'Reativa',
+        confirmTitle: 'Reativar Assinatura?',
+        confirmText: 'A cobrança será retomada no próximo ciclo.',
+        icon: 'question',
+        confirmButtonText: 'Sim, reativar!',
+        successTitle: 'Reativada!',
+        successText: 'Sua assinatura foi reativada com sucesso.'
+    });
+
+    // Configura o formulário de pausa
+    initializeSubscriptionActionForm({
+        formId: 'form-pause-subscription',
+        status: 'paused',
+        verb: 'Pausa',
+        confirmTitle: 'Pausar Assinatura?',
+        confirmText: 'As cobranças serão interrompidas até que você reative.',
+        icon: 'warning',
+        confirmButtonText: 'Sim, pausar!',
+        successTitle: 'Pausada!',
+        successText: 'Sua assinatura foi pausada com sucesso.'
+    });
+
+    // Configura o formulário de cancelamento (adicione um se precisar)
+    initializeSubscriptionActionForm({
+        formId: 'form-cancel-subscription',
+        status: 'cancelled',
+        verb: 'Cancela',
+        confirmTitle: 'Cancelar Assinatura?',
+        confirmText: 'Esta ação é definitiva e não pode ser desfeita.',
+        icon: 'error',
+        confirmButtonColor: '#d33',
+        confirmButtonText: 'Sim, cancelar!',
+        successTitle: 'Cancelada!',
+        successText: 'Sua assinatura foi cancelada com sucesso.'
     });
 }

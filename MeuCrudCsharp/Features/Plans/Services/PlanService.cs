@@ -176,8 +176,24 @@ namespace MeuCrudCsharp.Features.Plans.Services
         /// <inheritdoc />
         public async Task<Plan> CreatePlanAsync(CreatePlanDto createDto)
         {
+            var newPlan = new Plan
+            {
+                
+                Name = createDto.Reason,
+                Description = createDto.Description, 
+                TransactionAmount = createDto.AutoRecurring.TransactionAmount,
+                CurrencyId = createDto.AutoRecurring.CurrencyId,
+                Frequency = createDto.AutoRecurring.Frequency,
+                FrequencyType = createDto.AutoRecurring.FrequencyType,
+                IsActive = true,
+                
+            };
+            
+            createDto.ExternalPlanId = newPlan.Id.ToString();
+
             try
             {
+                // 3. Envie a requisição para o Mercado Pago.
                 const string endpoint = "/preapproval_plan";
                 var responseBody = await SendMercadoPagoRequestAsync(
                     HttpMethod.Post,
@@ -185,25 +201,19 @@ namespace MeuCrudCsharp.Features.Plans.Services
                     createDto
                 );
                 var mpPlanResponse = JsonSerializer.Deserialize<PlanResponseDto>(responseBody);
+                
+                newPlan.ExternalPlanId = mpPlanResponse.Id;
 
-                var newPlan = new Plan
-                {
-                    ExternalPlanId = mpPlanResponse.Id,
-                    Name = mpPlanResponse.Reason,
-                    TransactionAmount = mpPlanResponse.AutoRecurring.TransactionAmount,
-                    CurrencyId = mpPlanResponse.AutoRecurring.CurrencyId,
-                    Frequency = mpPlanResponse.AutoRecurring.Frequency,
-                    FrequencyType = mpPlanResponse.AutoRecurring.FrequencyType,
-                    IsActive = true,
-                };
-
+                // 5. Salve a entidade completa no seu banco de dados.
                 _context.Plans.Add(newPlan);
                 await _context.SaveChangesAsync();
 
                 await _cacheService.RemoveAsync("ActiveSubscriptionPlans");
                 _logger.LogInformation(
-                    "Plano '{PlanName}' criado com sucesso no MP e salvo localmente.",
-                    newPlan.Name
+                    "Plano '{PlanName}' criado com sucesso no MP (ID: {MpPlanId}) e salvo localmente (ID: {LocalPlanId}).",
+                    newPlan.Name,
+                    newPlan.ExternalPlanId,
+                    newPlan.Id
                 );
                 return newPlan;
             }

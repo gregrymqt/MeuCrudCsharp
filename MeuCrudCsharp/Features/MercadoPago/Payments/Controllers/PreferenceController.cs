@@ -1,9 +1,13 @@
 ﻿using System;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using MercadoPago.Resource.User;
+using MeuCrudCsharp.Features.Base;
 using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.MercadoPago.Payments.Dtos;
 using MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces;
+using MeuCrudCsharp.Models;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -12,9 +16,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Controllers
     /// <summary>
     /// Controladora responsável por criar preferências de pagamento no Mercado Pago.
     /// </summary>
-    [ApiController]
-    [Route("api/preferences")]
-    public class PreferenceController : ControllerBase
+    public class PreferenceController : ApiControllerBase
     {
         private readonly IPreferencePayment _preferencePaymentService;
 
@@ -42,13 +44,13 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Controllers
         /// <response code="500">Se ocorrer um erro interno na aplicação.</response>
         /// <response code="502">Se houver uma falha de comunicação com a API do Mercado Pago.</response>
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] PaymentRequestDto request)
+        public async Task<IActionResult> Create(decimal amount)
         {
             try
             {
                 // O ClaimsPrincipal (User) é automaticamente populado pelo ASP.NET Core
                 var preference = await _preferencePaymentService.CreatePreferenceAsync(
-                    request.Amount,
+                    amount,
                     User
                 );
 

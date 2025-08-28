@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Threading.Tasks;
+using MeuCrudCsharp.Features.Base;
 using MeuCrudCsharp.Features.Courses.Interfaces;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -10,11 +12,7 @@ namespace MeuCrudCsharp.Features.Courses.Controllers
     /// <summary>
     /// Endpoints públicos para a visualização de cursos, acessível por usuários e administradores.
     /// </summary>
-    [ApiController]
-    [Route("api/courses")]
-    [Authorize]
-    [IgnoreAntiforgeryToken]
-    public class PublicCoursesController : ControllerBase
+    public class PublicCoursesController : ApiControllerBase
     {
         private readonly ICourseService _courseService;
         private readonly ILogger<PublicCoursesController> _logger;

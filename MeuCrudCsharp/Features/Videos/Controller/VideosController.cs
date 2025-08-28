@@ -1,5 +1,7 @@
 ﻿using MeuCrudCsharp.Data;
+using MeuCrudCsharp.Features.Base;
 using MeuCrudCsharp.Models;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -11,9 +13,7 @@ namespace MeuCrudCsharp.Features.Videos.Controller
     /// Serves HLS (HTTP Live Streaming) video content to authenticated users.
     /// This controller handles requests for both the main manifest file (.m3u8) and the individual video segments (.ts).
     /// </summary>
-    [ApiController]
-    [Route("api/videos")]
-    public class VideosController : ControllerBase
+    public class VideosController : ApiControllerBase
     {
         private readonly ApiDbContext _context;
         private readonly IWebHostEnvironment _env;

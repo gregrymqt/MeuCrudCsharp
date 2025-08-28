@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Threading.Tasks;
+using MeuCrudCsharp.Features.Base;
 using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.Plans.DTOs;
 using MeuCrudCsharp.Features.Plans.Interfaces;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -12,11 +14,9 @@ namespace MeuCrudCsharp.Features.Plans.Controllers
     /// Manages administrative CRUD operations for subscription plans.
     /// Requires 'Admin' role for access.
     /// </summary>
-    [ApiController]
-    [Route("api/[controller]")]
+
     [Authorize(Roles = "Admin")]
-    [IgnoreAntiforgeryToken]
-    public class AdminController : ControllerBase
+    public class AdminController : ApiControllerBase
     {
         private readonly IPlanService _planService;
 

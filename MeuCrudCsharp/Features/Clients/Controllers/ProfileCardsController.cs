@@ -1,8 +1,10 @@
 ﻿using System.Security.Claims;
 using MeuCrudCsharp.Data;
+using MeuCrudCsharp.Features.Base;
 using MeuCrudCsharp.Features.Clients.DTOs;
 using MeuCrudCsharp.Features.Clients.Interfaces;
 using MeuCrudCsharp.Features.Exceptions;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -10,9 +12,7 @@ using Microsoft.EntityFrameworkCore;
 /// <summary>
 /// Endpoints para gerenciamento de cartões do perfil do usuário autenticado.
 /// </summary>
-[ApiController]
-[Route("api/profile/cards")]
-public class ProfileCardsController : ControllerBase
+public class ProfileCardsController : ApiControllerBase 
 {
     private readonly IClientService _clientService;
     private readonly ApiDbContext _apiDbContext;

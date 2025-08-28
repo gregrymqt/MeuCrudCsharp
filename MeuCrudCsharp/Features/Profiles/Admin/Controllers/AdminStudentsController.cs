@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Threading.Tasks;
+using MeuCrudCsharp.Features.Base;
 using MeuCrudCsharp.Features.Profiles.Admin.Interfaces;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -11,10 +13,8 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Controllers
     /// Manages administrative operations related to student profiles.
     /// Requires 'Admin' role for access.
     /// </summary>
-    [ApiController]
-    [Route("api/admin/students")]
     [Authorize(Roles = "Admin")]
-    public class AdminStudentsController : ControllerBase
+    public class AdminStudentsController : ApiControllerBase
     {
         private readonly IAdminStudentService _studentService;
         private readonly ILogger<AdminStudentsController> _logger;

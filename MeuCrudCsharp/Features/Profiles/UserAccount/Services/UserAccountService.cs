@@ -211,95 +211,70 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
             }
         }
 
-        /// <inheritdoc />
-        public async Task<bool> CancelSubscriptionAsync(string userId)
+        /// <summary>
+        /// Método unificado para atualizar o status de uma assinatura (pausar, reativar, cancelar).
+        /// </summary>
+        /// <param name="userId">O ID do usuário logado.</param>
+        /// <param name="newStatus">O novo status desejado ('paused', 'authorized', 'cancelled').</param>
+        /// <returns>True se a operação for bem-sucedida.</returns>
+        public async Task<bool> UpdateSubscriptionStatusAsync(string userId, string newStatus)
         {
+            // 1. Validação do status recebido para segurança
+            var allowedStatuses = new[] { "paused", "authorized", "cancelled" };
+            if (!allowedStatuses.Contains(newStatus))
+            {
+                _logger.LogWarning(
+                    "Tentativa de atualização de assinatura com status inválido '{Status}' para o usuário {UserId}.",
+                    newStatus, userId);
+                throw new AppServiceException("Status de assinatura inválido.");
+            }
+
             try
             {
-                var subscription = await FindActiveSubscriptionAsync(userId, "for cancellation");
+                // 2. Encontra a assinatura do usuário no seu banco de dados
+                var subscription = await FindActiveSubscriptionAsync(userId, $"for status update to '{newStatus}'");
 
+                // 3. Prepara e envia a requisição para o Mercado Pago
                 var endpoint = $"/preapproval/{subscription.ExternalId}";
-                var payload = new { status = "cancelled" };
-                var responseBody = await SendMercadoPagoRequestAsync(
-                    HttpMethod.Put,
-                    endpoint,
-                    payload
-                );
+                var payload = new { status = newStatus }; // Usa o status recebido como parâmetro
+                var responseBody = await SendMercadoPagoRequestAsync(HttpMethod.Put, endpoint, payload);
                 var result = JsonSerializer.Deserialize<SubscriptionResponseDto>(responseBody);
 
-                if (result?.Status == "cancelled")
+                // 4. Verifica a resposta do Mercado Pago e atualiza seu banco de dados
+                if (result?.Status == newStatus)
                 {
-                    subscription.Status = "cancelled";
+                    // Mapeia o status do MP para o status do seu sistema (ex: "authorized" -> "active")
+                    subscription.Status = (newStatus == "authorized") ? "active" : newStatus;
                     subscription.UpdatedAt = DateTime.UtcNow;
                     await _context.SaveChangesAsync();
                     await _cacheService.RemoveAsync($"SubscriptionDetails_{userId}");
+
                     _logger.LogInformation(
-                        "Subscription {SubscriptionId} for user {UserId} was cancelled.",
+                        "Assinatura {SubscriptionId} do usuário {UserId} atualizada para o status '{Status}'.",
                         subscription.ExternalId,
-                        userId
+                        userId,
+                        subscription.Status
                     );
                     return true;
                 }
 
+                _logger.LogWarning(
+                    "Mercado Pago não confirmou a atualização de status para '{Status}' para a assinatura {SubscriptionId}.",
+                    newStatus,
+                    subscription.ExternalId
+                );
                 return false;
             }
             catch (Exception ex)
             {
                 _logger.LogError(
                     ex,
-                    "Unexpected error while cancelling the subscription for user {UserId}.",
+                    "Erro inesperado ao tentar atualizar o status da assinatura para '{Status}' para o usuário {UserId}.",
+                    newStatus,
                     userId
                 );
-                throw new AppServiceException(
-                    "An error occurred while cancelling your subscription.",
-                    ex
-                );
-            }
-        }
-
-        /// <inheritdoc />
-        public async Task<bool> ReactivateSubscriptionAsync(string userId)
-        {
-            try
-            {
-                var subscription = await _context.Subscriptions.FirstOrDefaultAsync(s =>
-                    s.UserId == userId && s.Status == "paused"
-                );
-
-                if (subscription == null)
-                    return false; // Not an error, just nothing to reactivate.
-
-                var endpoint = $"/preapproval/{subscription.ExternalId}";
-                var payload = new { status = "authorized" };
-                var responseBody = await SendMercadoPagoRequestAsync(
-                    HttpMethod.Put,
-                    endpoint,
-                    payload
-                );
-                var result = JsonSerializer.Deserialize<SubscriptionResponseDto>(responseBody);
-
-                if (result?.Status == "authorized")
-                {
-                    subscription.Status = "active";
-                    subscription.UpdatedAt = DateTime.UtcNow;
-                    await _context.SaveChangesAsync();
-                    await _cacheService.RemoveAsync($"SubscriptionDetails_{userId}");
-                    return true;
-                }
-
-                return false;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(
-                    ex,
-                    "Unexpected error while reactivating the subscription for user {UserId}.",
-                    userId
-                );
-                throw new AppServiceException(
-                    "An error occurred while reactivating your subscription.",
-                    ex
-                );
+                throw new AppServiceException($"Ocorreu um erro ao tentar atualizar sua assinatura para '{newStatus}'.",
+                    ex);
             }
         }
 

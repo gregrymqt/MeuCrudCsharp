@@ -290,7 +290,10 @@ try
         );
     });
 
-    builder.Services.AddControllersWithViews();
+    builder.Services.AddControllersWithViews().AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+    });
 
     builder.Services.AddRazorPages(options =>
     {

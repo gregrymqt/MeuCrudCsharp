@@ -1,4 +1,6 @@
-﻿using MeuCrudCsharp.Features.Refunds.Services;
+﻿using MeuCrudCsharp.Features.Base;
+using MeuCrudCsharp.Features.Refunds.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -7,9 +9,7 @@ namespace MeuCrudCsharp.Features.Refunds.Controllers
     /// <summary>
     /// Manages refund requests for the authenticated user.
     /// </summary>
-    [ApiController] 
-    [Route("api/profile")]
-    public class RefundsController : ControllerBase
+    public class RefundsController : ApiControllerBase
     {
         private readonly RefundService _refundService;
         private readonly ILogger<RefundsController> _logger;

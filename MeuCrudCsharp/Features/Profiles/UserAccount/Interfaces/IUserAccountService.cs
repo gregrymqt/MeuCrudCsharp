@@ -46,19 +46,13 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Interfaces
         /// <param name="newCardToken">The new card token from the payment provider.</param>
         /// <returns>A task that represents the asynchronous operation. The task result is true if the update was successful; otherwise, false.</returns>
         Task<bool> UpdateSubscriptionCardAsync(string userId, string newCardToken);
-
+        
         /// <summary>
-        /// Cancels the user's active subscription.
+        /// 
         /// </summary>
-        /// <param name="userId">The unique identifier of the user.</param>
-        /// <returns>A task that represents the asynchronous operation. The task result is true if the cancellation was successful; otherwise, false.</returns>
-        Task<bool> CancelSubscriptionAsync(string userId);
-
-        /// <summary>
-        /// Reactivates a user's previously cancelled subscription.
-        /// </summary>
-        /// <param name="userId">The unique identifier of the user.</param>
-        /// <returns>A task that represents the asynchronous operation. The task result is true if the reactivation was successful; otherwise, false.</returns>
-        Task<bool> ReactivateSubscriptionAsync(string userId);
+        /// <param name="userId"></param>
+        /// <param name="newStatus"></param>
+        /// <returns></returns>
+        Task<bool> UpdateSubscriptionStatusAsync(string userId, string newStatus);
     }
 }

@@ -10,7 +10,7 @@ namespace MeuCrudCsharp.Models
     public class Plan
     {
         [Key]
-        public Guid Id { get; set; }
+        public Guid Id { get; set; } = new Guid();
 
         // ID do plano no provedor de pagamento (ex: Mercado Pago Pre-approval Plan ID)
         [Required]

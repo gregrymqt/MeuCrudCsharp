@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Threading.Tasks;
+using MeuCrudCsharp.Features.Base;
 using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.Subscriptions.DTOs;
 using MeuCrudCsharp.Features.Subscriptions.Interfaces;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -13,9 +15,7 @@ namespace MeuCrudCsharp.Features.Subscriptions.Controllers
     /// <summary>
     /// Manages the creation of new subscriptions for authenticated users.
     /// </summary>
-    [ApiController]
-    [Route("api/subscriptions")]
-    public class SubscriptionsController : ControllerBase
+    public class SubscriptionsController : ApiControllerBase
     {
         private readonly ISubscriptionService _subscriptionService;
         private readonly ILogger<SubscriptionsController> _logger;
