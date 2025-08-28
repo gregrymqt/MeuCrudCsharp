@@ -52,7 +52,7 @@ async function apiFetch(url, options = {}) {
  * @returns {Promise<object>} - A resposta JSON do servidor.
  */
 export function updateSubscriptionCard(payload) {
-    return apiFetch('/api/user/subscription/card', {
+    return apiFetch('/api/user/card', {
         method: 'PUT',
         body: JSON.stringify(payload),
     });
@@ -75,7 +75,7 @@ export function requestRefund() {
  * @returns {Promise<object>} - A resposta JSON do servidor.
  */
 export function updateSubscriptionStatus(status) {
-    return apiFetch('/api/user/subscription/status', {
+    return apiFetch('/api/user/status', {
         method: 'PUT',
         body: JSON.stringify({ status: status })
     });

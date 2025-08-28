@@ -11,17 +11,18 @@ using Microsoft.AspNetCore.Mvc;
 namespace MeuCrudCsharp.Features.Courses.Controllers
 {
     [Authorize(Roles = "Admin")]
-    public class CoursesController : ApiControllerBase 
+    [Route("api/admin/courses")]
+    public class CoursesAdminController : ApiControllerBase
     {
         private readonly ICourseService _courseService;
 
-        public CoursesController(ICourseService courseService)
+        public CoursesAdminController(ICourseService courseService)
         {
             _courseService = courseService;
         }
 
         // ✅ CORRIGIDO: Agora suporta paginação
-        [HttpGet("admin")]
+        [HttpGet]
         public async Task<IActionResult> GetCoursesPaginated(
             [FromQuery] int pageNumber = 1,
             [FromQuery] int pageSize = 10
@@ -47,28 +48,33 @@ namespace MeuCrudCsharp.Features.Courses.Controllers
         }
 
         // ✅ Perfeito, nenhuma alteração necessária
-        [HttpGet("/admin/{id:guid}")]
-        public async Task<IActionResult> GetCourseById(Guid id)
+        // Na sua classe de controle (ex: AdminCoursesController.cs)
+
+        [HttpGet("search")]
+        public async Task<ActionResult<IEnumerable<CourseDto>>> SearchCoursesByNameAsync([FromQuery] string name)
         {
-            try
+            // A validação inicial continua sendo uma boa prática
+            if (string.IsNullOrWhiteSpace(name))
             {
-                var course = await _courseService.GetCourseByIdAsync(id);
-                return Ok(course);
+                return Ok(Enumerable.Empty<CourseDto>());
             }
-            catch (ResourceNotFoundException ex)
-            {
-                return NotFound(new { message = ex.Message });
-            }
+
+            // ✅ Chama o novo método da service que retorna uma lista
+            var courses = await _courseService.SearchCoursesByNameAsync(name);
+
+            // ✅ Retorna a lista obtida. O try-catch não é mais necessário aqui
+            //    porque a service não lança mais a exceção para busca vazia.
+            return Ok(courses);
         }
 
         // ✅ Perfeito, nenhuma alteração necessária
-        [HttpPost("admin")]
+        [HttpPost]
         public async Task<IActionResult> CreateCourse([FromBody] CreateCourseDto createDto)
         {
             try
             {
                 var newCourse = await _courseService.CreateCourseAsync(createDto);
-                return CreatedAtAction(nameof(GetCourseById), new { id = newCourse.Id }, newCourse);
+                return CreatedAtAction(nameof(SearchCoursesByNameAsync), new { name = newCourse.Name }, newCourse);
             }
             catch (AppServiceException ex)
             {
@@ -77,7 +83,7 @@ namespace MeuCrudCsharp.Features.Courses.Controllers
         }
 
         // ✅ Perfeito, nenhuma alteração necessária
-        [HttpPut("/admin/{id:guid}")]
+        [HttpPut("{id:guid}")]
         public async Task<IActionResult> UpdateCourse(Guid id, [FromBody] UpdateCourseDto updateDto)
         {
             try
@@ -96,7 +102,7 @@ namespace MeuCrudCsharp.Features.Courses.Controllers
         }
 
         // ✅ Perfeito, nenhuma alteração necessária
-        [HttpDelete("/admin/{id:guid}")]
+        [HttpDelete("{id:guid}")]
         public async Task<IActionResult> DeleteCourse(Guid id)
         {
             try

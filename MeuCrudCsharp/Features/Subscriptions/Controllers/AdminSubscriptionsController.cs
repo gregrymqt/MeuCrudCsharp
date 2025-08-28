@@ -17,6 +17,7 @@ namespace MeuCrudCsharp.Features.Subscriptions.Controllers
     /// Requires 'Admin' role for access.
     /// </summary>
     [Authorize(Roles = "Admin")]
+    [Route("api/admin/subscriptions")]
     public class AdminSubscriptionsController : ApiControllerBase
     {
         private readonly ISubscriptionService _subscriptionService;

@@ -54,7 +54,7 @@ async function apiFetch(url, options = {}) {
 export function fetchPlans() {
     // A chamada agora é uma linha simples que usa nossa função central.
     // O token é adicionado automaticamente (se existir) e a resposta é validada.
-    return apiFetch('/api/plans');
+    return apiFetch('/api/public/plans');
 }
 
 // ADICIONAL: Exemplo de como você adicionaria uma nova função

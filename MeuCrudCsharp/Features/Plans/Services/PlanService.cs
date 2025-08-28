@@ -155,6 +155,7 @@ namespace MeuCrudCsharp.Features.Plans.Services
                 var monthlyPrice = amount / 12;
                 return $"R$ {monthlyPrice:F2}".Replace('.', ',');
             }
+
             return $"R$ {amount:F2}".Replace('.', ',');
         }
 
@@ -170,42 +171,53 @@ namespace MeuCrudCsharp.Features.Plans.Services
             {
                 return $"Cobrado R$ {amount:F2} anualmente".Replace('.', ',');
             }
+
             return "&nbsp;"; // Return a non-breaking space to maintain alignment in HTML.
         }
 
         /// <inheritdoc />
         public async Task<Plan> CreatePlanAsync(CreatePlanDto createDto)
         {
+            // 1. Crie a entidade que será salva no SEU banco de dados.
             var newPlan = new Plan
             {
-                
                 Name = createDto.Reason,
-                Description = createDto.Description, 
+                Description = createDto.Description,
                 TransactionAmount = createDto.AutoRecurring.TransactionAmount,
                 CurrencyId = createDto.AutoRecurring.CurrencyId,
                 Frequency = createDto.AutoRecurring.Frequency,
                 FrequencyType = createDto.AutoRecurring.FrequencyType,
                 IsActive = true,
-                
             };
-            
-            createDto.ExternalPlanId = newPlan.Id.ToString();
+
+            // ✅ Salve primeiro para gerar um ID local único.
+            _context.Plans.Add(newPlan);
+            await _context.SaveChangesAsync();
+
+            // 2. Crie um payload específico para o Mercado Pago.
+            var mercadoPagoPayload = new
+            {
+                reason = createDto.Reason,
+                auto_recurring = createDto.AutoRecurring,
+                back_url = createDto.BackUrl,
+                external_reference = newPlan.Id.ToString(), // ✅ Use o ID local como referência externa.
+                description = createDto.Description
+            };
 
             try
             {
-                // 3. Envie a requisição para o Mercado Pago.
+                // 3. Envie o payload para o Mercado Pago.
                 const string endpoint = "/preapproval_plan";
                 var responseBody = await SendMercadoPagoRequestAsync(
                     HttpMethod.Post,
                     endpoint,
-                    createDto
+                    mercadoPagoPayload 
                 );
                 var mpPlanResponse = JsonSerializer.Deserialize<PlanResponseDto>(responseBody);
-                
-                newPlan.ExternalPlanId = mpPlanResponse.Id;
 
-                // 5. Salve a entidade completa no seu banco de dados.
-                _context.Plans.Add(newPlan);
+                // 4. Atualize sua entidade com o ID externo retornado pelo MP.
+                newPlan.ExternalPlanId = mpPlanResponse.Id;
+                _context.Plans.Update(newPlan);
                 await _context.SaveChangesAsync();
 
                 await _cacheService.RemoveAsync("ActiveSubscriptionPlans");

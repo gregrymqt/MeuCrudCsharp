@@ -13,6 +13,7 @@ namespace MeuCrudCsharp.Features.Videos.Controller
     /// Serves HLS (HTTP Live Streaming) video content to authenticated users.
     /// This controller handles requests for both the main manifest file (.m3u8) and the individual video segments (.ts).
     /// </summary>
+    [Route("/api/videos")]
     public class VideosController : ApiControllerBase
     {
         private readonly ApiDbContext _context;

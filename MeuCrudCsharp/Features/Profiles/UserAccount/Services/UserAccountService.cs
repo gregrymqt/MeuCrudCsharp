@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Features.Caching;
+using MeuCrudCsharp.Features.Clients.Interfaces;
 using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.MercadoPago.Base;
 using MeuCrudCsharp.Features.Profiles.UserAccount.DTOs;
@@ -21,6 +22,7 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
     {
         private readonly ApiDbContext _context;
         private readonly ICacheService _cacheService;
+        private readonly IClientService _clientService;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="UserAccountService"/> class.
@@ -33,12 +35,14 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
             ApiDbContext context,
             ICacheService cacheService,
             HttpClient httpClient,
-            ILogger<UserAccountService> logger
+            ILogger<UserAccountService> logger,
+            IClientService clientService
         )
             : base(httpClient, logger)
         {
             _context = context;
             _cacheService = cacheService;
+            _clientService = clientService;
         }
 
         /// <inheritdoc />
@@ -189,6 +193,35 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
                     subscription.ExternalId,
                     userId
                 );
+                try
+                {
+                    var customerId = await _getCustomerIdByUserIdAsync(userId);
+                    if (!string.IsNullOrEmpty(customerId))
+                    {
+                        await _clientService.AddCardToCustomerAsync(customerId, newCardToken);
+                        _logger.LogInformation(
+                            "Sucesso na operação secundária: Novo cartão também foi adicionado ao perfil do cliente MP {CustomerId}.",
+                            customerId
+                        );
+                    }
+                    else
+                    {
+                        _logger.LogWarning(
+                            "Operação secundária pulada: Usuário {UserId} não possui um customerId no Mercado Pago para adicionar o novo cartão.",
+                            userId
+                        );
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(
+                        ex,
+                        "A atualização do cartão na assinatura do usuário {UserId} funcionou, mas falhou ao adicionar o mesmo cartão ao seu perfil de cliente. Isso não impacta a assinatura atual.",
+                        userId
+                    );
+                }
+
+                await _cacheService.RemoveAsync($"SubscriptionDetails_{userId}");
                 return true;
             }
             catch (ExternalApiException ex)
@@ -334,6 +367,16 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
                 throw new ResourceNotFoundException($"Active subscription not found {action}.");
 
             return subscription;
+        }
+
+        private async Task<string?> _getCustomerIdByUserIdAsync(string userId)
+        {
+            var user = await _context.Users
+                .AsNoTracking()
+                .FirstOrDefaultAsync(u => u.Id == userId);
+
+            // Retorna o ID do cliente ou nulo se não for encontrado, sem lançar exceção.
+            return user?.MercadoPagoCustomerId;
         }
     }
 }

@@ -31,12 +31,7 @@ namespace MeuCrudCsharp.Features.Plans.DTOs
         [Required(ErrorMessage = "The back URL is required.")]
         [Url(ErrorMessage = "The back URL must be a valid URL.")]
         public string? BackUrl { get; set; }
-
-        /// <summary>
-        /// An external identifier for the plan, used for associating it with a local plan record.
-        /// </summary>
-        [Required(ErrorMessage = "The external plan ID is required.")]
-        public string? ExternalPlanId { get; set; }
+        
         
         [JsonPropertyName("description")]
         [Required(ErrorMessage = "The description is required.")]

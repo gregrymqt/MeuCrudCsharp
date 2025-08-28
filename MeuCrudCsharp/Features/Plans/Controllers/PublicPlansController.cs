@@ -12,6 +12,7 @@ namespace MeuCrudCsharp.Features.Plans.Controllers
     /// <summary>
     /// Provides public, unauthenticated access to view subscription plans.
     /// </summary>
+   [Route("api/public/plans")]
     public class PublicPlansController : ApiControllerBase
     {
         private readonly IPlanService _planService;

@@ -91,7 +91,7 @@ async function fetchAndCache(cacheKey, url, options = {}) {
 
 // --- API de Planos ---
 // REATORADO: As funções não precisam mais do parâmetro 'token'.
-export const getPlans = (forceRefresh = false) => fetchAndCache('allPlans', '/api/PublicPlans', { force: forceRefresh });
+export const getPlans = (forceRefresh = false) => fetchAndCache('allPlans', '/api/public/plans', { force: forceRefresh });
 export const getPlanById = (id) => apiFetch(`/api/admin/plans/${id}`);
 export const createPlan = (planData) => apiFetch('/api/admin/plans', { method: 'POST', body: JSON.stringify(planData) });
 export const updatePlan = (id, planData) => apiFetch(`/api/admin/plans/${id}`, { method: 'PUT', body: JSON.stringify(planData) });
@@ -99,20 +99,21 @@ export const deletePlan = (id) => apiFetch(`/api/admin/plans/${id}`, { method: '
 
 
 // --- API de Cursos ---
-export const getCourses = (forceRefresh = false) => fetchAndCache('allCourses', '/api/course/admin', { force: forceRefresh });
+export const getCourses = (forceRefresh = false) => fetchAndCache('allCourses', '/api/admin/courses', { force: forceRefresh });
+export const searchCoursesByName = (name) => apiFetch(`/api/admin/courses/search?name=${encodeURIComponent(name)}`);
 export const createCourse = (courseData) => apiFetch('/api/courses/admin', { method: 'POST', body: JSON.stringify(courseData) });
 export const updateCourse = (id, courseData) => apiFetch(`/api/courses/admin/${id}`, { method: 'PUT', body: JSON.stringify(courseData) });
 export const deleteCourse = (id) => apiFetch(`/api/courses/admin/${id}`, { method: 'DELETE' });
 
 
 // --- API de Alunos ---
-export const getStudents = (forceRefresh = false) => fetchAndCache('allStudents', '/api/AdminStudents', { force: forceRefresh });
+export const getStudents = (forceRefresh = false) => fetchAndCache('allStudents', '/api/admin/students', { force: forceRefresh });
 
 
 // --- API de Assinaturas ---
-export const searchSubscription = (query) => apiFetch(`/api/AdminSubscriptions/subscriptions/search?query=${encodeURIComponent(query)}`);
-export const updateSubscriptionValue = (id, amount) => apiFetch(`/api/admin/AdminSubscriptions/${id}/value`, { method: 'PUT', body: JSON.stringify({ transactionAmount: amount }) });
-export const updateSubscriptionStatus = (id, status) => apiFetch(`/api/admin/AdminSubscriptions/${id}/status`, { method: 'PUT', body: JSON.stringify({ status: status }) });
+export const searchSubscription = (query) => apiFetch(`/api/admin/subscriptions/subscriptions/search?query=${encodeURIComponent(query)}`);
+export const updateSubscriptionValue = (id, amount) => apiFetch(`/api/admin/subscriptions/${id}/value`, { method: 'PUT', body: JSON.stringify({ transactionAmount: amount }) });
+export const updateSubscriptionStatus = (id, status) => apiFetch(`/api/admin/subscriptions/${id}/status`, { method: 'PUT', body: JSON.stringify({ status: status }) });
 
 
 // --- Função de Cache ---

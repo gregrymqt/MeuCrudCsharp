@@ -2,6 +2,7 @@
 using System.Security.Claims;
 using System.Threading.Tasks;
 using MeuCrudCsharp.Features.Base;
+using MeuCrudCsharp.Features.Clients.DTOs;
 using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.Profiles.UserAccount.DTOs;
 using MeuCrudCsharp.Features.Profiles.UserAccount.Interfaces;
@@ -17,6 +18,7 @@ namespace MeuCrudCsharp.Features.UserAccount.Controllers
     /// Manages the authenticated user's subscription actions, such as changing payment methods,
     /// cancelling, and reactivating.
     /// </summary>
+    [Route("api/user")]
     public class UserController : ApiControllerBase
     {
         private readonly IUserAccountService _userAccountService;
@@ -46,18 +48,18 @@ namespace MeuCrudCsharp.Features.UserAccount.Controllers
         /// <response code="401">If the user is not authenticated.</response>
         /// <response code="404">If the user's subscription is not found or the update fails.</response>
         /// <response code="500">If an unexpected server error occurs.</response>
-        [HttpPut("subscription/card")]
+        [HttpPut("card")]
         [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(object), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> ChangeCard([FromBody] UpdateCardTokenDto? request)
+        public async Task<IActionResult> ChangeCard([FromBody] CardRequestDto? request)
         {
             try
             {
                 var userId = GetCurrentUserId();
                 var success = await _userAccountService.UpdateSubscriptionCardAsync(
                     userId,
-                    request?.NewCardToken
+                    request?.Token
                 );
 
                 if (!success)

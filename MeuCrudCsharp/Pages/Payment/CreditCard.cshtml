@@ -32,7 +32,7 @@
         publicKey: '@Model.PublicKey',
         preferenceId: '@Model.PreferenceId',
         amount: @Model.Valor.ToString(System.Globalization.CultureInfo.InvariantCulture),
-        processPaymentUrl: '@Url.Page("/api/CreditCard/process-payment", "ProcessPayment")',
+        processPaymentUrl: '@Url.Page("/api/credit/card/process-payment", "ProcessPayment")',
         userId: '@Model.user.Id',
     };
 </script>

@@ -21,12 +21,12 @@ namespace MeuCrudCsharp.Features.Courses.Interfaces
         );
 
         /// <summary>
-        /// Busca um curso específico pelo seu ID, incluindo seus vídeos.
+        /// Busca um curso específico pelo seu nome, incluindo seus vídeos.
         /// </summary>
-        /// <param name="id">O ID do curso a ser buscado.</param>
+        /// <param name="id">O nome do curso a ser buscado.</param>
         /// <returns>Uma tarefa que representa a operação assíncrona. O resultado da tarefa contém o DTO do curso encontrado.</returns>
         /// <exception cref="ResourceNotFoundException">Lançada se o curso com o ID especificado não for encontrado.</exception>
-        Task<CourseDto?> GetCourseByIdAsync(Guid id);
+        Task<IEnumerable<CourseDto>> SearchCoursesByNameAsync(string name);
 
         /// <summary>
         /// Cria um novo curso com base nos dados fornecidos.

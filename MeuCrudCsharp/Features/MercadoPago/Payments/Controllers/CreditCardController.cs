@@ -16,7 +16,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Controllers
     /// Implementa um mecanismo de idempotência para garantir que uma mesma requisição
     /// de pagamento não seja processada múltiplas vezes.
     /// </summary>
-    /// 
+    [Route("/api/credit/card")]
     public class CreditCardController : ApiControllerBase
     {
         private const string IDEMPOTENCY_PREFIX = "CreditCardPayment";

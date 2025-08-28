@@ -9,6 +9,7 @@ namespace MeuCrudCsharp.Features.Refunds.Controllers
     /// <summary>
     /// Manages refund requests for the authenticated user.
     /// </summary>
+    [Route("api/refunds")]
     public class RefundsController : ApiControllerBase
     {
         private readonly RefundService _refundService;

@@ -12,6 +12,8 @@ namespace MeuCrudCsharp.Features.Courses.Controllers
     /// <summary>
     /// Endpoints públicos para a visualização de cursos, acessível por usuários e administradores.
     /// </summary>
+    
+    [Route("api/public/courses")]
     public class PublicCoursesController : ApiControllerBase
     {
         private readonly ICourseService _courseService;

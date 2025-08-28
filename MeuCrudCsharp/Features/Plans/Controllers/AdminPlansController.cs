@@ -16,7 +16,8 @@ namespace MeuCrudCsharp.Features.Plans.Controllers
     /// </summary>
 
     [Authorize(Roles = "Admin")]
-    public class AdminController : ApiControllerBase
+    [Route("api/admin/plans")]
+    public class AdminPlansController : ApiControllerBase
     {
         private readonly IPlanService _planService;
 
@@ -24,7 +25,7 @@ namespace MeuCrudCsharp.Features.Plans.Controllers
         /// Initializes a new instance of the <see cref="AdminController"/> class.
         /// </summary>
         /// <param name="planService">The service responsible for plan business logic.</param>
-        public AdminController(IPlanService planService)
+        public AdminPlansController(IPlanService planService)
         {
             _planService = planService;
         }
@@ -39,13 +40,12 @@ namespace MeuCrudCsharp.Features.Plans.Controllers
         /// <response code="401">If the user is not authenticated.</response>
         /// <response code="403">If the user is not in the 'Admin' role.</response>
         /// <response code="500">If an unexpected server error occurs.</response>
-        [HttpPost("plans")]
+        [HttpPost]
         public async Task<IActionResult> CreatePlan([FromBody] CreatePlanDto createDto)
         {
             try
             {
                 var newPlan = await _planService.CreatePlanAsync(createDto);
-                // Assuming a 'GetPlanById' method exists for the CreatedAtAction response.
                 return CreatedAtAction("getPlanById", new { id = newPlan.Id }, newPlan);
             }
             catch (AppServiceException ex)
@@ -69,7 +69,7 @@ namespace MeuCrudCsharp.Features.Plans.Controllers
         /// <response code="403">If the user is not in the 'Admin' role.</response>
         /// <response code="404">If a plan with the specified ID is not found.</response>
         /// <response code="500">If an unexpected server error occurs.</response>
-        [HttpPut("plans/{id}")]
+        [HttpPut("{id}")]
         public async Task<IActionResult> UpdatePlan(string id, [FromBody] UpdatePlanDto updateDto)
         {
             try
@@ -99,7 +99,7 @@ namespace MeuCrudCsharp.Features.Plans.Controllers
         /// <response code="403">If the user is not in the 'Admin' role.</response>
         /// <response code="404">If a plan with the specified ID is not found.</response>
         /// <response code="500">If an unexpected server error occurs.</response>
-        [HttpDelete("plans/{id}")]
+        [HttpDelete("{id}")]
         public async Task<IActionResult> DeletePlan(string id)
         {
             try

@@ -53,5 +53,5 @@ async function apiFetch(url, options = {}) {
  * @returns {Promise<object>} Uma promessa que resolve com o resultado paginado.
  */
 export function fetchPaginatedCourses(pageNumber, pageSize) {
-    return apiFetch(`/api/PublicCourses/paginated?pageNumber=${pageNumber}&pageSize=${pageSize}`);
+    return apiFetch(`/api/public/courses/paginated?pageNumber=${pageNumber}&pageSize=${pageSize}`);
 }

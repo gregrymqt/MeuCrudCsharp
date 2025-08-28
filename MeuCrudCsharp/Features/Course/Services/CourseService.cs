@@ -8,6 +8,7 @@ using MeuCrudCsharp.Features.Courses.Interfaces;
 using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.Videos.DTOs;
 using MeuCrudCsharp.Models;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -46,21 +47,20 @@ namespace MeuCrudCsharp.Features.Courses.Services
         /// <param name="id">O ID do curso a ser buscado.</param>
         /// <returns>O DTO do curso encontrado.</returns>
         /// <exception cref="ResourceNotFoundException">Lançada se o curso com o ID especificado não for encontrado.</exception>
-        public async Task<CourseDto?> GetCourseByIdAsync(Guid publicId)
+        // Na sua classe de serviço (ex: CourseService.cs)
+        public async Task<IEnumerable<CourseDto>> SearchCoursesByNameAsync(string name)
         {
-            // A busca é feita diretamente pelo PublicId e já projeta para o DTO
-            var courseDto = await _context
+            // ✅ A busca usa Contains() para encontrar resultados parciais
+            // ✅ ToLower() garante que a busca não diferencie maiúsculas de minúsculas
+            var courses = await _context
                 .Courses.AsNoTracking()
-                .Where(c => c.PublicId == publicId)
-                .Include(c => c.Videos) // Inclui os vídeos para o mapeamento
-                .Select(c => CourseMapper.ToDtoWithVideos(c)) // Usa o Mapper
-                .FirstOrDefaultAsync();
+                .Where(c => c.Name.ToLower().Contains(name.ToLower()))
+                .Select(c => CourseMapper.ToDto(c)) // Use um DTO simples para a lista
+                .ToListAsync();
 
-            if (courseDto == null)
-            {
-                throw new ResourceNotFoundException($"Curso com ID {publicId} não encontrado.");
-            }
-            return courseDto;
+            // ✅ Retorna a lista (que pode estar vazia). Não lança mais exceção.
+            //    Um resultado de busca vazio não é um erro.
+            return courses;
         }
 
         /// <summary>
@@ -198,6 +198,7 @@ namespace MeuCrudCsharp.Features.Courses.Services
                     $"Curso com o PublicId {publicId} não foi encontrado."
                 );
             }
+
             return course;
         }
 

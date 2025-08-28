@@ -12,6 +12,8 @@ using Microsoft.EntityFrameworkCore;
 /// <summary>
 /// Endpoints para gerenciamento de cartões do perfil do usuário autenticado.
 /// </summary>
+
+[Route("api/profile/cards")]
 public class ProfileCardsController : ApiControllerBase 
 {
     private readonly IClientService _clientService;

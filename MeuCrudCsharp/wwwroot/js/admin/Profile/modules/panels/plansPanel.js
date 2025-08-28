@@ -102,13 +102,13 @@ createPlanForm?.addEventListener('submit', async function (e) {
     saveButton.textContent = 'Creating...';
     const planData = {
         reason: document.getElementById('plan-reason').value,
-        autoRecurring: {
+        auto_recurring: {
             frequency: 1,
-            frequencyType: document.getElementById('plan-type').value,
-            transactionAmount: parseFloat(document.getElementById('plan-amount').value),
+            frequency_type: document.getElementById('plan-type').value, 
+            transaction_amount: parseFloat(document.getElementById('plan-amount').value), 
         },
         description: document.getElementById('plan-description').value,
-        backUrl: "https://b1027b9a8e2b.ngrok-free.app/"
+        back_url: "https://b1027b9a8e2b.ngrok-free.app/"
     };
 
     try {

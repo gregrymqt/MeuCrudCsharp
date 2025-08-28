@@ -15,19 +15,20 @@ namespace MeuCrudCsharp.Features.Subscriptions.Controllers
     /// <summary>
     /// Manages the creation of new subscriptions for authenticated users.
     /// </summary>
-    public class SubscriptionsController : ApiControllerBase
+    [Route("api/subscriptions/public")]
+    public class SubscriptionsPublicController : ApiControllerBase
     {
         private readonly ISubscriptionService _subscriptionService;
-        private readonly ILogger<SubscriptionsController> _logger;
+        private readonly ILogger<SubscriptionsPublicController> _logger;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="SubscriptionsController"/> class.
+        /// Initializes a new instance of the <see cref="SubscriptionsPublicController"/> class.
         /// </summary>
         /// <param name="subscriptionService">The service for subscription business logic.</param>
         /// <param name="logger">The logger for recording events and errors.</param>
-        public SubscriptionsController(
+        public SubscriptionsPublicController(
             ISubscriptionService subscriptionService,
-            ILogger<SubscriptionsController> logger
+            ILogger<SubscriptionsPublicController> logger
         )
         {
             _subscriptionService = subscriptionService;

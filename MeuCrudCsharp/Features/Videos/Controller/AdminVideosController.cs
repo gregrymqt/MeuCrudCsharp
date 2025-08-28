@@ -16,6 +16,7 @@ using Microsoft.Extensions.Logging;
 namespace MeuCrudCsharp.Features.Videos.Controller
 {
     [Authorize(Roles = "Admin")]
+    [Route("api/admin/videos")]
     public class AdminVideosController : ApiControllerBase
     {
         private readonly IAdminVideoService _videoService;

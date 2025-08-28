@@ -14,6 +14,7 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Controllers
     /// Requires 'Admin' role for access.
     /// </summary>
     [Authorize(Roles = "Admin")]
+    [Route("api/admin/students")]
     public class AdminStudentsController : ApiControllerBase
     {
         private readonly IAdminStudentService _studentService;
