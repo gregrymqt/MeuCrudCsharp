@@ -1,4 +1,5 @@
 ﻿// Models/Plan.cs
+
 using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -9,37 +10,24 @@ namespace MeuCrudCsharp.Models
     [Index(nameof(IsActive))]
     public class Plan
     {
-        [Key]
-        public Guid Id { get; set; } = new Guid();
+        [Key] public Guid Id { get; set; } = new Guid();
 
         // ID do plano no provedor de pagamento (ex: Mercado Pago Pre-approval Plan ID)
-        [Required]
-        [MaxLength(255)]
-        public string? ExternalPlanId { get; set; }
+        [Required] [MaxLength(255)] public string? ExternalPlanId { get; set; } = string.Empty;
+        [Required] [MaxLength(100)] public string? Name { get; set; } // Ex: "Plano Anual", "Plano Mensal"
 
-        [Required]
-        [MaxLength(100)]
-        public string? Name { get; set; } // Ex: "Plano Anual", "Plano Mensal"
-
-        [MaxLength(255)]
-        public string? Description { get; set; }
+        [MaxLength(255)] public string? Description { get; set; }
 
         [Required]
         [Column(TypeName = "decimal(10, 2)")]
         public decimal TransactionAmount { get; set; }
 
-        [Required]
-        [MaxLength(10)]
-        public string CurrencyId { get; set; } = "BRL";
+        [Required] [MaxLength(10)] public string CurrencyId { get; set; } = "BRL";
 
-        [Required]
-        public int Frequency { get; set; } // Ex: 1
+        [Required] public int Frequency { get; set; } // Ex: 1
 
-        [Required]
-        [MaxLength(20)]
-        public string? FrequencyType { get; set; } // Ex: "months", "years"
+        [Required] [MaxLength(20)] public int FrequencyType { get; set; } // Ex: "months", "years"
 
-        [Required]
-        public bool IsActive { get; set; } = true;
+        [Required] public bool IsActive { get; set; } = true;
     }
 }

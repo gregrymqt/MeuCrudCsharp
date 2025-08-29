@@ -20,7 +20,7 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Dtos
         /// </summary>
         [JsonPropertyName("frequency_type")]
         [Required(ErrorMessage = "Frequency type is required.")]
-        public string FrequencyType { get; set; } = string.Empty;
+        public int FrequencyType { get; set; }
 
         /// <summary>
         /// The amount to be charged in each recurring transaction.

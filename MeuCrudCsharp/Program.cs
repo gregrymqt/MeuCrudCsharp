@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -212,12 +213,18 @@ try
     builder.Services.AddScoped<IRefundNotification, RefundNotification>();
     builder.Services.AddScoped<IMercadoPagoPaymentService, MercadoPagoPaymentService>();
     builder.Services.AddScoped<INotificationPayment, NotificationPayment>();
+    builder.Services.AddScoped<IMercadoPagoPlanService, MercadoPagoPlanService>();
+
 
     builder.Services.Configure<SendGridSettings>(
         builder.Configuration.GetSection(SendGridSettings.SectionName)
     );
 
     JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
+
+    var cultureInfo = new CultureInfo("en-US"); // Ou CultureInfo.InvariantCulture
+    CultureInfo.DefaultThreadCurrentCulture = cultureInfo;
+    CultureInfo.DefaultThreadCurrentUICulture = cultureInfo;
 
     // --- Authentication Configuration ---
     builder

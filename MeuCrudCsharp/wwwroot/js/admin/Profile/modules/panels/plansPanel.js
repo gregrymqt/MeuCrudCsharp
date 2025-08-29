@@ -100,12 +100,17 @@ createPlanForm?.addEventListener('submit', async function (e) {
     const saveButton = createPlanForm.querySelector('button[type="submit"]');
     saveButton.disabled = true;
     saveButton.textContent = 'Creating...';
+    const planInterval = document.getElementById('plan-type').value;
+
+    const frequency = planInterval === 'yearly' ? 12 : 1;
+    const frequency_type = 'months'; // Para ambos os casos, a unidade será 'meses'
+
     const planData = {
         reason: document.getElementById('plan-reason').value,
         auto_recurring: {
-            frequency: 1,
-            frequency_type: document.getElementById('plan-type').value, 
-            transaction_amount: parseFloat(document.getElementById('plan-amount').value), 
+            frequency: frequency,                 // Usando a variável 'frequency'
+            frequency_type: frequency_type,       // Usando a variável 'frequency_type'
+            transaction_amount: parseFloat(document.getElementById('plan-amount').value),
         },
         description: document.getElementById('plan-description').value,
         back_url: "https://b1027b9a8e2b.ngrok-free.app/"
