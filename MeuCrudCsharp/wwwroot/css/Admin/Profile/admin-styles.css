@@ -1,0 +1,214 @@
+﻿/* ==========================================================================
+   1. Variáveis e Estilos Base
+   ========================================================================== */
+:root {
+    --primary-color: #0d6efd;
+    --secondary-color: #6c757d;
+    --success-color: #198754;
+    --danger-color: #dc3545;
+    --warning-color: #ffc107;
+    --light-gray: #f8f9fa;
+    --border-color: #dee2e6;
+    --text-dark: #212529;
+    --text-light: #6c757d;
+    --white: #fff;
+    --sidebar-bg: #212529;
+    --sidebar-text: #adb5bd;
+    --sidebar-text-hover: #ffffff;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+}
+
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: var(--light-gray);
+    color: var(--text-dark);
+    font-size: 16px;
+}
+
+/* ==========================================================================
+   2. Layout Principal (Mobile-First)
+   ========================================================================== */
+.admin-layout {
+    display: flex;
+    min-height: 100vh;
+}
+
+.admin-main-content {
+    width: 100%;
+    padding: 1rem;
+}
+
+/* ==========================================================================
+   3. Cabeçalho Mobile
+   ========================================================================== */
+.mobile-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 1rem;
+    background-color: var(--white);
+    border-radius: 8px;
+    box-shadow: 0 2px 4px var(--shadow-color);
+    margin-bottom: 1.5rem;
+}
+
+.mobile-header h1 {
+    margin: 0;
+    font-size: 1.25rem;
+}
+
+.menu-toggle-btn {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--text-dark);
+}
+
+/* ==========================================================================
+   4. Sidebar de Navegação
+   ========================================================================== */
+.admin-sidebar {
+    /* **ESCONDIDA POR PADRÃO NO MOBILE** */
+    display: none;
+
+    flex-direction: column;
+    width: 260px;
+    background-color: var(--sidebar-bg);
+    color: var(--sidebar-text);
+    padding: 1.5rem 0;
+    flex-shrink: 0;
+}
+
+/* Estado visível da sidebar (ativado via JS) */
+body.sidebar-visible .admin-sidebar {
+    display: flex;
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 1000;
+    animation: slideIn 0.3s ease-out forwards;
+}
+
+.sidebar-header {
+    padding: 0 1.5rem 1.5rem 1.5rem;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--white);
+    border-bottom: 1px solid #343a40;
+}
+
+.sidebar-nav {
+    margin-top: 1rem;
+    list-style: none;
+    padding: 0;
+}
+
+.sidebar-nav li a {
+    display: flex;
+    align-items: center;
+    padding: 0.8rem 1.5rem;
+    color: var(--sidebar-text);
+    text-decoration: none;
+    font-weight: 500;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.sidebar-nav li a i {
+    width: 20px;
+    margin-right: 1rem;
+    text-align: center;
+}
+
+.sidebar-nav li a:hover {
+    background-color: #343a40;
+    color: var(--sidebar-text-hover);
+}
+
+.sidebar-nav li a.active {
+    background-color: var(--primary-color);
+    color: var(--white);
+    font-weight: 600;
+}
+
+/* ==========================================================================
+   5. Conteúdo e Componentes
+   ========================================================================== */
+.content-panel { display: none; }
+.content-panel.active { display: block; animation: fadeIn 0.5s; }
+
+.panel-header {
+    display: flex;
+    flex-direction: column; /* Empilha em mobile */
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+.panel-header h2 { margin: 0; }
+.panel-header p { margin: 0.25rem 0 0; color: var(--text-light); }
+.button-group { display: flex; gap: 0.5rem; }
+
+.btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+.btn-primary { background-color: var(--primary-color); color: var(--white); }
+.btn-secondary { background-color: var(--secondary-color); color: var(--white); }
+
+.table-wrapper { overflow-x: auto; background: var(--white); border-radius: 8px; box-shadow: 0 2px 4px var(--shadow-color); }
+.data-table { width: 100%; border-collapse: collapse; }
+.data-table th, .data-table td { padding: 1rem; text-align: left; border-bottom: 1px solid var(--border-color); }
+.data-table th { font-weight: 600; background-color: var(--light-gray); }
+.data-table tbody tr:last-child td { border-bottom: none; }
+.text-right { text-align: right; }
+.text-center { text-align: center; }
+.empty-state { padding: 3rem 1rem; color: var(--text-light); }
+
+/* ==========================================================================
+   6. Animações e Efeitos
+   ========================================================================== */
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideIn { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+
+/* ==========================================================================
+   7. Estilos para Desktop (Media Query)
+   ========================================================================== */
+@media (min-width: 768px) {
+    .admin-main-content {
+        padding: 2rem;
+        flex-grow: 1; /* Faz o conteúdo principal ocupar o espaço restante */
+    }
+
+    .mobile-header {
+        /* **ESCONDE O CABEÇALHO MOBILE NO DESKTOP** */
+        display: none;
+    }
+
+    .admin-sidebar {
+        /* **TORNA A SIDEBAR VISÍVEL E FIXA NO DESKTOP** */
+        display: flex;
+        position: static; /* Remove o 'fixed' do mobile */
+        animation: none;  /* Remove a animação de slide */
+    }
+
+    body.sidebar-visible .admin-sidebar {
+        /* Garante que o estado 'visible' não afete o desktop */
+        position: static;
+    }
+
+    .panel-header {
+        flex-direction: row; /* Alinha lado a lado no desktop */
+        justify-content: space-between;
+        align-items: center;
+    }
+}
+

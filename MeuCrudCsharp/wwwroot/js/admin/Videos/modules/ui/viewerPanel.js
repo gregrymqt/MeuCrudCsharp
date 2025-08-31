@@ -1,6 +1,4 @@
-﻿// /js/admin/videos/modules/ui/viewerPanel.js
-import * as api from '../api/videosAPI.js';
-import * as player from '../services/videoPlayerService.js';
+﻿import * as api from '../api/videosAPI.js';
 
 // --- Estado do Painel ---
 let viewerState = {
@@ -11,29 +9,28 @@ let viewerState = {
 
 // --- Seletores de DOM ---
 const viewerPlaylist = document.getElementById('viewer-playlist');
-const videoPlayerElement = document.getElementById('video-player');
 
 // --- Funções Internas do Módulo ---
 
 /**
- * Renderiza um item na playlist e adiciona o evento de clique para tocar o vídeo.
- * @param {object} video - O objeto de vídeo vindo da API.
+ * Renderiza um item na playlist como um link que abre em uma nova aba.
+ * @param {object} video - O objeto de vídeo vindo da API, que deve conter 'publicId'.
  */
 function renderViewerPlaylistItem(video) {
-    const item = document.createElement('div');
-    item.className = 'playlist-item';
-    item.innerHTML = `<h4>${video.title}</h4><p>${video.courseName}</p>`;
+    // Cria um elemento <a> para o redirecionamento
+    const itemLink = document.createElement('a');
+    itemLink.className = 'playlist-item-link';
 
-    item.addEventListener('click', () => {
-        // Remove a classe 'playing' de qualquer outro item
-        document.querySelectorAll('.playlist-item.playing').forEach(el => el.classList.remove('playing'));
-        // Adiciona a classe ao item clicado
-        item.classList.add('playing');
-        // Usa o serviço para tocar o stream de vídeo
-        player.playStream(video.storageIdentifier, videoPlayerElement);
-    });
+    // Constrói a URL para a página do player, passando o PublicId
+    itemLink.href = `/Videos/Player?id=${video.publicId}`;
 
-    viewerPlaylist.appendChild(item);
+    // (UX Melhorada) target="_blank" abre o vídeo em uma nova aba,
+    // para que o admin não perca sua posição na lista.
+    itemLink.target = '_blank';
+
+    itemLink.innerHTML = `<h4>${video.title}</h4><p>${video.courseName || 'Curso não definido'}</p>`;
+
+    viewerPlaylist.appendChild(itemLink);
 }
 
 /**
@@ -76,22 +73,14 @@ export function resetAndLoadViewer() {
     loadData();
 }
 
-
-// --- Função Principal Exportada ---
-
 /**
- * Inicializa o painel do viewer, configurando o player e o scroll infinito.
+ * Inicializa o painel do viewer, configurando o scroll infinito.
  */
 export function initializeViewerPanel() {
-    // Inicializa o serviço do player de vídeo
-    player.initializePlayer(videoPlayerElement);
-
     // Configura o scroll infinito para a playlist
     viewerPlaylist.addEventListener('scroll', () => {
-        // Carrega mais itens quando o scroll chega perto do final
         if (viewerPlaylist.scrollTop + viewerPlaylist.clientHeight >= viewerPlaylist.scrollHeight - 100) {
             loadData();
         }
     });
-
 }

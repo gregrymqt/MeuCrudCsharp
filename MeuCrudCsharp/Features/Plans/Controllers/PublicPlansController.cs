@@ -43,7 +43,7 @@ namespace MeuCrudCsharp.Features.Plans.Controllers
         {
             try
             {
-                var plans = await _planService.GetActivePlansAsync();
+                var plans = await _planService.GetActiveDbPlansAsync();
                 return Ok(plans);
             }
             catch (Exception ex)

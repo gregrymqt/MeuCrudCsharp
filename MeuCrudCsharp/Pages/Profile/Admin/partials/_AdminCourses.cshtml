@@ -1,0 +1,82 @@
+<!-- =================================================================== -->
+<!-- PAINEL DE CURSOS                                                    -->
+<!-- Este painel gerencia a criação, visualização e edição de cursos.    -->
+<!-- =================================================================== -->
+<div id="content-courses" class="content-panel">
+
+    <!-- Seção 1: Formulário de Criação -->
+    <div class="panel-section">
+        <div class="panel-header">
+            <div>
+                <h2>Criar Novo Curso</h2>
+                <p>Adicione um novo curso à plataforma.</p>
+            </div>
+        </div>
+        <form id="create-course-form" class="form-container">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="course-name">Nome do Curso</label>
+                    <input type="text" id="course-name" class="form-control" placeholder="Ex: Dominando C#" required>
+                </div>
+                <div class="form-group">
+                    <label for="course-description">Descrição</label>
+                    <textarea id="course-description" class="form-control" rows="3" placeholder="Uma breve descrição sobre o curso..."></textarea>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Salvar Curso</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Seção 2: Tabela de Cursos Existentes -->
+    <div class="panel-section">
+        <div class="panel-header">
+             <div>
+                <h2>Cursos Existentes</h2>
+                <p>Visualize, edite ou remova os cursos cadastrados.</p>
+            </div>
+             <form id="search-course-form" class="search-form">
+                <input type="text" id="search-course-input" class="form-control" placeholder="Buscar curso...">
+                <button type="submit" class="btn btn-secondary">Buscar</button>
+            </form>
+        </div>
+        
+        <div class="table-wrapper">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Nome do Curso</th>
+                        <th>Descrição</th>
+                        <th class="text-right">Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="courses-table-body">
+                    <!-- Conteúdo gerado via JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+
+<div id="edit-course-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title">Editar Curso</h3>
+            <span class="close-button" id="close-edit-course-modal">&times;</span>
+        </div>
+        <form id="edit-course-form">
+            <input type="hidden" id="edit-course-id">
+            <div class="form-group">
+                <label for="edit-course-name">Nome do Curso</label>
+                <input type="text" id="edit-course-name" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label for="edit-course-description">Descrição</label>
+                <textarea id="edit-course-description" class="form-control" rows="4"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+        </form>
+    </div>
+</div>

@@ -19,7 +19,7 @@ function createVideoCard(video, courseId) {
     const durationText = `${durationMinutes} min`;
 
     const thumbnailUrl = video.thumbnailUrl || `https://placehold.co/600x400/111/FFFFFF?text=${encodeURIComponent(video.title)}`;
-    const videoPageUrl = `/Videos/Index?videoId=${video.id}&courseId=${courseId}`;
+    const videoPageUrl = `/Videos/Index?videoId=${video.PublicId}&courseId=${courseId}`;
 
     return `
         <a href="${videoPageUrl}" class="video-card" data-video-id="${video.id}" data-course-id="${courseId}">
@@ -67,7 +67,7 @@ export function renderCarousel(courses, container) {
     const slidesHTML = coursesWithVideos.map(course => {
         const firstVideo = course.videos[0];
         const thumbnailUrl = firstVideo.thumbnailUrl || `https://placehold.co/1280x720/000/FFF?text=${encodeURIComponent(course.name)}`;
-        const videoPageUrl = `/Videos/Index?videoId=${firstVideo.id}&courseId=${course.id}`;
+        const videoPageUrl = `/Videos/Index?videoId=${firstVideo.PublicId}&courseId=${course.id}`;
 
         return `
             <a href="${videoPageUrl}" class="swiper-slide">

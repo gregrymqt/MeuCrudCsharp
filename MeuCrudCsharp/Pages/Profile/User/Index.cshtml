@@ -1,0 +1,39 @@
+﻿@page
+@model MeuCrudCsharp.Pages.Profile.IndexModel
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+      integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw=="
+      crossorigin="anonymous" referrerpolicy="no-referrer"/>
+<link rel="stylesheet" href="~/css/profile/index.css" asp-append-version="true"/>
+<div class="profile-container">
+    
+    <!--      SIDEBAR            -->
+    <partial name="partials/_UserSideBar"/>
+
+    <!--   CONTEÚDO PRINCIPAL    -->
+    <main class="profile-main-content">
+
+        <!-- Cabeçalho visível apenas no mobile -->
+        <partial name="partials/_HeaderMobile"/>
+
+        <!-- Seção: Meu Perfil -->
+        <partial name="partials/_ProfileContent"/>
+
+        <!-- Seção: Histórico de Pagamentos -->
+        <partial name="partials/_PaymentHistory"/>
+
+        <!-- Seção: Gerenciar Assinatura -->
+        <partial name="partials/_SubscriptionContent"/>
+    </main>
+</div>
+
+@section Scripts {
+    <script src="https://sdk.mercadopago.com/js/v2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.1/signalr.min.js"></script>
+    <script src="~/js/profile/management.js" asp-append-version="true" defer type="module"></script>
+
+}

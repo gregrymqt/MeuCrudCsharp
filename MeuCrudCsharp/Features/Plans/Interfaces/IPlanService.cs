@@ -16,7 +16,12 @@ namespace MeuCrudCsharp.Features.Plans.Interfaces
         /// Retrieves all active subscription plans, formatted for public display.
         /// </summary>
         /// <returns>A task that represents the asynchronous operation. The task result contains a list of <see cref="PlanDto"/>.</returns>
-        Task<List<PlanDto>> GetActivePlansAsync();
+        Task<List<PlanDto>> GetActiveDbPlansAsync();
+
+
+        Task<List<PlanDto>> GetActiveApiPlansAsync();
         
+        
+
     }
 }

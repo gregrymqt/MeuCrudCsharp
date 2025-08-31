@@ -1,0 +1,40 @@
+<div id="content-create-video" class="content-panel">
+                <!-- Seu formulário de Adicionar Novo Vídeo aqui... -->
+                <h2>Adicionar Novo Vídeo</h2>
+                <p>O processo é feito em duas etapas: primeiro envie o arquivo de vídeo e depois preencha seus detalhes.</p>
+                <form id="create-video-form" enctype="multipart/form-data">
+                    <div class="form-group">
+                        <label for="video-file-input">1. Enviar Arquivo de Vídeo</label>
+                        <input type="file" id="video-file-input" class="form-control" accept="video/mp4,video/x-m4v,video/*">
+                        <div id="upload-status" class="upload-status"></div>
+                    </div>
+                    <fieldset id="metadata-fieldset" disabled>
+                        <legend class="fieldset-legend">2. Detalhes do Vídeo</legend>
+                        <input type="hidden" id="rageage-identifier-input">
+                        <div class="form-group">
+                            <label for="video-title">Título do Vídeo</label>
+                            <input type="text" id="video-title" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="video-description">Descrição</label>
+                            <textarea id="video-description" class="form-control" rows="4"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="video-thumbnail-file">Thumbnail (Capa do Vídeo)</label>
+                            <input type="file" id="video-thumbnail-file" class="form-control" accept="image/jpeg, image/png">
+                            <div class="thumbnail-preview-container">
+                                <img id="create-thumbnail-preview" class="thumbnail-preview" alt="Pré-visualização da Thumbnail">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="video-course-select">Associar ao Curso</label>
+                            <select id="video-course-select" class="form-control" required>
+                                <option value="" disabled selected>Carregando cursos...</option>
+                                <option value="new_course" style="font-weight: bold;">-- Criar Novo Curso --</option>
+                            </select>
+                            <input type="text" id="video-course-new-name" class="form-control" style="display:none; margin-top:10px;" placeholder="Nome do Novo Curso">
+                        </div>
+                    </fieldset>
+                    <button type="submit" id="save-video-button" class="btn btn-primary" disabled>Salvar Vídeo</button>
+                </form>
+            </div>

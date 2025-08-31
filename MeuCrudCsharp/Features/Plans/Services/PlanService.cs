@@ -39,21 +39,38 @@ namespace MeuCrudCsharp.Features.Plans.Services
             _cacheService = cacheService;
         }
 
-        public async Task<List<PlanDto>> GetActivePlansAsync()
+        /// <summary>
+        /// Busca os planos ativos diretamente do banco de dados local.
+        /// Este é o método principal para ser usado por usuários comuns para performance.
+        /// </summary>
+        /// <returns>Uma lista de PlanDto.</returns>
+        public async Task<List<PlanDto>> GetActiveDbPlansAsync()
         {
+            _logger.LogInformation("Buscando planos ativos diretamente do banco de dados local.");
+            return await FetchPlansFromDatabaseAsync();
+        }
+
+        /// <summary>
+        /// Busca os planos ativos diretamente da API do Mercado Pago.
+        /// Este método deve ser restrito a administradores para evitar rate limiting.
+        /// </summary>
+        /// <returns>Uma lista de PlanDto mapeada da resposta da API.</returns>
+        public async Task<List<PlanDto>> GetActiveApiPlansAsync()
+        {
+            _logger.LogInformation("Buscando planos ativos diretamente da API do Mercado Pago (Admin).");
             try
             {
-                _logger.LogInformation("Buscando planos da API do Mercado Pago.");
                 var apiPlans = await FetchPlansFromMercadoPagoAsync();
-
+            
                 // Mapeia os resultados da API para o nosso DTO de exibição
                 return apiPlans.Select(MapApiPlanToDto).ToList();
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex,
-                    "Falha ao buscar planos da API. Acionando fallback para o banco de dados local.");
-                return await FetchPlansFromDatabaseAsync();
+                _logger.LogError(ex, "Falha crítica ao buscar planos da API do Mercado Pago.");
+                // Para este método, se a API falhar, nós lançamos uma exceção.
+                // Não há fallback, pois o objetivo é justamente consultar a API.
+                throw new AppServiceException("Não foi possível carregar os planos da API do Mercado Pago.", ex);
             }
         }
 
@@ -92,18 +109,15 @@ namespace MeuCrudCsharp.Features.Plans.Services
 
         private PlanDto MapApiPlanToDto(PlanResponseDto apiPlan)
         {
-            // Nenhuma mudança aqui, a lógica já estava correta!
             bool isAnnual = apiPlan.AutoRecurring!.Frequency == 12 &&
-                            apiPlan.AutoRecurring.FrequencyType.Equals("months", StringComparison.OrdinalIgnoreCase);
+                            String.Equals(apiPlan.AutoRecurring.FrequencyType, "months", StringComparison.OrdinalIgnoreCase);
 
             return new PlanDto
             {
                 Name = apiPlan.Reason,
                 Slug = isAnnual ? "anual" : "mensal",
-                PriceDisplay = FormatPriceDisplay(apiPlan.AutoRecurring.TransactionAmount,
-                    apiPlan.AutoRecurring.Frequency),
-                BillingInfo = FormatBillingInfo(apiPlan.AutoRecurring.TransactionAmount,
-                    apiPlan.AutoRecurring.Frequency),
+                PriceDisplay = FormatPriceDisplay(apiPlan.AutoRecurring.TransactionAmount, apiPlan.AutoRecurring.Frequency),
+                BillingInfo = FormatBillingInfo(apiPlan.AutoRecurring.TransactionAmount, apiPlan.AutoRecurring.Frequency),
                 IsRecommended = isAnnual,
                 Features = GetDefaultFeatures()
             };
@@ -111,9 +125,8 @@ namespace MeuCrudCsharp.Features.Plans.Services
 
         private PlanDto MapDbPlanToDto(Plan dbPlan)
         {
-            // Nenhuma mudança aqui, a lógica já estava correta!
             bool isAnnual = dbPlan.Frequency == 12 &&
-                            dbPlan.FrequencyType.Equals("months", StringComparison.OrdinalIgnoreCase);
+                            String.Equals(dbPlan.FrequencyType, "months", StringComparison.OrdinalIgnoreCase);
 
             return new PlanDto
             {

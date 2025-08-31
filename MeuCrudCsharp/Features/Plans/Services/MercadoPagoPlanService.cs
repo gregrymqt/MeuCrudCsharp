@@ -27,7 +27,7 @@ public class MercadoPagoPlanService : MercadoPagoServiceBase, IMercadoPagoPlanSe
         ApiDbContext context,
         ICacheService cacheService,
         HttpClient httpClient,
-        ILogger<PlanService> logger
+        ILogger<IMercadoPagoPlanService> logger
     )
         : base(httpClient, logger)
     {

@@ -1,4 +1,8 @@
-/* --- 1. CONFIGURAÇÕES GLOBAIS E VARIÁVEIS --- */
+/* =================================================================== */
+/* 1. CONFIGURAÇÕES GLOBAIS E VARIÁVEIS (MOBILE-FIRST)                 */
+/* =================================================================== */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 :root {
     /* Cores */
     --primary-color: #6a11cb;
@@ -12,7 +16,7 @@
     --warning-color: #ffc107;
     --danger-color: #dc3545;
     --info-color: #17a2b8;
-    
+
     /* Fontes e Espaçamentos */
     --base-font-family: 'Inter', sans-serif;
     --base-font-size: 16px;
@@ -21,349 +25,185 @@
     --transition-speed: 0.3s ease;
 }
 
-/* --- 2. RESET BÁSICO E ESTILOS GERAIS --- */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
 body {
-    background-color: var(--secondary-color);
     font-family: var(--base-font-family);
-    font-size: var(--base-font-size);
+    background-color: var(--secondary-color);
     color: var(--text-dark);
-    line-height: 1.6;
-    margin: 0;
+    font-size: var(--base-font-size);
 }
 
-h1, h2, h3 {
-    font-weight: 600;
-    line-height: 1.3;
-}
+/* =================================================================== */
+/* 2. LAYOUT PRINCIPAL (MOBILE-FIRST)                                  */
+/* =================================================================== */
+.profile-container { display: flex; min-height: 100vh; }
 
-/* --- 3. LAYOUT PRINCIPAL (MOBILE-FIRST) --- */
-.profile-container {
-    display: flex;
-    flex-direction: column; /* Layout de coluna para mobile */
-    max-width: 1200px;
-    margin: 1.5rem auto;
-    padding: 0 1rem;
-}
-
-/* --- 4. SIDEBAR / NAVEGAÇÃO MOBILE --- */
 .profile-sidebar {
+    position: fixed;
+    top: 0;
+    left: -280px; /* Começa escondida */
+    width: 280px;
+    height: 100%;
     background-color: var(--background-color);
-    border-radius: var(--border-radius);
-    margin-bottom: 1.5rem;
-    box-shadow: var(--card-shadow);
+    border-right: 1px solid var(--border-color);
+    z-index: 1000;
+    transition: left var(--transition-speed);
+    display: flex;
+    flex-direction: column;
 }
 
+/* Estado visível da sidebar (ativado via JS) */
+body.sidebar-visible .profile-sidebar { left: 0; }
+body.sidebar-visible::after {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    z-index: 999;
+}
+
+.profile-main-content {
+    width: 100%;
+    padding: 1rem;
+    padding-top: 5rem; /* Espaço para o header mobile */
+}
+
+/* =================================================================== */
+/* 3. COMPONENTES (SIDEBAR, HEADER, SEÇÕES)                            */
+/* =================================================================== */
+/* --- Sidebar --- */
 .sidebar-header {
-    display: none; /* Escondido em mobile para um visual mais limpo */
-}
-
-.sidebar-nav ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: flex; /* Cria as abas horizontais no mobile */
-    overflow-x: auto; /* Permite rolar se não couber na tela */
+    padding: 1.5rem;
+    font-size: 1.25rem;
+    font-weight: 700;
     border-bottom: 1px solid var(--border-color);
 }
-
-.sidebar-nav li {
-    flex-shrink: 0; /* Impede que os itens encolham */
+.sidebar-nav {
+    padding: 1rem 0;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
 }
-
-.sidebar-nav a {
+.sidebar-nav ul { list-style: none; }
+.sidebar-nav li { padding: 0 1rem; }
+.profile-nav-link {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    padding: 1rem;
-    font-weight: 500;
-    font-size: 0.9rem;
-    color: var(--text-light);
-    text-decoration: none;
-    border-bottom: 3px solid transparent;
-    transition: all var(--transition-speed);
-}
-
-.sidebar-nav a:hover {
-    color: var(--text-dark);
-}
-
-.sidebar-nav a.active {
-    color: var(--primary-color);
-    border-bottom-color: var(--primary-color);
-}
-
-.sidebar-nav ul:last-of-type {
-    display: none; /* Esconde o botão 'Sair' da navegação de abas mobile */
-}
-
-/* --- 5. CONTEÚDO PRINCIPAL E SEÇÕES --- */
-.profile-main-content {
-    background-color: var(--background-color);
-    border-radius: var(--border-radius);
-    padding: 1.5rem;
-    box-shadow: var(--card-shadow);
-}
-
-.main-section {
-    display: none; /* Todas as seções são escondidas por padrão */
-    animation: fadeIn 0.5s ease;
-}
-
-.main-section.active {
-    display: block; /* Apenas a seção ativa é mostrada */
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-/* --- 6. ESTILOS DE COMPONENTES --- */
-
-/* CARD DE PERFIL */
-.profile-card {
-    text-align: center;
-    padding: 1rem 0;
-}
-
-.profile-picture {
-    width: 120px;
-    height: 120px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 4px solid var(--background-color);
-    box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
-    margin-bottom: 1rem;
-}
-
-.profile-name {
-    font-size: 1.8rem;
+    gap: 1rem;
+    padding: 0.9rem;
     margin-bottom: 0.25rem;
-}
-
-.profile-email {
+    border-radius: var(--border-radius);
+    text-decoration: none;
     color: var(--text-light);
-    font-size: 1rem;
-    margin-bottom: 1.5rem;
-}
-
-.subscription-status-badge {
-    display: inline-block;
-    padding: 0.4rem 1rem;
-    border-radius: 20px;
     font-weight: 500;
-    margin-bottom: 1.5rem;
-    font-size: 0.9rem;
+    transition: background-color var(--transition-speed), color var(--transition-speed);
 }
-
-.profile-cta-button {
-    display: inline-block;
+.profile-nav-link:hover { background-color: var(--secondary-color); color: var(--text-dark); }
+.profile-nav-link.active {
     background: var(--primary-gradient);
     color: white;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+.logout-btn { background: none; border: none; width: 100%; }
+
+/* --- Header Mobile --- */
+.profile-mobile-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 1rem; height: 60px;
+    background-color: var(--background-color);
+    box-shadow: var(--card-shadow);
+    position: fixed; top: 0; left: 0;
+    width: 100%;
+    z-index: 900;
+}
+.profile-mobile-header h1 { font-size: 1.1rem; }
+.menu-toggle { background: none; border: none; font-size: 1.5rem; cursor: pointer; }
+
+/* --- Seções de Conteúdo --- */
+.main-section { display: none; animation: fadeIn 0.5s ease; }
+.main-section.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* =================================================================== */
+/* 4. ELEMENTOS DE UI (CARDS, TABELAS, BOTÕES, ACCORDION)              */
+/* =================================================================== */
+.profile-card {
+    background: var(--background-color);
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--card-shadow);
+    text-align: center;
+}
+.profile-picture { width: 120px; height: 120px; border-radius: 50%; object-fit: cover; margin-bottom: 1rem; border: 4px solid var(--background-color); box-shadow: 0 0 15px rgba(0,0,0,0.1); }
+.profile-name { font-size: 1.75rem; font-weight: 700; }
+.profile-email { color: var(--text-light); margin-bottom: 1.5rem; }
+.profile-cta-button {
+    display: inline-block;
     padding: 0.8rem 2rem;
+    margin-top: 1rem;
+    background: var(--primary-gradient);
+    color: white;
+    text-decoration: none;
     border-radius: 50px;
     font-weight: 600;
-    text-decoration: none;
     transition: transform var(--transition-speed);
 }
+.profile-cta-button:hover { transform: scale(1.05); }
 
-.profile-cta-button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 15px rgba(106, 17, 203, 0.3);
-}
+/* --- Tabelas --- */
+.table-wrapper { overflow-x: auto; }
+.payment-history-table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; }
+.payment-history-table th, .payment-history-table td { padding: 1rem; text-align: left; border-bottom: 1px solid var(--border-color); }
+.payment-history-table th { background-color: var(--secondary-color); font-weight: 600; }
 
-/* TABELA DE PAGAMENTOS */
-.payment-history-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.9rem;
-}
+/* --- Badges de Status --- */
+.status-badge, .subscription-status-badge { padding: 0.3rem 0.8rem; border-radius: 50px; font-weight: 600; font-size: 0.8rem; }
+.status-approved, .status-ativo { background-color: #d4edda; color: #155724; }
+.status-pending { background-color: #fff3cd; color: #856404; }
+.status-cancelled { background-color: #f8d7da; color: #721c24; }
+.status-admin { background: var(--primary-gradient); color: white; }
+.status-none { background-color: var(--secondary-color); color: var(--text-light); }
 
-.payment-history-table th, .payment-history-table td {
-    padding: 0.8rem;
-    text-align: left;
-    border-bottom: 1px solid var(--border-color);
-}
+/* --- Detalhes da Assinatura --- */
+.subscription-details { background: var(--secondary-color); padding: 1.5rem; border-radius: var(--border-radius); margin: 1.5rem 0; display: grid; gap: 1rem; }
 
-.payment-history-table th {
-    background-color: var(--secondary-color);
-    font-weight: 600;
-}
-
-/* BADGES DE STATUS */
-.status-badge, .subscription-status-badge {
-    padding: 0.3rem 0.8rem;
-    border-radius: 15px;
-    font-weight: 500;
-    color: white;
-    text-transform: capitalize;
-}
-
-.status-ativo, .status-authorized, .status-approved { background-color: var(--success-color); }
-.status-pausado, .status-pending { background-color: var(--warning-color); color: var(--text-dark); }
-.status-cancelado, .status-cancelled, .status-rejected { background-color: var(--danger-color); }
-.status-none { background-color: var(--text-light); color: var(--text-dark); }
-
-/* GERENCIAMENTO DE ASSINATURA */
-.subscription-details {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 1rem;
-    background-color: var(--secondary-color);
-    padding: 1rem;
-    border-radius: var(--border-radius);
-    margin-bottom: 1.5rem;
-}
-
-/* ACCORDION (Sanfona) */
-.accordion-item {
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
-    margin-bottom: 0.75rem;
-    overflow: hidden;
-}
-
+/* --- Accordion --- */
+.accordion-item { border-bottom: 1px solid var(--border-color); }
 .accordion-header {
     width: 100%;
-    background-color: transparent;
-    border: none;
     padding: 1rem;
-    font-size: 1rem;
-    font-weight: 500;
+    background: none;
+    border: none;
     text-align: left;
+    font-size: 1rem;
+    font-weight: 600;
     cursor: pointer;
-    transition: background-color var(--transition-speed);
     position: relative;
 }
+.accordion-header::after { content: '+'; position: absolute; right: 1rem; font-size: 1.5rem; transition: transform var(--transition-speed); }
+.accordion-header.active::after { transform: rotate(45deg); }
+.accordion-body { max-height: 0; overflow: hidden; padding: 0 1rem; transition: max-height var(--transition-speed), padding var(--transition-speed); }
+.accordion-body > p { margin-bottom: 1rem; }
 
-/* Ícone de seta (chevron) para indicar que é clicável */
-.accordion-header::after {
-    content: '\f078'; /* Código do ícone de chevron para baixo do Font Awesome */
-    font-family: "Font Awesome 6 Free";
-    font-weight: 900;
-    position: absolute;
-    right: 1rem;
-    top: 50%;
-    transform: translateY(-50%);
-    transition: transform var(--transition-speed);
-}
-
-.accordion-header:hover {
-    background-color: var(--secondary-color);
-}
-
-.accordion-body {
-    /* Começa com altura zero, escondido mas pronto para animar */
-    max-height: 0;
-    overflow: hidden;
-
-    /* A transição suave que será aplicada à propriedade max-height */
-    transition: max-height 0.35s ease-out, padding 0.35s ease-out;
-    
-    /* Removemos o padding quando está fechado para a animação ficar perfeita */
-    padding: 0 1rem; 
-}
-
-.accordion-item.active .accordion-body {
-    /* Expande para uma altura suficiente para caber o conteúdo */
-    max-height: 500px; /* Use um valor alto o suficiente para o seu maior conteúdo */
-
-    /* Retorna o padding para dar espaço ao conteúdo */
-    padding: 1rem;
-}
-
-.accordion-item.active .accordion-header::after {
-    transform: translateY(-50%) rotate(180deg); /* Gira a seta para cima */
-}
-
-/* BOTÕES DE AÇÃO */
-.btn-danger, .btn-warning, .btn-success {
-    padding: 0.7rem 1.5rem;
-    border: none;
-    border-radius: var(--border-radius);
-    color: white;
-    font-weight: 500;
-    cursor: pointer;
-    transition: opacity var(--transition-speed);
-}
-
-.btn-danger { background-color: var(--danger-color); }
+/* --- Botões --- */
+.btn { padding: 0.7rem 1.5rem; border-radius: var(--border-radius); border: none; cursor: pointer; font-weight: 600; }
+.btn-danger { background-color: var(--danger-color); color: white; }
 .btn-warning { background-color: var(--warning-color); color: var(--text-dark); }
-.btn-success { background-color: var(--success-color); }
-.btn-danger:hover, .btn-warning:hover, .btn-success:hover { opacity: 0.85; }
+.btn-success { background-color: var(--success-color); color: white; }
+.text-danger { color: var(--danger-color); font-weight: 600; }
 
-.text-danger { color: var(--danger-color); font-weight: 500; }
-
-/* MENSAGENS DE REEMBOLSO */
-.refund-processing-message, .refund-confirmation-message {
-    text-align: center;
-    padding: 2rem;
-    background-color: var(--secondary-color);
-    border-radius: var(--border-radius);
-}
-.refund-processing-message i, .refund-confirmation-message i {
-    font-size: 3rem;
-    margin-bottom: 1rem;
-}
-.refund-processing-message i { color: var(--info-color); }
-.refund-confirmation-message i { color: var(--success-color); }
-
-/* --- 7. MEDIA QUERY PARA DESKTOP --- */
-@media (min-width: 768px) {
-    .profile-container {
-        flex-direction: row; /* Layout de linha para desktop */
-        gap: 2rem;
-        padding: 0 2rem;
-        margin-top: 2rem;
-    }
-
-    /* SIDEBAR DESKTOP */
-    .profile-sidebar {
-        flex: 0 0 250px; /* Largura fixa para a sidebar */
-        margin-bottom: 0;
-    }
-
-    .sidebar-header {
-        display: block; /* Mostra o título "Minha Conta" */
-        padding: 1.5rem;
-        font-size: 1.2rem;
-        font-weight: 600;
-        border-bottom: 1px solid var(--border-color);
-    }
-    
-    .sidebar-nav ul {
-        flex-direction: column; /* Volta a ser uma lista vertical */
-        border-bottom: none;
-        padding: 1rem 0;
-    }
-
-    .sidebar-nav ul:last-of-type {
-        display: block; /* Mostra o botão 'Sair' */
-        border-top: 1px solid var(--border-color);
-        margin-top: 1rem;
-    }
-
-    .sidebar-nav a {
-        padding: 0.8rem 1.5rem;
-        border-left: 3px solid transparent;
-        border-bottom: none;
-        border-radius: 0 5px 5px 0;
-    }
-
-    .sidebar-nav a.active {
-        background-color: #f1e4ff;
-        color: var(--primary-color);
-        border-left-color: var(--primary-color);
-        border-bottom-color: transparent;
-    }
-
-    /* CONTEÚDO PRINCIPAL DESKTOP */
+/* =================================================================== */
+/* 5. ESTILOS PARA DESKTOP (MEDIA QUERY)                               */
+/* =================================================================== */
+@media (min-width: 992px) {
+    .profile-mobile-header { display: none; }
+    .profile-sidebar { position: static; left: 0; flex-shrink: 0; }
+    body.sidebar-visible::after { display: none; }
     .profile-main-content {
-        flex-grow: 1; /* Ocupa o espaço restante */
+        flex-grow: 1;
         padding: 2rem;
     }
-
-    .subscription-details {
-        grid-template-columns: repeat(2, 1fr); /* 2 colunas para os detalhes */
-    }
+    .main-section { max-width: 900px; margin: 0 auto; }
 }

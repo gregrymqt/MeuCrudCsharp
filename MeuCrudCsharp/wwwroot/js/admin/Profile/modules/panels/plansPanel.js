@@ -11,23 +11,37 @@ const editModal = document.getElementById('edit-plan-modal');
 const editForm = document.getElementById('edit-plan-form');
 const editPlanId = document.getElementById('edit-plan-id');
 const editPlanReason = document.getElementById('edit-plan-reason');
+const fetchButtonsContainer = document.getElementById('fetch-buttons');
+
 
 function renderPlansTable(plans) {
-    plansTableBody.innerHTML = '';
+    plansTableBody.innerHTML = ''; // Limpa a tabela antes de popular
+
     if (!plans || plans.length === 0) {
-        plansTableBody.innerHTML = '<tr><td colspan="5" class="text-center">Nenhum plano encontrado.</td></tr>';
+        plansTableBody.innerHTML = '<tr><td colspan="5" class="text-center py-10 text-gray-500">Nenhum plano encontrado.</td></tr>';
         return;
     }
+
     plans.forEach(plan => {
+        // Verificação segura para cada propriedade do plano
+        const name = plan.name ?? 'Nome Indisponível';
+        const type = plan.slug === 'anual' ? 'Anual' : 'Mensal';
+        const price = plan.priceDisplay ?? 'R$ 0,00';
+        const status = plan.status ?? 'active'; // Define 'active' como padrão se nulo
+        const planId = plan.id ?? 'ID_INDISPONIVEL'; // Um ID de fallback
+
         const row = document.createElement('tr');
+        row.className = 'bg-white border-b hover:bg-gray-50';
         row.innerHTML = `
-            <td>${plan.reason || 'N/A'}</td>
-            <td>${plan.autoRecurring?.frequencyType === 'years' ? 'Anual' : 'Mensal'}</td>
-            <td>R$${plan.autoRecurring?.transactionAmount.toFixed(2)}</td>
-            <td><span class="status-badge status-${plan.status?.toLowerCase()}">${plan.status || 'N/A'}</span></td>
-            <td class="actions">
-                <button class="btn btn-secondary btn-sm btn-edit" data-plan-id="${plan.id}">Editar</button>
-                <button class="btn btn-danger btn-sm btn-delete" data-plan-id="${plan.id}">Excluir</button>
+            <td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">${name}</td>
+            <td class="px-6 py-4">${type}</td>
+            <td class="px-6 py-4">${price}</td>
+            <td class="px-6 py-4">
+                <span class="status-badge status-${status.toLowerCase()}">${status}</span>
+            </td>
+            <td class="px-6 py-4 text-right space-x-2">
+                <button class="font-medium text-blue-600 hover:underline btn-edit" data-plan-id="${planId}">Editar</button>
+                <button class="font-medium text-red-600 hover:underline btn-delete" data-plan-id="${planId}">Excluir</button>
             </td>
         `;
         plansTableBody.appendChild(row);
@@ -72,18 +86,53 @@ async function openEditPlanModal(planId) {
     }
 }
 
-export async function loadPlans() {
+async function loadPlans(source) {
+    // 1. Mostra o estado de carregamento
+    plansTableBody.innerHTML = `
+        <tr>
+            <td colspan="5" class="text-center py-10">
+                <div class="flex justify-center items-center flex-col">
+                    <div class="loading-spinner mb-2"></div>
+                    <span class="text-gray-600">Carregando planos...</span>
+                </div>
+            </td>
+        </tr>`;
+
+    // Desabilita os botões para prevenir múltiplos cliques
+    const buttons = fetchButtonsContainer.querySelectorAll('button');
+    buttons.forEach(button => button.disabled = true);
+
     try {
-        plansTableBody.innerHTML = `<tr><td colspan="5" class="text-center">Carregando...</td></tr>`;
-        const plans = await api.getPlans();
+        // 2. Busca os dados da fonte correta
+        const plans = source === 'api'
+            ? await api.getAdminPlans()
+            : await api.getPublicPlans();
+
+        // 3. Renderiza a tabela com os dados
         renderPlansTable(plans);
     } catch (error) {
-        plansTableBody.innerHTML = `<tr><td colspan="5" class="text-center text-danger">${error.message}</td></tr>`;
+        // 4. Mostra uma mensagem de erro em caso de falha
+        plansTableBody.innerHTML = `<tr><td colspan="5" class="text-center py-10 text-red-600 font-semibold">${error.message}</td></tr>`;
+    } finally {
+        // 5. Reabilita os botões em qualquer cenário (sucesso ou erro)
+        buttons.forEach(button => button.disabled = false);
     }
 }
 
 export function initializePlansPanel() {
     // Event delegation para a tabela de planos
+
+    fetchButtonsContainer.addEventListener('click', (e) => {
+        const target = e.target.closest('button');
+        if (!target) return;
+
+        if (target.id === 'fetch-api-btn') {
+            loadPlans('api');
+        } else if (target.id === 'fetch-db-btn') {
+            loadPlans('db');
+        }
+    });
+    
     plansTableBody.addEventListener('click', (e) => {
         const target = e.target;
         if (target.classList.contains('btn-edit')) {

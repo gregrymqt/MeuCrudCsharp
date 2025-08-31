@@ -19,20 +19,26 @@ const searchCourseInput = document.getElementById('search-course-input');
 // --- Funções de Renderização e Ações ---
 
 function renderCoursesTable(courses) {
-    coursesTableBody.innerHTML = '';
+    coursesTableBody.innerHTML = ''; // Limpa a tabela
+
     if (!courses || courses.length === 0) {
-        coursesTableBody.innerHTML = '<tr><td colspan="3" class="text-center">Nenhum curso encontrado.</td></tr>';
+        coursesTableBody.innerHTML = '<tr><td colspan="3" class="text-center empty-state">Nenhum curso encontrado.</td></tr>';
         return;
     }
 
     courses.forEach(course => {
+        // Verificação segura das propriedades
+        const courseId = course.id ?? 'ID_INVALIDO';
+        const name = course.name ?? 'Curso sem nome';
+        const description = course.description || 'Sem descrição'; // '||' funciona bem para strings vazias
+
         const row = document.createElement('tr');
         row.innerHTML = `
-            <td>${course.name}</td>
-            <td>${course.description || 'Sem descrição'}</td>
-            <td class="actions">
-                <button class="btn btn-secondary btn-sm btn-edit-course" data-course-id="${course.id}">Editar</button>
-                <button class="btn btn-danger btn-sm btn-delete-course" data-course-id="${course.id}">Excluir</button>
+            <td>${name}</td>
+            <td>${description}</td>
+            <td class="actions text-right">
+                <button class="btn btn-secondary btn-sm btn-edit-course" data-course-id="${courseId}">Editar</button>
+                <button class="btn btn-danger btn-sm btn-delete-course" data-course-id="${courseId}">Excluir</button>
             </td>
         `;
         coursesTableBody.appendChild(row);
@@ -128,8 +134,8 @@ export function initializeCoursesPanel() {
 
     // --- Listeners existentes (sem alterações) ---
     coursesTableBody.addEventListener('click', async (e) => {
-        // ... (código existente para editar e excluir)
-        const target = e.target;
+        const target = e.target.closest('button');
+        if (!target) return;
         const courseId = target.dataset.courseId;
         if (target.classList.contains('btn-edit-course')) {
             const courses = await api.getCourses();

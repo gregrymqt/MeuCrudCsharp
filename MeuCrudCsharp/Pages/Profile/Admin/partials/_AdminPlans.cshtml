@@ -1,0 +1,112 @@
+<div id="content-plans" class="content-panel active">
+
+    <!-- Seção 1: Criar Novo Plano (Seu formulário existente) -->
+    <div class="form-section">
+        <h2>Criar Novo Plano de Assinatura</h2>
+        <form id="create-plan-form">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="plan-reason">Nome do Plano (Motivo)</label>
+                    <input type="text" id="plan-reason" class="form-control"
+                           placeholder="Ex: Acesso Mensal Premium" required>
+                </div>
+                <div class="form-group">
+                    <label for="plan-type">Tipo de Plano</label>
+                    <select id="plan-type" class="form-select">
+                        <option value="monthly" selected>Mensal</option>
+                        <option value="yearly">Anual</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="plan-amount">Valor (R$)</label>
+                    <input type="number" id="plan-amount" class="form-control" step="0.01"
+                           placeholder="Ex: 49.90" required>
+                </div>
+                <div class="form-group">
+                    <label for="plan-amount">Descrição do Curso</label>
+                    <input type="text" id="plan-description" class="form-control"
+                           placeholder="Ex: Torne-se um programador" required>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary">Criar Plano no Mercado Pago</button>
+        </form>
+    </div>
+
+    <!-- Divisor visual entre as seções -->
+    <hr class="section-divider">
+
+    <!-- NOVO: Seção 2: Gerenciar Planos Existentes (Read, Update, Delete) -->
+    <div class="list-section">
+        <div class="panel-header">
+            <div>
+                <h2>Planos Existentes</h2>
+                <p>Gerencie os planos de assinatura disponíveis.</p>
+            </div>
+            <!-- Os botões agora usam as novas classes de estilo -->
+            <div id="fetch-buttons" class="button-group">
+                <button id="fetch-db-btn" class="btn btn-secondary">
+                    Buscar Localmente
+                </button>
+                <button id="fetch-api-btn" class="btn btn-primary">
+                    Buscar da API
+                </button>
+            </div>
+        </div>
+
+        <div class="table-wrapper">
+            <!-- A tabela agora tem uma classe genérica 'data-table' -->
+            <table class="data-table">
+                <thead>
+                <tr>
+                    <th>Nome do Plano</th>
+                    <th>Tipo</th>
+                    <th>Valor</th>
+                    <th>Status</th>
+                    <th class="text-right">Ações</th>
+                </tr>
+                </thead>
+                <tbody id="plans-table-body">
+                <!-- O JavaScript irá popular esta tabela -->
+                <tr>
+                    <td colspan="5" class="text-center empty-state">Selecione uma fonte de dados para carregar os planos.</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div id="edit-plan-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title">Editar Plano</h3>
+            <span class="close-button" id="close-edit-plan-modal">&times;</span>
+        </div>
+        <form id="edit-plan-form">
+            <input type="hidden" id="edit-plan-id">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="edit-plan-reason">Nome do Plano (Motivo)</label>
+                    <input type="text" id="edit-plan-reason" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-plan-amount">Valor da Transação (R$)</label>
+                    <input type="number" id="edit-plan-amount" class="form-control" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-plan-frequency-type">Tipo de Frequência</label>
+                    <select id="edit-plan-frequency-type" class="form-select" disabled>
+                        <option value="months">Mensal</option>
+                        <option value="years">Anual</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="edit-plan-back-url">URL de Retorno</label>
+                    <input type="url" id="edit-plan-back-url" class="form-control"
+                           placeholder="https://seusite.com/retorno">
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+        </form>
+    </div>
+</div>

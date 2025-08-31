@@ -1,32 +1,35 @@
-﻿// /js/main.js
-import { initializeMercadoPago } from './modules/mercadopagoManager.js';
-import { initializeTabNavigation, initializeAccordion } from './modules/ui/navigation.js';
-import { initializeRefundForm } from './modules/ui/refundForm.js';
+﻿import { initializeMercadoPago } from './modules/mercadopagoManager.js';
+import { initializeSidebarNavigation, initializeAccordions } from './modules/ui/navigation.js';
 
-// Importa a função unificada que lida com todos os formulários de assinatura
-import {
-    initializeCardAccordions,
-    initializeSubscriptionForms
-} from './modules/subscriptionManager.js';
+// Importa os inicializadores dos nossos painéis de dados dinâmicos
+import { initializeProfileCard } from './modules/ui/profileCard.js';
+import { initializePaymentHistory } from './modules/ui/paymentHistory.js';
+import { initializeSubscriptionPanel } from "./modules/ui/subscriptionPanel.js";
+
+// ✅ CORRETO: Importa o Manager que contém TODA a lógica de interatividade da assinatura
+import { initializeSubscriptionManager } from './modules/subscriptionManager.js';
 
 /**
- * Função principal que executa quando a página é carregada.
+ * ✅ A função principal agora é 'async' para poder usar 'await'.
+ * Isso garante que a renderização aconteça antes de anexar a lógica.
  */
-function main() {
-    // 1. Inicializa o SDK do Mercado Pago primeiro
-    const mpReady = initializeMercadoPago();
+async function main() {
+    // 1. Inicializa componentes que não dependem de dados da API
+    initializeMercadoPago();
+    initializeSidebarNavigation();
+    initializeAccordions(); // Mantido para outros acordeões que não sejam da assinatura
 
-    // 2. Inicializa os componentes de UI
-    initializeTabNavigation();
-    initializeAccordion();
-    initializeRefundForm();
+    // 2. Inicia o carregamento e a renderização dos painéis que dependem da API
+    initializeProfileCard();
+    initializePaymentHistory();
 
-    // 3. Inicializa funcionalidades que dependem do SDK do MP
-    if (mpReady) {
-        initializeCardAccordions();
-        initializeSubscriptionForms();
-    }
+    // Primeiro, renderiza o painel de assinatura e aguarda ele retornar os dados.
+    const subscriptionData = await initializeSubscriptionPanel();
+
+    // Segundo, se a renderização foi bem-sucedida (retornou dados),
+    // passa esses dados para o Manager, que irá anexar toda a lógica de interatividade.
+    initializeSubscriptionManager(subscriptionData);
 }
-
 // Garante que o script só rode após o carregamento completo do HTML
 document.addEventListener('DOMContentLoaded', main);
+
