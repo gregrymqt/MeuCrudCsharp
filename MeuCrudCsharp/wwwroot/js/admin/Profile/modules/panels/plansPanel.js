@@ -86,7 +86,7 @@ async function openEditPlanModal(planId) {
     }
 }
 
-async function loadPlans(source) {
+export async function loadPlans(source) {
     // 1. Mostra o estado de carregamento
     plansTableBody.innerHTML = `
         <tr>

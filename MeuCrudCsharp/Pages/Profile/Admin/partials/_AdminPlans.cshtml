@@ -1,4 +1,3 @@
-<div id="content-plans" class="content-panel active">
 
     <!-- Seção 1: Criar Novo Plano (Seu formulário existente) -->
     <div class="form-section">
@@ -74,39 +73,4 @@
             </table>
         </div>
     </div>
-</div>
-
-<div id="edit-plan-modal" class="modal" style="display: none;">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3 class="modal-title">Editar Plano</h3>
-            <span class="close-button" id="close-edit-plan-modal">&times;</span>
-        </div>
-        <form id="edit-plan-form">
-            <input type="hidden" id="edit-plan-id">
-            <div class="form-grid">
-                <div class="form-group">
-                    <label for="edit-plan-reason">Nome do Plano (Motivo)</label>
-                    <input type="text" id="edit-plan-reason" class="form-control" required>
-                </div>
-                <div class="form-group">
-                    <label for="edit-plan-amount">Valor da Transação (R$)</label>
-                    <input type="number" id="edit-plan-amount" class="form-control" step="0.01" required>
-                </div>
-                <div class="form-group">
-                    <label for="edit-plan-frequency-type">Tipo de Frequência</label>
-                    <select id="edit-plan-frequency-type" class="form-select" disabled>
-                        <option value="months">Mensal</option>
-                        <option value="years">Anual</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="edit-plan-back-url">URL de Retorno</label>
-                    <input type="url" id="edit-plan-back-url" class="form-control"
-                           placeholder="https://seusite.com/retorno">
-                </div>
-            </div>
-            <button type="submit" class="btn btn-primary">Salvar Alterações</button>
-        </form>
-    </div>
-</div>
+    

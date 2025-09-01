@@ -1,33 +1,100 @@
 ﻿@page
 @model MeuCrudCsharp.Pages.Profile.Admin.indexModel
 @{
-    ViewData["Title"] = "Gerenciar Planos de Assinatura";
+    ViewData["Title"] = "Gerenciar Planos de Assinatura"; 
 }
 
-<!-- 1. Dependência para os Ícones (Font Awesome) -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
 <link rel="stylesheet" href="~/css/admin/Profile/admin-styles.css" asp-append-version="true"/>
-<!-- 3. Estrutura HTML com a Sidebar -->
-<div class="admin-layout">
-    <!--Content Side-Bar -->
-    <partial name="partials/_AdminSideBar"/>
-    <!--Content Side-Bar -->
-    <partial name="partials/_AdminHeader"/>
-    <!-- Conteúdo Principal -->
-    <main class="admin-main-content">
-        <div class="admin-container">
-            <!-- Painel de Curso" -->
-            <partial name="partials/_AdminCourses"/>
-            <!-- Painel de Plano" -->
-            <partial name="partials/_AdminPlans"/>
-            <!-- Painel "Alunos" -->
-            <partial name="partials/_AdminStudents"/>
-            <!-- Painel "Gerenciar Assinaturas" -->
-            <partial name="partials/_AdminSubscriptions"/>
-        </div>
-    </main>
-</div>
 
-<!-- 4. JavaScript para interagir com a API -->
-<script src="~/js/admin/Profile/admin-main.js" type="module" defer asp-append-version="true"></script>
+<div class="admin-layout">
+
+    <partial name="partials/_AdminSideBar"/>
+
+    <main class="admin-main-content">
+
+        <header class="mobile-header">
+            <partial name="partials/_MobileHeader"/>
+        </header>
+
+        <div class="admin-container">
+
+            <div id="content-dashboard" class="content-panel active">
+                <h2>Dashboard</h2>
+                <p>Bem-vindo ao seu painel administrativo!</p>
+            </div>
+
+            <div id="content-courses" class="content-panel"> 
+                <partial name="partials/_AdminCourses"/>
+            </div>
+
+            <div id="content-plans" class="content-panel">
+                <partial name="partials/_AdminPlans"/>
+            </div>
+
+            <div id="content-students" class="content-panel">
+                <partial name="partials/_AdminStudents"/>
+            </div>
+
+            <div id="content-subscriptions" class="content-panel">
+                <partial name="partials/_AdminSubscriptions"/> 
+            </div>
+
+            <div id="edit-course-modal" class="modal" style="display: none;">
+                <div class="modal-content"> 
+                    <div class="modal-header">
+                        <h3 class="modal-title">Editar Curso</h3>
+                        <span class="close-button" id="close-edit-course-modal">&times;</span> 
+                    </div>
+                    <form id="edit-course-form">
+                        <input type="hidden" id="edit-course-id">
+                        <div class="form-group">
+                            <label for="edit-course-name">Nome do Curso</label> 
+                            <input type="text" id="edit-course-name" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-course-description">Descrição</label> 
+                            <textarea id="edit-course-description" class="form-control" rows="4"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+                    </form>
+                </div>
+            </div>
+
+            <div id="edit-plan-modal" class="modal" style="display: none;">
+                <div class="modal-content">
+                    <div class="modal-header"> 
+                        <h3 class="modal-title">Editar Plano</h3>
+                        <span class="close-button" id="close-edit-plan-modal">&times;</span>
+                    </div>
+                    <form id="edit-plan-form"> 
+                        <input type="hidden" id="edit-plan-id">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="edit-plan-reason">Nome do Plano (Motivo)</label> 
+                                <input type="text" id="edit-plan-reason" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="edit-plan-amount">Valor da Transação (R$)</label>
+                                <input type="number" id="edit-plan-amount" class="form-control" step="0.01" required>
+                            </div>
+                            <div class="form-group"> [cite: 44]
+                                <label for="edit-plan-frequency-type">Tipo de Frequência</label>
+                                <select id="edit-plan-frequency-type" class="form-select" disabled>
+                                    <option value="months">Mensal</option> 
+                                    <option value="years">Anual</option>
+                                </select>
+                            </div>
+                            <div class="form-group"> [cite: 46]
+                                <label for="edit-plan-back-url">URL de Retorno</label>
+                                <input type="url" id="edit-plan-back-url" class="form-control"
+                                       [cite_start]placeholder="https://seusite.com/retorno">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+                    </form>
+                </div>
+            </div>
+
+        </div> </main> </div> <script src="~/js/admin/Profile/admin-main.js" type="module" defer asp-append-version="true"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
