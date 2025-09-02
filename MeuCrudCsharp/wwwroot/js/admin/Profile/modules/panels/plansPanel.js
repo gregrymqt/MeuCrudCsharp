@@ -1,7 +1,7 @@
 ﻿// /js/admin/modules/panels/plansPanel.js
 
 import * as api from '../api/adminAPI.js';
-import { openModal, closeModal } from '../ui/modals.js';
+import {openModal, closeModal} from '../ui/modals.js';
 
 // --- Seletores de DOM ---
 const plansTableBody = document.getElementById('plans-table-body');
@@ -31,19 +31,18 @@ function renderPlansTable(plans) {
         const planId = plan.id ?? 'ID_INDISPONIVEL'; // Um ID de fallback
 
         const row = document.createElement('tr');
-        row.className = 'bg-white border-b hover:bg-gray-50';
         row.innerHTML = `
-            <td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">${name}</td>
-            <td class="px-6 py-4">${type}</td>
-            <td class="px-6 py-4">${price}</td>
-            <td class="px-6 py-4">
-                <span class="status-badge status-${status.toLowerCase()}">${status}</span>
-            </td>
-            <td class="px-6 py-4 text-right space-x-2">
-                <button class="font-medium text-blue-600 hover:underline btn-edit" data-plan-id="${planId}">Editar</button>
-                <button class="font-medium text-red-600 hover:underline btn-delete" data-plan-id="${planId}">Excluir</button>
-            </td>
-        `;
+    <td>${name}</td>
+    <td>${type}</td>
+    <td>R$ ${price}</td>
+    <td>
+        <span class="status-badge status-${status.toLowerCase()}">${status}</span>
+    </td>
+    <td class="text-right">
+        <button class="btn btn-secondary btn-sm btn-edit" data-plan-id="${planId}">Editar</button>
+        <button class="btn btn-danger btn-sm btn-delete" data-plan-id="${planId}">Excluir</button>
+    </td>
+`;
         plansTableBody.appendChild(row);
     });
 }
@@ -104,9 +103,7 @@ export async function loadPlans(source) {
 
     try {
         // 2. Busca os dados da fonte correta
-        const plans = source === 'api'
-            ? await api.getAdminPlans()
-            : await api.getPublicPlans();
+        const plans = source === 'api' ? await api.getAdminPlans() : await api.getPublicPlans();
 
         // 3. Renderiza a tabela com os dados
         renderPlansTable(plans);
@@ -132,7 +129,7 @@ export function initializePlansPanel() {
             loadPlans('db');
         }
     });
-    
+
     plansTableBody.addEventListener('click', (e) => {
         const target = e.target;
         if (target.classList.contains('btn-edit')) {
@@ -144,51 +141,47 @@ export function initializePlansPanel() {
     });
 
     // SEU MÉTODO addEventListener CORRIGIDO
-createPlanForm?.addEventListener('submit', async function (e) {
-    e.preventDefault();
-    const saveButton = createPlanForm.querySelector('button[type="submit"]');
-    saveButton.disabled = true;
-    saveButton.textContent = 'Creating...';
-    const planInterval = document.getElementById('plan-type').value;
+    createPlanForm?.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const saveButton = createPlanForm.querySelector('button[type="submit"]');
+        saveButton.disabled = true;
+        saveButton.textContent = 'Creating...';
+        const planInterval = document.getElementById('plan-type').value;
 
-    const frequency = planInterval === 'yearly' ? 12 : 1;
-    const frequency_type = 'months'; // Para ambos os casos, a unidade será 'meses'
+        const frequency = planInterval === 'yearly' ? 12 : 1;
+        const frequency_type = 'months'; // Para ambos os casos, a unidade será 'meses'
 
-    const planData = {
-        reason: document.getElementById('plan-reason').value,
-        auto_recurring: {
-            frequency: frequency,                 // Usando a variável 'frequency'
-            frequency_type: frequency_type,       // Usando a variável 'frequency_type'
-            transaction_amount: parseFloat(document.getElementById('plan-amount').value),
-        },
-        description: document.getElementById('plan-description').value,
-        back_url: "https://b1027b9a8e2b.ngrok-free.app/"
-    };
+        const planData = {
+            reason: document.getElementById('plan-reason').value,
+            auto_recurring: {
+                frequency: frequency,                 // Usando a variável 'frequency'
+                frequency_type: frequency_type,       // Usando a variável 'frequency_type'
+                transaction_amount: parseFloat(document.getElementById('plan-amount').value),
+            },
+            description: document.getElementById('plan-description').value,
+            back_url: "https://b1027b9a8e2b.ngrok-free.app/"
+        };
 
-    try {
-        // NOVO: Passa o token encontrado para a função da API
-        const result = await api.createPlan(planData);
+        try {
+            // NOVO: Passa o token encontrado para a função da API
+            const result = await api.createPlan(planData);
 
-        await Swal.fire({
-            title: 'Success!',
-            text: `Plan created successfully! ID: ${result.id}`,
-            icon: 'success'
-        });
+            await Swal.fire({
+                title: 'Success!', text: `Plan created successfully! ID: ${result.id}`, icon: 'success'
+            });
 
-        createPlanForm.reset();
-        await loadPlans();
+            createPlanForm.reset();
+            await loadPlans();
 
-    } catch (error) {
-        Swal.fire({
-            title: 'Error!',
-            text: error.message,
-            icon: 'error'
-        });
-    } finally {
-        saveButton.disabled = false;
-        saveButton.textContent = 'Create Plan';
-    }
-});
+        } catch (error) {
+            Swal.fire({
+                title: 'Error!', text: error.message, icon: 'error'
+            });
+        } finally {
+            saveButton.disabled = false;
+            saveButton.textContent = 'Create Plan';
+        }
+    });
 
     editForm?.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -196,11 +189,9 @@ createPlanForm?.addEventListener('submit', async function (e) {
         const submitButton = editForm.querySelector('button[type="submit"]');
         submitButton.disabled = true;
         submitButton.textContent = 'Saving...';
-        
+
         const updatedData = {
-            reason: editPlanReason.value,
-            back_url: editPlanBackUrl.value,
-            auto_recurring: {
+            reason: editPlanReason.value, back_url: editPlanBackUrl.value, auto_recurring: {
                 transaction_amount: parseFloat(editPlanAmount.value)
             }
         };
@@ -222,9 +213,7 @@ createPlanForm?.addEventListener('submit', async function (e) {
         } catch (error) {
             console.error('Error updating plan:', error);
             Swal.fire({
-                title: 'Error!',
-                text: error.message,
-                icon: 'error'
+                title: 'Error!', text: error.message, icon: 'error'
             });
         } finally {
             submitButton.disabled = false;

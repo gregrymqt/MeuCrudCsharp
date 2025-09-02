@@ -1,30 +1,41 @@
-<!-- =================================================================== -->
-<!-- PAINEL DE ALUNOS                                                    -->
-<!-- Este painel exibe a lista de alunos e o status de suas assinaturas. -->
-<!-- =================================================================== -->
-
-    <!-- Seção: Lista de Alunos -->
-    <div class="panel-section">
-        <div class="panel-header">
-            <div>
-                <h2>Lista de Alunos</h2>
-                <p>Visualize todos os alunos cadastrados e o status de suas assinaturas.</p>
-            </div>
+<div class="panel-section">
+    <!-- Cabeçalho com título e busca -->
+    <div class="panel-header">
+        <div>
+            <h2>Lista de Alunos</h2>
+            <p>Visualize e busque por alunos cadastrados.</p>
         </div>
-        
-        <div class="table-wrapper">
-            <table class="data-table">
-                <thead>
-                <tr>
-                    <th>Nome</th>
-                    <th>Email</th>
-                    <th>Status da Assinatura</th>
-                    <th>Data de Cadastro</th>
-                </tr>
-                </thead>
-                <tbody id="students-table-body">
-                <!-- Conteúdo gerado via JavaScript -->
-                </tbody>
-            </table>
-        </div>
+        <form id="search-students-form" class="search-form">
+            <input type="text" id="search-students-input" class="form-control" placeholder="Buscar por nome ou email...">
+            <button type="submit" class="btn btn-secondary">Buscar</button>
+        </form>
     </div>
+    
+    <!-- Tabela responsiva -->
+    <div class="table-wrapper">
+        <table class="data-table">
+            <thead>
+            <tr>
+                <th>Nome</th>
+                <th>Email</th>
+                <th>Status da Assinatura</th>
+                <th>Data de Cadastro</th>
+                <th class="text-right">Ações</th>
+            </tr>
+            </thead>
+            <tbody id="students-table-body">
+            <tr>
+                <td data-label="Nome">Nome do Aluno Exemplo</td>
+                <td data-label="Email">email@exemplo.com</td>
+                <td data-label="Status da Assinatura">
+                    <span class="status-badge status-active">Ativo</span>
+                </td>
+                <td data-label="Data de Cadastro">01/01/2024</td>
+                <td data-label="Ações" class="text-right">
+                    <button class="btn btn-secondary btn-sm">Detalhes</button>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>

@@ -44,7 +44,7 @@ namespace MeuCrudCsharp.Features.Courses.Services
         /// <summary>
         /// Obtém um curso específico pelo seu ID, incluindo a lista de vídeos associados.
         /// </summary>
-        /// <param name="id">O ID do curso a ser buscado.</param>
+        /// <param name="name">O name do curso a ser buscado.</param>
         /// <returns>O DTO do curso encontrado.</returns>
         /// <exception cref="ResourceNotFoundException">Lançada se o curso com o ID especificado não for encontrado.</exception>
         // Na sua classe de serviço (ex: CourseService.cs)
@@ -138,7 +138,7 @@ namespace MeuCrudCsharp.Features.Courses.Services
         /// <summary>
         /// Atualiza um curso existente.
         /// </summary>
-        /// <param name="id">O ID do curso a ser atualizado.</param>
+        /// <param name="publicId">O ID do curso a ser atualizado.</param>
         /// <param name="updateDto">DTO com os novos dados do curso.</param>
         /// <returns>O DTO do curso atualizado.</returns>
         /// <exception cref="ResourceNotFoundException">Lançada se o curso com o ID especificado não for encontrado.</exception>
@@ -159,7 +159,7 @@ namespace MeuCrudCsharp.Features.Courses.Services
         /// <summary>
         /// Deleta um curso pelo seu ID.
         /// </summary>
-        /// <param name="id">O ID do curso a ser deletado.</param>
+        /// <param name="publicId">O ID do curso a ser deletado.</param>
         /// <exception cref="ResourceNotFoundException">Lançada se o curso não for encontrado.</exception>
         /// <exception cref="AppServiceException">Lançada se o curso possuir vídeos associados, impedindo a exclusão.</exception>
         /// <remarks>A exclusão só é permitida se o curso não tiver nenhum vídeo vinculado.</remarks>

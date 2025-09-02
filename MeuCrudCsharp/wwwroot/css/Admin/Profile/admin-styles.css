@@ -1,6 +1,4 @@
-﻿/* ==========================================================================
-   1. Variáveis e Estilos Base
-   ========================================================================== */
+﻿/* 1. Variáveis e Estilos Base */
 :root {
     --primary-color: #0d6efd;
     --secondary-color: #6c757d;
@@ -30,9 +28,7 @@ body {
     font-size: 16px;
 }
 
-/* ==========================================================================
-   2. Layout Principal (Mobile-First)
-   ========================================================================== */
+/* 2. Layout Principal (Mobile-First) */
 .admin-layout {
     display: flex;
     min-height: 100vh;
@@ -43,9 +39,7 @@ body {
     padding: 1rem;
 }
 
-/* ==========================================================================
-   3. Cabeçalho Mobile
-   ========================================================================== */
+/* 3. Cabeçalho Mobile */
 .mobile-header {
     display: flex;
     align-items: center;
@@ -70,9 +64,7 @@ body {
     color: var(--text-dark);
 }
 
-/* ==========================================================================
-   4. Sidebar de Navegação
-   ========================================================================== */
+/* 4. Sidebar de Navegação */
 .admin-sidebar {
     /* **ESCONDIDA POR PADRÃO NO MOBILE** */
     display: none;
@@ -137,11 +129,15 @@ body.sidebar-visible .admin-sidebar {
     font-weight: 600;
 }
 
-/* ==========================================================================
-   5. Conteúdo e Componentes
-   ========================================================================== */
-.content-panel { display: none; }
-.content-panel.active { display: block; animation: fadeIn 0.5s; }
+/* 5. Conteúdo e Componentes */
+.content-panel {
+    display: none;
+}
+
+.content-panel.active {
+    display: block;
+    animation: fadeIn 0.5s;
+}
 
 .panel-header {
     display: flex;
@@ -149,9 +145,20 @@ body.sidebar-visible .admin-sidebar {
     gap: 1rem;
     margin-bottom: 2rem;
 }
-.panel-header h2 { margin: 0; }
-.panel-header p { margin: 0.25rem 0 0; color: var(--text-light); }
-.button-group { display: flex; gap: 0.5rem; }
+
+.panel-header h2 {
+    margin: 0;
+}
+
+.panel-header p {
+    margin: 0.25rem 0 0;
+    color: var(--text-light);
+}
+
+.button-group {
+    display: flex;
+    gap: 0.5rem;
+}
 
 .btn {
     padding: 0.75rem 1.5rem;
@@ -161,27 +168,37 @@ body.sidebar-visible .admin-sidebar {
     cursor: pointer;
     font-size: 0.9rem;
 }
-.btn-primary { background-color: var(--primary-color); color: var(--white); }
-.btn-secondary { background-color: var(--secondary-color); color: var(--white); }
 
-.table-wrapper { overflow-x: auto; background: var(--white); border-radius: 8px; box-shadow: 0 2px 4px var(--shadow-color); }
-.data-table { width: 100%; border-collapse: collapse; }
-.data-table th, .data-table td { padding: 1rem; text-align: left; border-bottom: 1px solid var(--border-color); }
-.data-table th { font-weight: 600; background-color: var(--light-gray); }
-.data-table tbody tr:last-child td { border-bottom: none; }
-.text-right { text-align: right; }
-.text-center { text-align: center; }
-.empty-state { padding: 3rem 1rem; color: var(--text-light); }
+.btn-primary {
+    background-color: var(--primary-color);
+    color: var(--white);
+}
 
-/* ==========================================================================
-   6. Animações e Efeitos
-   ========================================================================== */
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-@keyframes slideIn { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+.btn-secondary {
+    background-color: var(--secondary-color);
+    color: var(--white);
+}
 
-/* ==========================================================================
-   7. Estilos para Desktop (Media Query)
-   ========================================================================== */
+/* 6. Animações e Efeitos  */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(-100%);
+    }
+    to {
+        transform: translateX(0);
+    }
+}
+
+/* 7. Estilos para Desktop (Media Query) */
 @media (min-width: 768px) {
     .admin-main-content {
         padding: 2rem;
@@ -197,7 +214,7 @@ body.sidebar-visible .admin-sidebar {
         /* **TORNA A SIDEBAR VISÍVEL E FIXA NO DESKTOP** */
         display: flex;
         position: static; /* Remove o 'fixed' do mobile */
-        animation: none;  /* Remove a animação de slide */
+        animation: none; /* Remove a animação de slide */
     }
 
     body.sidebar-visible .admin-sidebar {
@@ -210,11 +227,65 @@ body.sidebar-visible .admin-sidebar {
         justify-content: space-between;
         align-items: center;
     }
+
+    .form-grid {
+        grid-template-columns: repeat(2, 1fr); /* Duas colunas para formulários */
+    }
+
+    .table-wrapper {
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        box-shadow: 0 4px 6px -1px var(--shadow-color);
+        overflow: hidden;
+    }
+
+    .data-table thead {
+        display: table-header-group; /* Mostra o cabeçalho no desktop */
+        background-color: #f8f9fa;
+    }
+
+    .data-table th {
+        padding: 1rem;
+        text-align: left;
+        font-weight: 600;
+        border-bottom: 2px solid var(--border-color);
+    }
+
+    .data-table tr {
+        display: table-row; /* Volta ao comportamento padrão de linha */
+        border: none;
+        box-shadow: none;
+        margin-bottom: 0;
+    }
+
+    .data-table tbody tr:hover {
+        background-color: #f1f5f9; /* Efeito hover suave */
+    }
+
+    .data-table td {
+        display: table-cell; /* Volta ao comportamento padrão de célula */
+        padding: 1rem;
+        text-align: left; /* Alinha todo texto à esquerda por padrão */
+        border-bottom: 1px solid var(--border-color);
+        vertical-align: middle;
+    }
+
+    .data-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    .data-table td::before {
+        display: none; /* Esconde o label do mobile */
+    }
+
+    /* Alinha colunas específicas à direita no desktop */
+    .data-table th.text-right,
+    .data-table td.text-right {
+        text-align: right;
+    }
 }
 
-/* =================================================================== */
-/* CSS FALTANTE: ESTILOS PARA MODAIS
-/* =================================================================== */
+/* CSS FALTANTE: ESTILOS PARA MODAIS */
 .modal {
     display: none; /* Inicia oculto */
     position: fixed;
@@ -268,42 +339,39 @@ body.sidebar-visible .admin-sidebar {
     opacity: 0.8;
 }
 
-/* =================================================================== */
-/* CSS FALTANTE: ESTILOS PARA FORMULÁRIOS
-/* =================================================================== */
-.form-grid {
-    display: grid;
-    gap: 1.5rem;
+.form-container {
+    background-color: var(--white);
+    padding: 1.5rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 6px -1px var(--shadow-color);
 }
 
-/* Para telas maiores, o grid pode ter 2 colunas */
-@media (min-width: 768px) {
-    .form-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
+.form-grid {
+    display: grid;
+    gap: 1.5rem; /* Espaçamento entre os campos */
 }
 
 .form-group {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
-    margin-bottom: 1rem;
 }
 
 .form-group label {
     font-weight: 600;
     font-size: 0.9rem;
     color: var(--text-dark);
+    margin-bottom: 0.5rem; /* Espaço entre label e input */
 }
 
 .form-control,
 .form-select {
     width: 100%;
-    padding: 0.75rem 1rem;
+    padding: 0.8rem 1rem;
     font-size: 1rem;
     border: 1px solid var(--border-color);
     border-radius: 6px;
-    background-color: var(--white);
+    background-color: #f8f9fa; /* Fundo levemente acinzentado */
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
     font-family: inherit;
 }
@@ -312,11 +380,141 @@ body.sidebar-visible .admin-sidebar {
 .form-select:focus {
     outline: none;
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.25);
+    background-color: var(--white);
+    box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.2);
 }
 
-/* Garante que o botão do formulário tenha margem superior */
-.modal-content form .btn,
-.admin-container form .btn {
+/* Container dos botões do formulário */
+.form-actions {
     margin-top: 1.5rem;
+    display: flex;
+    justify-content: flex-end; /* Alinha o botão à direita */
+}
+
+/* Formulário de busca */
+.search-form {
+    display: flex;
+    gap: 0.5rem;
+}
+
+/* ESTILOS PARA TABELAS (Mobile-First e Responsivo) */
+
+.table-wrapper {
+    width: 100%;
+    overflow-x: auto; /* Apenas como fallback, o design evita isso */
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+/* --- VISÃO MOBILE (Formato de Card) --- */
+.data-table thead {
+    display: none; /* Esconde o cabeçalho no mobile */
+}
+
+.data-table tr {
+    display: block;
+    margin-bottom: 1rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background-color: var(--white);
+    box-shadow: 0 4px 6px -1px var(--shadow-color);
+    overflow: hidden; /* Garante que o conteúdo respeite o border-radius */
+}
+
+.data-table td {
+    display: block;
+    padding: 0.75rem 1rem;
+    text-align: right; /* Alinha o valor à direita */
+    border-bottom: 1px solid #f0f0f0;
+    position: relative;
+}
+
+.data-table td:last-child {
+    border-bottom: none;
+}
+
+/* Adiciona o "label" do cabeçalho antes do conteúdo da célula */
+.data-table td::before {
+    content: attr(data-label); /* Puxa o texto do atributo data-label */
+    float: left; /* Alinha o label à esquerda */
+    font-weight: 600;
+    color: var(--text-dark);
+}
+
+/* Célula de ações com botões lado a lado */
+.data-table td[data-label="Ações"] {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+}
+
+.data-table td[data-label="Ações"]::before {
+    display: none; /* Não precisa de label para a célula de ações */
+}
+
+/* COMPONENTE DE ABAS (TABS) */
+
+.tabs-nav {
+    display: flex;
+    justify-content: center; /* Adicione esta linha */
+    border-bottom: 2px solid var(--border-color);
+    margin-bottom: 1.5rem;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.tab-link {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    background-color: transparent;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-light);
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px; /* Alinha a borda com a borda do container */
+    transition: color 0.2s ease, border-color 0.2s ease;
+    white-space: nowrap; /* Impede que o texto da aba quebre linha */
+}
+
+.tab-link:hover {
+    color: var(--text-dark);
+}
+
+.tab-link.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+}
+
+.tab-pane {
+    display: none; /* Esconde todas as abas por padrão */
+    animation: fadeIn 0.4s;
+}
+
+.tab-pane.active {
+    display: block; /* Mostra apenas a aba ativa */
+}
+
+/* Estilo para o badge de status (usado na tabela de Planos) */
+.status-badge {
+    padding: 0.25em 0.6em;
+    font-size: 0.85em;
+    font-weight: 700;
+    border-radius: 20px;
+    color: var(--white);
+}
+
+.status-badge.status-active {
+    background-color: var(--success-color);
+}
+
+.status-badge.status-inactive {
+    background-color: var(--secondary-color);
+}
+
+.status-badge.status-cancelled {
+    background-color: var(--danger-color);
 }

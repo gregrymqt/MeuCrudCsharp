@@ -5,6 +5,7 @@ import {initializePlansPanel, loadPlans} from './modules/panels/plansPanel.js';
 import {initializeCoursesPanel, loadCourses} from './modules/panels/coursesPanel.js';
 import {initializeStudentsPanel, loadStudents} from './modules/panels/studentsPanel.js';
 import {initializeSubscriptionsPanel} from './modules/panels/subscriptionsPanel.js';
+import {initializeTabs} from './modules/ui/tabs.js';
 
 function main() {
 
@@ -14,7 +15,7 @@ function main() {
             document.body.classList.toggle('sidebar-visible');
         });
     }
-    
+
     const panelLoaders = {
         'nav-plans': loadPlans,
         'nav-courses': loadCourses,
@@ -22,7 +23,7 @@ function main() {
     };
 
     initializeSidebar(panelLoaders);
-
+    initializeTabs();
     initializePlansPanel();
     initializeCoursesPanel();
     initializeStudentsPanel();

@@ -1,7 +1,7 @@
 ﻿// /js/admin/modules/panels/coursesPanel.js
 
 import * as api from '../api/adminAPI.js';
-import { openModal, closeModal } from '../ui/modals.js';
+import {openModal, closeModal} from '../ui/modals.js';
 
 // --- Seletores de DOM ---
 const coursesTableBody = document.getElementById('courses-table-body');
@@ -34,13 +34,13 @@ function renderCoursesTable(courses) {
 
         const row = document.createElement('tr');
         row.innerHTML = `
-            <td>${name}</td>
-            <td>${description}</td>
-            <td class="actions text-right">
-                <button class="btn btn-secondary btn-sm btn-edit-course" data-course-id="${courseId}">Editar</button>
-                <button class="btn btn-danger btn-sm btn-delete-course" data-course-id="${courseId}">Excluir</button>
-            </td>
-        `;
+    <td>${name}</td>
+    <td>${description}</td>
+    <td class="text-right">
+        <button class="btn btn-secondary btn-sm btn-edit-course" data-course-id="${courseId}">Editar</button>
+        <button class="btn btn-danger btn-sm btn-delete-course" data-course-id="${courseId}">Excluir</button>
+    </td>
+`;
         coursesTableBody.appendChild(row);
     });
 }
@@ -102,7 +102,7 @@ async function handleSearch(searchTerm) {
         } else {
             response = await api.getCourses();
         }
-        
+
         renderCoursesTable(response.items);
 
     } catch (error) {

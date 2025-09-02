@@ -39,9 +39,10 @@ function renderStudentsTable(students) {
         const name = student.name ?? 'Aluno sem nome';
         const email = student.email ?? 'Email não informado';
         const subscriptionStatus = student.subscriptionStatus ?? 'Desconhecido';
-
-        // Formatação segura da data
-        let registrationDate = 'Data inválida';
+        const Id = student.id;
+            // Formatação segura da data
+            let
+        registrationDate = 'Data inválida';
         try {
             registrationDate = new Date(student.registrationDate).toLocaleDateString('pt-BR');
         } catch (e) {
@@ -52,15 +53,21 @@ function renderStudentsTable(students) {
         const statusClass = getStatusClass(subscriptionStatus);
 
         const row = document.createElement('tr');
+
         row.innerHTML = `
-            <td>${name}</td>
-            <td>${email}</td>
-            <td>
-                <span class="status-badge ${statusClass}">${subscriptionStatus}</span>
-            </td>
-            <td>${registrationDate}</td>
-        `;
+    <td data-label="Nome">${name}</td>
+    <td data-label="Email">${email}</td>
+    <td data-label="Status da Assinatura">
+        <span class="status-badge ${statusClass}">${subscriptionStatus}</span>
+    </td>
+    <td data-label="Data de Cadastro">${registrationDate}</td>
+    <td data-label="Ações" class="text-right">
+        <button class="btn btn-secondary btn-sm btn-view-details" data-student-id="${Id}">Detalhes</button>
+    </td>
+`;
+
         studentsTableBody.appendChild(row);
+
     });
 }
 

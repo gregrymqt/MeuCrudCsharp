@@ -1,54 +1,74 @@
-<!-- Seção 1: Formulário de Criação -->
-    <div class="panel-section">
-        <div class="panel-header">
-            <div>
-                <h2>Criar Novo Curso</h2>
-                <p>Adicione um novo curso à plataforma.</p>
-            </div>
-        </div>
-        <form id="create-course-form" class="form-container">
-            <div class="form-grid">
-                <div class="form-group">
-                    <label for="course-name">Nome do Curso</label>
-                    <input type="text" id="course-name" class="form-control" placeholder="Ex: Dominando C#" required>
-                </div>
-                <div class="form-group">
-                    <label for="course-description">Descrição</label>
-                    <textarea id="course-description" class="form-control" rows="3" placeholder="Uma breve descrição sobre o curso..."></textarea>
-                </div>
-            </div>
-            <div class="form-actions">
-                <button type="submit" class="btn btn-primary">Salvar Curso</button>
-            </div>
-        </form>
-    </div>
+<div class="tabs-container">
+    <!-- Navegação das Abas -->
+    <nav class="tabs-nav" aria-label="Abas de Cursos">
+        <button class="tab-link active" data-tab="create-course" role="tab" aria-selected="true">Criar Novo</button>
+        <button class="tab-link" data-tab="manage-courses" role="tab" aria-selected="false">Gerenciar Cursos</button>
+    </nav>
 
-    <!-- Seção 2: Tabela de Cursos Existentes -->
-    <div class="panel-section">
-        <div class="panel-header">
-             <div>
-                <h2>Cursos Existentes</h2>
-                <p>Visualize, edite ou remova os cursos cadastrados.</p>
+    <!-- Conteúdo das Abas -->
+    <div class="tab-content">
+        <!-- Aba 1: Formulário de Criação -->
+        <div id="create-course" class="tab-pane active" role="tabpanel">
+            <div class="panel-section">
+                <form id="create-course-form" class="form-container">
+                    <div class="panel-header">
+                        <div>
+                            <h2>Criar Novo Curso</h2>
+                            <p>Adicione um novo curso à plataforma.</p>
+                        </div>
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="course-name">Nome do Curso</label>
+                            <input type="text" id="course-name" class="form-control" placeholder="Ex: Dominando C#" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="course-description">Descrição</label>
+                            <textarea id="course-description" class="form-control" rows="3" placeholder="Uma breve descrição sobre o curso..."></textarea>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Salvar Curso</button>
+                    </div>
+                </form>
             </div>
-             <form id="search-course-form" class="search-form">
-                <input type="text" id="search-course-input" class="form-control" placeholder="Buscar curso...">
-                <button type="submit" class="btn btn-secondary">Buscar</button>
-            </form>
         </div>
-        
-        <div class="table-wrapper">
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Nome do Curso</th>
-                        <th>Descrição</th>
-                        <th class="text-right">Ações</th>
-                    </tr>
-                </thead>
-                <tbody id="courses-table-body">
-                    <!-- Conteúdo gerado via JavaScript -->
-                </tbody>
-            </table>
+
+        <!-- Aba 2: Tabela de Cursos Existentes -->
+        <div id="manage-courses" class="tab-pane" role="tabpanel">
+            <div class="panel-section">
+                <div class="panel-header">
+                    <div>
+                        <h2>Cursos Existentes</h2>
+                        <p>Visualize, edite ou remova os cursos cadastrados.</p>
+                    </div>
+                    <form id="search-course-form" class="search-form">
+                        <input type="text" id="search-course-input" class="form-control" placeholder="Buscar curso...">
+                        <button type="submit" class="btn btn-secondary">Buscar</button>
+                    </form>
+                </div>
+                <div class="table-wrapper">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Nome do Curso</th>
+                                <th>Descrição</th>
+                                <th class="text-right">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="courses-table-body">
+                            <!-- Exemplo de como o JS deve renderizar a linha -->
+                            <tr>
+                                <td data-label="Nome do Curso">Dominando C#</td>
+                                <td data-label="Descrição">Um curso completo para iniciantes.</td>
+                                <td data-label="Ações" class="text-right">
+                                     <!-- Botões aqui -->
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
-    
+</div>
