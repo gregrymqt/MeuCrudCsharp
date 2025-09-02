@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic; // Adicione se não tiver
-using MercadoPago.Resource.Payment;
-using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace MeuCrudCsharp.Models

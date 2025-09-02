@@ -102,9 +102,9 @@ export const deletePlan = (id) => apiFetch(`/api/admin/plans/${id}`, { method: '
 // --- API de Cursos ---
 export const getCourses = (forceRefresh = false) => fetchAndCache('allCourses', '/api/admin/courses', { force: forceRefresh });
 export const searchCoursesByName = (name) => apiFetch(`/api/admin/courses/search?name=${encodeURIComponent(name)}`);
-export const createCourse = (courseData) => apiFetch('/api/courses/admin', { method: 'POST', body: JSON.stringify(courseData) });
-export const updateCourse = (id, courseData) => apiFetch(`/api/courses/admin/${id}`, { method: 'PUT', body: JSON.stringify(courseData) });
-export const deleteCourse = (id) => apiFetch(`/api/courses/admin/${id}`, { method: 'DELETE' });
+export const createCourse = (courseData) => apiFetch('/api/admin/courses', { method: 'POST', body: JSON.stringify(courseData) });
+export const updateCourse = (id, courseData) => apiFetch(`/api/admin/courses/${id}`, { method: 'PUT', body: JSON.stringify(courseData) });
+export const deleteCourse = (id) => apiFetch(`/api/admin/courses/${id}`, { method: 'DELETE' });
 
 
 // --- API de Alunos ---

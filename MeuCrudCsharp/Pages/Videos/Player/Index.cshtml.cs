@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace MeuCrudCsharp.Pages.Videos.Player
 {
-    [Authorize] // Garante que apenas usuários logados acessem esta página
+    [Authorize(Policy = "ActiveSubscription",Roles = "Admin")] 
     public class IndexModel : PageModel
     {
         private readonly ApiDbContext _context;

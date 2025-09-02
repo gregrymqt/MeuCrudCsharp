@@ -7,6 +7,7 @@ using Hangfire.Redis.StackExchange;
 using MercadoPago.Config;
 using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Features.Auth;
+using MeuCrudCsharp.Features.Authorization;
 using MeuCrudCsharp.Features.Clients.Interfaces;
 using MeuCrudCsharp.Features.Clients.Service;
 using MeuCrudCsharp.Features.Courses.Interfaces;
@@ -33,18 +34,13 @@ using MeuCrudCsharp.Features.Videos.Interfaces;
 using MeuCrudCsharp.Features.Videos.Service;
 using MeuCrudCsharp.Features.Videos.Services;
 using MeuCrudCsharp.Models;
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Authentication.OAuth;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.StackExchangeRedis;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
-using StackExchange.Redis;
 
 // Isso garante que até mesmo os erros de inicialização do host possam ser logados.
 Log.Logger = new LoggerConfiguration()
@@ -79,8 +75,9 @@ try
     builder.Services.AddSignalR();
 
     // 2. Main Database Configuration
-    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-    builder.Services.AddDbContext<ApiDbContext>(options => options.UseSqlServer(connectionString));
+    builder.Services.AddDbContextFactory<ApiDbContext>(options =>
+        options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"))); // Ajuste conforme seu BD
+
 
     // 3. ASP.NET Core Identity Configuration
     builder
@@ -214,6 +211,8 @@ try
     builder.Services.AddScoped<IMercadoPagoPaymentService, MercadoPagoPaymentService>();
     builder.Services.AddScoped<INotificationPayment, NotificationPayment>();
     builder.Services.AddScoped<IMercadoPagoPlanService, MercadoPagoPlanService>();
+    builder.Services.AddSingleton<IAuthorizationHandler, ActiveSubscriptionHandler>();
+    builder.Services.AddSingleton<IAuthorizationMiddlewareResultHandler, SubscriptionAuthorizationMiddlewareResultHandler>();
 
 
     builder.Services.Configure<SendGridSettings>(
@@ -285,16 +284,27 @@ try
             };
         });
 
+    // Program.cs
     builder.Services.AddAuthorization(options =>
     {
+        // A política de JWT continua existindo se você precisar dela em outros lugares
         options.AddPolicy(
             "RequireJwtToken",
             policy =>
             {
                 policy.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme);
                 policy.RequireAuthenticatedUser();
-            }
-        );
+            });
+        
+        // NOVA POLÍTICA COMBINADA
+        options.AddPolicy(
+            "ActiveSubscription",
+            policy =>
+            {
+                policy.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme);
+                policy.RequireAuthenticatedUser();
+                policy.AddRequirements(new ActiveSubscriptionRequirement());
+            });
     });
 
     builder.Services.AddControllersWithViews().AddJsonOptions(options =>

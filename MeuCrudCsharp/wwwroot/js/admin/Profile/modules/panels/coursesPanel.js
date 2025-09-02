@@ -77,36 +77,48 @@ function openEditCourseModal(course) {
 
 // --- Funções Principais de Carregamento e Inicialização ---
 
+// Função que lida com a resposta da API e chama a renderização
+function handleApiResponse(response) {
+    let coursesList = []; // Inicia uma lista vazia
+
+    // CASO 1: A resposta é um objeto de paginação (tem a propriedade 'items')
+    if (response && Array.isArray(response.items)) {
+        coursesList = response.items;
+
+        // BÔNUS: Aqui você pode atualizar os controles de paginação da sua tela
+        // usando response.pageNumber, response.totalPages, etc.
+    }
+    // CASO 2: A resposta é um array simples (resultado da busca)
+    else if (Array.isArray(response)) {
+        coursesList = response;
+    }
+    // Se não for nenhum dos casos, a lista permanece vazia.
+
+    // Agora sim, chamamos a função de renderização com a lista correta
+    renderCoursesTable(coursesList);
+}
+
+// Agora, suas funções de carregar dados ficam mais simples:
+
+// Função para carregar os cursos paginados
 export async function loadCourses() {
     try {
         coursesTableBody.innerHTML = `<tr><td colspan="3" class="text-center">Carregando...</td></tr>`;
-
-        // A variável 'response' agora é o objeto de paginação
-        const response = await api.getCourses();
-
-        // LINHA CORRETA: Passe apenas a lista de itens para a função
-        renderCoursesTable(response.items);
-
+        const response = await api.getCourses(); // Chama a rota paginada
+        handleApiResponse(response); // Usa o manipulador inteligente
     } catch (error) {
         coursesTableBody.innerHTML = `<tr><td colspan="3" class="text-center text-danger">${error.message}</td></tr>`;
     }
 }
 
-// NOVO: Função centralizada para lidar com a busca
-async function handleSearch(searchTerm) {
-    coursesTableBody.innerHTML = `<tr><td colspan="3" class="text-center">Buscando...</td></tr>`;
+// Função para carregar os resultados da busca
+export async function searchCourses(name) {
     try {
-        let response;
-        if (searchTerm) {
-            response = await api.searchCoursesByName(searchTerm);
-        } else {
-            response = await api.getCourses();
-        }
-
-        renderCoursesTable(response.items);
-
+        coursesTableBody.innerHTML = `<tr><td colspan="3" class="text-center">Buscando...</td></tr>`;
+        const response = await api.searchCoursesByName(name); // Chama a rota de busca
+        handleApiResponse(response); // Usa o mesmo manipulador!
     } catch (error) {
-        coursesTableBody.innerHTML = `<tr><td colspan="3" class="text-center text-danger">Erro na busca: ${error.message}</td></tr>`;
+        coursesTableBody.innerHTML = `<tr><td colspan="3" class="text-center text-danger">${error.message}</td></tr>`;
     }
 }
 
@@ -119,7 +131,7 @@ export function initializeCoursesPanel() {
         searchCourseForm.addEventListener('submit', (e) => {
             e.preventDefault(); // Impede o recarregamento da página
             const searchTerm = searchCourseInput.value.trim();
-            handleSearch(searchTerm);
+            searchCourses(searchTerm);
         });
 
         // 2. (UX Extra) Busca enquanto o usuário digita (com debounce)
@@ -127,7 +139,7 @@ export function initializeCoursesPanel() {
             clearTimeout(debounceTimer); // Cancela o timer anterior
             debounceTimer = setTimeout(() => {
                 const searchTerm = searchCourseInput.value.trim();
-                handleSearch(searchTerm);
+                searchCourses(searchTerm);
             }, 500); // Espera 500ms após o usuário parar de digitar para buscar
         });
     }
