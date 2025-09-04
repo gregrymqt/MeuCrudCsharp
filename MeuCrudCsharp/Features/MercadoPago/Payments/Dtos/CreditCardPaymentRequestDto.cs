@@ -5,7 +5,7 @@ using MeuCrudCsharp.Features.MercadoPago.Payments.Dtos;
 /// Representa os dados de uma requisição de pagamento enviada pelo frontend.
 /// Contém todas as informações necessárias para processar um pagamento único ou criar uma assinatura.
 /// </summary>
-public class PaymentRequestDto
+public class CreditCardPaymentRequestDto
 {
     /// <summary>
     /// O token do cartão de crédito gerado pelo frontend (Payment Brick). Obrigatório.

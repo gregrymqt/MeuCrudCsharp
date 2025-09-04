@@ -26,7 +26,7 @@ namespace MeuCrudCsharp.Models
 
         [Required] public int Frequency { get; set; } // Ex: 1
 
-        [Required] [MaxLength(20)] public string FrequencyType { get; set; } 
+        [Required] [MaxLength(20)] public string FrequencyType { get; set; }
 
         [Required] public bool IsActive { get; set; } = true;
     }

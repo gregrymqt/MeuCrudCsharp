@@ -8,16 +8,33 @@
 export function createPlanCardHTML(plan) {
     const isRecommended = plan.isRecommended ? 'recommended' : '';
     const recommendationBadge = plan.isRecommended ? '<div class="recommendation-badge">MAIS POPULAR</div>' : '';
-    const buttonText = plan.isRecommended ? 'Economize com o Anual' : 'Assinar Agora';
 
     // Separa o preço para estilização (ex: "R$49,90" -> ["R$49", "90"])
     const priceParts = plan.priceDisplay.split(',');
     const mainPrice = priceParts[0];
     const cents = priceParts.length > 1 ? `,${priceParts[1]}` : '';
-    const priceSuffix = '/mês'; // Pode ser ajustado conforme o plano no futuro
+    const priceSuffix = plan.name.toLowerCase().includes('anual') ? '/mês' : '';
 
     // Gera a lista de features
     const featuresHTML = plan.features.map(feature => `<li><i class="fas fa-check-circle"></i> ${feature}</li>`).join('');
+
+    // --- LÓGICA CONDICIONAL PARA O LINK E TEXTO DO BOTÃO ---
+    let buttonHref = '';
+    let buttonText = 'Assinar Agora';
+    const planNameLower = plan.name.toLowerCase();
+
+    if (planNameLower.includes('anual')) {
+        // Se for o plano ANUAL,  mantém o fluxo direto para o cartão de crédito.
+        buttonHref = `/Payment/Type/CreditCard?plano=${plan.slug}`;
+    } else {
+        // Se for MENSAL (ou outro), mantém o fluxo direto para o cartão de crédito.
+        buttonHref = `/Payment/Method/SelectPaymentMethod?plano=${plan.slug}`;
+        buttonText = 'Escolher Pagamento'; // Texto mais claro para a próxima ação.
+    }
+
+    if (plan.isRecommended) {
+        buttonText = 'Economize com o Anual';
+    }
 
     return `
         <div class="plan-card ${isRecommended}">
@@ -28,7 +45,7 @@ export function createPlanCardHTML(plan) {
             <ul class="plan-features">
                 ${featuresHTML}
             </ul>
-            <a href="/Payment/CreditCard?plano=${plan.slug}" class="btn-choose-plan">${buttonText}</a>
+            <a href="${buttonHref}" class="btn-choose-plan">${buttonText}</a>
         </div>
     `;
 }

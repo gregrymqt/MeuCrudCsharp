@@ -1,8 +1,5 @@
-﻿using System;
-using System.Threading.Tasks;
-using MeuCrudCsharp.Features.Emails.Interfaces;
+﻿using MeuCrudCsharp.Features.Emails.Interfaces;
 using MeuCrudCsharp.Features.Exceptions;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SendGrid;
 using SendGrid.Helpers.Mail;

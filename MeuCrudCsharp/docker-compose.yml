@@ -1,29 +1,37 @@
-# docker-compose.yml
-version: '3.8'
-
 services:
-  # Serviço 1: Nosso servidor Redis
+  # ... serviço do redis (sem mudanças) ...
   redis:
-    image: "redis:alpine" # Puxa a imagem oficial e leve do Redis
+    image: "redis:alpine"
     container_name: meu-servidor-redis
     ports:
       - "6379:6379"
 
-
-  # Serviço 2: Nossa aplicação ASP.NET
   webapp:
     container_name: minha-aplicacao-aspnet
-    # 'build: .' diz para construir a imagem a partir do Dockerfile local
     build: .
     ports:
-      # Expõe a porta 8080 do contêiner para a porta 8080 da sua máquina
       - "8080:8080"
     environment:
-      # AQUI ESTÁ A MÁGICA DA CONEXÃO!
-      # Passamos a string de conexão para a aplicação.
-      # O Docker Compose cria uma rede onde o nome 'redis' é resolvido para o IP do contêiner do Redis.
+      # --- Configurações da Aplicação e Conexões ---
       - ConnectionStrings__Redis=redis:6379
       - ASPNETCORE_URLS=http://+:8080
+
+      # --- Segredos Lidos do Arquivo .env ---
+      # JWT
+      - Jwt__Key=${JWT_SECRET_KEY}
+
+      # Google
+      - Google__ClientId=${GOOGLE_CLIENT_ID}
+      - Google__ClientSecret=${GOOGLE_CLIENT_SECRET}
+
+      # Mercado Pago
+      - MercadoPago__AccessToken=${MERCADOPAGO_ACCESS_TOKEN}
+      - MercadoPago__WebhookSecret=${MERCADOPAGO_WEBHOOK_SECRET}
+
+      # SendGrid
+      - SendGrid__ApiKey=${SENDGRID_API_KEY}
+      - SendGrid__FromEmail=${SENDGRID_FROM_EMAIL}
+      - SendGrid__FromName=${SENDGRID_FROM_NAME}
     depends_on:
-      # Garante que o contêiner do Redis seja iniciado ANTES da nossa aplicação
       - redis
+

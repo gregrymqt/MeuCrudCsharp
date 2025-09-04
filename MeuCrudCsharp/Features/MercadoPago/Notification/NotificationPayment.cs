@@ -54,84 +54,69 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Notification
         /// Este método foi projetado para ser executado por um job em segundo plano (ex: Hangfire).
         /// Ele relança exceções para permitir que o sistema de jobs trate falhas e execute novas tentativas.
         /// </remarks>
-        public async Task VerifyAndProcessNotificationAsync(string userId, string internalPaymentId)
+        // Assinatura simplificada, sem o userId redundante
+        public async Task VerifyAndProcessNotificationAsync(string internalPaymentId)
         {
             _logger.LogInformation(
-                "Iniciando processamento de notificação para UserID: {UserId}, PaymentId: {PaymentId}",
-                userId,
+                "Iniciando processamento de notificação para PaymentId: {PaymentId}",
                 internalPaymentId
             );
 
-            try
+            // O try/catch foi movido para o job, que é o responsável pela transação e tratamento de falhas.
+            // Se ocorrer um erro aqui, o job fará o rollback.
+            var localPayment =
+                await SearchForPaymentAsync(internalPaymentId); // Supondo que este método inclua a Subscription
+
+            if (localPayment == null)
+                throw new ResourceNotFoundException(
+                    $"Pagamento com ID {internalPaymentId} não foi encontrado para notificação.");
+
+            var user = localPayment.User; // Obtém o usuário a partir do pagamento
+            if (user == null)
+                throw new ResourceNotFoundException(
+                    $"Usuário associado ao pagamento {internalPaymentId} não foi encontrado.");
+
+            // A chamada para a API externa permanece, conforme sua lógica atual.
+            var externPayment = await _mercadoPagoService.GetPaymentStatusAsync(localPayment.ExternalId);
+
+            bool sendConfirmationEmail = false;
+            bool sendRejectionEmail = false;
+            bool sendRefundEmail = false;
+
+            // Apenas modifica os objetos em memória
+            switch (externPayment.Status)
             {
-                var localPayment = await SearchForPaymentAsync(internalPaymentId);
-                var user = await _context.Users.FindAsync(userId.ToString());
-
-                if (user == null)
-                    throw new ResourceNotFoundException(
-                        $"Usuário com ID {userId} não foi encontrado para notificação."
-                    );
-
-                if (localPayment == null)
-                    throw new ResourceNotFoundException(
-                        $"Pagamento com ID {internalPaymentId} não foi encontrado para notificação."
-                    );
-
-                var externPayment = await _mercadoPagoService.GetPaymentStatusAsync(
-                    localPayment.ExternalId
-                );
-
-                _logger.LogInformation(
-                    "Pagamento {PaymentId} encontrado com status: {Status}",
-                    internalPaymentId,
-                    localPayment.Status
-                );
-
-                if (externPayment.Status == "approved")
-                {
+                case "approved":
                     localPayment.Status = "approved";
                     localPayment.Subscription.Status = "active";
-                    await _context.SaveChangesAsync();
-                    await SendConfirmationEmailAsync(user, internalPaymentId);
-                }
-                else if (externPayment.Status == "rejected" || externPayment.Status == "cancelled")
-                {
+                    sendConfirmationEmail = true;
+                    break;
+
+                case "rejected":
+                case "cancelled":
                     localPayment.Status = externPayment.Status;
-                    await _context.SaveChangesAsync();
-                    await SendRejectionEmailAsync(user, internalPaymentId);
-                }
-                else if (externPayment.Status == "refunded") // <-- A LÓGICA PARA O REEMBOLSO!
-                {
-                    _logger.LogInformation(
-                        "Pagamento {PaymentId} confirmado como REEMBOLSADO. Atualizando DB e notificando via SignalR.",
-                        localPayment.ExternalId
-                    );
+                    // Talvez atualizar o status da Subscription para "cancelled" também?
+                    sendRejectionEmail = true;
+                    break;
 
-                    // 1. Atualizar o status no seu banco de dados
+                case "refunded":
                     localPayment.Status = "refunded";
-                    localPayment.Subscription.Status = "refunded"; // ou "cancelled", como preferir
-                    await _context.SaveChangesAsync();
-
-                    // 2. Disparar a notificação via SignalR
+                    localPayment.Subscription.Status = "refunded";
                     await _refundNotification.SendRefundStatusUpdate(
-                        userId,
-                        "completed",
-                        "Seu reembolso foi processado com sucesso!"
-                    );
+                        localPayment.UserId, "completed", "Seu reembolso foi processado com sucesso!");
+                    sendRefundEmail = true;
+                    break;
+            }
 
-                    await SendRefundConfirmationEmailAsync(user, internalPaymentId);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(
-                    ex,
-                    "Falha crítica no processamento da notificação para UserID: {UserId}, PaymentId: {PaymentId}",
-                    userId,
-                    internalPaymentId
-                );
-                throw;
-            }
+            // Chama SaveChanges UMA ÚNICA VEZ
+            await _context.SaveChangesAsync();
+            _logger.LogInformation("Status do pagamento {PaymentId} atualizado para {Status}.", internalPaymentId,
+                localPayment.Status);
+
+            // Envia os e-mails após a confirmação da transação no banco
+            if (sendConfirmationEmail) await SendConfirmationEmailAsync(user, internalPaymentId);
+            if (sendRejectionEmail) await SendRejectionEmailAsync(user, internalPaymentId);
+            if (sendRefundEmail) await SendRefundConfirmationEmailAsync(user, internalPaymentId);
         }
 
         /// <summary>

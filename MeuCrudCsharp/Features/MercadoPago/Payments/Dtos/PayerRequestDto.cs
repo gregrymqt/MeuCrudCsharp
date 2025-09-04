@@ -9,6 +9,10 @@
         /// O e-mail do pagador.
         /// </summary>
         public string? Email { get; set; }
+        
+        public string? FirstName { get; set; }
+        
+        public string? LastName { get; set; }
 
         /// <summary>
         /// Os dados de identificação (documento) do pagador.

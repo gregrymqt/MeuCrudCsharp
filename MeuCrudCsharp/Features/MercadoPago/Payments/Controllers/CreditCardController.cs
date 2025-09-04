@@ -55,7 +55,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Controllers
         /// <response code="401">O usuário não está autenticado.</response>
         /// <response code="500">Ocorreu um erro interno inesperado no servidor.</response>
         [HttpPost("process-payment")]
-        public async Task<IActionResult> ProcessPaymentAsync([FromBody] PaymentRequestDto request)
+        public async Task<IActionResult> ProcessPaymentAsync([FromBody] CreditCardPaymentRequestDto request)
         {
             if (!ModelState.IsValid)
             {

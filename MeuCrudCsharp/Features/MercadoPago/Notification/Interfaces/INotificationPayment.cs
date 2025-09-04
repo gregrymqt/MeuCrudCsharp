@@ -12,9 +12,8 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces
         /// Verifica o status de um pagamento com o provedor externo e processa a notificação,
         /// atualizando o estado da transação no sistema local.
         /// </summary>
-        /// <param name="userId">O ID do usuário no sistema local associado ao pagamento.</param>
-        /// <param name="paymentID">O ID do pagamento gerado pelo provedor externo (ex: Mercado Pago).</param>
+        /// <param name="internalPaymentId">O ID do pagamento gerado pelo provedor externo (ex: Mercado Pago).</param>
         /// <returns>Uma <see cref="Task"/> que representa a operação de verificação e processamento assíncrona.</returns>
-        Task VerifyAndProcessNotificationAsync(string userId, string paymentID);
+        Task VerifyAndProcessNotificationAsync(string internalPaymentId);
     }
 }

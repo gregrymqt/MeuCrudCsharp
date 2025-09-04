@@ -10,7 +10,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
-namespace MeuCrudCsharp.Pages.Payment
+namespace MeuCrudCsharp.Pages.Payment.Type
 {
     [Authorize]
     public class CreditCardModel : PageModel

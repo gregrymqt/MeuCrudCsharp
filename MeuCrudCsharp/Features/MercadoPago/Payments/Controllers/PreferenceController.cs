@@ -19,15 +19,15 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Controllers
     [Route("api/preferences")]
     public class PreferenceController : ApiControllerBase
     {
-        private readonly IPreferencePayment _preferencePaymentService;
+        private readonly IPreferencePaymentService _preferencePaymentServiceService;
 
         /// <summary>
         /// Inicializa uma nova instância da classe <see cref="PreferenceController"/>.
         /// </summary>
-        /// <param name="preferencePaymentService">O serviço que contém a lógica para criar preferências de pagamento.</param>
-        public PreferenceController(IPreferencePayment preferencePaymentService)
+        /// <param name="preferencePaymentServiceService">O serviço que contém a lógica para criar preferências de pagamento.</param>
+        public PreferenceController(IPreferencePaymentService preferencePaymentServiceService)
         {
-            _preferencePaymentService = preferencePaymentService;
+            _preferencePaymentServiceService = preferencePaymentServiceService;
         }
 
         /// <summary>
@@ -50,7 +50,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Controllers
             try
             {
                 // O ClaimsPrincipal (User) é automaticamente populado pelo ASP.NET Core
-                var preference = await _preferencePaymentService.CreatePreferenceAsync(
+                var preference = await _preferencePaymentServiceService.CreatePreferenceAsync(
                     amount,
                     User
                 );

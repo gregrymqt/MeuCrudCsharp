@@ -24,7 +24,6 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
     public class CreditCardPaymentService : ICreditCardPaymentService
     {
         private readonly ApiDbContext _context;
-        private readonly IConfiguration _configuration;
         private readonly ISubscriptionService _subscriptionService;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly ILogger<CreditCardPaymentService> _logger;
@@ -44,7 +43,6 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
 
         public CreditCardPaymentService(
             ApiDbContext context,
-            IConfiguration configuration,
             ISubscriptionService subscriptionService,
             IHttpContextAccessor httpContextAccessor,
             ILogger<CreditCardPaymentService> logger,
@@ -54,7 +52,6 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
         )
         {
             _context = context;
-            _configuration = configuration;
             _redirectSettings = redirectSettings.Value;
             _paymentSettings = paymentSettings.Value;
             _httpContextAccessor = httpContextAccessor;
@@ -68,7 +65,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
         /// Cria um pagamento ou assinatura com base na solicitação.
         /// </summary>
         /// <param name="request">Os dados da solicitação de pagamento.</param>
-        public async Task<object> CreatePaymentOrSubscriptionAsync(PaymentRequestDto request)
+        public async Task<object> CreatePaymentOrSubscriptionAsync(CreditCardPaymentRequestDto request)
         {
             // MUDANÇA 2: Validação "Fail-Fast"
             if (request == null)
@@ -87,19 +84,19 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
         /// <summary>
         /// Cria um pagamento único com base nos dados fornecidos.
         /// </summary>
-        /// <param name="paymentData">Os dados do pagamento.</param>
+        /// <param name="creditCardPaymentData">Os dados do pagamento.</param>
         /// <returns>Um objeto representando a resposta do pagamento.</returns>
         /// <exception cref="ArgumentException">Se os dados do pagamento forem inválidos.</exception>
         /// <exception cref="AppServiceException">Se ocorrer um erro ao criar o pagamento.</exception>
         private async Task<PaymentResponseDto> CreateSinglePaymentInternalAsync(
-            PaymentRequestDto paymentData
+            CreditCardPaymentRequestDto creditCardPaymentData
         )
         {
             var userId = GetCurrentUserId();
 
             if (
-                paymentData.Payer?.Email is null
-                || paymentData.Payer.Identification?.Number is null
+                creditCardPaymentData.Payer?.Email is null
+                || creditCardPaymentData.Payer.Identification?.Number is null
             )
             {
                 throw new ArgumentException("Dados do pagador (email, CPF) são obrigatórios.");
@@ -114,11 +111,11 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
             {
                 UserId = userId,
                 Status = "iniciando",
-                PayerEmail = paymentData.Payer.Email,
-                Method = paymentData.PaymentMethodId,
-                CustomerCpf = paymentData.Payer.Identification.Number,
-                Amount = paymentData.Amount,
-                Installments = paymentData.Installments,
+                PayerEmail = creditCardPaymentData.Payer.Email,
+                Method = creditCardPaymentData.PaymentMethodId,
+                CustomerCpf = creditCardPaymentData.Payer.Identification.Number,
+                Amount = creditCardPaymentData.Amount,
+                Installments = creditCardPaymentData.Installments,
                 ExternalId = Guid.NewGuid().ToString(), // Usando um ID externo único para idempotência
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
@@ -154,19 +151,19 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
                 // =======================================================
                 var paymentRequest = new PaymentCreateRequest
                 {
-                    TransactionAmount = paymentData.Amount,
-                    Token = paymentData.Token,
+                    TransactionAmount = creditCardPaymentData.Amount,
+                    Token = creditCardPaymentData.Token,
                     Description = "Pagamento do curso - " + userId, // Descrição clara para o cliente
-                    Installments = paymentData.Installments,
-                    PaymentMethodId = paymentData.PaymentMethodId,
-                    IssuerId = paymentData.IssuerId,
+                    Installments = creditCardPaymentData.Installments,
+                    PaymentMethodId = creditCardPaymentData.PaymentMethodId,
+                    IssuerId = creditCardPaymentData.IssuerId,
                     Payer = new PaymentPayerRequest
                     {
-                        Email = paymentData.Payer.Email,
+                        Email = creditCardPaymentData.Payer.Email,
                         Identification = new IdentificationRequest
                         {
-                            Type = paymentData.Payer.Identification.Type,
-                            Number = paymentData.Payer.Identification.Number,
+                            Type = creditCardPaymentData.Payer.Identification.Type,
+                            Number = creditCardPaymentData.Payer.Identification.Number,
                         },
                     },
                     ExternalReference = novoPagamento.ExternalId, // Referência externa para rastreamento
@@ -286,7 +283,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
         /// <exception cref="ArgumentException">Se os dados da assinatura forem inválidos.</exception>
         /// <exception cref="AppServiceException">Se ocorrer um erro ao criar a assinatura.</exception>
         private async Task<object> CreateSubscriptionInternalAsync(
-            PaymentRequestDto subscriptionData
+            CreditCardPaymentRequestDto subscriptionData
         )
         {
             var userId = GetCurrentUserId();

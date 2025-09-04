@@ -21,6 +21,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Jobs
         private readonly ILogger<ProcessPaymentNotificationJob> _logger;
         private readonly ApiDbContext _context;
         private readonly INotificationPayment _notificationPayment;
+        private readonly ICacheService _cacheService;
 
         /// <summary>
         /// Inicializa uma nova instância da classe <see cref="ProcessPaymentNotificationJob"/>.
@@ -31,12 +32,14 @@ namespace MeuCrudCsharp.Features.MercadoPago.Jobs
         public ProcessPaymentNotificationJob(
             ILogger<ProcessPaymentNotificationJob> logger,
             ApiDbContext context,
-            INotificationPayment notificationPayment
+            INotificationPayment notificationPayment,
+            ICacheService cacheService
         )
         {
             _logger = logger;
             _context = context;
             _notificationPayment = notificationPayment;
+            _cacheService = cacheService;
         }
 
         /// <summary>
@@ -102,7 +105,6 @@ namespace MeuCrudCsharp.Features.MercadoPago.Jobs
                 }
 
                 await _notificationPayment.VerifyAndProcessNotificationAsync(
-                    pagamentoLocal.UserId,
                     pagamentoLocal.Id.ToString() // Passando o ID interno
                 );
 
@@ -112,6 +114,10 @@ namespace MeuCrudCsharp.Features.MercadoPago.Jobs
                     "Processamento do Payment ID: {PaymentId} concluído com sucesso.",
                     paymentId
                 );
+
+                var cacheKey = $"payment:db:{pagamentoLocal.Id}";
+                await _cacheService.RemoveAsync(cacheKey);
+                _logger.LogInformation("Cache invalidado para a chave: {CacheKey}", cacheKey);
             }
             catch (Exception ex)
             {

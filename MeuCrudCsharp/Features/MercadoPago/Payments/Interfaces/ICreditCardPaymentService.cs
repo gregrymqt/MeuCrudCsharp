@@ -14,6 +14,6 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces
         /// </summary>
         /// <param name="request">The DTO containing all necessary data for the payment, such as the card token, amount, and payer details.</param>
         /// <returns>An object representing the result of the operation, which could be a payment DTO or a subscription DTO.</returns>
-        Task<object> CreatePaymentOrSubscriptionAsync(PaymentRequestDto request);
+        Task<object> CreatePaymentOrSubscriptionAsync(CreditCardPaymentRequestDto request);
     }
 }

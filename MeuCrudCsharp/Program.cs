@@ -191,7 +191,7 @@ try
     builder.Services.AddScoped<ICacheService, CacheService>();
     builder.Services.AddScoped<IAppAuthService, AppAuthService>();
     builder.Services.AddScoped<ICreditCardPaymentService, CreditCardPaymentService>();
-    builder.Services.AddScoped<IPreferencePayment, PreferencePaymentService>();
+    builder.Services.AddScoped<IPreferencePaymentService, PreferencePaymentService>();
     builder.Services.AddScoped<IQueueService, BackgroundJobQueueService>();
     builder.Services.AddScoped<IEmailSenderService, SendGridEmailSenderService>();
     builder.Services.AddScoped<IRazorViewToStringRenderer, RazorViewToStringRenderer>();
@@ -212,8 +212,9 @@ try
     builder.Services.AddScoped<INotificationPayment, NotificationPayment>();
     builder.Services.AddScoped<IMercadoPagoPlanService, MercadoPagoPlanService>();
     builder.Services.AddSingleton<IAuthorizationHandler, ActiveSubscriptionHandler>();
-    builder.Services.AddSingleton<IAuthorizationMiddlewareResultHandler, SubscriptionAuthorizationMiddlewareResultHandler>();
-
+    builder.Services
+        .AddSingleton<IAuthorizationMiddlewareResultHandler, SubscriptionAuthorizationMiddlewareResultHandler>();
+    builder.Services.AddScoped<IPixPaymentService, PixPaymentService>();
 
     builder.Services.Configure<SendGridSettings>(
         builder.Configuration.GetSection(SendGridSettings.SectionName)
@@ -295,7 +296,7 @@ try
                 policy.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme);
                 policy.RequireAuthenticatedUser();
             });
-        
+
         // NOVA POLÍTICA COMBINADA
         options.AddPolicy(
             "ActiveSubscription",
@@ -327,6 +328,9 @@ try
 
     builder.Services.Configure<RedirectSettings>(builder.Configuration.GetSection("Redirect"));
     builder.Services.Configure<PaymentSettings>(builder.Configuration.GetSection("Payment"));
+    builder.Services.Configure<MercadoPagoSettings>(
+        builder.Configuration.GetSection(MercadoPagoSettings.SectionName)
+    );
 
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddHttpClient();

@@ -8,7 +8,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces
     /// <summary>
     /// Defines the contract for a service that creates payment preferences in Mercado Pago.
     /// </summary>
-    public interface IPreferencePayment
+    public interface IPreferencePaymentService
     {
         /// <summary>
         /// Creates a new payment preference for a given amount and user.

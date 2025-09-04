@@ -1,0 +1,82 @@
+@page
+@model MeuCrudCsharp.Pages.Payment.Type.Pix
+
+@{
+    Layout = null;
+}
+
+<link rel="stylesheet" href="~/css/Payment/type/pix-styles.css" asp-append-version="true">
+
+<div class="pix-container">
+    <header class="pix-header">
+        <i class="fas fa-qrcode header-icon"></i>
+        <h1>Pagamento com PIX</h1>
+        <p>Preencha seus dados para gerar o código PIX.</p>
+    </header>
+
+    <form id="form-checkout" novalidate>
+        <div class="form-grid">
+            <div class="form-group half-width">
+                <label for="form-checkout__payerFirstName">Nome</label>
+                <input id="form-checkout__payerFirstName" name="payerFirstName" type="text" required>
+            </div>
+            <div class="form-group half-width">
+                <label for="form-checkout__payerLastName">Sobrenome</label>
+                <input id="form-checkout__payerLastName" name="payerLastName" type="text" required>
+            </div>
+            <div class="form-group full-width">
+                <label for="email">E-mail</label>
+                <input id="form-checkout__email" name="email" type="email" required>
+            </div>
+            <div class="form-group half-width">
+                <label for="identificationType">Tipo de documento</label>
+                <select id="form-checkout__identificationType" name="identificationType" required></select>
+            </div>
+            <div class="form-group half-width">
+                <label for="identificationNumber">Número do documento</label>
+                <input id="form-checkout__identificationNumber" name="identificationNumber" type="text" required>
+            </div>
+        </div>
+
+        <input type="hidden" name="transactionAmount" id="transactionAmount" value="150.50"> <input type="hidden"
+                                                                                                    name="description"
+                                                                                                    id="description"
+                                                                                                    value="Assinatura Plano Anual">
+
+        <div id="form-error" class="error-message"></div>
+
+        <div class="form-actions">
+            <div id="loading-spinner" class="spinner"></div>
+            <button type="submit" id="form-submit-button">Criar Pagamento PIX</button>
+        </div>
+    </form>
+
+    <div id="pix-payment-container" style="display: none;">
+        <h2 class="pix-result-title">Pague para finalizar</h2>
+        <p class="pix-result-subtitle">Escaneie o QR Code ou use o código abaixo.</p>
+        <img id="pix-qr-code-image" src="" alt="PIX QR Code" class="qr-code">
+
+        <div class="pix-copy-paste">
+            <input type="text" id="pix-qr-code-text" readonly>
+            <button id="copy-pix-code-button" title="Copiar código PIX">
+                <i class="fas fa-copy"></i> Copiar Código
+            </button>
+        </div>
+        <p class="pix-expiration-info">
+            <i class="fas fa-info-circle"></i> Este código expira em 30 minutos.
+        </p>
+    </div>
+    
+    <div id="success-screen" style="display: none;">
+        <div class="success-icon">
+            <i class="fas fa-check-circle"></i>
+        </div>
+        <h2 class="success-title">Pagamento Aprovado!</h2>
+        <p class="success-message">Obrigado! Sua assinatura está ativa. Você será redirecionado em breve ou pode clicar
+            no botão abaixo.</p>
+        <a href="/dashboard" class="success-button">Acessar minha conta</a>
+    </div>
+</div>
+
+<script src="https://sdk.mercadopago.com/js/v2"></script>
+<script src="~/js/payment/Pix/admin-pix.js" type="module" defer></script>

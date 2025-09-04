@@ -1,0 +1,48 @@
+@page
+@model MeuCrudCsharp.Pages.Payment.Method.SelectPaymentMethod
+
+@{
+    Layout = null;
+}
+<link rel="stylesheet" href="~/css/Payment/method/method_payment.css" asp-append-version="true"> 
+
+<main class="payment-selection-container">
+    <header class="selection-header">
+        <h1 class="selection-title">Como deseja pagar?</h1>
+        <p class="selection-subtitle">Você está a um passo de assinar o <strong>Plano Anual</strong>. Escolha sua forma de pagamento preferida.</p>
+    </header>
+
+    <div class="payment-options">
+            
+        <a href="/Payment/Pix?plano=@ViewBag.PlanoSlug" class="payment-option-card recommended">
+            <div class="payment-icon">
+                <i class="fas fa-qrcode"></i>
+            </div>
+            <div class="payment-details">
+                <h2 class="payment-name">Pagar com PIX</h2>
+                <p class="payment-description">Aprovação instantânea. Copie o código ou use o QR Code.</p>
+            </div>
+            <div class="arrow-icon">
+                <i class="fas fa-chevron-right"></i>
+            </div>
+        </a>
+
+        <a href="/Payment/CreditCard?plano=@ViewBag.PlanoSlug" class="payment-option-card">
+            <div class="payment-icon">
+                <i class="fas fa-credit-card"></i>
+            </div>
+            <div class="payment-details">
+                <h2 class="payment-name">Cartão de Crédito</h2>
+                <p class="payment-description">Parcele em até 12x. Aprovação em segundos.</p>
+            </div>
+            <div class="arrow-icon">
+                <i class="fas fa-chevron-right"></i>
+            </div>
+        </a>
+
+    </div>
+        
+    <footer class="selection-footer">
+        <a href="/Plan" class="back-link">&larr; Voltar para os planos</a>
+    </footer>
+</main>

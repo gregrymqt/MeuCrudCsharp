@@ -1,0 +1,146 @@
+/* === ESTILOS PARA A PÁGINA DE SELEÇÃO DE PAGAMENTO === */
+
+/* Reset e Body */
+body {
+    margin: 0;
+    font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+    background-color: #f5f7fa; /* Um cinza claro e suave */
+    color: #333;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 1rem;
+    box-sizing: border-box;
+}
+
+/* Container Principal */
+.payment-selection-container {
+    width: 100%;
+    max-width: 550px;
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+    padding: 2rem;
+    box-sizing: border-box;
+    text-align: center;
+    animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Cabeçalho */
+.selection-header {
+    margin-bottom: 2.5rem;
+}
+
+.selection-title {
+    font-size: clamp(1.8rem, 5vw, 2.2rem); /* Fonte fluida */
+    color: #1d2d3e;
+    margin-block: 0 0.5rem;
+}
+
+.selection-subtitle {
+    font-size: clamp(1rem, 2.5vw, 1.1rem);
+    color: #5a677b;
+    line-height: 1.6;
+    margin: 0;
+}
+
+.selection-subtitle strong {
+    color: #007bff; /* Cor de destaque para o plano */
+}
+
+/* Opções de Pagamento */
+.payment-options {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.payment-option-card {
+    display: flex;
+    align-items: center;
+    padding: 1.25rem 1.5rem;
+    background-color: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    text-decoration: none;
+    color: inherit;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    text-align: left;
+}
+
+.payment-option-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 7px 25px rgba(0, 123, 255, 0.1);
+    border-color: #007bff;
+}
+
+.payment-icon {
+    font-size: 2rem;
+    color: #007bff;
+    margin-right: 1.5rem;
+    width: 40px;
+    text-align: center;
+}
+
+.payment-details {
+    flex-grow: 1;
+}
+
+.payment-name {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #1d2d3e;
+    margin: 0 0 0.25rem 0;
+}
+
+.payment-description {
+    font-size: 0.95rem;
+    color: #5a677b;
+    margin: 0;
+    line-height: 1.5;
+}
+
+.arrow-icon {
+    font-size: 1.2rem;
+    color: #ced4da;
+    transition: color 0.2s ease;
+}
+
+.payment-option-card:hover .arrow-icon {
+    color: #007bff;
+}
+
+/* Destaque para a opção recomendada (ex: PIX) */
+.payment-option-card.recommended {
+    border-color: #007bff;
+}
+
+/* Rodapé */
+.selection-footer {
+    margin-top: 2.5rem;
+}
+
+.back-link {
+    font-size: 0.9rem;
+    color: #5a677b;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.back-link:hover {
+    color: #007bff;
+    text-decoration: underline;
+}
+
+/* Media Query para Desktop (maior que 768px) */
+@media (min-width: 768px) {
+    .payment-selection-container {
+        padding: 3rem;
+    }
+}

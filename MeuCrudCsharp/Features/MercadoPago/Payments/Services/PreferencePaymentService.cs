@@ -15,9 +15,9 @@ using Microsoft.Extensions.Options;
 namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
 {
     /// <summary>
-    /// Implementa <see cref="IPreferencePayment"/> para criar preferências de pagamento no Mercado Pago.
+    /// Implementa <see cref="IPreferencePaymentService"/> para criar preferências de pagamento no Mercado Pago.
     /// </summary>
-    public class PreferencePaymentService : IPreferencePayment
+    public class PreferencePaymentService : IPreferencePaymentService
     {
         private readonly IConfiguration _configuration;
         private readonly ILogger<PreferencePaymentService> _logger;
