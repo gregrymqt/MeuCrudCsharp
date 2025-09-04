@@ -170,7 +170,7 @@ namespace MeuCrudCsharp.Features.Auth
                 new CookieOptions
                 {
                     HttpOnly = true, // Impede o acesso via JavaScript (essencial para segurança)
-                    Expires = DateTime.UtcNow.AddDays(7), // Defina a expiração
+                    Expires = DateTime.UtcNow.AddHours(7), // Defina a expiração
                     Secure = true, // Enviar apenas em HTTPS
                     SameSite = SameSiteMode.Lax, // Melhora a proteção contra ataques CSRF
                 }

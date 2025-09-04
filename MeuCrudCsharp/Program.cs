@@ -85,6 +85,20 @@ try
         .AddEntityFrameworkStores<ApiDbContext>()
         .AddDefaultTokenProviders();
 
+    // --- Registro das Configurações ---
+    builder.Services.Configure<SendGridSettings>(
+        builder.Configuration.GetSection(SendGridSettings.SectionName)
+    );
+    builder.Services.Configure<JwtSettings>(
+        builder.Configuration.GetSection("Jwt")
+    );
+    builder.Services.Configure<GoogleSettings>(
+        builder.Configuration.GetSection("Google")
+    );
+    builder.Services.Configure<MercadoPagoSettings>(
+        builder.Configuration.GetSection("MercadoPago")
+    );
+
     // Substitua o seu "builder.Services.ConfigureApplicationCookie" por este bloco completo:
     builder.Services.ConfigureApplicationCookie(options =>
     {
@@ -170,23 +184,6 @@ try
         );
     }
 
-    var mercadoPagoAccessToken = builder.Configuration["MercadoPago:AccessToken"];
-
-    MercadoPagoConfig.AccessToken = mercadoPagoAccessToken;
-
-    if (string.IsNullOrEmpty(MercadoPagoConfig.AccessToken))
-    {
-        Log.Fatal(
-            "FALHA CRÍTICA: O Access Token do Mercado Pago (MercadoPago:AccessToken) não foi encontrado na configuração. A aplicação será encerrada.");
-
-        throw new InvalidOperationException(
-            "O Access Token do Mercado Pago é uma configuração obrigatória e não foi encontrada.");
-    }
-    else
-    {
-        Log.Information("Access Token do Mercado Pago carregado com sucesso.");
-    }
-
     // 6. Custom Application Services
     builder.Services.AddScoped<ICacheService, CacheService>();
     builder.Services.AddScoped<IAppAuthService, AppAuthService>();
@@ -216,10 +213,6 @@ try
         .AddSingleton<IAuthorizationMiddlewareResultHandler, SubscriptionAuthorizationMiddlewareResultHandler>();
     builder.Services.AddScoped<IPixPaymentService, PixPaymentService>();
 
-    builder.Services.Configure<SendGridSettings>(
-        builder.Configuration.GetSection(SendGridSettings.SectionName)
-    );
-
     JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
 
     var cultureInfo = new CultureInfo("en-US"); // Ou CultureInfo.InvariantCulture
@@ -231,42 +224,49 @@ try
         .Services.AddAuthentication()
         .AddGoogle(options =>
         {
-            // Validação das credenciais (continua igual)
-            string? clientId = builder.Configuration["Google:ClientId"];
-            string? clientSecret = builder.Configuration["Google:ClientSecret"];
-            if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
+            // 1. Obtenha o objeto de configuração do Google de forma fortemente tipada.
+            var googleSettings = builder.Configuration
+                .GetSection(GoogleSettings.SectionName)
+                .Get<GoogleSettings>();
+
+            // 2. Valide se o objeto ou suas propriedades essenciais são nulos.
+            if (googleSettings == null || string.IsNullOrEmpty(googleSettings.ClientId) ||
+                string.IsNullOrEmpty(googleSettings.ClientSecret))
             {
                 throw new InvalidOperationException(
-                    "As credenciais do Google não foram encontradas."
+                    "As credenciais do Google (GoogleSettings) não foram encontradas ou estão incompletas."
                 );
             }
 
-            options.ClientId = clientId;
-            options.ClientSecret = clientSecret;
-
-            // ✅ MUDANÇA CRÍTICA:
-            // Diz ao Google para usar o esquema de cookie temporário do ASP.NET Identity.
+            // 3. Use as propriedades do objeto. Sem "magic strings"!
+            options.ClientId = googleSettings.ClientId;
+            options.ClientSecret = googleSettings.ClientSecret;
             options.SignInScheme = IdentityConstants.ExternalScheme;
         })
         .AddJwtBearer(options =>
         {
-            var jwtKey = builder.Configuration["Jwt:Key"];
-            if (string.IsNullOrEmpty(jwtKey))
+            var jwtSettings = builder.Configuration
+                .GetSection("Jwt") // Lembre-se que JwtSettings não tem uma constante SectionName
+                .Get<JwtSettings>();
+
+            // 2. Valide o objeto e a propriedade Key.
+            if (jwtSettings == null || string.IsNullOrEmpty(jwtSettings.Key))
             {
                 throw new InvalidOperationException(
-                    "A chave JWT (Jwt:Key) não foi encontrada na configuração."
+                    "A chave JWT (JwtSettings.Key) não foi encontrada na configuração."
                 );
             }
 
+            // 3. Use a propriedade do objeto.
+            var jwtKeyBytes = Encoding.UTF8.GetBytes(jwtSettings.Key);
             options.TokenValidationParameters = new TokenValidationParameters
             {
                 ValidateIssuerSigningKey = true,
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+                IssuerSigningKey = new SymmetricSecurityKey(jwtKeyBytes),
                 ValidateIssuer = false,
                 ValidateAudience = false,
-
-                NameClaimType = ClaimTypes.Name, // http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name
-                RoleClaimType = ClaimTypes.Role, // http://schemas.microsoft.com/ws/2008/06/identity/claims/role
+                NameClaimType = ClaimTypes.Name,
+                RoleClaimType = ClaimTypes.Role,
             };
 
             options.Events = new JwtBearerEvents
@@ -325,12 +325,6 @@ try
         options.Conventions.AllowAnonymousToPage("/Account/ExternalLogin");
         options.Conventions.AllowAnonymousToPage("/Account/Logout");
     });
-
-    builder.Services.Configure<RedirectSettings>(builder.Configuration.GetSection("Redirect"));
-    builder.Services.Configure<PaymentSettings>(builder.Configuration.GetSection("Payment"));
-    builder.Services.Configure<MercadoPagoSettings>(
-        builder.Configuration.GetSection(MercadoPagoSettings.SectionName)
-    );
 
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddHttpClient();

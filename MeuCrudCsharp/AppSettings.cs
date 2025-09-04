@@ -13,7 +13,7 @@ public class PaymentSettings
 
 public class MercadoPagoSettings
 {
-    public const string SectionName = "MERCADOPAGO";
+    public const string SectionName = "MercadoPago";
 
     public string PublicKey { get; set; }
     public string AccessToken { get; set; } // Adicionado para o AccessToken
@@ -40,4 +40,17 @@ public class SendGridSettings
     public string ApiKey { get; set; }
     public string FromEmail { get; set; }
     public string FromName { get; set; }
+}
+
+public class JwtSettings
+{
+    public string Key { get; set; }
+}
+
+public class GoogleSettings
+{
+    public const string SectionName = "Google";
+    
+    public string ClientId { get; set; }
+    public string ClientSecret { get; set; }
 }
