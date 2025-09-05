@@ -15,6 +15,7 @@ using MeuCrudCsharp.Features.Courses.Services;
 using MeuCrudCsharp.Features.Emails.Interfaces;
 using MeuCrudCsharp.Features.Emails.Services;
 using MeuCrudCsharp.Features.Hubs;
+using MeuCrudCsharp.Features.MercadoPago.Base;
 using MeuCrudCsharp.Features.MercadoPago.Jobs; // Adicionado para os Jobs
 using MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces;
 using MeuCrudCsharp.Features.MercadoPago.Payments.Notification;
@@ -98,6 +99,22 @@ try
     builder.Services.Configure<MercadoPagoSettings>(
         builder.Configuration.GetSection("MercadoPago")
     );
+
+    var mercadoPagoSettings = builder.Configuration.GetSection(MercadoPagoSettings.SectionName)
+        .Get<MercadoPagoSettings>();
+
+    if (mercadoPagoSettings == null || string.IsNullOrEmpty(mercadoPagoSettings.AccessToken))
+    {
+        throw new InvalidOperationException("AccessToken do MercadoPago não está configurado.");
+    }
+
+    builder.Services.AddHttpClient<IMercadoPagoServiceBase, MercadoPagoServiceBase>(client =>
+    {
+        // Configure o cliente HTTP aqui
+        client.BaseAddress = new Uri("https://api.mercadopago.com"); // Exemplo de URL base
+        client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", mercadoPagoSettings.AccessToken);
+    });
 
     // Substitua o seu "builder.Services.ConfigureApplicationCookie" por este bloco completo:
     builder.Services.ConfigureApplicationCookie(options =>

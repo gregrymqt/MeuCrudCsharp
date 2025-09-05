@@ -6,6 +6,7 @@ using MercadoPago.Client;
 using MercadoPago.Config;
 using MeuCrudCsharp.Features.Exceptions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Base
 {
@@ -13,7 +14,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Base
     /// Classe base abstrata para serviços que interagem com a API do Mercado Pago.
     /// Encapsula a lógica comum de envio de requisições HTTP, autenticação e tratamento de erros.
     /// </summary>
-    public abstract class MercadoPagoServiceBase
+    public abstract class MercadoPagoServiceBase : IMercadoPagoServiceBase
     {
         // Usamos 'protected' para que as classes filhas possam acessar esses campos.
         protected readonly ILogger _logger;
@@ -25,7 +26,9 @@ namespace MeuCrudCsharp.Features.MercadoPago.Base
         /// </summary>
         /// <param name="httpClient">O cliente HTTP para realizar as requisições.</param>
         /// <param name="logger">O serviço de logging para registrar informações e erros.</param>
-        protected MercadoPagoServiceBase(HttpClient httpClient, ILogger logger)
+        protected MercadoPagoServiceBase(HttpClient httpClient,
+            ILogger logger
+        )
         {
             _httpClient = httpClient;
             _logger = logger;
@@ -44,22 +47,17 @@ namespace MeuCrudCsharp.Features.MercadoPago.Base
         /// <returns>Uma string contendo o corpo da resposta da API em caso de sucesso.</returns>
         /// <exception cref="ExternalApiException">Lançada quando ocorre um erro de comunicação ou a API retorna um status de erro.</exception>
         /// <exception cref="AppServiceException">Lançada para erros inesperados durante o processo.</exception>
-        protected async Task<string> SendMercadoPagoRequestAsync<T>(
+        public async Task<string> SendMercadoPagoRequestAsync<T>(
             HttpMethod method,
             string endpoint,
             T? payload
         )
-            where T : class
         {
             var request = new HttpRequestMessage(
                 method,
-                new Uri($"https://api.mercadopago.com{endpoint}")
+                endpoint
             );
             
-            request.Headers.Authorization = new AuthenticationHeaderValue(
-                "Bearer",
-                MercadoPagoConfig.AccessToken
-            );
             request.Headers.Add("X-Idempotency-Key", Guid.NewGuid().ToString());
 
             if (payload != null)

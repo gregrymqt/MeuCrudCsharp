@@ -30,6 +30,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
         private readonly IPaymentNotificationService _notificationService;
         private readonly RedirectSettings _redirectSettings;
         private readonly PaymentSettings _paymentSettings;
+        private readonly MercadoPagoSettings _mercadoPagoSettings;
 
         private readonly Dictionary<string, string> _statusMap = new()
         {
@@ -48,7 +49,8 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
             ILogger<CreditCardPaymentService> logger,
             IPaymentNotificationService notificationService,
             IOptions<RedirectSettings> redirectSettings,
-            IOptions<PaymentSettings> paymentSettings
+            IOptions<PaymentSettings> paymentSettings,
+            IOptions<MercadoPagoSettings> mercadoPagoSettings
         )
         {
             _context = context;
@@ -58,6 +60,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
             _logger = logger;
             _subscriptionService = subscriptionService;
             _notificationService = notificationService;
+            _mercadoPagoSettings = mercadoPagoSettings.Value;
         }
 
         /// <inheritdoc />
@@ -300,19 +303,19 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
                 var plan = await _context
                     .Plans.AsNoTracking()
                     .FirstOrDefaultAsync(p =>
-                        p.ExternalPlanId == subscriptionData.PreapprovalPlanId
+                        p.ExternalPlanId == _mercadoPagoSettings.Plans.Anual.Id
                     );
 
                 if (plan == null)
                 {
                     throw new ResourceNotFoundException(
-                        $"O plano com ID externo '{subscriptionData.PreapprovalPlanId}' não foi encontrado."
+                        $"O plano com ID externo '{_mercadoPagoSettings.Plans.Anual.Id}' não foi encontrado."
                     );
                 }
 
                 var createSubscriptionDto = new CreateSubscriptionDto
                 {
-                    PreapprovalPlanId = subscriptionData.PreapprovalPlanId!,
+                    PreapprovalPlanId = _mercadoPagoSettings.Plans.Anual.Id,
                     PayerEmail = subscriptionData?.Payer?.Email,
                     CardTokenId = subscriptionData?.Token,
                     Reason = plan.Name,

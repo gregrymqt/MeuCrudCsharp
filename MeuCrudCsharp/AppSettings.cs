@@ -20,6 +20,7 @@ public class MercadoPagoSettings
     public string WebhookSecret { get; set; } // Adicionado para o segredo do Webhook
     public string Defaultdescription { get; set; }
     public PlanConfiguration Plans { get; set; }
+    public PaymentSettings Payment { get; set; }
 }
 
 public class PlanConfiguration
@@ -53,4 +54,7 @@ public class GoogleSettings
     
     public string ClientId { get; set; }
     public string ClientSecret { get; set; }
+    
+    public RedirectSettings Redirect { get; set; }
+
 }

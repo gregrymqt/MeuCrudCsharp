@@ -54,8 +54,4 @@ public class CreditCardPaymentRequestDto
     /// </summary>
     public string? Plano { get; set; }
 
-    /// <summary>
-    /// O ID do plano de pré-aprovação para criar uma assinatura. Se fornecido, indica uma transação recorrente.
-    /// </summary>
-    public string? PreapprovalPlanId { get; set; }
 }
