@@ -28,9 +28,8 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly ILogger<CreditCardPaymentService> _logger;
         private readonly IPaymentNotificationService _notificationService;
-        private readonly RedirectSettings _redirectSettings;
-        private readonly PaymentSettings _paymentSettings;
         private readonly MercadoPagoSettings _mercadoPagoSettings;
+        private readonly GeneralSettings _generalSettings;
 
         private readonly Dictionary<string, string> _statusMap = new()
         {
@@ -48,19 +47,17 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
             IHttpContextAccessor httpContextAccessor,
             ILogger<CreditCardPaymentService> logger,
             IPaymentNotificationService notificationService,
-            IOptions<RedirectSettings> redirectSettings,
-            IOptions<PaymentSettings> paymentSettings,
-            IOptions<MercadoPagoSettings> mercadoPagoSettings
+            IOptions<MercadoPagoSettings> mercadoPagoSettings,
+            IOptions<GeneralSettings> generalSettings
         )
         {
             _context = context;
-            _redirectSettings = redirectSettings.Value;
-            _paymentSettings = paymentSettings.Value;
             _httpContextAccessor = httpContextAccessor;
             _logger = logger;
             _subscriptionService = subscriptionService;
             _notificationService = notificationService;
             _mercadoPagoSettings = mercadoPagoSettings.Value;
+            _generalSettings = generalSettings.Value;
         }
 
         /// <inheritdoc />
@@ -170,7 +167,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
                         },
                     },
                     ExternalReference = novoPagamento.ExternalId, // Referência externa para rastreamento
-                    NotificationUrl = _paymentSettings.NotificationUrl,
+                    NotificationUrl = $"{_generalSettings.BaseUrl}/webhook/mercadopago"
                 };
                 // =======================================================
                 //  FIM DA CORREÇÃO PRINCIPAL
@@ -319,7 +316,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
                     PayerEmail = subscriptionData?.Payer?.Email,
                     CardTokenId = subscriptionData?.Token,
                     Reason = plan.Name,
-                    BackUrl = $"{_redirectSettings.Url}/Subscription/Success",
+                    BackUrl = $"{_generalSettings.BaseUrl}/Subscription/Success",
                 };
 
                 var user = _httpContextAccessor.HttpContext?.User;

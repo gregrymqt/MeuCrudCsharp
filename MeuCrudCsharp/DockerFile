@@ -1,7 +1,7 @@
 # -----------------------------------------------------------------------------
 # Estágio 1: Build (A Oficina de Montagem)
 # -----------------------------------------------------------------------------
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
 
 # Copia e restaura as dependências (sem alterações aqui)
@@ -26,7 +26,7 @@ RUN dotnet publish "MeuCrudCsharp.csproj" -c Release -o /app/publish /p:UseAppHo
 # -----------------------------------------------------------------------------
 # Estágio 3: Final (O Showroom)
 # -----------------------------------------------------------------------------
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
+FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
 ENTRYPOINT ["dotnet", "MeuCrudCsharp.dll"]

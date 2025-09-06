@@ -1,37 +1,34 @@
 services:
-  # ... serviço do redis (sem mudanças) ...
+  # --- Serviço do Redis ---
   redis:
     image: "redis:alpine"
     container_name: meu-servidor-redis
     ports:
       - "6379:6379"
 
+  # --- Serviço da sua Aplicação Web ---
   webapp:
     container_name: minha-aplicacao-aspnet
-    build: .
+    build: . # Diz ao Compose para usar o Dockerfile nesta pasta para construir a imagem
     ports:
       - "8080:8080"
+    env_file:
+      - .env # Aponta para o ficheiro que contém os segredos
     environment:
-      # --- Configurações da Aplicação e Conexões ---
-      - ConnectionStrings__Redis=redis:6379
+      # As variáveis abaixo são APENAS REFERÊNCIAS.
+      # Os valores reais serão lidos do ficheiro .env.
       - ASPNETCORE_URLS=http://+:8080
-
-      # --- Segredos Lidos do Arquivo .env ---
-      # JWT
-      - Jwt__Key=${JWT_SECRET_KEY}
-
-      # Google
-      - Google__ClientId=${GOOGLE_CLIENT_ID}
-      - Google__ClientSecret=${GOOGLE_CLIENT_SECRET}
-
-      # Mercado Pago
-      - MercadoPago__AccessToken=${MERCADOPAGO_ACCESS_TOKEN}
-      - MercadoPago__WebhookSecret=${MERCADOPAGO_WEBHOOK_SECRET}
-
-      # SendGrid
-      - SendGrid__ApiKey=${SENDGRID_API_KEY}
-      - SendGrid__FromEmail=${SENDGRID_FROM_EMAIL}
-      - SendGrid__FromName=${SENDGRID_FROM_NAME}
+      - ConnectionStrings__DefaultConnection=${ConnectionStrings__DefaultConnection}
+      - ConnectionStrings__Redis=${ConnectionStrings__Redis}
+      - MercadoPago__AccessToken=${MercadoPago__AccessToken}
+      - MercadoPago__WebhookSecret=${MercadoPago__WebhookSecret}
+      - MercadoPago__PublicKey=${MercadoPago__PublicKey}
+      - Jwt__Key=${Jwt__Key}
+      - Google__ClientId=${Google__ClientId}
+      - Google__ClientSecret=${Google__ClientSecret}
+      - SendGrid__ApiKey=${SendGrid__ApiKey}
+      - SendGrid__FromEmail=${SendGrid__FromEmail}
+      - SendGrid__FromName=${SendGrid__FromName}
     depends_on:
       - redis
 

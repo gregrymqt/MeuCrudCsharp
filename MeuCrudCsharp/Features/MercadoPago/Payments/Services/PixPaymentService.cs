@@ -7,6 +7,7 @@ using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.MercadoPago.Payments.Dtos;
 using MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces;
+using Microsoft.Extensions.Options;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services;
 
@@ -16,19 +17,19 @@ public class PixPaymentService : IPixPaymentService
     private readonly ICacheService _cacheService;
     private readonly IPaymentNotificationService _notificationService;
     private readonly ApiDbContext _dbContext;
-    private readonly PaymentSettings _settings;
+    private readonly GeneralSettings _generalsettings;
 
     public PixPaymentService(ILogger<PixPaymentService> logger,
         ICacheService cacheService,
         IPaymentNotificationService notificationService,
         ApiDbContext dbContext,
-        PaymentSettings settings)
+        IOptions<GeneralSettings> settings)
     {
         _logger = logger;
         _cacheService = cacheService;
         _notificationService = notificationService;
         _dbContext = dbContext;
-        _settings = settings;
+        _generalsettings = settings.Value;
     }
 
     private readonly Dictionary<string, string> _statusMap = new()
@@ -106,7 +107,7 @@ public class PixPaymentService : IPixPaymentService
                     }
                 },
                 ExternalReference = novoPixPayment.ExternalId,
-                NotificationUrl = _settings.NotificationUrl,
+                NotificationUrl = $"{_generalsettings.BaseUrl}/webhook/mercadpago",
             };
 
             Payment payment = await paymentClient.CreateAsync(paymentRequest, requestOptions);

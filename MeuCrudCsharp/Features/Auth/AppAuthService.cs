@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
 namespace MeuCrudCsharp.Features.Auth
@@ -23,8 +24,8 @@ namespace MeuCrudCsharp.Features.Auth
         private readonly ILogger<AppAuthService> _logger;
         private readonly UserManager<Users> _userManager;
         private readonly IConfiguration _configuration;
-
         private readonly ApiDbContext _dbContext;
+        private readonly JwtSettings _jwtSettings;
 
         /// <summary>
         /// Inicializa o serviço de autenticação da aplicação.
@@ -36,13 +37,15 @@ namespace MeuCrudCsharp.Features.Auth
             UserManager<Users> userManager,
             IConfiguration configuration,
             ILogger<AppAuthService> logger,
-            ApiDbContext dbContext
+            ApiDbContext dbContext,
+            IOptions<JwtSettings> jwtSettings
         )
         {
             _userManager = userManager;
             _configuration = configuration;
             _logger = logger;
             _dbContext = dbContext;
+            _jwtSettings = jwtSettings.Value;
         }
 
         /// <summary>
@@ -76,7 +79,14 @@ namespace MeuCrudCsharp.Features.Auth
                 claims.Add(new Claim(ClaimTypes.Role, role));
             }
 
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!));
+            if (_jwtSettings == null || string.IsNullOrEmpty(_jwtSettings.Key))
+            {
+                throw new InvalidOperationException(
+                    "A chave JWT (JwtSettings.Key) não foi encontrada na configuração."
+                );
+            }
+
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.Key));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
             var expires = DateTime.UtcNow.AddHours(8);
 

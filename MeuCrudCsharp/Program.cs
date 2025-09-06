@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.IdentityModel.Tokens.Jwt;
+using System.Runtime.InteropServices;
 using System.Security.Claims;
 using System.Text;
 using Hangfire;
@@ -42,6 +43,9 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
+using DotNetEnv;
+using System.Security.Cryptography;
+
 
 // Isso garante que até mesmo os erros de inicialização do host possam ser logados.
 Log.Logger = new LoggerConfiguration()
@@ -62,11 +66,12 @@ Log.Logger = new LoggerConfiguration()
 try
 {
     Log.Information("Iniciando a aplicação...");
+    Env.Load();
 
     var builder = WebApplication.CreateBuilder(args);
 
     builder.Host.UseSerilog();
-
+    
     // --- Service Registration (Dependency Injection) ---
 
     // 1. Core ASP.NET Core Services
@@ -98,6 +103,9 @@ try
     );
     builder.Services.Configure<MercadoPagoSettings>(
         builder.Configuration.GetSection("MercadoPago")
+    );
+    builder.Services.Configure<GeneralSettings>(
+        builder.Configuration.GetSection(GeneralSettings.SectionName)
     );
 
     var mercadoPagoSettings = builder.Configuration.GetSection(MercadoPagoSettings.SectionName)
@@ -371,7 +379,7 @@ try
             policy =>
             {
                 policy.WithOrigins(
-                        "https://074f5d6c3d9e.ngrok-free.app",
+                        "https://214aeb274764.ngrok-free.app",
                         "http://localhost:5045"
                     )
                     .AllowAnyHeader()

@@ -1,26 +1,18 @@
-
-public class RedirectSettings
+public class GeneralSettings
 {
-    public string Url { get; set; }
+    public const string SectionName = "General";
+    public string BaseUrl { get; set; }
 }
-
-public class PaymentSettings
-{
-    public string NotificationUrl { get; set; }
-}
-
-// ADICIONE ESTAS NOVAS CLASSES ABAIXO
 
 public class MercadoPagoSettings
 {
     public const string SectionName = "MercadoPago";
 
     public string PublicKey { get; set; }
-    public string AccessToken { get; set; } // Adicionado para o AccessToken
-    public string WebhookSecret { get; set; } // Adicionado para o segredo do Webhook
+    public string AccessToken { get; set; }
+    public string WebhookSecret { get; set; }
     public string Defaultdescription { get; set; }
     public PlanConfiguration Plans { get; set; }
-    public PaymentSettings Payment { get; set; }
 }
 
 public class PlanConfiguration
@@ -54,7 +46,4 @@ public class GoogleSettings
     
     public string ClientId { get; set; }
     public string ClientSecret { get; set; }
-    
-    public RedirectSettings Redirect { get; set; }
-
 }
