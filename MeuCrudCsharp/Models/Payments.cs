@@ -1,5 +1,4 @@
-﻿// Models/Payment.cs
-using System;
+﻿using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
@@ -7,24 +6,12 @@ using Microsoft.EntityFrameworkCore;
 namespace MeuCrudCsharp.Models
 {
     [Index(nameof(UserId))]
-    [Index(nameof(SubscriptionId))]
+    [Index(nameof(SubscriptionId))] // A FK já é um Guid (string), então está ok.
     [Index(nameof(ExternalId), IsUnique = true)]
     [Index(nameof(Status))]
     [Index(nameof(PayerEmail))]
-    [Index(nameof(CreatedAt))]
-    public class Payments : TransactionBase // Herda da classe base
+    public class Payments : TransactionBase
     {
-        // Propriedades herdadas de TransactionBase:
-        // - Id
-        // - ExternalId (será usado para o PaymentId do MP)
-        // - UserId
-        // - User
-        // - Status
-        // - PayerEmail
-        // - CreatedAt, UpdatedAt
-        // - PaymentID
-
-        // Propriedades específicas de um Pagamento Único
         [Required]
         [MaxLength(20)]
         public string? Method { get; set; }
@@ -45,6 +32,8 @@ namespace MeuCrudCsharp.Models
         [Column(TypeName = "decimal(10, 2)")]
         public decimal Amount { get; set; }
 
+        // A FK para Subscription é uma string (Guid), o que já é seguro.
+        // Não precisamos de uma propriedade de PublicId separada aqui.
         [Required]
         public string SubscriptionId { get; set; } = null!;
 

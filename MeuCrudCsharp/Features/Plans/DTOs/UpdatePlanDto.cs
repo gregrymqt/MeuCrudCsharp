@@ -1,34 +1,34 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace MeuCrudCsharp.Features.Plans.DTOs
 {
     /// <summary>
-    /// Represents the data required to update an existing subscription plan.
-    /// All properties are optional, allowing for partial updates.
+    /// Representa os dados para atualizar um plano de assinatura.
+    /// Propriedades nulas não serão alteradas.
     /// </summary>
     public class UpdatePlanDto
     {
         /// <summary>
-        /// The new name or reason for the subscription plan.
+        /// O novo nome (razão) do plano.
         /// </summary>
-        [StringLength(256, ErrorMessage = "The reason must be up to 256 characters long.")]
+        [StringLength(256, ErrorMessage = "A razão deve ter no máximo 256 caracteres.")]
+        [JsonPropertyName("reason")] // Mapeia para o campo esperado pela API do Mercado Pago
         public string? Reason { get; set; }
 
         /// <summary>
-        /// The new URL to which the user will be redirected after completing the payment flow.
+        /// O novo valor da transação recorrente.
         /// </summary>
-        [Url(ErrorMessage = "The back URL must be a valid URL.")]
-        public string? BackUrl { get; set; }
+        [Range(0.01, 1000000.00, ErrorMessage = "O valor da transação deve ser positivo.")]
+        [JsonPropertyName("transaction_amount")]
+        public decimal? TransactionAmount { get; set; } // ALTERADO para decimal? para ser opcional
 
+        // CAMPO ADICIONADO para corresponder ao front-end
         /// <summary>
-        /// The new transaction amount for the recurring payment.
+        /// A nova frequência da cobrança (ex: "months").
         /// </summary>
-        [Range(
-            typeof(decimal),
-            "0.01",
-            "1000000.00",
-            ErrorMessage = "The transaction amount must be a positive value."
-        )]
-        public decimal TransactionAmount { get; set; }
+        [StringLength(20, ErrorMessage = "O tipo de frequência deve ter no máximo 20 caracteres.")]
+        [JsonPropertyName("frequency_type")]
+        public string? FrequencyType { get; set; }
     }
 }

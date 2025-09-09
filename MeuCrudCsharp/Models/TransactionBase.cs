@@ -1,13 +1,13 @@
-﻿// Models/TransactionBase.cs
-using System;
+﻿using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using Microsoft.EntityFrameworkCore;
 
 namespace MeuCrudCsharp.Models
 {
     public abstract class TransactionBase
     {
+        // A chave primária já é um Guid em formato de string, o que é seguro para expor.
+        // Neste caso, ele serve tanto como PK quanto como identificador público.
         [Key]
         public string Id { get; set; }
 
@@ -15,6 +15,7 @@ namespace MeuCrudCsharp.Models
         [Required]
         public string? ExternalId { get; set; }
 
+        // A FK para o usuário já é uma string (padrão do Identity), então está correto.
         [Required]
         public string UserId { get; set; }
 
@@ -25,7 +26,6 @@ namespace MeuCrudCsharp.Models
         [MaxLength(20)]
         public string? Status { get; set; }
 
-        // Adicionando PayerEmail como campo comum
         [Required]
         [MaxLength(255)]
         public string? PayerEmail { get; set; }
@@ -35,7 +35,7 @@ namespace MeuCrudCsharp.Models
 
         public DateTime? UpdatedAt { get; set; }
 
-        public string? PaymentId { get; set; } // ID do pagamento no Mercado Pago
+        public string? PaymentId { get; set; }
 
         protected TransactionBase()
         {

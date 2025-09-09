@@ -124,6 +124,7 @@ namespace MeuCrudCsharp.Features.Auth
 
             // Procura o usuário
             var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.GoogleId == googleId);
+
             if (user == null)
             {
                 // Se não encontra, procura por e-mail para vincular a conta
@@ -131,6 +132,7 @@ namespace MeuCrudCsharp.Features.Auth
                 if (user == null)
                 {
                     // Se realmente não existe, cria um novo
+                    _logger.LogInformation("Nenhum usuário encontrado para {Email}. Criando uma nova conta.", email);
                     string? name = googleUserPrincipal.FindFirstValue(ClaimTypes.Name);
                     string? avatar = googleUserPrincipal.FindFirstValue("urn:google:picture");
                     user = new Users
@@ -151,13 +153,27 @@ namespace MeuCrudCsharp.Features.Auth
                         );
                     }
 
-                    // ✅ SOLUÇÃO: ATRIBUA UM PAPEL PADRÃO AO NOVO USUÁRIO
-                    _logger.LogInformation(
-                        "Novo usuário {Email} criado. Atribuindo papel 'User'.",
-                        user.Email
-                    );
-                    await _userManager.AddToRoleAsync(user, "User");
+                    // --- LÓGICA DE ATRIBUIÇÃO DE PAPEL PARA NOVOS USUÁRIOS ---
+                    // Verifica se o email do novo usuário é o seu email de admin
+                    if (user.Email.Equals("lucasvicentedesouza021@gmail.com", StringComparison.OrdinalIgnoreCase))
+                    {
+                        _logger.LogInformation(
+                            "Novo usuário admin {Email} criado. Atribuindo papel 'Admin'.",
+                            user.Email
+                        );
+                        await _userManager.AddToRoleAsync(user, "Admin");
+                    }
+                    else
+                    {
+                        // Se não for você, atribui o papel padrão 'User'
+                        _logger.LogInformation(
+                            "Novo usuário {Email} criado. Atribuindo papel 'User'.",
+                            user.Email
+                        );
+                        await _userManager.AddToRoleAsync(user, "User");
+                    }
                 }
+
                 // Associa o login do Google à conta encontrada ou recém-criada
                 await _userManager.AddLoginAsync(
                     user,

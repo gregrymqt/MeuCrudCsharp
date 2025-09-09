@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using MeuCrudCsharp.Data;
+using MeuCrudCsharp.Features.Caching;
 using MeuCrudCsharp.Features.Course.DTOs;
 using MeuCrudCsharp.Features.Courses.Interfaces;
 using MeuCrudCsharp.Features.Exceptions;

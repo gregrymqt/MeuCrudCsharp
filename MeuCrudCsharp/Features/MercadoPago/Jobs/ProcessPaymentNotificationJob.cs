@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Hangfire;
 using MeuCrudCsharp.Data;
+using MeuCrudCsharp.Features.Caching;
 using MeuCrudCsharp.Features.Exceptions; // Nossas exceções
 using MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces;
 using MeuCrudCsharp.Features.MercadoPago.Payments.Notification;

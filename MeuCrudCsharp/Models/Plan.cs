@@ -1,33 +1,50 @@
-﻿// Models/Plan.cs
-
-using System;
+﻿using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 
 namespace MeuCrudCsharp.Models
 {
+    // Este modelo já está perfeito e serve como nosso guia.
+    // Nenhuma alteração necessária.
+    [Index(nameof(PublicId), IsUnique = true)]
     [Index(nameof(IsActive))]
     public class Plan
     {
-        [Key] public Guid Id { get; set; } = new Guid();
+        [Key] // Chave primária interna (int) -> Ótima performance
+        public int Id { get; set; }
 
-        // ID do plano no provedor de pagamento (ex: Mercado Pago Pre-approval Plan ID)
-        [Required] [MaxLength(255)] public string? ExternalPlanId { get; set; } = string.Empty;
-        [Required] [MaxLength(100)] public string? Name { get; set; } // Ex: "Plano Anual", "Plano Mensal"
+        // Identificador público (Guid) -> Ótima segurança
+        [Required]
+        public Guid PublicId { get; set; } = Guid.NewGuid();
 
-        [MaxLength(255)] public string? Description { get; set; }
+        [Required]
+        [MaxLength(255)]
+        public string ExternalPlanId { get; set; } = string.Empty;
+
+        [Required]
+        [MaxLength(100)]
+        public string Name { get; set; }
+
+        [MaxLength(255)]
+        public string? Description { get; set; }
 
         [Required]
         [Column(TypeName = "decimal(10, 2)")]
         public decimal TransactionAmount { get; set; }
 
-        [Required] [MaxLength(10)] public string CurrencyId { get; set; } = "BRL";
+        [Required]
+        [MaxLength(10)]
+        public string CurrencyId { get; set; } = "BRL";
 
-        [Required] public int Frequency { get; set; } // Ex: 1
+        [Required]
+        public int Frequency { get; set; }
 
-        [Required] [MaxLength(20)] public string FrequencyType { get; set; }
+        [Required]
+        [MaxLength(20)]
+        public string FrequencyType { get; set; }
 
-        [Required] public bool IsActive { get; set; } = true;
+        [Required]
+        public bool IsActive { get; set; } = true;
     }
 }

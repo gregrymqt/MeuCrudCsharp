@@ -8,6 +8,8 @@ namespace MeuCrudCsharp.Features.Plans.DTOs
     /// </summary>
     public class PlanDto
     {
+        public string PublicId { get; set; }
+
         /// <summary>
         /// The display name of the plan (e.g., "Annual Plan").
         /// </summary>

@@ -45,6 +45,7 @@ using Microsoft.IdentityModel.Tokens;
 using Serilog;
 using DotNetEnv;
 using System.Security.Cryptography;
+using MeuCrudCsharp.Features.Caching;
 
 
 // Isso garante que até mesmo os erros de inicialização do host possam ser logados.

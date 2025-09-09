@@ -1,30 +1,40 @@
-using System.IO;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Configuration;
+using System.IO;
 
-// Substitua "Seu.Namespace.Aqui" pelo namespace real do seu projeto
 namespace MeuCrudCsharp.Data
 {
     public class ApiDbContextFactory : IDesignTimeDbContextFactory<ApiDbContext>
     {
         public ApiDbContext CreateDbContext(string[] args)
         {
-            // Constrói a configuração para ler o appsettings.json
-            // Isso permite que a ferramenta 'dotnet ef' encontre sua connection string
-            // sem precisar rodar todo o Program.cs
-            IConfigurationRoot configuration = new ConfigurationBuilder()
+            // Detecta o ambiente atual (Development, Production, etc.)
+            var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+
+            var builder = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile("appsettings.json")
-                .AddJsonFile("appsettings.Development.json", optional: true) // Opcional, mas bom ter
-                .Build();
+                .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+                .AddJsonFile($"appsettings.{environment}.json", optional: true)
+                .AddEnvironmentVariables();
+
+            // A MÁGICA ACONTECE AQUI!
+            // Se estivermos em desenvolvimento, carregue os User Secrets.
+            if (environment == "Development")
+            {
+                builder.AddUserSecrets<ApiDbContextFactory>();
+            }
+
+            IConfigurationRoot configuration = builder.Build();
 
             var optionsBuilder = new DbContextOptionsBuilder<ApiDbContext>();
-
-            // Pega a connection string diretamente da configuração
             var connectionString = configuration.GetConnectionString("DefaultConnection");
 
-            // Configura o DbContext para usar SQL Server
+            if (string.IsNullOrEmpty(connectionString))
+            {
+                throw new InvalidOperationException("A ConnectionString 'DefaultConnection' não foi encontrada. Verifique seus arquivos appsettings.json e User Secrets.");
+            }
+
             optionsBuilder.UseSqlServer(connectionString);
 
             return new ApiDbContext(optionsBuilder.Options);

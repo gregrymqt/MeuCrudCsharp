@@ -17,19 +17,19 @@ public interface IMercadoPagoPlanService
         /// <summary>
         /// Updates an existing subscription plan.
         /// </summary>
-        /// <param name="externalPlanId">The unique identifier of the plan to update.</param>
+        /// <param name="publicID">The unique identifier of the plan to update.</param>
         /// <param name="updateDto">The data transfer object with the updated plan details.</param>
         /// <returns>A task that represents the asynchronous operation. The task result contains the updated <see cref="Plan"/> entity.</returns>
         /// <exception cref="ResourceNotFoundException">Thrown if a plan with the specified ID is not found.</exception>
         /// <exception cref="ExternalApiException">Thrown if there is a communication failure with the payment provider API.</exception>
-        Task<Plan> UpdatePlanAsync(string externalPlanId, UpdatePlanDto updateDto);
+        Task<Plan> UpdatePlanAsync(Guid publicID, UpdatePlanDto updateDto);
 
         /// <summary>
         /// Deletes a subscription plan.
         /// </summary>
-        /// <param name="externalPlanId">The unique identifier of the plan to delete.</param>
+        /// <param name="publicID">The unique identifier of the plan to delete.</param>
         /// <returns>A task that represents the asynchronous operation.</returns>
         /// <exception cref="ResourceNotFoundException">Thrown if a plan with the specified ID is not found.</exception>
         /// <exception cref="ExternalApiException">Thrown if there is a communication failure with the payment provider API.</exception>
-        Task DeletePlanAsync(string externalPlanId);
+        Task DeletePlanAsync(Guid publicID);
 }

@@ -87,7 +87,7 @@ namespace MeuCrudCsharp.Features.Plans.Controllers
     /// <response code="404">If a plan with the specified ID is not found.</response>
     /// <response code="500">If an unexpected server error occurs.</response>
     [HttpPut("{id}")]
-    public async Task<IActionResult> UpdatePlan(string id, [FromBody] UpdatePlanDto updateDto)
+    public async Task<IActionResult> UpdatePlan(Guid id, [FromBody] UpdatePlanDto updateDto)
     {
         try
         {
@@ -117,7 +117,7 @@ namespace MeuCrudCsharp.Features.Plans.Controllers
     /// <response code="404">If a plan with the specified ID is not found.</response>
     /// <response code="500">If an unexpected server error occurs.</response>
     [HttpDelete("{id}")]
-    public async Task<IActionResult> DeletePlan(string id)
+    public async Task<IActionResult> DeletePlan(Guid id)
     {
         try
         {

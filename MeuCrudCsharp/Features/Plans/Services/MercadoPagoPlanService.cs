@@ -112,25 +112,35 @@ public class MercadoPagoPlanService : MercadoPagoServiceBase, IMercadoPagoPlanSe
         }
 
         /// <inheritdoc />
-        public async Task<Plan> UpdatePlanAsync(string externalPlanId, UpdatePlanDto updateDto)
+        public async Task<Plan> UpdatePlanAsync(Guid publicId, UpdatePlanDto updateDto)
         {
             try
             {
+                // CORREÇÃO 1: Busca o plano local pelo PublicId para obter o ExternalPlanId
+                var localPlan = await GetPlanByPublicIdAsync(publicId);
+                var externalPlanId = localPlan.ExternalPlanId;
+
                 var endpoint = $"/preapproval_plan/{externalPlanId}";
                 await SendMercadoPagoRequestAsync(HttpMethod.Put, endpoint, updateDto);
 
-                var localPlan = await _context.Plans.FirstOrDefaultAsync(p =>
-                    p.ExternalPlanId == externalPlanId
-                );
-                if (localPlan == null)
-                    throw new ResourceNotFoundException(
-                        $"Plano com ID externo {externalPlanId} não encontrado localmente para atualização."
-                    );
+                // CORREÇÃO 2: Atualiza apenas os campos que foram fornecidos no DTO
+                if (updateDto.Reason != null)
+                {
+                    localPlan.Name = updateDto.Reason;
+                }
+                if (updateDto.TransactionAmount.HasValue)
+                {
+                    localPlan.TransactionAmount = updateDto.TransactionAmount.Value;
+                }
+                if (updateDto.FrequencyType != null)
+                {
+                    localPlan.FrequencyType = updateDto.FrequencyType;
+                }
+                // (Adicione outros campos como BackUrl se você os armazena localmente)
 
-                localPlan.Name = updateDto.Reason;
-                localPlan.TransactionAmount = updateDto.TransactionAmount;
                 await _context.SaveChangesAsync();
 
+                // CORREÇÃO 3: Invalida ambos os caches onde os planos podem estar
                 await _cacheService.RemoveAsync("ActiveSubscriptionPlans");
                 _logger.LogInformation("Plano {PlanId} atualizado com sucesso.", externalPlanId);
 
@@ -145,7 +155,7 @@ public class MercadoPagoPlanService : MercadoPagoServiceBase, IMercadoPagoPlanSe
                 _logger.LogError(
                     ex,
                     "Erro da API externa ao tentar atualizar o plano {PlanId}.",
-                    externalPlanId
+                    publicId
                 );
                 throw;
             }
@@ -154,7 +164,7 @@ public class MercadoPagoPlanService : MercadoPagoServiceBase, IMercadoPagoPlanSe
                 _logger.LogError(
                     ex,
                     "Erro inesperado ao atualizar o plano {PlanId}.",
-                    externalPlanId
+                    publicId
                 );
                 throw new AppServiceException(
                     "Ocorreu um erro em nosso sistema ao atualizar o plano.",
@@ -168,22 +178,19 @@ public class MercadoPagoPlanService : MercadoPagoServiceBase, IMercadoPagoPlanSe
         /// This performs a "soft delete". In Mercado Pago, plans are not deleted but are instead
         /// deactivated by setting their status to 'cancelled'. Locally, the 'IsActive' flag is set to false.
         /// </remarks>
-        public async Task DeletePlanAsync(string externalPlanId)
+        public async Task DeletePlanAsync(Guid publicId)
         {
             try
             {
+                var localPlan = await GetPlanByPublicIdAsync(publicId);
+                var externalPlanId = localPlan.ExternalPlanId;
+
                 var endpoint = $"/preapproval_plan/{externalPlanId}";
                 var payload = new { status = "cancelled" };
                 await SendMercadoPagoRequestAsync(HttpMethod.Put, endpoint, payload);
 
-                var localPlan = await _context.Plans.FirstOrDefaultAsync(p =>
-                    p.ExternalPlanId == externalPlanId
-                );
-                if (localPlan != null)
-                {
-                    localPlan.IsActive = false;
-                    await _context.SaveChangesAsync();
-                }
+                localPlan.IsActive = false; // Soft delete
+                await _context.SaveChangesAsync();
 
                 await _cacheService.RemoveAsync("ActiveSubscriptionPlans");
                 _logger.LogInformation("Plano {PlanId} desativado com sucesso.", externalPlanId);
@@ -193,7 +200,7 @@ public class MercadoPagoPlanService : MercadoPagoServiceBase, IMercadoPagoPlanSe
                 _logger.LogError(
                     ex,
                     "Erro da API externa ao tentar desativar o plano {PlanId}.",
-                    externalPlanId
+                    publicId
                 );
                 throw;
             }
@@ -202,12 +209,24 @@ public class MercadoPagoPlanService : MercadoPagoServiceBase, IMercadoPagoPlanSe
                 _logger.LogError(
                     ex,
                     "Erro inesperado ao desativar o plano {PlanId}.",
-                    externalPlanId
+                    publicId
                 );
                 throw new AppServiceException(
                     "Ocorreu um erro em nosso sistema ao desativar o plano.",
                     ex
                 );
             }
+        }
+        private async Task<Plan> GetPlanByPublicIdAsync(Guid publicId)
+        {
+            // BUG CRÍTICO CORRIGIDO: A busca deve ser em 'PublicId', não 'ExternalPlanId'
+            var plan = await _context.Plans
+                .FirstOrDefaultAsync(p => p.PublicId == publicId);
+
+            if (plan == null)
+            {
+                throw new ResourceNotFoundException($"Plano com PublicId {publicId} não encontrado.");
+            }
+            return plan;
         }
 }

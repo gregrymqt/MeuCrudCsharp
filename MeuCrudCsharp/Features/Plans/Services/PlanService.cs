@@ -19,6 +19,8 @@ namespace MeuCrudCsharp.Features.Plans.Services
     {
         private readonly ApiDbContext _context;
         private readonly ICacheService _cacheService;
+        private const string ApiPlansCacheKey = "ActiveApiPlans";
+        private const string DbPlansCacheKey = "ActiveDbPlans";
 
         /// <summary>
         /// Initializes a new instance of the <see cref="PlanService"/> class.
@@ -46,8 +48,15 @@ namespace MeuCrudCsharp.Features.Plans.Services
         /// <returns>Uma lista de PlanDto.</returns>
         public async Task<List<PlanDto>> GetActiveDbPlansAsync()
         {
-            _logger.LogInformation("Buscando planos ativos diretamente do banco de dados local.");
-            return await FetchPlansFromDatabaseAsync();
+            _logger.LogInformation("Buscando planos ativos do banco de dados (com cache).");
+
+            var cachedPlans = await _cacheService.GetOrCreateAsync(
+                DbPlansCacheKey,
+                FetchPlansFromDatabaseAsync, // A função original já retorna Task<List<PlanDto>>
+                TimeSpan.FromMinutes(15) // Cache mais longo para dados que mudam com menos frequência.
+            );
+        
+            return cachedPlans ?? new List<PlanDto>();
         }
 
         /// <summary>
@@ -57,34 +66,52 @@ namespace MeuCrudCsharp.Features.Plans.Services
         /// <returns>Uma lista de PlanDto mapeada da resposta da API.</returns>
         public async Task<List<PlanDto>> GetActiveApiPlansAsync()
         {
-            _logger.LogInformation("Buscando planos ativos diretamente da API do Mercado Pago (Admin).");
-            try
-            {
-                var apiPlans = await FetchPlansFromMercadoPagoAsync();
-            
-                // Mapeia os resultados da API para o nosso DTO de exibição
-                return apiPlans.Select(MapApiPlanToDto).ToList();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Falha crítica ao buscar planos da API do Mercado Pago.");
-                // Para este método, se a API falhar, nós lançamos uma exceção.
-                // Não há fallback, pois o objetivo é justamente consultar a API.
-                throw new AppServiceException("Não foi possível carregar os planos da API do Mercado Pago.", ex);
-            }
+            _logger.LogInformation("Buscando planos ativos da API (com cache).");
+
+            // Utiliza o GetOrCreateAsync para buscar do cache ou, se não encontrar,
+            // executa a função para buscar da API e depois salva o resultado no cache.
+            var cachedPlans = await _cacheService.GetOrCreateAsync(
+                ApiPlansCacheKey,
+                async () =>
+                {
+                    // A lógica original de busca e mapeamento fica aqui dentro.
+                    var apiPlans = await FetchPlansFromMercadoPagoAsync();
+                    return apiPlans.ToList();
+                },
+                TimeSpan.FromMinutes(5) // Cache mais curto para dados que podem mudar com mais frequência.
+            );
+
+            // Retorna a lista do cache ou uma lista vazia se tudo falhar.
+            return cachedPlans ?? new List<PlanDto>();
         }
 
 // --- MÉTODOS AUXILIARES ---
 
-        private async Task<IEnumerable<PlanResponseDto>> FetchPlansFromMercadoPagoAsync()
+// Este método agora é o único responsável por buscar da API E mapear os resultados.
+        private async Task<IEnumerable<PlanDto>> FetchPlansFromMercadoPagoAsync()
         {
             const string endpoint = "/preapproval_plan/search";
             var responseBody = await SendMercadoPagoRequestAsync(HttpMethod.Get, endpoint, (object?)null);
             var apiResponse = JsonSerializer.Deserialize<PlanSearchResponseDto>(responseBody);
 
-            // Garante que a resposta e os resultados não são nulos antes de continuar
-            return apiResponse?.Results?.Where(plan => plan.Status == "active" && plan.AutoRecurring != null)
-                   ?? Enumerable.Empty<PlanResponseDto>();
+            // Usamos 'PlanResponseDto' aqui, que é o tipo que vem da API
+            var activePlansFromApi =
+                apiResponse?.Results?.Where(plan => plan.Status == "active" && plan.AutoRecurring != null)
+                ?? Enumerable.Empty<PlanResponseDto>();
+
+            var planResponseDtos = activePlansFromApi.ToList();
+            if (!planResponseDtos.Any())
+            {
+                return Enumerable.Empty<PlanDto>();
+            }
+
+            var mappingTasks = planResponseDtos.Select(MapApiPlanToDto);
+
+            // 2. Aguarde todas as tarefas terminarem em paralelo
+            var mappedPlans = await Task.WhenAll(mappingTasks);
+
+            // 3. Filtre qualquer resultado nulo (planos que não foram encontrados no banco) e retorne a lista
+            return mappedPlans.Where(p => p != null).ToList()!;
         }
 
         private async Task<List<PlanDto>> FetchPlansFromDatabaseAsync()
@@ -107,17 +134,32 @@ namespace MeuCrudCsharp.Features.Plans.Services
             }
         }
 
-        private PlanDto MapApiPlanToDto(PlanResponseDto apiPlan)
+        // Mude a assinatura para async Task<PlanDto?>
+        private async Task<PlanDto?> MapApiPlanToDto(PlanResponseDto apiPlan)
         {
+            var localPlan = await GetPlanByIdentifierAsync(apiPlan.Id!);
+
+            if (localPlan == null)
+            {
+                _logger.LogWarning(
+                    "Um plano com ExternalPlanId '{ExternalId}' foi encontrado no Mercado Pago, mas não existe no banco de dados local.",
+                    apiPlan.Id);
+                return null;
+            }
+
             bool isAnnual = apiPlan.AutoRecurring!.Frequency == 12 &&
-                            String.Equals(apiPlan.AutoRecurring.FrequencyType, "months", StringComparison.OrdinalIgnoreCase);
+                            String.Equals(apiPlan.AutoRecurring.FrequencyType, "months",
+                                StringComparison.OrdinalIgnoreCase);
 
             return new PlanDto
             {
+                PublicId = localPlan.PublicId,
                 Name = apiPlan.Reason,
                 Slug = isAnnual ? "anual" : "mensal",
-                PriceDisplay = FormatPriceDisplay(apiPlan.AutoRecurring.TransactionAmount, apiPlan.AutoRecurring.Frequency),
-                BillingInfo = FormatBillingInfo(apiPlan.AutoRecurring.TransactionAmount, apiPlan.AutoRecurring.Frequency),
+                PriceDisplay = FormatPriceDisplay(apiPlan.AutoRecurring.TransactionAmount,
+                    apiPlan.AutoRecurring.Frequency),
+                BillingInfo = FormatBillingInfo(apiPlan.AutoRecurring.TransactionAmount,
+                    apiPlan.AutoRecurring.Frequency),
                 IsRecommended = isAnnual,
                 Features = GetDefaultFeatures()
             };
@@ -130,6 +172,7 @@ namespace MeuCrudCsharp.Features.Plans.Services
 
             return new PlanDto
             {
+                PublicId = dbPlan.PublicId.ToString(),
                 Name = dbPlan.Name,
                 Slug = isAnnual ? "anual" : "mensal",
                 PriceDisplay = FormatPriceDisplay(dbPlan.TransactionAmount, dbPlan.Frequency),
@@ -137,6 +180,31 @@ namespace MeuCrudCsharp.Features.Plans.Services
                 IsRecommended = isAnnual,
                 Features = GetDefaultFeatures()
             };
+        }
+
+        public async Task<PlanDto?> GetPlanByIdentifierAsync(string identifier)
+        {
+            if (string.IsNullOrWhiteSpace(identifier))
+            {
+                _logger.LogWarning("Tentativa de buscar plano com identificador vazio ou nulo.");
+                return null;
+            }
+
+            bool isGuid = Guid.TryParse(identifier, out Guid publicId);
+
+            var planFromDb = await _context.Plans
+                .AsNoTracking()
+                .FirstOrDefaultAsync(p => p.IsActive &&
+                                          (isGuid ? p.PublicId == publicId : p.ExternalPlanId == identifier));
+
+            if (planFromDb == null)
+            {
+                _logger.LogInformation("Plano com identificador '{Identifier}' não encontrado no banco de dados.",
+                    identifier);
+                return null;
+            }
+
+            return MapDbPlanToDto(planFromDb);
         }
 
 // Método para evitar repetição da lista de features

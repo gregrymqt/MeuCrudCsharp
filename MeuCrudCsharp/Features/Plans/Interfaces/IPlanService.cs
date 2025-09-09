@@ -20,8 +20,11 @@ namespace MeuCrudCsharp.Features.Plans.Interfaces
 
 
         Task<List<PlanDto>> GetActiveApiPlansAsync();
-        
-        
+
+
+        Task<PlanDto?> GetPlanByIdentifierAsync(string identifier);
+
+
 
     }
 }

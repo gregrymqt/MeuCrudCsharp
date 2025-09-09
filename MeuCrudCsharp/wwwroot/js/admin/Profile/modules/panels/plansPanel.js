@@ -27,22 +27,22 @@ function renderPlansTable(plans) {
         const name = plan.name ?? 'Nome Indisponível';
         const type = plan.slug === 'anual' ? 'Anual' : 'Mensal';
         const price = plan.priceDisplay ?? 'R$ 0,00';
-        const status = plan.status ?? 'active'; // Define 'active' como padrão se nulo
-        const planId = plan.id ?? 'ID_INDISPONIVEL'; // Um ID de fallback
+        const status = plan.status ?? 'active';
+        const publicId = plan.publicId ?? 'ID_INDISPONIVEL';
 
         const row = document.createElement('tr');
         row.innerHTML = `
-    <td>${name}</td>
-    <td>${type}</td>
-    <td>R$ ${price}</td>
-    <td>
-        <span class="status-badge status-${status.toLowerCase()}">${status}</span>
-    </td>
-    <td class="text-right">
-        <button class="btn btn-secondary btn-sm btn-edit" data-plan-id="${planId}">Editar</button>
-        <button class="btn btn-danger btn-sm btn-delete" data-plan-id="${planId}">Excluir</button>
-    </td>
-`;
+            <td>${name}</td>
+            <td>${type}</td>
+            <td>${price}</td>
+            <td>
+                <span class="status-badge status-${status.toLowerCase()}">${status}</span>
+            </td>
+            <td class="text-right">
+                <button class="btn btn-secondary btn-sm btn-edit" data-plan-id="${publicId}">Editar</button>
+                <button class="btn btn-danger btn-sm btn-delete" data-plan-id="${publicId}">Excluir</button>
+            </td>
+        `;
         plansTableBody.appendChild(row);
     });
 }
@@ -78,7 +78,6 @@ async function openEditPlanModal(planId) {
         document.getElementById('edit-plan-reason').value = plan.reason;
         document.getElementById('edit-plan-amount').value = plan.autoRecurring.transactionAmount;
         document.getElementById('edit-plan-frequency-type').value = plan.autoRecurring.frequencyType;
-        document.getElementById('edit-plan-back-url').value = plan.back_url || '';
         openModal(editModal);
     } catch (error) {
         console.error("Falha ao buscar detalhes do plano:", error);
