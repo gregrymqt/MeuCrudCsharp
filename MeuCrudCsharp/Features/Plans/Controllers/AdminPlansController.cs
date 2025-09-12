@@ -46,6 +46,37 @@ namespace MeuCrudCsharp.Features.Plans.Controllers
                     new { message = "Erro ao se comunicar com a API de pagamentos.", error = ex.Message });
             }
         }
+        
+        // No seu AdminPlansController.cs
+
+        [HttpGet("{id:guid}")]
+        [ActionName("GetPlanById")]
+        public async Task<IActionResult> GetPlanById(Guid id)
+        {
+            var plan = await _mercadoPagoPlanService.GetPlanByPublicIdAsync(id);
+
+            if (plan == null)
+            {
+                return NotFound(new { message = $"Plano com PublicId {id} não encontrado." });
+            }
+
+            // ✅ Transforma a entidade do banco em uma lista limpa para o frontend
+            var planDetails = new List<PlanDetailDto>
+            {
+                // Adicionamos apenas os campos que o frontend PRECISA
+                new PlanDetailDto { Feature = "publicId", Value = plan.PublicId },
+                new PlanDetailDto { Feature = "name", Value = plan.Name },
+                new PlanDetailDto { Feature = "description", Value = plan.Description },
+                new PlanDetailDto { Feature = "transactionAmount", Value = plan.TransactionAmount, DisplayValue = plan.TransactionAmount.ToString("C", new System.Globalization.CultureInfo("pt-BR")) }, // Ex: "R$ 10,00"
+                new PlanDetailDto { Feature = "frequency", Value = plan.Frequency },
+                new PlanDetailDto { Feature = "frequencyType", Value = plan.FrequencyType },
+                new PlanDetailDto { Feature = "currencyId", Value = plan.CurrencyId },
+                new PlanDetailDto { Feature = "isActive", Value = plan.IsActive }
+            };
+    
+            // Agora retornamos a lista formatada
+            return Ok(planDetails);
+        }
 
     /// <summary>
     /// Creates a new subscription plan.

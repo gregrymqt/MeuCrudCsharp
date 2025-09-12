@@ -32,7 +32,7 @@ namespace MeuCrudCsharp.Features.Plans.Services
         public PlanService(
             ApiDbContext context,
             ICacheService cacheService,
-            HttpClient httpClient,
+            IHttpClientFactory httpClient,
             ILogger<PlanService> logger
         )
             : base(httpClient, logger)
@@ -55,7 +55,7 @@ namespace MeuCrudCsharp.Features.Plans.Services
                 FetchPlansFromDatabaseAsync, // A função original já retorna Task<List<PlanDto>>
                 TimeSpan.FromMinutes(15) // Cache mais longo para dados que mudam com menos frequência.
             );
-        
+
             return cachedPlans ?? new List<PlanDto>();
         }
 
@@ -137,7 +137,7 @@ namespace MeuCrudCsharp.Features.Plans.Services
         // Mude a assinatura para async Task<PlanDto?>
         private async Task<PlanDto?> MapApiPlanToDto(PlanResponseDto apiPlan)
         {
-            var localPlan = await GetPlanByIdentifierAsync(apiPlan.Id!);
+            var localPlan = await GetPlanByExternalIdAsync(apiPlan.Id!);
 
             if (localPlan == null)
             {
@@ -153,7 +153,7 @@ namespace MeuCrudCsharp.Features.Plans.Services
 
             return new PlanDto
             {
-                PublicId = localPlan.PublicId,
+                PublicId = localPlan.PublicId.ToString(),
                 Name = apiPlan.Reason,
                 Slug = isAnnual ? "anual" : "mensal",
                 PriceDisplay = FormatPriceDisplay(apiPlan.AutoRecurring.TransactionAmount,
@@ -180,31 +180,6 @@ namespace MeuCrudCsharp.Features.Plans.Services
                 IsRecommended = isAnnual,
                 Features = GetDefaultFeatures()
             };
-        }
-
-        public async Task<PlanDto?> GetPlanByIdentifierAsync(string identifier)
-        {
-            if (string.IsNullOrWhiteSpace(identifier))
-            {
-                _logger.LogWarning("Tentativa de buscar plano com identificador vazio ou nulo.");
-                return null;
-            }
-
-            bool isGuid = Guid.TryParse(identifier, out Guid publicId);
-
-            var planFromDb = await _context.Plans
-                .AsNoTracking()
-                .FirstOrDefaultAsync(p => p.IsActive &&
-                                          (isGuid ? p.PublicId == publicId : p.ExternalPlanId == identifier));
-
-            if (planFromDb == null)
-            {
-                _logger.LogInformation("Plano com identificador '{Identifier}' não encontrado no banco de dados.",
-                    identifier);
-                return null;
-            }
-
-            return MapDbPlanToDto(planFromDb);
         }
 
 // Método para evitar repetição da lista de features
@@ -251,6 +226,13 @@ namespace MeuCrudCsharp.Features.Plans.Services
 
             // Para qualquer outra frequência (como 1 mês), não mostramos nada.
             return "&nbsp;";
+        }
+
+        public async Task<Plan?> GetPlanByExternalIdAsync(string externalId)
+        {
+            return await _context.Plans
+                .AsNoTracking()
+                .FirstOrDefaultAsync(p => p.IsActive && p.ExternalPlanId == externalId);
         }
     }
 }

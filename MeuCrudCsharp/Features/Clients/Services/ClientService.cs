@@ -22,7 +22,7 @@ namespace MeuCrudCsharp.Features.Clients.Service
         /// </summary>
         /// <param name="httpClient">Cliente HTTP para fazer requisições à API do Mercado Pago.</param>
         /// <param name="logger">Logger para rastreamento e diagnóstico.</param>
-        public ClientService(HttpClient httpClient, ILogger<ClientService> logger)
+        public ClientService(IHttpClientFactory httpClient, ILogger<ClientService> logger)
             : base(httpClient, logger) { }
 
         /// <summary>

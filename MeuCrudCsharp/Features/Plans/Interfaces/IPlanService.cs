@@ -17,14 +17,7 @@ namespace MeuCrudCsharp.Features.Plans.Interfaces
         /// </summary>
         /// <returns>A task that represents the asynchronous operation. The task result contains a list of <see cref="PlanDto"/>.</returns>
         Task<List<PlanDto>> GetActiveDbPlansAsync();
-
-
         Task<List<PlanDto>> GetActiveApiPlansAsync();
-
-
-        Task<PlanDto?> GetPlanByIdentifierAsync(string identifier);
-
-
 
     }
 }

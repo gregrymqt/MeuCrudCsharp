@@ -36,7 +36,7 @@ namespace MeuCrudCsharp.Features.Subscriptions.Services
         /// <param name="clientService">The service for managing payment provider customers and cards.</param>
         /// <param name="cacheService">The caching service for performance optimization.</param>
         public SubscriptionService(
-            HttpClient httpClient,
+            IHttpClientFactory httpClient,
             ILogger<SubscriptionService> logger,
             ApiDbContext context,
             IClientService clientService,

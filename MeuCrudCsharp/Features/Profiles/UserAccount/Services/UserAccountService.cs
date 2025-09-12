@@ -34,7 +34,7 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
         public UserAccountService(
             ApiDbContext context,
             ICacheService cacheService,
-            HttpClient httpClient,
+            IHttpClientFactory httpClient,
             ILogger<UserAccountService> logger,
             IClientService clientService
         )

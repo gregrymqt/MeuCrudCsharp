@@ -92,7 +92,7 @@ async function fetchAndCache(cacheKey, url, options = {}) {
 // --- API de Planos ---
 // REATORADO: As funções não precisam mais do parâmetro 'token'.
 export const getPublicPlans = (forceRefresh = false) => fetchAndCache('allPublicPlans', '/api/public/plans', { force: forceRefresh });
-export const getAdminPlans = (forceRefresh = false) => fetchAndCache('allAdminPlans', 'api/admin/plans', { force: forceRefresh });
+export const getAdminPlans = (forceRefresh = false) => fetchAndCache('allAdminPlans', '/api/admin/plans', { force: forceRefresh });
 export const getPlanById = (id) => apiFetch(`/api/admin/plans/${id}`);
 export const createPlan = (planData) => apiFetch('/api/admin/plans', { method: 'POST', body: JSON.stringify(planData) });
 export const updatePlan = (id, planData) => apiFetch(`/api/admin/plans/${id}`, { method: 'PUT', body: JSON.stringify(planData) });

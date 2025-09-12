@@ -32,4 +32,11 @@ public interface IMercadoPagoPlanService
         /// <exception cref="ResourceNotFoundException">Thrown if a plan with the specified ID is not found.</exception>
         /// <exception cref="ExternalApiException">Thrown if there is a communication failure with the payment provider API.</exception>
         Task DeletePlanAsync(Guid publicID);
+
+        /// <summary>
+        /// search the plan by PublicID
+        /// </summary>
+        /// <param name="publicId"></param>
+        /// <returns>A task that represents the asynchronous operation. The task result contains the Plan</returns>
+        Task<Plan> GetPlanByPublicIdAsync(Guid publicId);
 }

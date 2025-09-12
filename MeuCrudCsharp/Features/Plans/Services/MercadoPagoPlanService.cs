@@ -26,7 +26,7 @@ public class MercadoPagoPlanService : MercadoPagoServiceBase, IMercadoPagoPlanSe
     public MercadoPagoPlanService(
         ApiDbContext context,
         ICacheService cacheService,
-        HttpClient httpClient,
+        IHttpClientFactory httpClient,
         ILogger<IMercadoPagoPlanService> logger
     )
         : base(httpClient, logger)
@@ -217,9 +217,8 @@ public class MercadoPagoPlanService : MercadoPagoServiceBase, IMercadoPagoPlanSe
                 );
             }
         }
-        private async Task<Plan> GetPlanByPublicIdAsync(Guid publicId)
+        public async Task<Plan> GetPlanByPublicIdAsync(Guid publicId)
         {
-            // BUG CRÍTICO CORRIGIDO: A busca deve ser em 'PublicId', não 'ExternalPlanId'
             var plan = await _context.Plans
                 .FirstOrDefaultAsync(p => p.PublicId == publicId);
 

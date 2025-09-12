@@ -6,7 +6,6 @@ import {openModal, closeModal} from '../ui/modals.js';
 // --- Seletores de DOM ---
 const plansTableBody = document.getElementById('plans-table-body');
 const createPlanForm = document.getElementById('create-plan-form');
-const createPlanStatus = document.getElementById('create-plan-status');
 const editModal = document.getElementById('edit-plan-modal');
 const editForm = document.getElementById('edit-plan-form');
 const editPlanId = document.getElementById('edit-plan-id');
@@ -38,10 +37,10 @@ function renderPlansTable(plans) {
             <td>
                 <span class="status-badge status-${status.toLowerCase()}">${status}</span>
             </td>
-            <td class="text-right">
-                <button class="btn btn-secondary btn-sm btn-edit" data-plan-id="${publicId}">Editar</button>
-                <button class="btn btn-danger btn-sm btn-delete" data-plan-id="${publicId}">Excluir</button>
-            </td>
+                <td class="text-right">
+            <button class="btn btn-secondary btn-sm btn-edit" data-public-id="${publicId}">Editar</button>
+            <button class="btn btn-danger btn-sm btn-delete" data-public-id="${publicId}">Excluir</button>
+        </td>
         `;
         plansTableBody.appendChild(row);
     });
@@ -72,15 +71,25 @@ async function handlePlanDelete(planId) {
 
 async function openEditPlanModal(planId) {
     try {
-        const plan = await api.getPlanById(planId);
-        editPlanId.value = plan.id;
-        document.getElementById('edit-plan-id').value = plan.id;
-        document.getElementById('edit-plan-reason').value = plan.reason;
-        document.getElementById('edit-plan-amount').value = plan.autoRecurring.transactionAmount;
-        document.getElementById('edit-plan-frequency-type').value = plan.autoRecurring.frequencyType;
+        // 1. A resposta da API agora é um array (lista)
+        const planDetailsArray = await api.getPlanById(planId);
+
+        // 2. Transformamos o array em um objeto simples e prático
+        // Ex: [{ feature: 'name', value: 'Plano A' }] vira { name: 'Plano A' }
+        const plan = planDetailsArray.reduce((acc, item) => {
+            acc[item.feature] = item.value;
+            return acc;
+        }, {});
+        
+        editPlanId.value = plan.publicId;
+        editPlanReason.value = plan.name;
+        document.getElementById('edit-plan-amount').value = plan.transactionAmount;
+        document.getElementById('edit-plan-frequency-type').value = plan.frequencyType;
+
         openModal(editModal);
+
     } catch (error) {
-        console.error("Falha ao buscar detalhes do plano:", error);
+        console.error("Falha ao buscar ou preencher detalhes do plano:", error);
     }
 }
 
@@ -132,10 +141,10 @@ export function initializePlansPanel() {
     plansTableBody.addEventListener('click', (e) => {
         const target = e.target;
         if (target.classList.contains('btn-edit')) {
-            openEditPlanModal(target.dataset.planId);
+            openEditPlanModal(target.dataset.publicId);
         }
         if (target.classList.contains('btn-delete')) {
-            handlePlanDelete(target.dataset.planId);
+            handlePlanDelete(target.dataset.publicId);
         }
     });
 

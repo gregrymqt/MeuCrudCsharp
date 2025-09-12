@@ -29,7 +29,7 @@ namespace MeuCrudCsharp.Features.Refunds.Services
         public RefundService(
             ApiDbContext context,
             IHttpContextAccessor httpContextAccessor,
-            HttpClient httpClient,
+            IHttpClientFactory httpClient,
             ILogger<RefundService> logger
         )
             : base(httpClient, logger)

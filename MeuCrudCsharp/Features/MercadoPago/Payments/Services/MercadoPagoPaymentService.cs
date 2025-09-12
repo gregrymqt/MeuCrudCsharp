@@ -11,7 +11,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
     {
         // O construtor apenas passa as dependências para a classe base
         public MercadoPagoPaymentService(
-            HttpClient httpClient,
+            IHttpClientFactory httpClient,
             ILogger<MercadoPagoPaymentService> logger
         )
             : base(httpClient, logger) { }
