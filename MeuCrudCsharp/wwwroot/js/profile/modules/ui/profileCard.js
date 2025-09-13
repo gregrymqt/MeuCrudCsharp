@@ -1,27 +1,4 @@
-// --- Módulo de Cache Simples (usando sessionStorage) ---
-const cacheService = {
-    get: (key) => {
-        const cachedData = sessionStorage.getItem(key);
-        return cachedData ? JSON.parse(cachedData) : null;
-    },
-    set: (key, data) => {
-        sessionStorage.setItem(key, JSON.stringify(data));
-    }
-};
-
-// --- Funções "Privadas" do Módulo ---
-async function fetchCardInfo() {
-    const CACHE_KEY = 'profileCardInfo';
-    let data = cacheService.get(CACHE_KEY);
-    if (data) return data; // Retorna do cache se existir
-
-    const response = await fetch('/api/user-account/card-info');
-    if (!response.ok) throw new Error('Falha ao buscar os dados do card.');
-
-    data = await response.json();
-    cacheService.set(CACHE_KEY, data); // Salva no cache
-    return data;
-}
+import { fetchCardInfo } from '../api/subscriptionApi.js';
 
 function renderProfileCard(data) {
     const cardContainer = document.querySelector('#profile-content .profile-card');

@@ -1,28 +1,4 @@
-// --- Módulo de Cache Simples (usando sessionStorage) ---
-const cacheService = {
-    get: (key) => {
-        const cachedData = sessionStorage.getItem(key);
-        return cachedData ? JSON.parse(cachedData) : null;
-    },
-    set: (key, data) => {
-        sessionStorage.setItem(key, JSON.stringify(data));
-    }
-};
-
-// --- Funções "Privadas" do Módulo ---
-async function fetchPaymentHistory() {
-    const CACHE_KEY = 'userPaymentHistory';
-    let data = cacheService.get(CACHE_KEY);
-    if (data) return data; // Retorna do cache se existir
-
-    // Chama o endpoint específico para o histórico que criamos no Controller
-    const response = await fetch('/api/user-account/payment-history');
-    if (!response.ok) throw new Error('Falha ao buscar o histórico de pagamentos.');
-
-    data = await response.json();
-    cacheService.set(CACHE_KEY, data); // Salva no cache
-    return data;
-}
+import { fetchPaymentHistory } from '../api/subscriptionApi.js';
 
 function renderPaymentHistoryTable(history) {
     const tableBody = document.querySelector('#payment-history-content tbody');

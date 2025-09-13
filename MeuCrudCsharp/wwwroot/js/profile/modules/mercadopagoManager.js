@@ -1,5 +1,7 @@
 ﻿// /js/modules/mercadopagoManager.js
 
+import { fetchPublicKey } from './api/subscriptionAPI';
+
 let bricksBuilder;
 
 /**
@@ -7,12 +9,7 @@ let bricksBuilder;
  * @returns {boolean} - Retorna true se a inicialização foi bem-sucedida.
  */
 export function initializeMercadoPago() {
-    const publicKey = 'APP_USR-9237cffa-5ad4-4056-956b-20d62d1d0dab'; // Sua Public Key
-    if (!publicKey || publicKey.startsWith('APP_USR-')) {
-        console.error('A Public Key do Mercado Pago não está configurada!');
-        return false;
-    }
-    const mp = new MercadoPago(publicKey);
+    const mp = new MercadoPago(fetchPublicKey());
     bricksBuilder = mp.bricks();
     return true;
 }
@@ -29,8 +26,8 @@ export async function createAndRenderCardBrick(containerId, onSubmitCallback) {
     }
 
     const settings = {
-        initialization: { amount: 1.00 }, // Valor simbólico para validação do cartão
-        customization: { visual: { style: { theme: 'bootstrap' } } },
+        initialization: {amount: 1.00}, // Valor simbólico para validação do cartão
+        customization: {visual: {style: {theme: 'bootstrap'}}},
         callbacks: {
             onReady: () => console.log(`Brick em #${containerId} está pronto.`),
             onError: (error) => console.error(`Erro no Brick #${containerId}:`, error),

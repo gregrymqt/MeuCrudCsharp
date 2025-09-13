@@ -28,7 +28,7 @@ function renderCoursesTable(courses) {
 
     courses.forEach(course => {
         // Verificação segura das propriedades
-        const courseId = course.id ?? 'ID_INVALIDO';
+        const coursePublicId = course.publicId ?? 'ID_INVALIDO';
         const name = course.name ?? 'Curso sem nome';
         const description = course.description || 'Sem descrição'; // '||' funciona bem para strings vazias
 
@@ -37,8 +37,8 @@ function renderCoursesTable(courses) {
     <td>${name}</td>
     <td>${description}</td>
     <td class="text-right">
-        <button class="btn btn-secondary btn-sm btn-edit-course" data-course-id="${courseId}">Editar</button>
-        <button class="btn btn-danger btn-sm btn-delete-course" data-course-id="${courseId}">Excluir</button>
+        <button type="button" class="btn btn-secondary btn-sm btn-edit-course" data-course-public-id="${coursePublicId}">Editar</button>
+        <button type="button" class="btn btn-danger btn-sm btn-delete-course" data-course-public-id="${coursePublicId}">Excluir</button>
     </td>
 `;
         coursesTableBody.appendChild(row);
@@ -69,7 +69,7 @@ async function handleCourseDelete(courseId) {
 }
 
 function openEditCourseModal(course) {
-    editCourseId.value = course.id;
+    editCourseId.value = course.publicId;
     editCourseName.value = course.name;
     editCourseDescription.value = course.description || '';
     openModal(editCourseModal);
@@ -145,20 +145,37 @@ export function initializeCoursesPanel() {
     }
 
     // --- Listeners existentes (sem alterações) ---
+    // Dentro do seu event listener de clique na tabela de cursos
     coursesTableBody.addEventListener('click', async (e) => {
-        const target = e.target.closest('button');
+        const target = e.target.closest('button.btn-edit-course');
         if (!target) return;
-        const courseId = target.dataset.courseId;
-        if (target.classList.contains('btn-edit-course')) {
-            const courses = await api.getCourses();
-            const course = courses.find(c => c.id == courseId);
-            if (course) openEditCourseModal(course);
+
+        // AQUI ESTÁ O PONTO CRÍTICO
+        const courseId = target.dataset.coursePublicId;
+
+        // ADICIONE ESTA LINHA PARA DEPURAR
+        console.log("ID do curso capturado do botão:", courseId);
+
+        if (!courseId) {
+            alert("ERRO: ID do curso não encontrado no elemento do botão!");
+            return;
         }
-        if (target.classList.contains('btn-delete-course')) {
-            handleCourseDelete(courseId);
+
+        try {
+            const course = await api.getCoursesPublicId(courseId);
+            if (course) {
+                if (target.classList.contains('btn-edit-course')) {
+                    openEditCourseModal(course);
+                }
+
+                if (target.classList.contains('btn-delete-course')) {
+                    handleCourseDelete(courseId);
+                }
+            }
+        } catch (error) {
+            console.error('Falha ao buscar o curso:', error);
         }
     });
-
     createCourseForm.addEventListener('submit', async (e) => {
         // ... (código existente de criação)
         e.preventDefault();

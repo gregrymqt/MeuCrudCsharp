@@ -1,50 +1,39 @@
-// js/modules/api.js
+// /js/modules/api/pixAPI.js (ou o caminho/nome que preferir)
+
+// 1. IMPORTA o serviço central de API.
+import apiService from '../../../../core/apiService.js'; // Ajuste o caminho se necessário
 
 /**
- * Busca a Public Key do Mercado Pago no seu backend.
+ * Busca a Public Key do Mercado Pago no back-end.
  * @returns {Promise<string>} A Public Key.
  */
 export async function fetchPublicKey() {
     try {
-        const response = await fetch('/api/payment/getpublickey', {
-            credentials: "include",
-        }); // Endpoint de exemplo no seu backend
-        
-        if (!response.ok) {
-            throw new Error('Falha ao buscar a chave pública.');
-        }
-        const data = await response.json();
+        // 2. USA o apiService para a chamada GET.
+        const data = await apiService.fetch('/api/payment/getpublickey');
         return data.publicKey;
     } catch (error) {
-        console.error("Erro na API (fetchPublicKey):", error);
-        throw error; // Propaga o erro para ser tratado no fluxo principal
+        console.error("Erro ao buscar a Public Key:", error.message);
+        // Propaga o erro para que a lógica que chamou esta função possa tratá-lo.
+        throw error;
     }
 }
 
 /**
- * Envia os dados do formulário para o seu backend para criar o pagamento PIX.
+ * Envia os dados do formulário para o back-end para criar um pagamento PIX.
  * @param {object} paymentData - Dados do pagamento (nome, email, valor, etc.).
  * @returns {Promise<object>} Os dados do PIX gerado (QR Code, etc.).
  */
 export async function postCreatePayment(paymentData) {
     try {
-        const response = await fetch('/api/payment/createpix', { // Endpoint de exemplo
+        // 3. USA o apiService para a chamada POST, que lida com tudo automaticamente.
+        return await apiService.fetch('/api/payment/createpix', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(paymentData),
-            credentials: 'include',
+            body: JSON.stringify(paymentData)
         });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || 'Não foi possível processar o pagamento.');
-        }
-
-        return await response.json();
     } catch (error) {
-        console.error("Erro na API (postCreatePayment):", error);
+        console.error("Erro ao criar o pagamento PIX:", error.message);
+        // Propaga o erro para a UI poder mostrar uma mensagem ao usuário.
         throw error;
     }
 }

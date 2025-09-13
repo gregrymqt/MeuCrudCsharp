@@ -9,7 +9,7 @@ namespace MeuCrudCsharp.Features.Course.DTOs
         {
             return new CourseDto
             {
-                Id = course.PublicId,
+                PublicId = course.PublicId,
                 Name = course.Name,
                 Description = course.Description,
                 Videos = course.Videos?.Select(VideoMapper.ToDto).ToList() ?? new List<VideoDto>(),
@@ -21,7 +21,7 @@ namespace MeuCrudCsharp.Features.Course.DTOs
         {
             return new CourseDto
             {
-                Id = course.PublicId,
+                PublicId = course.PublicId,
                 Name = course.Name,
                 Description = course.Description,
                 // A lista de vídeos fica vazia por padrão

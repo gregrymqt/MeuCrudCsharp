@@ -1,124 +1,77 @@
-﻿// /js/admin/modules/api/adminAPI.js
+﻿// js/modules/api/adminAPI.js (ou o caminho correto)
 
-// NOVO: Importa a função que busca o token. Ajuste o caminho se necessário.
+// 1. IMPORTA os serviços centrais. Toda a lógica de fetch e cache virá daqui.
+import apiService from '../../../../core/apiService.js';
+import cacheService from '../../../../core/cacheService.js';
 
-const cache = new Map();
-
-let antiforgeryToken = null;
-let antiforgeryHeaderName = null;
-
-/**
- * Função para buscar o token Antiforgery do back-end na primeira vez.
- */
-async function ensureAntiforgeryToken() {
-    if (!antiforgeryToken) {
-        try {
-            // Chama o novo endpoint que criamos no back-end
-            const response = await fetch('/api/antiforgery/token', { credentials: 'include' });
-            if (response.ok) {
-                const data = await response.json();
-                antiforgeryToken = data.token;
-                antiforgeryHeaderName = data.headerName;
-                console.log("Token Antiforgery obtido com sucesso.");
-            }
-        } catch (error) {
-            console.error("Falha ao obter o token Antiforgery:", error);
-        }
-    }
-}
+// ==========================================================================================
+// FUNÇÃO HELPER LOCAL (só para este arquivo)
+// ==========================================================================================
 
 /**
- * REATORADO: Função central que busca o token automaticamente.
- * @param {string} url - O endpoint da API.
- * @param {object} options - Opções do fetch (method, body, etc.).
- * @returns {Promise<any>} - A resposta da API em formato JSON.
+ * Helper para buscar dados, com lógica de cache.
+ * Usa os serviços centrais importados.
+ * @param {string} cacheKey A chave para o cache.
+ * @param {string} url O endpoint da API.
+ * @param {boolean} forceRefresh Se true, ignora o cache e busca novos dados.
+ * @returns {Promise<any>}
  */
-async function apiFetch(url, options = {}) {
-    await ensureAntiforgeryToken();
-
-    const headers = { ...options.headers };
-
-    // Adiciona o Content-Type para POST/PUT
-    if (options.body && (options.method === 'POST' || options.method === 'PUT' || options.method === 'DELETE')) {
-        headers['Content-Type'] = 'application/json';
-
-        // ADICIONA O HEADER ANTIFORGERY AQUI!
-        if (antiforgeryToken && antiforgeryHeaderName) {
-            headers[antiforgeryHeaderName] = antiforgeryToken;
+async function fetchAndCache(cacheKey, url, forceRefresh = false) {
+    if (!forceRefresh) {
+        const cachedData = cacheService.get(cacheKey);
+        if (cachedData) {
+            return cachedData;
         }
     }
 
-    const response = await fetch(url, {
-        ...options,
-        headers,
-        credentials: 'include'
-    });
-
-    // 4. Lida com a resposta
-    if (response.status === 204) {
-        return null;
-    }
-
-    const contentType = response.headers.get("content-type");
-    if (!contentType || !contentType.includes("application/json")) {
-        const text = await response.text();
-        console.error("Resposta inesperada do servidor:", text);
-        throw new Error(`O servidor respondeu com um formato inesperado (não-JSON). Status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    
-    if (!response.ok) {
-        const errorMessage = data.message || `Erro na API. Status: ${response.status}`;
-        throw new Error(errorMessage);
-    }
-
+    // Se não houver cache ou se forçar a atualização, busca da API
+    const data = await apiService.fetch(url);
+    cacheService.set(cacheKey, data); // Salva os novos dados no cache
     return data;
 }
 
+// ==========================================================================================
+// API DE PLANOS (Plans)
+// ==========================================================================================
+
+export const getPublicPlans = (forceRefresh = false) => fetchAndCache('allPublicPlans', '/api/public/plans', forceRefresh);
+export const getAdminPlans = (forceRefresh = false) => fetchAndCache('allAdminPlans', '/api/admin/plans', forceRefresh);
+export const getPlanById = (id) => apiService.fetch(`/api/admin/plans/${id}`);
+export const createPlan = (planData) => apiService.fetch('/api/admin/plans', { method: 'POST', body: JSON.stringify(planData) });
+export const updatePlan = (id, planData) => apiService.fetch(`/api/admin/plans/${id}`, { method: 'PUT', body: JSON.stringify(planData) });
+export const deletePlan = (id) => apiService.fetch(`/api/admin/plans/${id}`, { method: 'DELETE' });
+
+// ==========================================================================================
+// API DE CURSOS (Courses)
+// ==========================================================================================
+
+export const getCourses = (forceRefresh = false) => fetchAndCache('allCourses', '/api/admin/courses', forceRefresh);
+export const getCoursesPublicId = (id) => apiService.fetch(`/api/admin/courses/${id}`);
+export const searchCoursesByName = (name) => apiService.fetch(`/api/admin/courses/search?name=${encodeURIComponent(name)}`);
+export const createCourse = (courseData) => apiService.fetch('/api/admin/courses', { method: 'POST', body: JSON.stringify(courseData) });
+export const updateCourse = (id, courseData) => apiService.fetch(`/api/admin/courses/${id}`, { method: 'PUT', body: JSON.stringify(courseData) });
+export const deleteCourse = (id) => apiService.fetch(`/api/admin/courses/${id}`, { method: 'DELETE' });
+
+// ==========================================================================================
+// API DE ALUNOS (Students)
+// ==========================================================================================
+
+export const getStudents = (forceRefresh = false) => fetchAndCache('allStudents', '/api/admin/students', forceRefresh);
+
+// ==========================================================================================
+// API DE ASSINATURAS (Subscriptions)
+// ==========================================================================================
+
+export const searchSubscription = (query) => apiService.fetch(`/api/admin/subscriptions/subscriptions/search?query=${encodeURIComponent(query)}`);
+export const updateSubscriptionValue = (id, amount) => apiService.fetch(`/api/admin/subscriptions/${id}/value`, { method: 'PUT', body: JSON.stringify({ transactionAmount: amount }) });
+export const updateSubscriptionStatus = (id, status) => apiService.fetch(`/api/admin/subscriptions/${id}/status`, { method: 'PUT', body: JSON.stringify({ status: status }) });
+
 /**
- * REATORADO: A função de cache agora usa o apiFetch automático.
+ * Invalida (remove) um item específico do cache.
+ * @param {string} cacheKey A chave a ser removida.
  */
-async function fetchAndCache(cacheKey, url, options = {}) {
-    if (options.force || !cache.has(cacheKey)) {
-        const data = await apiFetch(url, { ...options, method: 'GET' });
-        cache.set(cacheKey, data);
-        return data;
-    }
-    return cache.get(cacheKey);
-}
-
-
-// --- API de Planos ---
-// REATORADO: As funções não precisam mais do parâmetro 'token'.
-export const getPublicPlans = (forceRefresh = false) => fetchAndCache('allPublicPlans', '/api/public/plans', { force: forceRefresh });
-export const getAdminPlans = (forceRefresh = false) => fetchAndCache('allAdminPlans', '/api/admin/plans', { force: forceRefresh });
-export const getPlanById = (id) => apiFetch(`/api/admin/plans/${id}`);
-export const createPlan = (planData) => apiFetch('/api/admin/plans', { method: 'POST', body: JSON.stringify(planData) });
-export const updatePlan = (id, planData) => apiFetch(`/api/admin/plans/${id}`, { method: 'PUT', body: JSON.stringify(planData) });
-export const deletePlan = (id) => apiFetch(`/api/admin/plans/${id}`, { method: 'DELETE' });
-
-
-// --- API de Cursos ---
-export const getCourses = (forceRefresh = false) => fetchAndCache('allCourses', '/api/admin/courses', { force: forceRefresh });
-export const searchCoursesByName = (name) => apiFetch(`/api/admin/courses/search?name=${encodeURIComponent(name)}`);
-export const createCourse = (courseData) => apiFetch('/api/admin/courses', { method: 'POST', body: JSON.stringify(courseData) });
-export const updateCourse = (id, courseData) => apiFetch(`/api/admin/courses/${id}`, { method: 'PUT', body: JSON.stringify(courseData) });
-export const deleteCourse = (id) => apiFetch(`/api/admin/courses/${id}`, { method: 'DELETE' });
-
-
-// --- API de Alunos ---
-export const getStudents = (forceRefresh = false) => fetchAndCache('allStudents', '/api/admin/students', { force: forceRefresh });
-
-
-// --- API de Assinaturas ---
-export const searchSubscription = (query) => apiFetch(`/api/admin/subscriptions/subscriptions/search?query=${encodeURIComponent(query)}`);
-export const updateSubscriptionValue = (id, amount) => apiFetch(`/api/admin/subscriptions/${id}/value`, { method: 'PUT', body: JSON.stringify({ transactionAmount: amount }) });
-export const updateSubscriptionStatus = (id, status) => apiFetch(`/api/admin/subscriptions/${id}/status`, { method: 'PUT', body: JSON.stringify({ status: status }) });
-
-
-// --- Função de Cache ---
 export function invalidateCache(cacheKey) {
     console.log(`Cache para a chave '${cacheKey}' foi invalidado.`);
-    cache.delete(cacheKey);
+    // Usa o método 'remove' do nosso cacheService central.
+    cacheService.remove(cacheKey);
 }

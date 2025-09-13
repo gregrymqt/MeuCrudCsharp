@@ -1,28 +1,4 @@
-// --- Módulo de Cache Simples (usando sessionStorage) ---
-const cacheService = {
-    get: (key) => {
-        const cachedData = sessionStorage.getItem(key);
-        return cachedData ? JSON.parse(cachedData) : null;
-    },
-    set: (key, data) => {
-        sessionStorage.setItem(key, JSON.stringify(data));
-    }
-};
-
-// --- Funções "Privadas" do Módulo ---
-async function fetchSubscriptionDetails() {
-    const CACHE_KEY = 'userSubscriptionDetails';
-    let data = cacheService.get(CACHE_KEY);
-    if (data) return data; // Retorna do cache se existir
-
-    // Chama o endpoint específico para os detalhes da assinatura
-    const response = await fetch('/api/user-account/subscription-details');
-    if (!response.ok) throw new Error('Falha ao buscar os detalhes da assinatura.');
-
-    data = await response.json();
-    cacheService.set(CACHE_KEY, data); // Salva no cache
-    return data;
-}
+import { fetchSubscriptionDetails } from '../api/subscriptionApi.js';
 
 function renderSubscriptionPanel(subscription) {
     const container = document.getElementById('subscription-content');

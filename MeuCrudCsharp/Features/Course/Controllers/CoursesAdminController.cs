@@ -47,6 +47,27 @@ namespace MeuCrudCsharp.Features.Courses.Controllers
             }
         }
 
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetCoursesByPublicId(Guid id)
+        {
+            if (String.IsNullOrEmpty(id.ToString()))
+            {
+                throw new Exception("O ID não pode ser vazio.");
+            }
+            
+            var course =  await _courseService.FindCourseByPublicIdOrFailAsync(id);
+
+            var courseDto = new CourseDto
+            {
+                PublicId = course.PublicId,
+                Name = course.Name,
+                Description = course.Description
+            };
+
+            return Ok(courseDto);
+
+        }
+
         // ✅ Perfeito, nenhuma alteração necessária
         // Na sua classe de controle (ex: AdminCoursesController.cs)
 

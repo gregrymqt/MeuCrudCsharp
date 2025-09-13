@@ -1,82 +1,103 @@
 ﻿// /js/modules/api/subscriptionAPI.js
 
+// 1. IMPORTA os serviços centrais que criamos.
+//    Não há mais código duplicado de 'apiFetch' ou 'cacheService' aqui.
+import apiService from '../../../core/apiService.js';
+import cacheService from '../../../core/cacheService.js';
+
 /**
- * NOVO: Função central e automática para todas as chamadas de API deste módulo.
- * Pega o token automaticamente e lida com toda a lógica de requisição e resposta.
- * @param {string} url - O endpoint da API.
- * @param {object} options - Opções do fetch (method, body, etc.).
- * @returns {Promise<any>} - A resposta da API em formato JSON.
+ * Busca o histórico de pagamentos do usuário, utilizando o cacheService central.
+ * @returns {Promise<any>}
  */
-async function apiFetch(url, options = {}) {
+export async function fetchPaymentHistory() {
+    const CACHE_KEY = 'userPaymentHistory';
 
-    // 2. Configura os cabeçalhos.
-    const headers = { ...options.headers };
+    let data = cacheService.get(CACHE_KEY);
+    if (data) return data;
 
-    if (options.body && (options.method === 'POST' || options.method === 'PUT')) {
-        headers['Content-Type'] = 'application/json';
-    }
+    // USA o apiService.fetch importado.
+    data = await apiService.fetch('/api/user-account/payment-history');
 
-    // 4. Realiza a chamada fetch
-    const response = await fetch(url, {
-        ...options,
-        headers,
-        credentials: 'include',
-    });
-
-    // 5. Lida com a resposta
-    // Lida com sucesso sem corpo de resposta (ex: 204 No Content)
-    if (response.status === 204) {
-        return null;
-    }
-
-    const contentType = response.headers.get("content-type");
-    if (!contentType || !contentType.includes("application/json")) {
-        const text = await response.text();
-        console.error("Resposta inesperada do servidor:", text);
-        throw new Error(`O servidor respondeu com um formato inesperado (não-JSON). Status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    
-    if (!response.ok) {
-        const errorMessage = data.message || `Erro na API. Status: ${response.status}`;
-        throw new Error(errorMessage);
-    }
-
+    // USA o cacheService importado (que agora tem tempo de expiração).
+    cacheService.set(CACHE_KEY, data);
     return data;
 }
 
 /**
- * REATORADO: Envia um novo token de cartão para o back-end para atualizar a assinatura.
+ * Busca as informações do cartão de perfil do usuário, utilizando o cacheService central.
+ * @returns {Promise<any>}
+ */
+export async function fetchCardInfo() {
+    const CACHE_KEY = 'profileCardInfo';
+
+    let data = cacheService.get(CACHE_KEY);
+    if (data) return data;
+
+    data = await apiService.fetch('/api/user-account/card-info');
+
+    cacheService.set(CACHE_KEY, data);
+    return data;
+}
+
+/**
+ * Busca os detalhes da assinatura do usuário, utilizando o cacheService central.
+ * @returns {Promise<any>}
+ */
+export async function fetchSubscriptionDetails() {
+    const CACHE_KEY = 'userSubscriptionDetails';
+
+    let data = cacheService.get(CACHE_KEY);
+    if (data) return data;
+
+    data = await apiService.fetch('/api/user-account/subscription-details');
+
+    cacheService.set(CACHE_KEY, data);
+    return data;
+}
+
+/**
+ * Envia um novo token de cartão para o back-end para atualizar a assinatura.
  * @param {object} payload - O corpo da requisição, geralmente contendo o newCardToken.
- * @returns {Promise<object>} - A resposta JSON do servidor.
+ * @returns {Promise<object>}
  */
 export function updateSubscriptionCard(payload) {
-    return apiFetch('/api/user/card', {
+    // Simplesmente chama o apiService.fetch com as opções corretas.
+    return apiService.fetch('/api/user/card', {
         method: 'PUT',
         body: JSON.stringify(payload),
     });
 }
 
 /**
- * REATORADO: Envia uma requisição para solicitar o reembolso.
- * @returns {Promise<object|null>} - A resposta do servidor.
+ * Envia uma requisição para solicitar o reembolso.
+ * @returns {Promise<object|null>}
  */
 export function requestRefund() {
-    return apiFetch('/api/refunds/request-refund', {
+    return apiService.fetch('/api/refunds/request-refund', {
         method: 'POST'
     });
 }
 
-
 /**
- *  Função única para atualizar o status da assinatura.
+ * Função única para atualizar o status da assinatura.
  * @param {string} status - O novo status a ser enviado ('paused', 'authorized', 'cancelled').
- * @returns {Promise<object>} - A resposta JSON do servidor.
+ * @returns {Promise<object>}
  */
 export function updateSubscriptionStatus(status) {
-    return apiFetch('/api/user/status', {
+    return apiService.fetch('/api/user/status', {
         method: 'PUT',
         body: JSON.stringify({ status: status })
     });
+}
+
+export async function fetchPublicKey() {
+    try {
+        // 2. USA o apiService para a chamada GET.
+        const data = await apiService.fetch('/api/payment/getpublickey');
+        return data.publicKey;
+    } catch (error) {
+        console.error("Erro ao buscar a Public Key:", error.message);
+        // Propaga o erro para que a lógica que chamou esta função possa tratá-lo.
+        throw error;
+    }
 }

@@ -166,10 +166,7 @@ namespace MeuCrudCsharp.Features.Courses.Services
         /// <remarks>A exclusão só é permitida se o curso não tiver nenhum vídeo vinculado.</remarks>
         public async Task DeleteCourseAsync(Guid publicId)
         {
-            // Busca o curso incluindo os vídeos para a verificação
-            var course = await _context
-                .Courses.Include(c => c.Videos)
-                .FirstOrDefaultAsync(c => c.PublicId == publicId);
+            var course = await FindCourseByPublicIdOrFailAsync(publicId);
 
             if (course == null)
             {
@@ -190,7 +187,7 @@ namespace MeuCrudCsharp.Features.Courses.Services
             _logger.LogInformation("Curso {CourseId} deletado com sucesso.", publicId);
         }
 
-        private async Task<Models.Course> FindCourseByPublicIdOrFailAsync(Guid publicId)
+        public  async Task<Models.Course> FindCourseByPublicIdOrFailAsync(Guid publicId)
         {
             var course = await _context.Courses.FirstOrDefaultAsync(c => c.PublicId == publicId);
             if (course == null)
@@ -199,6 +196,8 @@ namespace MeuCrudCsharp.Features.Courses.Services
                     $"Curso com o PublicId {publicId} não foi encontrado."
                 );
             }
+            
+            await InvalidateCoursesCacheAsync(); // Invalidação robusta
 
             return course;
         }

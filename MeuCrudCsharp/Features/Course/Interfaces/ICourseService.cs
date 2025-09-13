@@ -53,5 +53,8 @@ namespace MeuCrudCsharp.Features.Courses.Interfaces
         /// <exception cref="ResourceNotFoundException">Lançada se o curso com o ID especificado não for encontrado.</exception>
         /// <exception cref="AppServiceException">Lançada se o curso tiver vídeos associados e não puder ser excluído.</exception>
         Task DeleteCourseAsync(Guid id);
+
+
+        Task<Models.Course> FindCourseByPublicIdOrFailAsync(Guid publicId);
     }
 }
