@@ -10,7 +10,7 @@ using MeuCrudCsharp.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
-namespace MeuCrudCsharp.Features.MercadoPago.Payments.Notification
+namespace MeuCrudCsharp.Features.MercadoPago.Notification
 {
     /// <summary>
     /// Implementa <see cref="INotificationPaymentService"/> para processar notificações de pagamento.

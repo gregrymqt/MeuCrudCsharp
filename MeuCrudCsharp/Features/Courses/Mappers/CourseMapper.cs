@@ -1,6 +1,7 @@
-﻿using MeuCrudCsharp.Features.Videos.DTOs;
+﻿using MeuCrudCsharp.Features.Courses.DTOs;
+using MeuCrudCsharp.Features.Videos.DTOs;
 
-namespace MeuCrudCsharp.Features.Course.DTOs
+namespace MeuCrudCsharp.Features.Courses.Mappers
 {
     public static class CourseMapper
     {

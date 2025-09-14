@@ -14,7 +14,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Base
     /// Classe base abstrata para serviços que interagem com a API do Mercado Pago.
     /// Encapsula a lógica comum de envio de requisições HTTP, autenticação e tratamento de erros.
     /// </summary>
-    public abstract class MercadoPagoServiceBase : IMercadoPagoServiceBase
+    public abstract class MercadoPagoServiceBase
     {
         // Usamos 'protected' para que as classes filhas possam acessar esses campos.
         protected readonly ILogger _logger;

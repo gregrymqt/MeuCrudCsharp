@@ -1,17 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿
 using MeuCrudCsharp.Data;
-using MeuCrudCsharp.Features.Caching;
-using MeuCrudCsharp.Features.Course.DTOs;
+using MeuCrudCsharp.Features.Courses.DTOs;
 using MeuCrudCsharp.Features.Courses.Interfaces;
+using MeuCrudCsharp.Features.Courses.Mappers;
 using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.Videos.DTOs;
-using MeuCrudCsharp.Models;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 
 namespace MeuCrudCsharp.Features.Courses.Services
 {

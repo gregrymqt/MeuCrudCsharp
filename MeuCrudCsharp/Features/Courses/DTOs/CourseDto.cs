@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using MeuCrudCsharp.Features.Videos.DTOs;
 
-namespace MeuCrudCsharp.Features.Course.DTOs
+namespace MeuCrudCsharp.Features.Courses.DTOs
 {
     /// <summary>
     /// DTO (Data Transfer Object) que representa um curso para exibição.

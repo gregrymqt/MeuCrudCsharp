@@ -2,7 +2,7 @@
 using MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces;
 using Microsoft.AspNetCore.SignalR;
 
-namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
+namespace MeuCrudCsharp.Features.MercadoPago.Services
 {
     public class PaymentNotificationService : IPaymentNotificationService
     {

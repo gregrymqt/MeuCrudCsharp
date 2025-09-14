@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace MeuCrudCsharp.Features.Course.DTOs
+namespace MeuCrudCsharp.Features.Courses.DTOs
 {
     /// <summary>
     /// DTO (Data Transfer Object) para a criação de um novo curso.

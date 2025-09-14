@@ -6,7 +6,7 @@ using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Features.Caching;
 using MeuCrudCsharp.Features.Exceptions; // Nossas exceções
 using MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces;
-using MeuCrudCsharp.Features.MercadoPago.Payments.Notification;
+using MeuCrudCsharp.Features.MercadoPago.Notification;
 using MeuCrudCsharp.Features.Refunds.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;

@@ -23,7 +23,6 @@ namespace MeuCrudCsharp.Features.Auth
     {
         private readonly ILogger<AppAuthService> _logger;
         private readonly UserManager<Users> _userManager;
-        private readonly IConfiguration _configuration;
         private readonly ApiDbContext _dbContext;
         private readonly JwtSettings _jwtSettings;
 
@@ -35,14 +34,12 @@ namespace MeuCrudCsharp.Features.Auth
         /// <param name="logger">Logger para registrar eventos de autenticação.</param>
         public AppAuthService(
             UserManager<Users> userManager,
-            IConfiguration configuration,
             ILogger<AppAuthService> logger,
             ApiDbContext dbContext,
             IOptions<JwtSettings> jwtSettings
         )
         {
             _userManager = userManager;
-            _configuration = configuration;
             _logger = logger;
             _dbContext = dbContext;
             _jwtSettings = jwtSettings.Value;

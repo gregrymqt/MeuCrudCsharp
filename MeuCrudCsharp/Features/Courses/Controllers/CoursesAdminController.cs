@@ -1,7 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using MeuCrudCsharp.Features.Base;
-using MeuCrudCsharp.Features.Course.DTOs;
+using MeuCrudCsharp.Features.Courses.DTOs;
 using MeuCrudCsharp.Features.Courses.Interfaces;
 using MeuCrudCsharp.Features.Exceptions;
 using Microsoft.AspNetCore.Authentication.JwtBearer;

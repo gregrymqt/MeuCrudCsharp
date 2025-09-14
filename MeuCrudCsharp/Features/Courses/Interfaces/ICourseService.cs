@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
-using MeuCrudCsharp.Features.Course.DTOs;
+using MeuCrudCsharp.Features.Courses.DTOs;
 using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.Videos.DTOs;
 
