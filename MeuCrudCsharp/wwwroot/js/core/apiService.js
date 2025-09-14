@@ -35,7 +35,7 @@ async function apiFetch(url, options = {}) {
     await ensureAntiforgeryToken();
     const headers = { ...options.headers };
 
-    const jwtToken = localStorage.getItem('jwt_token');
+    const jwtToken = localStorage.getItem('jwt');
     if (jwtToken) {
         headers['Authorization'] = `Bearer ${jwtToken}`;
     }

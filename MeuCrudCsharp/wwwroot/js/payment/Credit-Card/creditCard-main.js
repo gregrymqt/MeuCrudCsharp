@@ -4,6 +4,8 @@ import * as UI from './modules/ui/paymentUI.js';
 import * as MP from './modules/services/mercadopagoService.js';
 import { createPaymentHubConnection } from './modules/services/signalRService.js';
 import { processPayment } from './modules/api/paymentAPI.js';
+import { initializeMercadoPago } from '../../core/mercadoPagoService.js';
+
 
 /**
  * Fun��o principal que orquestra o processo de pagamento.
@@ -51,17 +53,21 @@ async function handlePaymentSubmit({ formData }) {
 /**
  * Inicializa a p�gina de pagamento.
  */
-function initializePage() {
+async function initializePage() {
     if (typeof MercadoPago === 'undefined' || typeof signalR === 'undefined') {
         UI.showError('Falha ao carregar depend�ncias essenciais (Mercado Pago ou SignalR).');
         return;
     }
-    if (!window.paymentConfig?.publicKey || !window.paymentConfig?.preferenceId) {
-        UI.showError('Erro de configura��o: Chave p�blica ou ID de prefer�ncia n�o encontrados.');
-        return;
+    const {preferenceId} = window.paymentConfig;
+
+    if (!preferenceId) {
+        // Essa validação é uma segurança extra, mas em teoria, se o backend falhar,
+        // o usuário nem chegaria nesta página.
+        UI.showError('Erro de configuração. Por favor, recarregue a página.');
+
     }
 
-    MP.initializeMercadoPago(window.paymentConfig.publicKey);
+    await initializeMercadoPago();
 
     const brickCallbacks = {
         onReady: () => {

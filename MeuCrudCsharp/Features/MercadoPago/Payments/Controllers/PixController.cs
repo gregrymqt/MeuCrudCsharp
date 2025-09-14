@@ -13,30 +13,16 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Controllers;
     {
         private readonly ILogger<PixController> _logger;
         private readonly IPixPaymentService _paymentService;
-        private readonly MercadoPagoSettings _mpSettings;
-
+        
         // Injeção de Dependências: Logger, a futura Service e as Configurações
         public PixController(
             ILogger<PixController> logger,
-            IPixPaymentService paymentService,
-            IOptions<MercadoPagoSettings> mpSettings)
+            IPixPaymentService paymentService)
         {
             _logger = logger;
             _paymentService = paymentService;
-            _mpSettings = mpSettings.Value;
         }
-
-        /// <summary>
-        /// Endpoint público para obter a Public Key do Mercado Pago.
-        /// </summary>
-        [HttpGet("getpublickey")]
-        [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
-        public IActionResult GetPublicKey()
-        {
-            _logger.LogInformation("Endpoint GetPublicKey foi chamado.");
-            return Ok(new { publicKey = _mpSettings.PublicKey });
-        }
-
+        
         /// <summary>
         /// Cria uma intenção de pagamento PIX. Requer autenticação.
         /// </summary>

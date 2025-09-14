@@ -29,7 +29,6 @@
 <script>
     // --- O OBJETO DE CONFIGURAÇÃO AGORA É DINÂMICO ---
     window.paymentConfig = {
-        publicKey: '@Model.PublicKey',
         preferenceId: '@Model.PreferenceId',
         amount: @Model.Valor.ToString(System.Globalization.CultureInfo.InvariantCulture),
         processPaymentUrl: '@Url.Page("/api/credit/card/process-payment", "ProcessPayment")',

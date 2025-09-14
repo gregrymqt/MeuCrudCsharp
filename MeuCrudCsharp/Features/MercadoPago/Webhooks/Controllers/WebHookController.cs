@@ -1,16 +1,11 @@
-﻿using System;
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.MercadoPago.Jobs;
 using MeuCrudCsharp.Models;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Webhooks.Controllers
 {
@@ -24,6 +19,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Webhooks.Controllers
         private readonly ILogger<WebHookController> _logger;
         private readonly IQueueService _queueService;
         private readonly string? _webhookSecret;
+        private readonly MercadoPagoSettings  _mercadoPagoSettings;
 
         /// <summary>
         /// Inicializa uma nova instância da classe <see cref="WebHookController"/>.
@@ -34,12 +30,12 @@ namespace MeuCrudCsharp.Features.MercadoPago.Webhooks.Controllers
         public WebHookController(
             ILogger<WebHookController> logger,
             IQueueService queueService,
-            IConfiguration configuration
+            IOptions<MercadoPagoSettings> mercadoPagoSettings
         )
         {
             _logger = logger;
             _queueService = queueService;
-            _webhookSecret = configuration["MercadoPago:WebhookSecret"];
+            _mercadoPagoSettings = mercadoPagoSettings.Value;
         }
 
         /// <summary>
@@ -123,14 +119,10 @@ namespace MeuCrudCsharp.Features.MercadoPago.Webhooks.Controllers
         /// <returns><c>true</c> se a assinatura for válida ou se a validação for ignorada em DEBUG; caso contrário, <c>false</c>.</returns>
         private bool IsSignatureValid(HttpRequest request, MercadoPagoNotification notification)
         {
-            if (string.IsNullOrEmpty(_webhookSecret))
+            if (string.IsNullOrEmpty(_mercadoPagoSettings.WebhookSecret))
             {
                 _logger.LogWarning(
                     "A chave secreta do webhook (MercadoPago:WebhookSecret) não está configurada. Validação da assinatura ignorada."
-                );
-                return true;
-                _logger.LogError(
-                    "FALHA DE SEGURANÇA: WebhookSecret não configurado em ambiente de Produção."
                 );
                 return false;
             }
@@ -167,7 +159,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Webhooks.Controllers
                 }
 
                 var manifest = $"id:{notification.Data.Id};request-id:{xRequestId};ts:{ts};";
-                using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(_webhookSecret));
+                using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(_mercadoPagoSettings.WebhookSecret));
                 var calculatedHash = BitConverter
                     .ToString(hmac.ComputeHash(Encoding.UTF8.GetBytes(manifest)))
                     .Replace("-", "")

@@ -78,5 +78,10 @@
     </div>
 </div>
 
+<script>
+    window.paymentConfig = {
+        userId : @Model.user.Id,
+    }
+</script>
 <script src="https://sdk.mercadopago.com/js/v2"></script>
 <script src="~/js/payment/Pix/admin-pix.js" type="module" defer></script>

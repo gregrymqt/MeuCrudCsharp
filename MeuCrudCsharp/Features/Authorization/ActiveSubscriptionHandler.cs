@@ -18,6 +18,12 @@ public class ActiveSubscriptionHandler : AuthorizationHandler<ActiveSubscription
 
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, ActiveSubscriptionRequirement requirement)
     {
+        if (context.User.IsInRole("Admin"))
+        {
+            context.Succeed(requirement);
+            return; // Sai do método, autorização concedida.
+        }
+        
         // 1. Obter o ID do usuário a partir do token JWT
         var userId = context.User.FindFirstValue(ClaimTypes.NameIdentifier);
 

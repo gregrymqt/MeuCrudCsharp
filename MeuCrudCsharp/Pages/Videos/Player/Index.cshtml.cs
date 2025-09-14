@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace MeuCrudCsharp.Pages.Videos.Player
 {
-    [Authorize(Policy = "ActiveSubscription",Roles = "Admin")] 
+    [Authorize(Policy = "ActiveSubscription")] 
     public class IndexModel : PageModel
     {
         private readonly ApiDbContext _context;

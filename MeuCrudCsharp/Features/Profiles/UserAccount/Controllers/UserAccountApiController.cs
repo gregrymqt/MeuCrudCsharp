@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using MeuCrudCsharp.Features.Base;
 using MeuCrudCsharp.Features.Profiles.UserAccount.Interfaces;
 using MeuCrudCsharp.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -10,7 +11,7 @@ namespace MeuCrudCsharp.Features.UserAccount.Controllers;
 [ApiController]
 [Authorize]
 [Route("api/user-account")]
-public class UserAccountApiController : ControllerBase
+public class UserAccountApiController : ApiControllerBase
 {
     private readonly IUserAccountService _userAccountService;
     private readonly UserManager<Users> _userManager;

@@ -78,6 +78,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
             {
                 return await CreateSubscriptionInternalAsync(request);
             }
+
             return await CreateSinglePaymentInternalAsync(request);
         }
 
@@ -202,7 +203,8 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
 
                 // Atualiza o registro no banco com os dados retornados pela API
                 novoPagamento.PaymentId = payment.Id.ToString();
-                novoPagamento.Status = MapPaymentStatus(payment.Status); // Supondo que você tenha este método de mapeamento
+                novoPagamento.Status =
+                    MapPaymentStatus(payment.Status); // Supondo que você tenha este método de mapeamento
                 novoPagamento.DateApproved = payment.DateApproved;
                 novoPagamento.UpdatedAt = DateTime.UtcNow;
 
@@ -297,22 +299,32 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
                     new PaymentStatusUpdate("Validando dados da assinatura...", "processing", false)
                 );
 
+                // 1. Tente obter a configuração do plano de forma segura
+                if (!_mercadoPagoSettings.Plans.TryGetValue("Anual", out PlanDetail planDetail))
+                {
+                    throw new InvalidOperationException(
+                        "A configuração para o plano 'Anual' não foi encontrada. Verifique o appsettings."
+                    );
+                }
+
+                // 3. A partir daqui, o compilador e você sabem que 'planDetail' NÃO É NULO.
+                // O resto do seu código pode continuar exatamente como estava.
                 var plan = await _context
                     .Plans.AsNoTracking()
                     .FirstOrDefaultAsync(p =>
-                        p.ExternalPlanId == _mercadoPagoSettings.Plans.Anual.Id
+                        p.ExternalPlanId == planDetail.Id
                     );
 
                 if (plan == null)
                 {
                     throw new ResourceNotFoundException(
-                        $"O plano com ID externo '{_mercadoPagoSettings.Plans.Anual.Id}' não foi encontrado."
+                        $"O plano com ID externo '{planDetail.Id}' não foi encontrado no banco de dados."
                     );
                 }
 
                 var createSubscriptionDto = new CreateSubscriptionDto
                 {
-                    PreapprovalPlanId = _mercadoPagoSettings.Plans.Anual.Id,
+                    PreapprovalPlanId = planDetail.Id, // Agora 100% seguro
                     PayerEmail = subscriptionData?.Payer?.Email,
                     CardTokenId = subscriptionData?.Token,
                     Reason = plan.Name,

@@ -15,11 +15,3 @@ export function fetchPaginatedCourses(pageNumber, pageSize) {
     // 2. USA o apiService.fetch importado para fazer a chamada.
     return apiService.fetch(`/api/public/courses/paginated?pageNumber=${pageNumber}&pageSize=${pageSize}`);
 }
-
-// Você pode adicionar outras funções de API relacionadas a cursos aqui, seguindo o mesmo padrão.
-// Exemplo:
-/*
-export function getCourseDetails(courseId) {
-    return apiService.fetch(`/api/public/courses/${courseId}`);
-}
-*/

@@ -1,18 +1,5 @@
 ﻿// /js/modules/mercadopagoManager.js
-
-import { fetchPublicKey } from './api/subscriptionAPI';
-
 let bricksBuilder;
-
-/**
- * Inicializa o SDK do Mercado Pago e o construtor de Bricks.
- * @returns {boolean} - Retorna true se a inicialização foi bem-sucedida.
- */
-export function initializeMercadoPago() {
-    const mp = new MercadoPago(fetchPublicKey());
-    bricksBuilder = mp.bricks();
-    return true;
-}
 
 /**
  * Cria e renderiza um Card Payment Brick do Mercado Pago.

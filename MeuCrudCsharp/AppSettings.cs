@@ -12,7 +12,7 @@ public class MercadoPagoSettings
     public string AccessToken { get; set; }
     public string WebhookSecret { get; set; }
     public string Defaultdescription { get; set; }
-    public PlanConfiguration Plans { get; set; }
+    public Dictionary<string, PlanDetail> Plans { get; set; }
 }
 
 public class PlanConfiguration

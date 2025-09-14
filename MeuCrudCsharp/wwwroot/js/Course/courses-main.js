@@ -1,9 +1,9 @@
 // /js/courses-main.js
 
-import { fetchPaginatedCourses } from './modules/api/coursesAPI.js';
-import { renderCourseRows, renderCarousel } from './modules/ui/courseTemplates.js';
-import { renderContinueWatchingSection } from './modules/ui/continueWatching.js';
-import { initializeCarousel } from './modules/services/swiperService.js';
+import {fetchPaginatedCourses} from './modules/api/coursesAPI.js';
+import {renderCourseRows, renderCarousel} from './modules/ui/courseTemplates.js';
+import {renderContinueWatchingSection} from './modules/ui/continueWatching.js';
+import {initializeCarousel} from './modules/services/swiperService.js';
 
 // --- Estado da P�gina ---
 let currentPage = 1;
@@ -26,7 +26,7 @@ async function loadCourses() {
 
     try {
         const paginatedResult = await fetchPaginatedCourses(currentPage, pageSize);
-        const { items, totalCount } = paginatedResult;
+        const {items, totalCount} = paginatedResult;
 
         if (items && items.length > 0) {
             if (currentPage === 1) {
@@ -38,6 +38,12 @@ async function loadCourses() {
             hasMorePages = (currentPage - 1) * pageSize < totalCount;
         } else {
             hasMorePages = false;
+            // 👇 ADICIONE ESTA VERIFICAÇÃO 👇
+            // Se for a primeira página e o container ainda estiver vazio, mostre uma mensagem.
+            if (currentPage === 1 && coursesContainer.innerHTML.trim() === '') {
+                pageLoader.style.display = 'none'; // Esconde o loader primeiro
+                coursesContainer.innerHTML = `<p class="info-message">Nenhum curso com vídeos disponível no momento. Volte em breve!</p>`;
+            }
         }
     } catch (error) {
         console.error("Falha ao carregar cursos:", error);
@@ -56,7 +62,7 @@ function setupInfiniteScroll() {
         if (entries[0].isIntersecting && hasMorePages) {
             loadCourses();
         }
-    }, { rootMargin: '200px' }); // Carrega 200px antes de chegar no final
+    }, {rootMargin: '200px'}); // Carrega 200px antes de chegar no final
 
     observer.observe(pageLoader);
 }

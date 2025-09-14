@@ -1,4 +1,4 @@
-﻿import { initializeMercadoPago } from './modules/mercadopagoManager.js';
+﻿import { initializeMercadoPago } from '../core/mercadoPagoService';
 import { initializeSidebarNavigation, initializeAccordions } from './modules/ui/navigation.js';
 
 // Importa os inicializadores dos nossos painéis de dados dinâmicos
@@ -15,13 +15,13 @@ import { initializeSubscriptionManager } from './modules/subscriptionManager.js'
  */
 async function main() {
     // 1. Inicializa componentes que não dependem de dados da API
-    initializeMercadoPago();
+    await initializeMercadoPago();
     initializeSidebarNavigation();
     initializeAccordions(); // Mantido para outros acordeões que não sejam da assinatura
 
     // 2. Inicia o carregamento e a renderização dos painéis que dependem da API
-    initializeProfileCard();
-    initializePaymentHistory();
+    await initializeProfileCard();
+    await initializePaymentHistory();
 
     // Primeiro, renderiza o painel de assinatura e aguarda ele retornar os dados.
     const subscriptionData = await initializeSubscriptionPanel();

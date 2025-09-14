@@ -2,14 +2,7 @@
 
 import { showError } from '../ui/paymentUI.js';
 
-let mp;
 let bricksBuilder;
-
-/** Inicializa o SDK do Mercado Pago. */
-export function initializeMercadoPago(publicKey) {
-    mp = new MercadoPago(publicKey, { locale: 'pt-BR' });
-    bricksBuilder = mp.bricks();
-}
 
 /** Renderiza o Brick de Pagamento. */
 export function renderPaymentBrick(callbacks) {

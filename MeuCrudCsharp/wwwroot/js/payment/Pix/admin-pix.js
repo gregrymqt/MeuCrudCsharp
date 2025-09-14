@@ -1,8 +1,10 @@
 // js/admin-pix.js
-import { fetchPublicKey, postCreatePayment } from './modules/api/api.js';
-import { displayPixPayment, setLoading, displayError, setupCopyButton, showSuccessScreen } from './modules/ui/ui.js';
-import { initializeMercadoPago, loadIdentificationTypes } from './modules/services/mercadoPago.js';
-import { createPaymentHubConnection } from './modules/services/signalr.js';
+import {postCreatePayment} from './modules/api/api.js';
+import {displayPixPayment, setLoading, displayError, setupCopyButton, showSuccessScreen} from './modules/ui/ui.js';
+import {loadIdentificationTypes} from './modules/services/mercadoPago.js';
+import {createPaymentHubConnection} from './modules/services/signalr.js';
+import {initializeMercadoPago, getMercadoPagoInstance} from '../../core/mercadoPagoService.js';
+
 
 let hubConnection;
 
@@ -27,26 +29,31 @@ function handlePaymentStatusUpdate(data) {
 // 2. Função principal que executa quando a página carrega
 async function main() {
     try {
-        // Assume que o ID do usuário está disponível globalmente, como no seu exemplo do cartão
-        // Você DEVE injetar isso na sua página via backend. Ex: <script>window.paymentConfig = { userId: '@User.Identity.Name' };</script>
+        // 1. VALIDAÇÃO PRIMORDIAL: Verifique TODA a configuração necessária no início.
         if (!window.paymentConfig || !window.paymentConfig.userId) {
-            throw new Error("ID do usuário não encontrado. A comunicação em tempo real não pode ser iniciada.");
+            throw new Error("Configuraçõe de pagamento userId não encontrada na página.");
         }
 
-        // Inicia e subscreve a conexão com o Hub assim que a página carrega
+        // Desestruturação para um código mais limpo
+        const {userId} = window.paymentConfig;
+
+        // 2. INICIALIZAÇÃO DO SDK (agora síncrona)
+        await initializeMercadoPago(publicKey);
+        
+
+        // 3. CONEXÃO COM O HUB (operação assíncrona)
         hubConnection = createPaymentHubConnection(handlePaymentStatusUpdate);
         await hubConnection.start();
-        await hubConnection.subscribe(window.paymentConfig.userId);
-        console.log("Conectado ao Hub de Pagamentos e aguardando atualizações.");
+        await hubConnection.subscribe(userId);
+        console.log("Conectado ao Hub de Pagamentos e aguardando atualizações para o usuário:", userId);
 
-        // Lógica existente para carregar o formulário do MP
-        const publicKey = await fetchPublicKey();
-        await initializeMercadoPago(publicKey);
+        // 4. OPERAÇÕES ADICIONAIS
         await loadIdentificationTypes();
         setupCopyButton();
+        console.log("Página PIX pronta.");
 
     } catch (error) {
-        console.error("Erro na inicialização:", error);
+        console.error("Erro na inicialização da página PIX:", error);
         displayError("Não foi possível carregar a página de pagamento. Tente novamente.");
     }
 }

@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace MeuCrudCsharp.Pages.Payment.Type
 {
@@ -16,15 +17,14 @@ namespace MeuCrudCsharp.Pages.Payment.Type
     public class CreditCardModel : PageModel
     {
         private readonly PreferenceController _preferenceController;
-        private readonly IConfiguration _configuration;
         private readonly ILogger<CreditCardModel> _logger; // MUDANÇA 1: Adicionando Logger
+        private readonly MercadoPagoSettings _mercadoPagoSettings;
 
         // Apenas o 'Plano' vem da URL. O 'Valor' será definido no backend.
         [BindProperty(SupportsGet = true)]
         public string? Plano { get; set; }
 
         public decimal Valor { get; private set; } // Não é mais um BindProperty
-        public string? PublicKey { get; private set; }
         public string? PreferenceId { get; private set; }
         public string? PreapprovalPlanId { get; private set; }
         public Users? user { get; set; }
@@ -33,12 +33,13 @@ namespace MeuCrudCsharp.Pages.Payment.Type
         public CreditCardModel(
             PreferenceController preferenceController,
             IConfiguration configuration,
-            ILogger<CreditCardModel> logger
-        ) // MUDANÇA 1
+            ILogger<CreditCardModel> logger,
+            IOptions<MercadoPagoSettings> mercadoPagoSettings
+            ) // MUDANÇA 1
         {
             _preferenceController = preferenceController;
-            _configuration = configuration;
             _logger = logger;
+            _mercadoPagoSettings = mercadoPagoSettings.Value;
         }
 
         public async Task<IActionResult> OnGetAsync()
@@ -74,11 +75,13 @@ namespace MeuCrudCsharp.Pages.Payment.Type
                 // MUDANÇA 3: Lógica para buscar o valor e o ID da configuração
                 try
                 {
-                    // Usamos a capitalização correta para buscar no appsettings (Mensal, Anual)
-                    var planConfigKey = $"MercadoPago:Plans:{Plano.Capitalize()}";
+                    var planoNormalizado = Plano.Capitalize(); // Um método de extensão para "Mensal" ou "Anual"
 
-                    Valor = _configuration.GetValue<decimal>($"{planConfigKey}:Price");
-                    PreapprovalPlanId = _configuration.GetValue<string>($"{planConfigKey}:Id");
+                    if (_mercadoPagoSettings.Plans.TryGetValue(planoNormalizado, out PlanDetail planoSelecionado))
+                    {
+                        Valor = planoSelecionado.Price;
+                        PreapprovalPlanId = planoSelecionado.Id;
+                    }
 
                     // Validação para garantir que a configuração foi encontrada
                     if (Valor <= 0)
@@ -93,9 +96,6 @@ namespace MeuCrudCsharp.Pages.Payment.Type
                             $"O PreapprovalPlanId para o plano '{Plano}' não está configurado."
                         );
                     }
-
-                    // Carrega a chave pública para o frontend
-                    PublicKey = _configuration["MercadoPago:PUBLIC_KEY"];
 
                     // Cria a preferência de pagamento com o VALOR SEGURO
                     var preferenceID = await _preferenceController.Create(Valor);
