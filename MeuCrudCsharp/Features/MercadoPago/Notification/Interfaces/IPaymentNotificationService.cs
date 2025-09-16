@@ -1,12 +1,8 @@
-﻿namespace MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces
+﻿using MeuCrudCsharp.Features.MercadoPago.Notification.Record;
+
+namespace MeuCrudCsharp.Features.MercadoPago.Notification.Interfaces
 {
-    public record PaymentStatusUpdate(
-        string Message,
-        string Status,
-        bool IsComplete,
-        string? PaymentId = null,
-        string? ExternalId = null
-    );
+    
 
     public interface IPaymentNotificationService
     {

@@ -1,15 +1,9 @@
-﻿using System;
-using System.Linq;
-using System.Threading.Tasks;
-using Hangfire;
+﻿using Hangfire;
 using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Features.Caching;
 using MeuCrudCsharp.Features.Exceptions; // Nossas exceções
-using MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces;
-using MeuCrudCsharp.Features.MercadoPago.Notification;
-using MeuCrudCsharp.Features.Refunds.Interfaces;
+using MeuCrudCsharp.Features.MercadoPago.Notification.Interfaces;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Jobs
 {

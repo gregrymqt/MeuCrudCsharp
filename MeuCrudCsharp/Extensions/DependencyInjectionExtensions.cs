@@ -19,11 +19,12 @@ public static class DependencyInjectionExtensions
                 "MeuCrudCsharp.Features.Courses.Services", // Corrigido: Estava no singular "Course"
                 "MeuCrudCsharp.Features.Emails.Services",
                 "MeuCrudCsharp.Features.MercadoPago.Payments.Services",
-                "MeuCrudCsharp.Features.MercadoPago.Notification", 
+                "MeuCrudCsharp.Features.MercadoPago.Notification.Services",
                 "MeuCrudCsharp.Features.Plans.Services",
                 "MeuCrudCsharp.Features.Profiles.Admin.Services",
                 "MeuCrudCsharp.Features.Profiles.UserAccount.Services",
                 "MeuCrudCsharp.Features.Refunds.Services",
+                "MeuCrudCsharp.Features.Refunds.Notifications",
                 "MeuCrudCsharp.Features.Subscriptions.Services",
                 "MeuCrudCsharp.Features.Videos.Service",
                 "MeuCrudCsharp.Features.Videos.Services",
@@ -38,9 +39,8 @@ public static class DependencyInjectionExtensions
 
         // Registra manualmente serviços que não seguem o padrão ou precisam de configuração especial.
         builder.Services.AddScoped<ProcessPaymentNotificationJob>();
-        // Exemplo: builder.Services.AddScoped<IQueueService, BackgroundJobQueueService>();
+        builder.Services.AddScoped<IQueueService, BackgroundJobQueueService>();
 
         return builder;
     }
 }
-

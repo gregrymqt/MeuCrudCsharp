@@ -6,6 +6,7 @@ using MercadoPago.Resource.Payment;
 using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Features.Caching;
 using MeuCrudCsharp.Features.Exceptions;
+using MeuCrudCsharp.Features.MercadoPago.Notification.Interfaces;
 using MeuCrudCsharp.Features.MercadoPago.Payments.Dtos;
 using MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces;
 using Microsoft.Extensions.Options;

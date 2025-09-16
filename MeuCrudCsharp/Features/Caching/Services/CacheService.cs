@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using StackExchange.Redis;
 using System;
@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using MeuCrudCsharp.Features.Caching;
 
+namespace  MeuCrudCsharp.Features.Caching.Services;
 public class CacheService : ICacheService
 {
     private readonly IDistributedCache _cache;

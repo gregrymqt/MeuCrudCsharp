@@ -1,5 +1,7 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
+
+namespace MeuCrudCsharp.Features.Caching.Interfaces;
 
 public interface ICacheService
 {

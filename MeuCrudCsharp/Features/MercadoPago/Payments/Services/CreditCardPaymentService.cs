@@ -4,12 +4,11 @@ using MercadoPago.Client.Common;
 using MercadoPago.Client.Payment;
 using MercadoPago.Error;
 using MercadoPago.Resource.Payment;
-using MercadoPago.Resource.User;
 using MeuCrudCsharp.Data;
-using MeuCrudCsharp.Features.Exceptions; // Nossas exceções
+using MeuCrudCsharp.Features.Exceptions;
+using MeuCrudCsharp.Features.MercadoPago.Notification.Interfaces; // Nossas exceções
 using MeuCrudCsharp.Features.MercadoPago.Payments.Dtos;
 using MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces;
-using MeuCrudCsharp.Features.Profiles.Admin.Interfaces;
 using MeuCrudCsharp.Features.Subscriptions.DTOs;
 using MeuCrudCsharp.Features.Subscriptions.Interfaces;
 using MeuCrudCsharp.Models;

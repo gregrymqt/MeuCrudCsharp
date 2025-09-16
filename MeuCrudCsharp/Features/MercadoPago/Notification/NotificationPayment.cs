@@ -4,6 +4,7 @@ using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Features.Emails.Interfaces;
 using MeuCrudCsharp.Features.Emails.ViewModels;
 using MeuCrudCsharp.Features.Exceptions;
+using MeuCrudCsharp.Features.MercadoPago.Notification.Interfaces;
 using MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces;
 using MeuCrudCsharp.Features.Refunds.Interfaces;
 using MeuCrudCsharp.Models;
@@ -13,7 +14,7 @@ using Microsoft.Extensions.Logging;
 namespace MeuCrudCsharp.Features.MercadoPago.Notification
 {
     /// <summary>
-    /// Implementa <see cref="INotificationPaymentService"/> para processar notificações de pagamento.
+    /// Implementa <see cref="INotificationPayment"/> para processar notificações de pagamento.
     /// Este serviço verifica o status de um pagamento no banco de dados local e envia e-mails de confirmação ou rejeição ao usuário.
     /// </summary>
     public class NotificationPayment : INotificationPayment

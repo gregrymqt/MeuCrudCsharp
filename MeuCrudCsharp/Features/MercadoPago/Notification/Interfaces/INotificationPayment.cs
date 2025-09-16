@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 
-namespace MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces
+namespace MeuCrudCsharp.Features.MercadoPago.Notification.Interfaces
 {
     /// <summary>
     /// Define o contrato para um serviço responsável por processar notificações de pagamento.
