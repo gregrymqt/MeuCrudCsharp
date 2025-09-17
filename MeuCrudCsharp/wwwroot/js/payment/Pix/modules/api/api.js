@@ -11,7 +11,7 @@ import apiService from '../../../../core/apiService.js'; // Ajuste o caminho se 
 export async function postCreatePayment(paymentData) {
     try {
         // 3. USA o apiService para a chamada POST, que lida com tudo automaticamente.
-        return await apiService.fetch('/api/payment/createpix', {
+        return await apiService.fetch('/api/pix/createpix', {
             method: 'POST',
             body: JSON.stringify(paymentData)
         });

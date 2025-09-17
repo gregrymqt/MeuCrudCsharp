@@ -6,7 +6,8 @@ using MercadoPago.Error;
 using MercadoPago.Resource.Payment;
 using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Features.Exceptions;
-using MeuCrudCsharp.Features.MercadoPago.Notification.Interfaces; // Nossas exceções
+using MeuCrudCsharp.Features.MercadoPago.Notification.Interfaces;
+using MeuCrudCsharp.Features.MercadoPago.Notification.Record; // Nossas exceções
 using MeuCrudCsharp.Features.MercadoPago.Payments.Dtos;
 using MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces;
 using MeuCrudCsharp.Features.Subscriptions.DTOs;

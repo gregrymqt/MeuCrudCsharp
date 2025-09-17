@@ -11,18 +11,18 @@ using MeuCrudCsharp.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
-namespace MeuCrudCsharp.Features.MercadoPago.Notification
+namespace MeuCrudCsharp.Features.MercadoPago.Notification.Services
 {
     /// <summary>
     /// Implementa <see cref="INotificationPayment"/> para processar notificações de pagamento.
     /// Este serviço verifica o status de um pagamento no banco de dados local e envia e-mails de confirmação ou rejeição ao usuário.
     /// </summary>
-    public class NotificationPayment : INotificationPayment
+    public class NotificationPaymentService : INotificationPayment
     {
         private readonly ApiDbContext _context;
         private readonly IEmailSenderService _emailSender;
         private readonly IRazorViewToStringRenderer _razorRenderer;
-        private readonly ILogger<NotificationPayment> _logger;
+        private readonly ILogger<NotificationPaymentService> _logger;
         private readonly IMercadoPagoPaymentService _mercadoPagoService;
         private readonly IRefundNotification _refundNotification;
 
@@ -33,11 +33,11 @@ namespace MeuCrudCsharp.Features.MercadoPago.Notification
         /// <param name="emailSender">O serviço para envio de e-mails.</param>
         /// <param name="razorRenderer">O serviço para renderizar templates Razor para string.</param>
         /// <param name="logger">O serviço de logging.</param>
-        public NotificationPayment(
+        public NotificationPaymentService(
             ApiDbContext context,
             IEmailSenderService emailSender,
             IRazorViewToStringRenderer razorRenderer,
-            ILogger<NotificationPayment> logger,
+            ILogger<NotificationPaymentService> logger,
             IMercadoPagoPaymentService mercadoPagoService, // <-- INJEÇÃO DO SERVIÇO DO MP
             IRefundNotification refundNotification // <-- INJEÇÃO DO SERVIÇO SIGNALR
         )

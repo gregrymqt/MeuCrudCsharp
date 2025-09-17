@@ -5,6 +5,7 @@ using System;
 using System.Text.Json;
 using System.Threading.Tasks;
 using MeuCrudCsharp.Features.Caching;
+using MeuCrudCsharp.Features.Caching.Interfaces;
 
 namespace  MeuCrudCsharp.Features.Caching.Services;
 public class CacheService : ICacheService

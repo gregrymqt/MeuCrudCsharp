@@ -15,7 +15,7 @@ public static class DependencyInjectionExtensions
             .FromEntryAssembly()
             // Adiciona todas as classes dos namespaces especificados.
             .AddClasses(classes => classes.InNamespaces(
-                "MeuCrudCsharp.Features.Clients.Service",
+                "MeuCrudCsharp.Features.Clients.Services",
                 "MeuCrudCsharp.Features.Courses.Services", // Corrigido: Estava no singular "Course"
                 "MeuCrudCsharp.Features.Emails.Services",
                 "MeuCrudCsharp.Features.MercadoPago.Payments.Services",
@@ -26,11 +26,11 @@ public static class DependencyInjectionExtensions
                 "MeuCrudCsharp.Features.Refunds.Services",
                 "MeuCrudCsharp.Features.Refunds.Notifications",
                 "MeuCrudCsharp.Features.Subscriptions.Services",
-                "MeuCrudCsharp.Features.Videos.Service",
                 "MeuCrudCsharp.Features.Videos.Services",
-                "MeuCrudCsharp.Features.Caching",
+                "MeuCrudCsharp.Features.Caching.Services",
                 "MeuCrudCsharp.Features.Authorization",
-                "MeuCrudCsharp.Features.Auth"
+                "MeuCrudCsharp.Features.Auth",
+                "MeuCrudCsharp.AppSettings"
             ))
             // Registra as classes como implementações de suas interfaces.
             .AsImplementedInterfaces()
@@ -40,6 +40,12 @@ public static class DependencyInjectionExtensions
         // Registra manualmente serviços que não seguem o padrão ou precisam de configuração especial.
         builder.Services.AddScoped<ProcessPaymentNotificationJob>();
         builder.Services.AddScoped<IQueueService, BackgroundJobQueueService>();
+        builder.Services.Configure<GeneralSettings>(builder.Configuration.GetSection(GeneralSettings.SectionName));
+        builder.Services.Configure<MercadoPagoSettings>(
+            builder.Configuration.GetSection(MercadoPagoSettings.SectionName));
+        builder.Services.Configure<SendGridSettings>(builder.Configuration.GetSection(SendGridSettings.SectionName));
+        builder.Services.Configure<GoogleSettings>(builder.Configuration.GetSection(GoogleSettings.SectionName));
+        builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"));
 
         return builder;
     }

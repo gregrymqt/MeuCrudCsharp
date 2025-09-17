@@ -1,8 +1,5 @@
-﻿using System;
-using System.ComponentModel;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Globalization;
-using System.IO;
 using System.Text.RegularExpressions;
 using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Features.Exceptions;
@@ -11,10 +8,9 @@ using MeuCrudCsharp.Features.Videos.Interfaces;
 using MeuCrudCsharp.Models;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 
-namespace MeuCrudCsharp.Features.Videos.Service
+
+namespace MeuCrudCsharp.Features.Videos.Services
 {
     /// <summary>
     /// Implements <see cref="IVideoProcessingService"/> to handle video file conversions using FFmpeg.

@@ -41,6 +41,7 @@ public static class AuthExtensions
             })
             .AddJwtBearer(options =>
             {
+                // Seu código atual em AddAuth
                 var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>();
                 if (jwtSettings?.Key is null)
                 {

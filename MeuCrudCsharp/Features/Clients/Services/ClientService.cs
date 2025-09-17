@@ -1,5 +1,7 @@
 ﻿// Local: Features/Clients/Service/ClientService.cs
+
 using System.Text.Json;
+using MeuCrudCsharp.Features.Caching.Interfaces;
 using MeuCrudCsharp.Features.Clients.DTOs;
 using MeuCrudCsharp.Features.Clients.Interfaces;
 using MeuCrudCsharp.Features.Exceptions;
@@ -8,7 +10,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace MeuCrudCsharp.Features.Clients.Service
+namespace MeuCrudCsharp.Features.Clients.Services
 {
     /// <summary>
     /// Serviço responsável por interagir com a API de Clientes do Mercado Pago,
@@ -17,13 +19,20 @@ namespace MeuCrudCsharp.Features.Clients.Service
     /// </summary>
     public class ClientService : MercadoPagoServiceBase, IClientService
     {
+        private readonly ICacheService _cacheService;
+
         /// <summary>
         /// Inicializa uma nova instância do serviço de cliente.
         /// </summary>
         /// <param name="httpClient">Cliente HTTP para fazer requisições à API do Mercado Pago.</param>
         /// <param name="logger">Logger para rastreamento e diagnóstico.</param>
-        public ClientService(IHttpClientFactory httpClient, ILogger<ClientService> logger)
-            : base(httpClient, logger) { }
+        public ClientService(IHttpClientFactory httpClient,
+            ILogger<ClientService> logger,
+            ICacheService cacheService)
+            : base(httpClient, logger)
+        {
+            _cacheService = cacheService;
+        }
 
         /// <summary>
         /// Cria um novo cliente na plataforma Mercado Pago.
@@ -44,9 +53,9 @@ namespace MeuCrudCsharp.Features.Clients.Service
             );
 
             return JsonSerializer.Deserialize<CustomerResponseDto>(responseBody)
-                ?? throw new AppServiceException(
-                    "Falha ao desserializar a resposta da criação do cliente."
-                );
+                   ?? throw new AppServiceException(
+                       "Falha ao desserializar a resposta da criação do cliente."
+                   );
         }
 
         /// <summary>
@@ -75,10 +84,16 @@ namespace MeuCrudCsharp.Features.Clients.Service
                 payload
             );
 
-            return JsonSerializer.Deserialize<CardResponseDto>(responseBody)
-                ?? throw new AppServiceException(
-                    "Falha ao desserializar a resposta ao adicionar cartão."
-                );
+            var cardResponse = JsonSerializer.Deserialize<CardResponseDto>(responseBody)
+                               ?? throw new AppServiceException(
+                                   "Falha ao desserializar a resposta ao adicionar cartão."
+                               );
+
+            // Invalida o cache após a operação ser bem-sucedida
+            var cacheKey = $"customer-cards:{customerId}";
+            await _cacheService.RemoveAsync(cacheKey);
+
+            return cardResponse;
         }
 
         /// <summary>
@@ -107,10 +122,16 @@ namespace MeuCrudCsharp.Features.Clients.Service
                 (object?)null
             );
 
-            return JsonSerializer.Deserialize<CardResponseDto>(responseBody)
-                ?? throw new AppServiceException(
-                    "Falha ao desserializar a resposta ao deletar cartão."
-                );
+            var cardResponse = JsonSerializer.Deserialize<CardResponseDto>(responseBody)
+                               ?? throw new AppServiceException(
+                                   "Falha ao desserializar a resposta ao deletar cartão."
+                               );
+
+            // Invalida o cache após a operação ser bem-sucedida
+            var cacheKey = $"customer-cards:{customerId}";
+            await _cacheService.RemoveAsync(cacheKey);
+
+            return cardResponse;
         }
 
         /// <summary>
@@ -123,16 +144,27 @@ namespace MeuCrudCsharp.Features.Clients.Service
         {
             _logger.LogInformation("Listando cartões para o cliente MP: {CustomerId}", customerId);
 
-            var endpoint = $"/v1/customers/{customerId}/cards";
+            // 1. Define uma chave única para o cache
+            var cacheKey = $"customer-cards:{customerId}";
+            var expirationTime = TimeSpan.FromMinutes(15); // Exemplo: cache por 15 minutos
 
-            var responseBody = await SendMercadoPagoRequestAsync(
-                HttpMethod.Get,
-                endpoint,
-                (object?)null
-            );
+            // 2. Usa GetOrCreateAsync
+            //    - Tenta buscar do cache.
+            //    - Se não encontrar, executa a função "factory", busca na API e salva o resultado no cache.
+            return await _cacheService.GetOrCreateAsync(cacheKey, async () =>
+            {
+                _logger.LogInformation("Cache miss para {CacheKey}. Buscando da API.", cacheKey);
+                var endpoint = $"/v1/customers/{customerId}/cards";
 
-            return JsonSerializer.Deserialize<List<CardResponseDto>>(responseBody)
-                ?? new List<CardResponseDto>();
+                var responseBody = await SendMercadoPagoRequestAsync(
+                    HttpMethod.Get,
+                    endpoint,
+                    (object?)null
+                );
+
+                return JsonSerializer.Deserialize<List<CardResponseDto>>(responseBody)
+                       ?? new List<CardResponseDto>();
+            }, expirationTime);
         }
     }
 }

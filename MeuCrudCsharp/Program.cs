@@ -28,15 +28,15 @@ try
 
     // --- 2. Registro de Serviços (usando os Métodos de Extensão) ---
     builder
-        .AddCoreServices()        // Configura Controllers, Razor Pages, Swagger, SignalR
+        .AddCoreServices() // Configura Controllers, Razor Pages, Swagger, SignalR
         .AddApplicationServices() // Registra todos os seus serviços de negócio
-        .AddPersistence()         // Configura DB, Identity, Cache (Redis) e Hangfire
-        .AddWebServices()         // Configura CORS, Cookies e HttpClient
-        .AddAuth();               // Configura Autenticação e Autorização
+        .AddPersistence() // Configura DB, Identity, Cache (Redis) e Hangfire
+        .AddWebServices() // Configura CORS, Cookies e HttpClient
+        .AddAuth(); // Configura Autenticação e Autorização
 
     // --- 3. Construção e Configuração do Pipeline ---
     var app = builder.Build();
-    
+
     await app.UseAppPipeline(); // Configura todos os middlewares e endpoints
 
     app.Run();

@@ -1,12 +1,8 @@
-﻿using System;
-using System.Threading.Tasks;
-using MercadoPago.Error;
+﻿using MercadoPago.Error;
 using MeuCrudCsharp.Features.Base;
-using MeuCrudCsharp.Features.Caching;
-using MeuCrudCsharp.Features.MercadoPago.Payments.Dtos;
+using MeuCrudCsharp.Features.Caching.Interfaces;
+using MeuCrudCsharp.Features.Caching.Record;
 using MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Payments.Controllers

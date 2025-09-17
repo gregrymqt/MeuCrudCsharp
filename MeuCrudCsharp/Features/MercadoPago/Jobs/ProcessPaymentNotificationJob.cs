@@ -1,6 +1,7 @@
 ﻿using Hangfire;
 using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Features.Caching;
+using MeuCrudCsharp.Features.Caching.Interfaces;
 using MeuCrudCsharp.Features.Exceptions; // Nossas exceções
 using MeuCrudCsharp.Features.MercadoPago.Notification.Interfaces;
 using Microsoft.EntityFrameworkCore;

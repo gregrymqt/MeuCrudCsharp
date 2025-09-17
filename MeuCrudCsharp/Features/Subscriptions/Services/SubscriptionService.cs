@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Security.Claims;
 using System.Text.Json;
-using System.Threading.Tasks;
 using MeuCrudCsharp.Data;
-using MeuCrudCsharp.Features.Caching;
+using MeuCrudCsharp.Features.Caching.Interfaces;
 using MeuCrudCsharp.Features.Clients.Interfaces;
 using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.MercadoPago.Base;
@@ -12,7 +11,6 @@ using MeuCrudCsharp.Features.Subscriptions.DTOs;
 using MeuCrudCsharp.Features.Subscriptions.Interfaces;
 using MeuCrudCsharp.Models;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 
 namespace MeuCrudCsharp.Features.Subscriptions.Services
 {

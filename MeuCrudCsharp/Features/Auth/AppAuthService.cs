@@ -79,7 +79,7 @@ namespace MeuCrudCsharp.Features.Auth
             if (_jwtSettings == null || string.IsNullOrEmpty(_jwtSettings.Key))
             {
                 throw new InvalidOperationException(
-                    "A chave JWT (JwtSettings.Key) não foi encontrada na configuração."
+                    "A chave JWT (JwtSettings.Key) não foi encontrada na configuraçãos."
                 );
             }
 

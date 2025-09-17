@@ -1,6 +1,7 @@
 ﻿
 using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Features.Caching;
+using MeuCrudCsharp.Features.Caching.Interfaces;
 using MeuCrudCsharp.Features.Courses.DTOs;
 using MeuCrudCsharp.Features.Courses.Interfaces;
 using MeuCrudCsharp.Features.Courses.Mappers;

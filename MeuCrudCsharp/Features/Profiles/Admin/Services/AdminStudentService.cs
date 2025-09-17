@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Features.Caching;
+using MeuCrudCsharp.Features.Caching.Interfaces;
 using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.Profiles.Admin.Dtos;
 using MeuCrudCsharp.Features.Profiles.Admin.Interfaces;

@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Features.Caching;
+using MeuCrudCsharp.Features.Caching.Interfaces;
 using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.Videos.DTOs;
 using MeuCrudCsharp.Features.Videos.Interfaces;
@@ -9,7 +10,7 @@ using MeuCrudCsharp.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
-namespace MeuCrudCsharp.Features.Videos.Service
+namespace MeuCrudCsharp.Features.Videos.Services
 {
     /// <summary>
     /// Implements <see cref="IAdminVideoService"/> to provide administrative functionalities

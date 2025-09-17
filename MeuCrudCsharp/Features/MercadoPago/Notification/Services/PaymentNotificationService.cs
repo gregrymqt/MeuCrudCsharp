@@ -1,5 +1,6 @@
 ﻿using MeuCrudCsharp.Features.Hubs;
 using MeuCrudCsharp.Features.MercadoPago.Notification.Interfaces;
+using MeuCrudCsharp.Features.MercadoPago.Notification.Record;
 using Microsoft.AspNetCore.SignalR;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Notification.Services
@@ -7,7 +8,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Notification.Services
     public class PaymentNotificationService : IPaymentNotificationService
     {
         private readonly IHubContext<PaymentProcessingHub> _hubContext;
-
+        
         public PaymentNotificationService(IHubContext<PaymentProcessingHub> hubContext)
         {
             _hubContext = hubContext;
