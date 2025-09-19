@@ -1,4 +1,4 @@
-﻿import { initializeMercadoPago } from '../core/mercadoPagoService';
+﻿import { initializeMercadoPago } from '../core/mercadoPagoService.js';
 import { initializeSidebarNavigation, initializeAccordions } from './modules/ui/navigation.js';
 
 // Importa os inicializadores dos nossos painéis de dados dinâmicos

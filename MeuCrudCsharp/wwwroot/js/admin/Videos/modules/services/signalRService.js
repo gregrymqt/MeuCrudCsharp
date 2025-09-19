@@ -11,4 +11,4 @@ export function createVideoHubConnection(callbacks) {
         stop: () => connection.stop(),
         subscribe: (jobId) => connection.invoke("SubscribeToJobProgress", jobId),
     };
-}s
+}

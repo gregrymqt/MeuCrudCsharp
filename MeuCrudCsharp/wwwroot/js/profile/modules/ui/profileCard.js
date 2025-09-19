@@ -16,10 +16,11 @@ function renderProfileCard(data) {
     // Lógica para exibir o status e o botão corretos
     if (data.isAdmin) {
         cardContainer.insertAdjacentHTML('beforeend', `
-            <div class="subscription-status-badge status-admin"><i class="fas fa-crown"></i> Administrador</div>
-            <a href="/Profile/Admin/Index" class="profile-cta-button">Painel Admin</a>
-        `);
-    } else if (data.subscription) {
+        <div class="subscription-status-badge status-admin"><i class="fas fa-crown"></i> Administrador</div>
+        <a href="/Profile/Admin/Index" class="profile-cta-button">Painel Admin</a>
+        <a href="/Videos/Admin/Index" class="profile-cta-button">Painel de Vídeos</a> 
+    `);
+    }else if (data.subscription) {
         const statusClass = `status-${data.subscription.status?.toLowerCase() || 'none'}`;
         cardContainer.insertAdjacentHTML('beforeend', `
             <div class="subscription-status-badge ${statusClass}">Plano: ${data.subscription.planName} (${data.subscription.status})</div>

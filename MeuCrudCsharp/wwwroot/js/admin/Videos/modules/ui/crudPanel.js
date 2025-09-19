@@ -107,7 +107,8 @@ async function handleVideoDelete(videoId) {
 
 async function loadCoursesIntoSelect() {
     try {
-        const courses = await api.getCourses();
+        const coursesResponse = await api.getCourses();
+        const courses = coursesResponse.items;
         while (courseSelect.options.length > 2) courseSelect.remove(2);
         courses.forEach(course => courseSelect.add(new Option(course.name, course.name)));
     } catch (error) {
