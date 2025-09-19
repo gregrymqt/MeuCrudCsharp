@@ -63,8 +63,28 @@ public class CacheService : ICacheService
         }
     }
     
+    public async Task InvalidateCacheByKeyAsync(string cacheVersionKey)
+    {
+        try
+        {
+            var newVersion = Guid.NewGuid().ToString();
+            // Usamos SetAsync para definir explicitamente a nova versão.
+            await SetAsync(cacheVersionKey, newVersion, TimeSpan.FromDays(30));
+
+            _logger.LogInformation(
+                "Cache para a chave de versão '{CacheKey}' invalidado. Nova versão: {CacheVersion}",
+                cacheVersionKey,
+                newVersion
+            );
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Falha ao invalidar o cache para a chave de versão {CacheKey}", cacheVersionKey);
+        }
+    }
+    
     // Métodos privados para manter a lógica de Get/Set encapsulada.
-    public async Task<T?> GetAsync<T>(string key)
+    private async Task<T?> GetAsync<T>(string key)
     {
         try
         {
@@ -82,7 +102,7 @@ public class CacheService : ICacheService
         }
     }
 
-    public  async Task SetAsync<T>(string key, T value, TimeSpan? absoluteExpireTime = null)
+    private  async Task SetAsync<T>(string key, T value, TimeSpan? absoluteExpireTime = null)
     {
         try
         {

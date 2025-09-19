@@ -6,23 +6,6 @@ namespace MeuCrudCsharp.Features.Caching.Interfaces;
 public interface ICacheService
 {
     /// <summary>
-    /// Busca um valor do cache de forma assíncrona.
-    /// </summary>
-    /// <typeparam name="T">O tipo do objeto a ser deserializado.</typeparam>
-    /// <param name="key">A chave do cache.</param>
-    /// <returns>O objeto deserializado ou o valor padrão se a chave não for encontrada.</returns>
-    Task<T?> GetAsync<T>(string key);
-
-    /// <summary>
-    /// Define um valor no cache com um tempo de expiração.
-    /// </summary>
-    /// <typeparam name="T">O tipo do objeto a ser serializado.</typeparam>
-    /// <param name="key">A chave do cache.</param>
-    /// <param name="value">O valor a ser armazenado.</param>
-    /// <param name="absoluteExpireTime">O tempo de expiração a partir de agora. Se nulo, usa o padrão.</param>
-    Task SetAsync<T>(string key, T value, TimeSpan? absoluteExpireTime = null);
-
-    /// <summary>
     /// Busca um valor do cache. Se não existir, executa a função factory para criar o valor,
     /// o armazena no cache e o retorna.
     /// </summary>
@@ -38,4 +21,8 @@ public interface ICacheService
     /// </summary>
     /// <param name="key">A chave a ser removida.</param>
     Task RemoveAsync(string key);
+    
+    
+    Task InvalidateCacheByKeyAsync(string cacheVersionKey);
+
 }

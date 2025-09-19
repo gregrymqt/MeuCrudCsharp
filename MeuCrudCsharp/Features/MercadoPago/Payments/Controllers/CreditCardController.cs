@@ -58,60 +58,44 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Controllers
                 return BadRequest(ModelState);
             }
 
-            if (
-                !Request.Headers.TryGetValue("X-Idempotency-Key", out var idempotencyKey)
-                || string.IsNullOrEmpty(idempotencyKey)
-            )
+            if (!Request.Headers.TryGetValue("X-Idempotency-Key", out var idempotencyKey) ||
+                string.IsNullOrEmpty(idempotencyKey))
             {
                 return BadRequest(new { message = "O header 'X-Idempotency-Key' é obrigatório." });
             }
 
             var cacheKey = $"{IDEMPOTENCY_PREFIX}_idempotency_{idempotencyKey}";
-            var cachedResponse = await _cacheService.GetAsync<CachedResponse>(cacheKey);
 
-            if (cachedResponse != null)
+            var response = await _cacheService.GetOrCreateAsync(
+                cacheKey,
+                async () =>
+                {
+                    try
+                    {
+                        var result = await _creditCardPaymentService.CreatePaymentOrSubscriptionAsync(request);
+                        return new CachedResponse(result, 201); 
+                    }
+                    catch (MercadoPagoApiException e)
+                    {
+                        var errorBody = new { error = "MercadoPago Error", message = e.ApiError.Message };
+                        return new CachedResponse(errorBody, 400); 
+                    }
+                    catch (Exception ex)
+                    {
+                        var errorBody = new { message = "Ocorreu um erro inesperado.", error = ex.Message };
+                        return new CachedResponse(errorBody, 500); 
+                    }
+                },
+                TimeSpan.FromHours(24) 
+            );
+            
+
+            if (response.StatusCode == 201) 
             {
-                Console.WriteLine("--> Resposta retornada do cache de idempotência.");
-                return StatusCode(cachedResponse.StatusCode, cachedResponse.Body);
+                return CreatedAtAction(nameof(ProcessPaymentAsync), response.Body);
             }
-
-            try
-            {
-                var result = await _creditCardPaymentService.CreatePaymentOrSubscriptionAsync(
-                    request
-                );
-
-                var responseToCache = new CachedResponse(result, 201);
-                await _cacheService.SetAsync(cacheKey, responseToCache, TimeSpan.FromHours(24));
-
-                return CreatedAtAction(nameof(ProcessPaymentAsync), result);
-            }
-            catch (MercadoPagoApiException e)
-            {
-                var errorBody = new { error = "MercadoPago Error", message = e.ApiError.Message };
-
-                var errorResponseToCache = new CachedResponse(errorBody, 400);
-                await _cacheService.SetAsync(
-                    cacheKey,
-                    errorResponseToCache,
-                    TimeSpan.FromHours(24)
-                );
-
-                return BadRequest(errorBody);
-            }
-            catch (Exception ex)
-            {
-                var errorBody = new { message = "Ocorreu um erro inesperado.", error = ex.Message };
-
-                var errorResponseToCache = new CachedResponse(errorBody, 500);
-                await _cacheService.SetAsync(
-                    cacheKey,
-                    errorResponseToCache,
-                    TimeSpan.FromHours(24)
-                );
-
-                return StatusCode(500, errorBody);
-            }
+            
+            return StatusCode(response.StatusCode, response.Body);
         }
     }
 }

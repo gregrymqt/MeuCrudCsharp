@@ -126,7 +126,7 @@ namespace MeuCrudCsharp.Features.Courses.Services
 
             _context.Courses.Add(newCourse);
             await _context.SaveChangesAsync();
-            await InvalidateCoursesCacheAsync(); // Invalidação robusta
+            await _cacheService.InvalidateCacheByKeyAsync(CoursesCacheVersionKey);
 
             _logger.LogInformation("Novo curso '{CourseName}' criado com sucesso.", newCourse.Name);
             return CourseMapper.ToDto(newCourse); // Usa o Mapper
@@ -147,7 +147,7 @@ namespace MeuCrudCsharp.Features.Courses.Services
             course.Description = updateDto.Description ?? string.Empty;
 
             await _context.SaveChangesAsync();
-            await InvalidateCoursesCacheAsync(); // Invalidação robusta
+            await _cacheService.InvalidateCacheByKeyAsync(CoursesCacheVersionKey);
 
             _logger.LogInformation("Curso {CourseId} atualizado.", publicId);
             return CourseMapper.ToDto(course); // Usa o Mapper
@@ -178,7 +178,7 @@ namespace MeuCrudCsharp.Features.Courses.Services
 
             _context.Courses.Remove(course);
             await _context.SaveChangesAsync();
-            await InvalidateCoursesCacheAsync(); // Invalidação robusta
+            await _cacheService.InvalidateCacheByKeyAsync(CoursesCacheVersionKey);
 
             _logger.LogInformation("Curso {CourseId} deletado com sucesso.", publicId);
         }
@@ -193,21 +193,11 @@ namespace MeuCrudCsharp.Features.Courses.Services
                 );
             }
             
-            await InvalidateCoursesCacheAsync(); // Invalidação robusta
+            await _cacheService.InvalidateCacheByKeyAsync(CoursesCacheVersionKey);
 
             return course;
         }
-
-        // ✅ NOVO: Centraliza a lógica de invalidação de cache
-        private async Task InvalidateCoursesCacheAsync()
-        {
-            var newVersion = Guid.NewGuid().ToString();
-            await _cacheService.SetAsync(CoursesCacheVersionKey, newVersion, TimeSpan.FromDays(30));
-            _logger.LogInformation(
-                "Cache de cursos invalidado. Nova versão: {CacheVersion}",
-                newVersion
-            );
-        }
+        
 
         private Task<string> GetCacheVersionAsync()
         {

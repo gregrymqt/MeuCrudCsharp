@@ -107,7 +107,7 @@ namespace MeuCrudCsharp.Features.Videos.Services
 
             _context.Videos.Add(video);
             await _context.SaveChangesAsync();
-            await InvalidateVideosCache();
+            await _cacheService.InvalidateCacheByKeyAsync(VideosCacheVersionKey);
 
             // Atribui Course para que o mapper use o nome corretamente
             video.Course = course;
@@ -132,7 +132,7 @@ namespace MeuCrudCsharp.Features.Videos.Services
             video.Description = updateDto.Description;
 
             await _context.SaveChangesAsync();
-            await InvalidateVideosCache();
+            await _cacheService.InvalidateCacheByKeyAsync(VideosCacheVersionKey);
 
             _logger.LogInformation("Vídeo {VideoId} atualizado com sucesso.", video.Id);
             return VideoMapper.ToDto(video);
@@ -156,7 +156,8 @@ namespace MeuCrudCsharp.Features.Videos.Services
 
             _context.Videos.Remove(video);
             await _context.SaveChangesAsync();
-            await InvalidateVideosCache();
+            await _cacheService.InvalidateCacheByKeyAsync(VideosCacheVersionKey);
+
 
             _logger.LogInformation(
                 "Vídeo {VideoId} deletado com sucesso do banco de dados.",
@@ -169,15 +170,6 @@ namespace MeuCrudCsharp.Features.Videos.Services
         /// <c>GetAllVideosAsync</c> cache entries.
         /// </summary>
         /// <returns>A task representing the asynchronous operation.</returns>
-        private async Task InvalidateVideosCache()
-        {
-            var newVersion = Guid.NewGuid().ToString();
-            await _cacheService.SetAsync(VideosCacheVersionKey, newVersion, TimeSpan.FromDays(30));
-            _logger.LogInformation(
-                "Cache de vídeos invalidado. Nova versão: {CacheVersion}",
-                newVersion
-            );
-        }
 
         /// <summary>
         /// Retrieves a <see cref="Video"/> entity by <paramref name="publicId"/>.

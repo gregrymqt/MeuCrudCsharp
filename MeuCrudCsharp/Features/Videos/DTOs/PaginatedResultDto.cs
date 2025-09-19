@@ -12,7 +12,7 @@ namespace MeuCrudCsharp.Features.Videos.DTOs
         /// <summary>
         /// The collection of items for the current page.
         /// </summary>
-        public IEnumerable<T> Items { get; }
+        public List<T> Items { get; }
 
         /// <summary>
         /// The current page number.
@@ -29,12 +29,7 @@ namespace MeuCrudCsharp.Features.Videos.DTOs
         /// </summary>
         public int TotalCount { get; }
 
-        /// <summary>
-        /// The total number of pages available.
-        /// </summary>
-        public int TotalPages => (int)Math.Ceiling(TotalCount / (double)PageSize);
-
-        public PaginatedResultDto(IEnumerable<T> items, int count, int page, int pageSize)
+        public PaginatedResultDto(List<T> items, int count, int page, int pageSize)
         {
             Items = items;
             TotalCount = count;
