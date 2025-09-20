@@ -15,7 +15,6 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Controllers
     [Route("/api/credit/card")]
     public class CreditCardController : ApiControllerBase
     {
-        private const string IDEMPOTENCY_PREFIX = "CreditCardPayment";
         private readonly ICacheService _cacheService;
         private readonly ICreditCardPaymentService _creditCardPaymentService;
 
@@ -58,43 +57,23 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Controllers
                 return BadRequest(ModelState);
             }
 
-            if (!Request.Headers.TryGetValue("X-Idempotency-Key", out var idempotencyKey) ||
-                string.IsNullOrEmpty(idempotencyKey))
+            if (!Request.Headers.TryGetValue("X-Idempotency-Key", out var idempotencyKey))
             {
                 return BadRequest(new { message = "O header 'X-Idempotency-Key' é obrigatório." });
             }
 
-            var cacheKey = $"{IDEMPOTENCY_PREFIX}_idempotency_{idempotencyKey}";
-
-            var response = await _cacheService.GetOrCreateAsync(
-                cacheKey,
-                async () =>
-                {
-                    try
-                    {
-                        var result = await _creditCardPaymentService.CreatePaymentOrSubscriptionAsync(request);
-                        return new CachedResponse(result, 201); 
-                    }
-                    catch (MercadoPagoApiException e)
-                    {
-                        var errorBody = new { error = "MercadoPago Error", message = e.ApiError.Message };
-                        return new CachedResponse(errorBody, 400); 
-                    }
-                    catch (Exception ex)
-                    {
-                        var errorBody = new { message = "Ocorreu um erro inesperado.", error = ex.Message };
-                        return new CachedResponse(errorBody, 500); 
-                    }
-                },
-                TimeSpan.FromHours(24) 
+            // A controller apenas delega a chamada, passando os dados e a chave.
+            var response = await _creditCardPaymentService.CreatePaymentOrSubscriptionAsync(
+                request,
+                idempotencyKey.ToString()
             );
-            
 
-            if (response.StatusCode == 201) 
+            // E então, monta a resposta HTTP baseada no resultado padronizado.
+            if (response.StatusCode == 201)
             {
                 return CreatedAtAction(nameof(ProcessPaymentAsync), response.Body);
             }
-            
+
             return StatusCode(response.StatusCode, response.Body);
         }
     }

@@ -29,6 +29,7 @@ services:
       - SendGrid__ApiKey=${SendGrid__ApiKey}
       - SendGrid__FromEmail=${SendGrid__FromEmail}
       - SendGrid__FromName=${SendGrid__FromName}
+      - General__BaseUrl=${General__BaseUrl}
     depends_on:
       - redis
 

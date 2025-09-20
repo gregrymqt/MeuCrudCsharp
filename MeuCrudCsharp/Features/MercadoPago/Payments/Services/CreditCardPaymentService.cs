@@ -5,6 +5,8 @@ using MercadoPago.Client.Payment;
 using MercadoPago.Error;
 using MercadoPago.Resource.Payment;
 using MeuCrudCsharp.Data;
+using MeuCrudCsharp.Features.Caching.Record;
+using MeuCrudCsharp.Features.Caching.Services;
 using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.MercadoPago.Notification.Interfaces;
 using MeuCrudCsharp.Features.MercadoPago.Notification.Record; // Nossas exceções
@@ -23,6 +25,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
     /// </summary>
     public class CreditCardPaymentService : ICreditCardPaymentService
     {
+        private const string IDEMPOTENCY_PREFIX = "CreditCardPayment";
         private readonly ApiDbContext _context;
         private readonly ISubscriptionService _subscriptionService;
         private readonly IHttpContextAccessor _httpContextAccessor;
@@ -30,6 +33,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
         private readonly IPaymentNotificationService _notificationService;
         private readonly MercadoPagoSettings _mercadoPagoSettings;
         private readonly GeneralSettings _generalSettings;
+        private readonly CacheService _cacheService;
 
         private readonly Dictionary<string, string> _statusMap = new()
         {
@@ -48,7 +52,8 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
             ILogger<CreditCardPaymentService> logger,
             IPaymentNotificationService notificationService,
             IOptions<MercadoPagoSettings> mercadoPagoSettings,
-            IOptions<GeneralSettings> generalSettings
+            IOptions<GeneralSettings> generalSettings,
+            CacheService cacheService
         )
         {
             _context = context;
@@ -58,6 +63,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
             _notificationService = notificationService;
             _mercadoPagoSettings = mercadoPagoSettings.Value;
             _generalSettings = generalSettings.Value;
+            _cacheService = cacheService;
         }
 
         /// <inheritdoc />
@@ -65,23 +71,57 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
         /// Cria um pagamento ou assinatura com base na solicitação.
         /// </summary>
         /// <param name="request">Os dados da solicitação de pagamento.</param>
-        public async Task<object> CreatePaymentOrSubscriptionAsync(CreditCardPaymentRequestDto request)
+        public async Task<CachedResponse> CreatePaymentOrSubscriptionAsync(
+            CreditCardPaymentRequestDto request, 
+            string idempotencyKey // 1. A assinatura do método agora inclui a idempotencyKey
+        )
         {
-            // MUDANÇA 2: Validação "Fail-Fast"
+            // Validação "Fail-Fast"
             if (request == null)
-                throw new ArgumentNullException(
-                    nameof(request),
-                    "Os dados do pagamento não podem ser nulos."
-                );
+                throw new ArgumentNullException(nameof(request), "Os dados do pagamento não podem ser nulos.");
 
-            if (string.Equals(request.Plano, "anual", StringComparison.OrdinalIgnoreCase))
-            {
-                return await CreateSubscriptionInternalAsync(request);
-            }
+            var cacheKey = $"{IDEMPOTENCY_PREFIX}_idempotency_{idempotencyKey}";
 
-            return await CreateSinglePaymentInternalAsync(request);
+            // 2. A lógica de cache envolve toda a operação, garantindo a idempotência
+            var response = await _cacheService.GetOrCreateAsync(
+                cacheKey,
+                async () =>
+                {
+                    // 3. Tratamento de erro para cachear falhas e garantir que não sejam reprocessadas
+                    try
+                    {
+                        object result;
+                
+                        // 4. A lógica de negócio original está dentro da "factory"
+                        if (string.Equals(request.Plano, "anual", StringComparison.OrdinalIgnoreCase))
+                        {
+                            result = await CreateSubscriptionInternalAsync(request);
+                        }
+                        else
+                        {
+                            result = await CreateSinglePaymentInternalAsync(request);
+                        }
+
+                        // 5. O retorno de sucesso é padronizado para CachedResponse
+                        return new CachedResponse(result, 201); // 201 Created
+                    }
+                    catch (MercadoPagoApiException e)
+                    {
+                        var errorBody = new { error = "MercadoPago Error", message = e.ApiError.Message };
+                        return new CachedResponse(errorBody, 400); // 400 Bad Request
+                    }
+                    catch (Exception ex)
+                    {
+                        var errorBody = new { message = "Ocorreu um erro inesperado.", error = ex.Message };
+                        return new CachedResponse(errorBody, 500); // 500 Internal Server Error
+                    }
+                },
+                TimeSpan.FromHours(24)
+            );
+
+            return response;
         }
-
+        
         /// <summary>
         /// Cria um pagamento único com base nos dados fornecidos.
         /// </summary>
@@ -146,10 +186,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
                 {
                     CustomHeaders = { { "X-Idempotency-Key", novoPagamento.ExternalId } },
                 };
-
-                // =======================================================
-                //  INÍCIO DA CORREÇÃO PRINCIPAL
-                // =======================================================
+                
                 var paymentRequest = new PaymentCreateRequest
                 {
                     TransactionAmount = creditCardPaymentData.Amount,
@@ -170,9 +207,6 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
                     ExternalReference = novoPagamento.ExternalId, // Referência externa para rastreamento
                     NotificationUrl = $"{_generalSettings.BaseUrl}/webhook/mercadopago"
                 };
-                // =======================================================
-                //  FIM DA CORREÇÃO PRINCIPAL
-                // =======================================================
 
                 Payment payment = await paymentClient.CreateAsync(paymentRequest, requestOptions);
 
@@ -203,8 +237,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
 
                 // Atualiza o registro no banco com os dados retornados pela API
                 novoPagamento.PaymentId = payment.Id.ToString();
-                novoPagamento.Status =
-                    MapPaymentStatus(payment.Status); // Supondo que você tenha este método de mapeamento
+                novoPagamento.Status = MapPaymentStatus(payment.Status); // Supondo que você tenha este método de mapeamento
                 novoPagamento.DateApproved = payment.DateApproved;
                 novoPagamento.UpdatedAt = DateTime.UtcNow;
 

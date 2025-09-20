@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using MeuCrudCsharp.Features.Base;
+using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.MercadoPago.Payments.Dtos;
 using MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -33,32 +34,35 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Controllers;
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<IActionResult> CreatePixPayment([FromBody] CreatePixPaymentRequest request)
         {
-            _logger.LogInformation("Endpoint CreatePixPayment foi chamado.");
-
-            // 1. Obter o ID do usuário logado a partir do token JWT ou cookie de sessão
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-
             if (string.IsNullOrEmpty(userId))
             {
-                _logger.LogWarning("Tentativa de criar pagamento sem um usuário autenticado.");
                 return Unauthorized(new { message = "Usuário não autenticado." });
             }
 
-            _logger.LogInformation("Usuário ID: {UserId} está criando um pagamento PIX.", userId);
+            // 1. Adicionar a validação do header de idempotência
+            if (!Request.Headers.TryGetValue("X-Idempotency-Key", out var idempotencyKey) ||
+                string.IsNullOrEmpty(idempotencyKey))
+            {
+                return BadRequest(new { message = "O header 'X-Idempotency-Key' é obrigatório." });
+            }
 
             try
             {
-                // 2. Chamar a service, passando o usuário e os dados do pagamento
-                var response = await _paymentService.CreatePixPaymentAsync(userId, request);
-
-                // 3. Retornar a resposta da service (QR Code, etc.) para o front-end
-                return Ok(response);
+                // 2. Chamar o novo método no serviço, passando a chave
+                var response = await _paymentService.CreateIdempotentPixPaymentAsync(userId, request, idempotencyKey.ToString());
+        
+                // 3. Montar a resposta HTTP com base no resultado do serviço
+                return StatusCode(response.StatusCode, response.Body);
+            }
+            catch (AppServiceException ex) // Exceção de serviço pode ser tratada aqui
+            {
+                return BadRequest(new { message = ex.Message });
             }
             catch (Exception ex)
             {
-                // Em um caso real, você pode ter exceções customizadas para diferentes erros
-                _logger.LogError(ex, "Erro ao criar pagamento PIX para o usuário {UserId}.", userId);
-                return BadRequest(new { message = $"Ocorreu um erro ao processar o pagamento: {ex.Message}" });
+                _logger.LogError(ex, "Erro inesperado ao criar pagamento PIX para o usuário {UserId}.", userId);
+                return StatusCode(500, new { message = "Ocorreu um erro inesperado." });
             }
         }
     }
