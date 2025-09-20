@@ -5,15 +5,17 @@ using MercadoPago.Client.Payment;
 using MercadoPago.Error;
 using MercadoPago.Resource.Payment;
 using MeuCrudCsharp.Data;
+using MeuCrudCsharp.Features.Auth.Interfaces;
+using MeuCrudCsharp.Features.Caching.Interfaces;
 using MeuCrudCsharp.Features.Caching.Record;
-using MeuCrudCsharp.Features.Caching.Services;
 using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.MercadoPago.Notification.Interfaces;
 using MeuCrudCsharp.Features.MercadoPago.Notification.Record; // Nossas exceções
 using MeuCrudCsharp.Features.MercadoPago.Payments.Dtos;
 using MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces;
-using MeuCrudCsharp.Features.Subscriptions.DTOs;
-using MeuCrudCsharp.Features.Subscriptions.Interfaces;
+using MeuCrudCsharp.Features.MercadoPago.Payments.Utils;
+using MeuCrudCsharp.Features.MercadoPago.Subscriptions.DTOs;
+using MeuCrudCsharp.Features.MercadoPago.Subscriptions.Interfaces;
 using MeuCrudCsharp.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -33,17 +35,8 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
         private readonly IPaymentNotificationService _notificationService;
         private readonly MercadoPagoSettings _mercadoPagoSettings;
         private readonly GeneralSettings _generalSettings;
-        private readonly CacheService _cacheService;
-
-        private readonly Dictionary<string, string> _statusMap = new()
-        {
-            { "approved", "aprovado" },
-            { "pending", "pendente" },
-            { "in_process", "pendente" },
-            { "rejected", "recusado" },
-            { "refunded", "reembolsado" },
-            { "cancelled", "cancelado" },
-        };
+        private readonly ICacheService _cacheService;
+        private readonly IUserContext _userContext;
 
         public CreditCardPaymentService(
             ApiDbContext context,
@@ -53,9 +46,11 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
             IPaymentNotificationService notificationService,
             IOptions<MercadoPagoSettings> mercadoPagoSettings,
             IOptions<GeneralSettings> generalSettings,
-            CacheService cacheService
+            ICacheService cacheService,
+            IUserContext userContext
         )
         {
+            if (userContext == null) throw new ArgumentNullException(nameof(userContext));
             _context = context;
             _httpContextAccessor = httpContextAccessor;
             _logger = logger;
@@ -64,6 +59,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
             _mercadoPagoSettings = mercadoPagoSettings.Value;
             _generalSettings = generalSettings.Value;
             _cacheService = cacheService;
+            _userContext = userContext;
         }
 
         /// <inheritdoc />
@@ -72,7 +68,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
         /// </summary>
         /// <param name="request">Os dados da solicitação de pagamento.</param>
         public async Task<CachedResponse> CreatePaymentOrSubscriptionAsync(
-            CreditCardPaymentRequestDto request, 
+            CreditCardPaymentRequestDto request,
             string idempotencyKey // 1. A assinatura do método agora inclui a idempotencyKey
         )
         {
@@ -91,7 +87,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
                     try
                     {
                         object result;
-                
+
                         // 4. A lógica de negócio original está dentro da "factory"
                         if (string.Equals(request.Plano, "anual", StringComparison.OrdinalIgnoreCase))
                         {
@@ -121,7 +117,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
 
             return response;
         }
-        
+
         /// <summary>
         /// Cria um pagamento único com base nos dados fornecidos.
         /// </summary>
@@ -133,7 +129,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
             CreditCardPaymentRequestDto creditCardPaymentData
         )
         {
-            var userId = GetCurrentUserId();
+            var userId = _userContext.GetCurrentUserId();
 
             if (
                 creditCardPaymentData.Payer?.Email is null
@@ -186,7 +182,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
                 {
                     CustomHeaders = { { "X-Idempotency-Key", novoPagamento.ExternalId } },
                 };
-                
+
                 var paymentRequest = new PaymentCreateRequest
                 {
                     TransactionAmount = creditCardPaymentData.Amount,
@@ -237,7 +233,9 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
 
                 // Atualiza o registro no banco com os dados retornados pela API
                 novoPagamento.PaymentId = payment.Id.ToString();
-                novoPagamento.Status = MapPaymentStatus(payment.Status); // Supondo que você tenha este método de mapeamento
+                novoPagamento.Status =
+                    PaymentStatusMapper
+                        .MapFromMercadoPago(payment.Status); // Supondo que você tenha este método de mapeamento
                 novoPagamento.DateApproved = payment.DateApproved;
                 novoPagamento.UpdatedAt = DateTime.UtcNow;
 
@@ -253,13 +251,14 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
                     novoPagamento.PaymentId,
                     novoPagamento.Status
                 );
-
-                return new PaymentResponseDto
-                {
-                    Id = payment.Id,
-                    Status = payment.Status,
-                    Message = "Pagamento processado.",
-                };
+                
+                return new PaymentResponseDto(
+                    payment.Status,
+                    payment.Id,
+                    null,
+                    "Pagamento processado.",
+                    null,
+                    null);
             }
             catch (MercadoPagoApiException mpex)
             {
@@ -321,7 +320,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
             CreditCardPaymentRequestDto subscriptionData
         )
         {
-            var userId = GetCurrentUserId();
+            var userId = _userContext.GetCurrentUserId();
 
             // MUDANÇA 3: Bloco try-catch robusto
             try
@@ -356,13 +355,13 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
                 }
 
                 var createSubscriptionDto = new CreateSubscriptionDto
-                {
-                    PreapprovalPlanId = planDetail.Id, // Agora 100% seguro
-                    PayerEmail = subscriptionData?.Payer?.Email,
-                    CardTokenId = subscriptionData?.Token,
-                    Reason = plan.Name,
-                    BackUrl = $"{_generalSettings.BaseUrl}/Subscription/Success",
-                };
+                (
+                    planDetail.Id, // Agora 100% seguro
+                    subscriptionData?.Payer?.Email, 
+                    subscriptionData?.Token,
+                    plan.Name,
+                    $"{_generalSettings.BaseUrl}/Subscription/Success"
+                );
 
                 var user = _httpContextAccessor.HttpContext?.User;
 
@@ -389,7 +388,8 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
                     UserId = userId,
                     PlanId = plan.Id,
                     ExternalId = subscriptionResponse.Id,
-                    Status = MapPaymentStatus(subscriptionResponse.Status), // Supondo que você tenha este método
+                    Status = PaymentStatusMapper.MapFromMercadoPago(subscriptionResponse
+                        .Status!), // Supondo que você tenha este método
                     PayerEmail = subscriptionData?.Payer?.Email,
                     UpdatedAt = DateTime.UtcNow,
                     PaymentId = subscriptionResponse.Id,
@@ -433,26 +433,6 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
                     ex
                 );
             }
-        }
-
-        public string MapPaymentStatus(string mercadopagoStatus)
-        {
-            return _statusMap.TryGetValue(mercadopagoStatus, out var status) ? status : "pendente";
-        }
-
-        private string GetCurrentUserId()
-        {
-            var userIdString = _httpContextAccessor.HttpContext?.User.FindFirstValue(
-                ClaimTypes.NameIdentifier
-            );
-            if (string.IsNullOrEmpty(userIdString))
-            {
-                throw new AppServiceException(
-                    "A identificação do usuário não pôde ser encontrada na sessão atual."
-                );
-            }
-
-            return userIdString;
         }
     }
 }

@@ -15,21 +15,22 @@ public static class DependencyInjectionExtensions
             .FromEntryAssembly()
             // Adiciona todas as classes dos namespaces especificados.
             .AddClasses(classes => classes.InNamespaces(
-                "MeuCrudCsharp.Features.Clients.Services",
-                "MeuCrudCsharp.Features.Courses.Services", // Corrigido: Estava no singular "Course"
+                "MeuCrudCsharp.Features.Courses.Services", 
                 "MeuCrudCsharp.Features.Emails.Services",
                 "MeuCrudCsharp.Features.MercadoPago.Payments.Services",
                 "MeuCrudCsharp.Features.MercadoPago.Notification.Services",
-                "MeuCrudCsharp.Features.Plans.Services",
+                "MeuCrudCsharp.Features.MercadoPago.Plans.Services",
+                "MeuCrudCsharp.Features.MercadoPago.Clients.Services",
+                "MeuCrudCsharp.Features.MercadoPago.Subscriptions.Services",
+                "MeuCrudCsharp.Features.MercadoPago.Refunds.Services",
+                "MeuCrudCsharp.Features.MercadoPago.Refunds.Notifications",
                 "MeuCrudCsharp.Features.Profiles.Admin.Services",
                 "MeuCrudCsharp.Features.Profiles.UserAccount.Services",
-                "MeuCrudCsharp.Features.Refunds.Services",
-                "MeuCrudCsharp.Features.Refunds.Notifications",
-                "MeuCrudCsharp.Features.Subscriptions.Services",
                 "MeuCrudCsharp.Features.Videos.Services",
                 "MeuCrudCsharp.Features.Caching.Services",
                 "MeuCrudCsharp.Features.Authorization",
                 "MeuCrudCsharp.Features.Auth",
+                "MeuCrudCsharp.Features.Shared.User",
                 "MeuCrudCsharp.AppSettings"
             ))
             // Registra as classes como implementações de suas interfaces.

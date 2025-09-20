@@ -1,18 +1,13 @@
-﻿using System;
-using System.Security.Claims;
-using System.Threading.Tasks;
+﻿using System.Security.Claims;
+using MeuCrudCsharp.Features.Auth.Interfaces;
 using MeuCrudCsharp.Features.Base;
-using MeuCrudCsharp.Features.Clients.DTOs;
 using MeuCrudCsharp.Features.Exceptions;
-using MeuCrudCsharp.Features.Profiles.UserAccount.DTOs;
+using MeuCrudCsharp.Features.MercadoPago.Clients.DTOs;
+using MeuCrudCsharp.Features.MercadoPago.Subscriptions.DTOs;
 using MeuCrudCsharp.Features.Profiles.UserAccount.Interfaces;
-using MeuCrudCsharp.Features.Subscriptions.DTOs;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 
-namespace MeuCrudCsharp.Features.UserAccount.Controllers
+namespace MeuCrudCsharp.Features.Profiles.UserAccount.Controllers
 {
     /// <summary>
     /// Manages the authenticated user's subscription actions, such as changing payment methods,
@@ -23,6 +18,7 @@ namespace MeuCrudCsharp.Features.UserAccount.Controllers
     {
         private readonly IUserAccountService _userAccountService;
         private readonly ILogger<UserController> _logger;
+        private readonly IUserContext _userContext;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SubscriptionController"/> class.
@@ -31,11 +27,13 @@ namespace MeuCrudCsharp.Features.UserAccount.Controllers
         /// <param name="logger">The logger for recording events and errors.</param>
         public UserController(
             IUserAccountService userAccountService,
-            ILogger<UserController> logger
+            ILogger<UserController> logger,
+            IUserContext userContext
         )
         {
             _userAccountService = userAccountService;
             _logger = logger;
+            _userContext = userContext;
         }
 
         /// <summary>
@@ -56,7 +54,7 @@ namespace MeuCrudCsharp.Features.UserAccount.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
+                var userId = _userContext.GetCurrentUserId();
                 var success = await _userAccountService.UpdateSubscriptionCardAsync(
                     userId,
                     request?.Token
@@ -87,7 +85,7 @@ namespace MeuCrudCsharp.Features.UserAccount.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId(); // Função auxiliar para pegar o ID do usuário logado
+                var userId = _userContext.GetCurrentUserId();
                 var success = await _userAccountService.UpdateSubscriptionStatusAsync(userId, dto.Status);
 
                 if (!success)
@@ -107,12 +105,6 @@ namespace MeuCrudCsharp.Features.UserAccount.Controllers
                 _logger.LogError(ex, "Erro inesperado no endpoint UpdateStatus.");
                 return StatusCode(500, new { message = "Ocorreu um erro inesperado." });
             }
-        }
-
-        private string GetCurrentUserId()
-        {
-            // Implemente a lógica para obter o ID do usuário a partir das claims do token JWT
-            return User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         }
     }
 }

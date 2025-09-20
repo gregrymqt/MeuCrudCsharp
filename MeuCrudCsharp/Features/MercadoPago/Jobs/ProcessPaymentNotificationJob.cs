@@ -24,7 +24,8 @@ namespace MeuCrudCsharp.Features.MercadoPago.Jobs
         /// </summary>
         /// <param name="logger">O serviço de logging.</param>
         /// <param name="context">O contexto do banco de dados para operações transacionais.</param>
-        /// <param name="notificationPaymentService">O serviço que contém a lógica de negócio para processar a notificação.</param>
+        /// <param name="notificationPayment">O serviço que contém a lógica de negócio para processar a notificação.</param>
+        /// <param name="cacheService"></param>
         public ProcessPaymentNotificationJob(
             ILogger<ProcessPaymentNotificationJob> logger,
             ApiDbContext context,

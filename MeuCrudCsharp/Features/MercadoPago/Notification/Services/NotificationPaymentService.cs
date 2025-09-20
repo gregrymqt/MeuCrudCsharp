@@ -6,7 +6,7 @@ using MeuCrudCsharp.Features.Emails.ViewModels;
 using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.MercadoPago.Notification.Interfaces;
 using MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces;
-using MeuCrudCsharp.Features.Refunds.Interfaces;
+using MeuCrudCsharp.Features.MercadoPago.Refunds.Interfaces;
 using MeuCrudCsharp.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -33,6 +33,9 @@ namespace MeuCrudCsharp.Features.MercadoPago.Notification.Services
         /// <param name="emailSender">O serviço para envio de e-mails.</param>
         /// <param name="razorRenderer">O serviço para renderizar templates Razor para string.</param>
         /// <param name="logger">O serviço de logging.</param>
+        /// <param name="mercadoPagoService">O serviço de logging.</param>
+        /// <param name="refundNotification">O serviço de logging.</param>
+
         public NotificationPaymentService(
             ApiDbContext context,
             IEmailSenderService emailSender,

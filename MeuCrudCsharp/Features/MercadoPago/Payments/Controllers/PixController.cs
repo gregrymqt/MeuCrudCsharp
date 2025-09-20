@@ -34,12 +34,6 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Controllers;
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<IActionResult> CreatePixPayment([FromBody] CreatePixPaymentRequest request)
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (string.IsNullOrEmpty(userId))
-            {
-                return Unauthorized(new { message = "Usuário não autenticado." });
-            }
-
             // 1. Adicionar a validação do header de idempotência
             if (!Request.Headers.TryGetValue("X-Idempotency-Key", out var idempotencyKey) ||
                 string.IsNullOrEmpty(idempotencyKey))
@@ -50,7 +44,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Controllers;
             try
             {
                 // 2. Chamar o novo método no serviço, passando a chave
-                var response = await _paymentService.CreateIdempotentPixPaymentAsync(userId, request, idempotencyKey.ToString());
+                var response = await _paymentService.CreateIdempotentPixPaymentAsync(request, idempotencyKey.ToString());
         
                 // 3. Montar a resposta HTTP com base no resultado do serviço
                 return StatusCode(response.StatusCode, response.Body);
@@ -61,7 +55,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Controllers;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erro inesperado ao criar pagamento PIX para o usuário {UserId}.", userId);
+                _logger.LogError(ex, "Ocorreu um erro ao criar o pix");
                 return StatusCode(500, new { message = "Ocorreu um erro inesperado." });
             }
         }

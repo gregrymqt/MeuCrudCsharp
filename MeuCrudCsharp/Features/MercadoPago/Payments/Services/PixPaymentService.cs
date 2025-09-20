@@ -4,6 +4,7 @@ using MercadoPago.Client.Payment;
 using MercadoPago.Error;
 using MercadoPago.Resource.Payment;
 using MeuCrudCsharp.Data;
+using MeuCrudCsharp.Features.Auth.Interfaces;
 using MeuCrudCsharp.Features.Caching.Interfaces;
 using MeuCrudCsharp.Features.Caching.Record;
 using MeuCrudCsharp.Features.Exceptions;
@@ -11,6 +12,7 @@ using MeuCrudCsharp.Features.MercadoPago.Notification.Interfaces;
 using MeuCrudCsharp.Features.MercadoPago.Notification.Record;
 using MeuCrudCsharp.Features.MercadoPago.Payments.Dtos;
 using MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces;
+using MeuCrudCsharp.Features.MercadoPago.Payments.Utils;
 using Microsoft.Extensions.Options;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services;
@@ -23,32 +25,25 @@ public class PixPaymentService : IPixPaymentService
     private readonly ApiDbContext _dbContext;
     private readonly GeneralSettings _generalsettings;
     private const string IDEMPOTENCY_PREFIX = "PixPayment";
+    private readonly IUserContext _userContext;
 
 
     public PixPaymentService(ILogger<PixPaymentService> logger,
         ICacheService cacheService,
         IPaymentNotificationService notificationService,
         ApiDbContext dbContext,
-        IOptions<GeneralSettings> settings)
+        IOptions<GeneralSettings> settings,
+        IUserContext userContext)
     {
         _logger = logger;
         _cacheService = cacheService;
         _notificationService = notificationService;
         _dbContext = dbContext;
         _generalsettings = settings.Value;
+        _userContext = userContext;
     }
-
-    private readonly Dictionary<string, string> _statusMap = new()
-    {
-        { "approved", "aprovado" },
-        { "pending", "pendente" },
-        { "in_process", "pendente" },
-        { "rejected", "recusado" },
-        { "refunded", "reembolsado" },
-        { "cancelled", "cancelado" },
-    };
     
-    public async Task<CachedResponse> CreateIdempotentPixPaymentAsync(string userId, CreatePixPaymentRequest request, string idempotencyKey)
+    public async Task<CachedResponse> CreateIdempotentPixPaymentAsync(CreatePixPaymentRequest request, string idempotencyKey)
     {
         var cacheKey = $"{IDEMPOTENCY_PREFIX}_idempotency_pix_{idempotencyKey}";
 
@@ -60,7 +55,7 @@ public class PixPaymentService : IPixPaymentService
                 {
                     // Reutilizamos a sua lógica original de criação de PIX aqui dentro.
                     // A chave de idempotência do cliente será usada como referência externa.
-                    var result = await this.CreatePixPaymentAsync(userId, request, idempotencyKey);
+                    var result = await this.CreatePixPaymentAsync(_userContext.GetCurrentUserId(),request, idempotencyKey);
                 
                     // Em caso de sucesso, retornamos o DTO de resposta com status 200 (OK) ou 201 (Created).
                     return new CachedResponse(result, 200); 
@@ -155,7 +150,7 @@ public class PixPaymentService : IPixPaymentService
             Payment payment = await paymentClient.CreateAsync(paymentRequest, requestOptions);
 
             novoPixPayment.PaymentId = payment.Id.ToString();
-            novoPixPayment.Status = MapPaymentStatus(payment.Status);
+            novoPixPayment.Status = PaymentStatusMapper.MapFromMercadoPago(payment.Status);
             novoPixPayment.DateApproved = payment.DateApproved;
             novoPixPayment.UpdatedAt = DateTime.UtcNow;
             
@@ -178,15 +173,15 @@ public class PixPaymentService : IPixPaymentService
                     new PaymentStatusUpdate(payment.StatusDetail ?? "O pagamento foi recusado.", "failed", true,
                         payment.Id.ToString()));
             }
-
             return new PaymentResponseDto
-            {
-                Id = payment.Id.Value,
-                Status = payment.Status,
-                QrCode = payment.PointOfInteraction?.TransactionData?.QrCode,
-                QrCodeBase64 = payment.PointOfInteraction?.TransactionData?.QrCodeBase64,
-                Message = "Pagamento PIX criado com sucesso."
-            };
+            (
+                payment.Status,
+                payment.Id.Value,
+                null,
+                "Pagamento PIX criado com sucesso.",
+                payment.PointOfInteraction?.TransactionData?.QrCode,
+                payment.PointOfInteraction?.TransactionData?.QrCodeBase64
+            );
         }
         catch (Exception ex)
         {
@@ -218,10 +213,5 @@ public class PixPaymentService : IPixPaymentService
             // Lança uma exceção mais genérica para a camada superior (Controller)
             throw new AppServiceException(mensagemErro, ex);
         }
-    }
-
-    public string MapPaymentStatus(string mercadopagoStatus)
-    {
-        return _statusMap.TryGetValue(mercadopagoStatus, out var status) ? status : "pendente";
     }
 }

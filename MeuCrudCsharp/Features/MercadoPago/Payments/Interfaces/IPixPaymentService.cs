@@ -5,5 +5,5 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces;
 
     public interface IPixPaymentService
     {
-        Task<CachedResponse> CreateIdempotentPixPaymentAsync(string userId, CreatePixPaymentRequest request, string idempotencyKey);
+        Task<CachedResponse> CreateIdempotentPixPaymentAsync(CreatePixPaymentRequest request, string idempotencyKey);
     }

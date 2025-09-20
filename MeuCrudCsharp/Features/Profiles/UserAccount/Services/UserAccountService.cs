@@ -1,16 +1,14 @@
 ﻿using System.Text.Json;
 using MeuCrudCsharp.Data;
-using MeuCrudCsharp.Features.Caching;
 using MeuCrudCsharp.Features.Caching.Interfaces;
-using MeuCrudCsharp.Features.Clients.Interfaces;
 using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.MercadoPago.Base;
+using MeuCrudCsharp.Features.MercadoPago.Clients.Interfaces;
+using MeuCrudCsharp.Features.MercadoPago.Subscriptions.DTOs;
 using MeuCrudCsharp.Features.Profiles.UserAccount.DTOs;
 using MeuCrudCsharp.Features.Profiles.UserAccount.Interfaces;
-using MeuCrudCsharp.Features.Subscriptions.DTOs;
 using MeuCrudCsharp.Models;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 
 namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
 {
@@ -196,22 +194,10 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
                 );
                 try
                 {
-                    var customerId = await _getCustomerIdByUserIdAsync(userId);
-                    if (!string.IsNullOrEmpty(customerId))
-                    {
-                        await _clientService.AddCardToCustomerAsync(customerId, newCardToken);
+                        await _clientService.AddCardToCustomerAsync(newCardToken);
                         _logger.LogInformation(
-                            "Sucesso na operação secundária: Novo cartão também foi adicionado ao perfil do cliente MP {CustomerId}.",
-                            customerId
+                            "Sucesso na operação secundária: Novo cartão também foi adicionado ao perfil do cliente no MP."
                         );
-                    }
-                    else
-                    {
-                        _logger.LogWarning(
-                            "Operação secundária pulada: Usuário {UserId} não possui um customerId no Mercado Pago para adicionar o novo cartão.",
-                            userId
-                        );
-                    }
                 }
                 catch (Exception ex)
                 {
@@ -368,16 +354,6 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
                 throw new ResourceNotFoundException($"Active subscription not found {action}.");
 
             return subscription;
-        }
-
-        private async Task<string?> _getCustomerIdByUserIdAsync(string userId)
-        {
-            var user = await _context.Users
-                .AsNoTracking()
-                .FirstOrDefaultAsync(u => u.Id == userId);
-
-            // Retorna o ID do cliente ou nulo se não for encontrado, sem lançar exceção.
-            return user?.MercadoPagoCustomerId;
         }
     }
 }
