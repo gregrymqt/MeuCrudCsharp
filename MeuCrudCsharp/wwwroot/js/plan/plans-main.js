@@ -16,9 +16,7 @@ async function initializePlansPage() {
 
         // 2. Renderiza os planos ou uma mensagem de "nenhum plano encontrado"
         if (plans && plans.length > 0) {
-            // Usa o módulo de template para gerar o HTML de cada card
-            const plansHTML = plans.map(createPlanCardHTML).join('');
-            plansContainer.innerHTML = plansHTML;
+            plansContainer.innerHTML = plans.map(createPlanCardHTML).join('');
         } else {
             plansContainer.innerHTML = '<p class="error-message">Nenhum plano disponível no momento.</p>';
         }

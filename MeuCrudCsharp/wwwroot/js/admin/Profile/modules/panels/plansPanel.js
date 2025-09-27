@@ -59,7 +59,7 @@ async function handlePlanDelete(planId) {
     });
     if (result.isConfirmed) {
         try {
-            await api.deletePlan(planId, token);
+            await api.deletePlan(planId);
             api.invalidateCache('allPlans');
             await loadPlans();
             Swal.fire('Excluído!', 'O plano foi excluído.', 'success');
@@ -71,21 +71,18 @@ async function handlePlanDelete(planId) {
 
 async function openEditPlanModal(planId) {
     try {
-        // 1. A resposta da API agora é um array (lista)
-        const planDetailsArray = await api.getPlanById(planId);
+        const plan = await api.getPlanById(planId);
 
-        // 2. Transformamos o array em um objeto simples e prático
-        // Ex: [{ feature: 'name', value: 'Plano A' }] vira { name: 'Plano A' }
-        const plan = planDetailsArray.reduce((acc, item) => {
-            acc[item.feature] = item.value;
-            return acc;
-        }, {});
-        
         editPlanId.value = plan.publicId;
         editPlanReason.value = plan.name;
         document.getElementById('edit-plan-amount').value = plan.transactionAmount;
-        document.getElementById('edit-plan-frequency-type').value = plan.frequencyType;
-
+        const frequencySelect = document.getElementById('edit-plan-frequency-type');
+        if (plan.frequency === 12 && plan.frequencyType === 'months') {
+            frequencySelect.value = 'years';
+        } else {
+            frequencySelect.value = 'months';
+        }
+        
         openModal(editModal);
 
     } catch (error) {
@@ -198,14 +195,17 @@ export function initializePlansPanel() {
         submitButton.disabled = true;
         submitButton.textContent = 'Saving...';
 
+        const selectedFrequency = document.getElementById('edit-plan-frequency-type').value;
+
         const updatedData = {
-            reason: editPlanReason.value, back_url: editPlanBackUrl.value, auto_recurring: {
-                transaction_amount: parseFloat(editPlanAmount.value)
-            }
+            reason: document.getElementById('edit-plan-reason').value,
+            transaction_amount: parseFloat(document.getElementById('edit-plan-amount').value),
+            frequency: selectedFrequency === 'years' ? 12 : 1, 
+            frequency_type: 'months' 
         };
 
         try {
-            const response = await api.updatePlan(planId, updatedData, token);
+            const response = await api.updatePlan(planId, updatedData);
 
             Swal.fire({
                 title: 'Success!',
@@ -215,7 +215,7 @@ export function initializePlansPanel() {
                 showConfirmButton: false
             });
 
-            closeEditModal();
+            closeModal();
             await loadPlans();
 
         } catch (error) {

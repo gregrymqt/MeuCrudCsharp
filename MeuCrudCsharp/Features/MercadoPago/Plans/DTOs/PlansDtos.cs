@@ -42,10 +42,16 @@ public record CreatePlanDto(
 /// <summary>
 /// A generic key-value pair for displaying plan features.
 /// </summary>
-public record PlanDetailDto(
-    string Feature,
-    object Value,
-    string? DisplayValue
+// Estrutura específica (a solução)
+public record PlanDetailViewModel(
+    Guid PublicId,
+    string Name,
+    string Description,
+    decimal TransactionAmount,
+    int Frequency,
+    string FrequencyType,
+    string CurrencyId,
+    bool IsActive
 );
 
 /// <summary>
@@ -98,14 +104,15 @@ public record PlanSearchResponseDto(
 /// </summary>
 public record UpdatePlanDto(
     [property: JsonPropertyName("reason")]
-    [StringLength(256, ErrorMessage = "A razão deve ter no máximo 256 caracteres.")]
     string? Reason,
     
     [property: JsonPropertyName("transaction_amount")]
-    [Range(0.01, 1000000.00, ErrorMessage = "O valor da transação deve ser positivo.")]
     decimal? TransactionAmount,
 
+    // Adicione esta propriedade
+    [property: JsonPropertyName("frequency")]
+    int? Frequency,
+
     [property: JsonPropertyName("frequency_type")]
-    [StringLength(20, ErrorMessage = "O tipo de frequência deve ter no máximo 20 caracteres.")]
     string? FrequencyType
 );

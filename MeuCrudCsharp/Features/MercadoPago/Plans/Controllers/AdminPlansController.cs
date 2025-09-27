@@ -58,20 +58,19 @@ namespace MeuCrudCsharp.Features.MercadoPago.Plans.Controllers
                 return NotFound(new { message = $"Plano com PublicId {id} não encontrado." });
             }
 
-            var planDetails = new List<PlanDetailDto>
-            {
-                new("publicId", plan.PublicId, null),
-                new("name", plan.Name, null),
-                new("description", plan.Description, null),
-                new("transactionAmount", plan.TransactionAmount,
-                    plan.TransactionAmount.ToString("C", new System.Globalization.CultureInfo("pt-BR"))),
-                new("frequency", plan.Frequency, null),
-                new("frequencyType", plan.FrequencyType, null),
-                new("currencyId", plan.CurrencyId, null),
-                new("isActive", plan.IsActive, null)
-            };
+            // Instancia o novo record com a estrutura específica
+            var planDetails = new PlanDetailViewModel(
+                plan.PublicId,
+                plan.Name,
+                plan.Description,
+                plan.TransactionAmount,
+                plan.Frequency,
+                plan.FrequencyType,
+                plan.CurrencyId,
+                plan.IsActive
+            );
 
-            // A lista já está pronta! Agora é só retornar.
+            // Retorna o objeto simples e direto
             return Ok(planDetails);
         }
 

@@ -113,12 +113,20 @@ export async function loadCourses() {
 
 // Função para carregar os resultados da busca
 export async function searchCourses(name) {
+    const submitButton = searchCourseForm.querySelector('button');
+
     try {
-        coursesTableBody.innerHTML = `<tr><td colspan="3" class="text-center">Buscando...</td></tr>`;
-        const response = await api.searchCoursesByName(name); // Chama a rota de busca
-        handleApiResponse(response); // Usa o mesmo manipulador!
+        searchCourseInput.disabled = true; // Desativa o input
+        if (submitButton) submitButton.disabled = true; // Desativa o botão
+        coursesTableBody.innerHTML = `<tr><td colspan="3" class="text-center"><div class="loading-spinner"></div></td></tr>`; // Mostra um spinner
+
+        const response = await api.searchCoursesByName(name);
+        handleApiResponse(response);
     } catch (error) {
         coursesTableBody.innerHTML = `<tr><td colspan="3" class="text-center text-danger">${error.message}</td></tr>`;
+    } finally {
+        searchCourseInput.disabled = false;
+        if (submitButton) submitButton.disabled = false;
     }
 }
 
@@ -139,22 +147,22 @@ export function initializeCoursesPanel() {
             clearTimeout(debounceTimer); // Cancela o timer anterior
             debounceTimer = setTimeout(() => {
                 const searchTerm = searchCourseInput.value.trim();
-                searchCourses(searchTerm);
-            }, 500); // Espera 500ms após o usuário parar de digitar para buscar
+
+                if (searchTerm === '') {
+                    loadCourses(); 
+                } else {
+                    searchCourses(searchTerm);
+                }
+            }, 500); 
         });
     }
 
-    // --- Listeners existentes (sem alterações) ---
-    // Dentro do seu event listener de clique na tabela de cursos
     coursesTableBody.addEventListener('click', async (e) => {
-        const target = e.target.closest('button.btn-edit-course');
+        const target = e.target.closest('button[data-course-public-id]');
+
         if (!target) return;
 
-        // AQUI ESTÁ O PONTO CRÍTICO
         const courseId = target.dataset.coursePublicId;
-
-        // ADICIONE ESTA LINHA PARA DEPURAR
-        console.log("ID do curso capturado do botão:", courseId);
 
         if (!courseId) {
             alert("ERRO: ID do curso não encontrado no elemento do botão!");
@@ -162,20 +170,19 @@ export function initializeCoursesPanel() {
         }
 
         try {
-            const course = await api.getCoursesPublicId(courseId);
-            if (course) {
-                if (target.classList.contains('btn-edit-course')) {
-                    openEditCourseModal(course);
-                }
+            if (target.classList.contains('btn-edit-course')) {
+                const course = await api.getCoursesPublicId(courseId);
+                openEditCourseModal(course);
+            }
 
-                if (target.classList.contains('btn-delete-course')) {
-                    handleCourseDelete(courseId);
-                }
+            if (target.classList.contains('btn-delete-course')) {
+                await handleCourseDelete(courseId);
             }
         } catch (error) {
-            console.error('Falha ao buscar o curso:', error);
+            console.error('Falha na ação do curso:', error);
         }
     });
+    
     createCourseForm.addEventListener('submit', async (e) => {
         // ... (código existente de criação)
         e.preventDefault();
