@@ -1,15 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using MeuCrudCsharp.Data;
-using MeuCrudCsharp.Features.Caching;
+﻿using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Features.Caching.Interfaces;
 using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.Profiles.Admin.Dtos;
 using MeuCrudCsharp.Features.Profiles.Admin.Interfaces;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 
 namespace MeuCrudCsharp.Features.Profiles.Admin.Services
 {
@@ -63,25 +57,23 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Services
                             .ThenInclude(s => s.Plan)
                             .OrderBy(u => u.Name)
                             .Select(u => new StudentDto
-                            {
-                                Id = Guid.Parse(u.Id),
-                                Name = u.Name,
-                                Email = u.Email,
-                                SubscriptionStatus =
-                                    u.Subscription != null
-                                        ? u.Subscription.Status
-                                        : "Sem Assinatura",
-                                PlanName =
-                                    u.Subscription != null ? u.Subscription.Plan.Name : "N/A",
-                                RegistrationDate = u.CreatedAt,
-                            })
+                            (
+                                u.PublicId.ToString(),
+                                u.Name,
+                                u.Email,
+                                u.Subscription != null
+                                    ? u.Subscription.Status
+                                    : "Sem Assinatura",
+                                u.Subscription != null ? u.Subscription.Plan.Name : "N/A",
+                                u.CreatedAt
+                            ))
                             .ToListAsync();
                     }
                     catch (Exception ex)
                     {
                         _logger.LogError(
                             ex,
-                            "Falha ao buscar a lista de alunos do banco de dados."
+                            "Falha ao buscar o aluno no banco de dados."
                         );
                         throw new AppServiceException(
                             "An error occurred while querying student data.",
@@ -93,32 +85,47 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Services
             );
         }
 
-        /// <summary>
-        /// Invalidates and removes the cached list of all students.
-        /// This should be called after any operation that creates, updates, or deletes a user or their subscription.
-        /// </summary>
-        /// <returns>A task that represents the asynchronous operation.</returns>
-        /// <exception cref="AppServiceException">Thrown if an error occurs while clearing the cache.</exception>
-        public async Task InvalidateStudentsCacheAsync()
+        public async Task<StudentDto> GetStudentByIdAsync(Guid id)
         {
-            try
-            {
-                await _cacheService.RemoveAsync("Admin_AllStudentsWithSubscription");
-                _logger.LogInformation(
-                    "Student cache ('Admin_AllStudentsWithSubscription') was successfully invalidated."
-                );
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(
-                    ex,
-                    "Failed to invalidate student cache. The application will continue, but the cache may be out of sync."
-                );
-                throw new AppServiceException(
-                    "An error occurred while clearing the student cache.",
-                    ex
-                );
-            }
+                    try
+                    {
+                        _logger.LogInformation(
+                            "Buscando o alunos pelo id no banco de dados (cache miss)."
+                        );
+
+                        var user = await _context.Users.AsNoTracking()
+                            .Include(users => users.Subscription)
+                            .ThenInclude(s => s.Plan)
+                            .SingleOrDefaultAsync(u => u.PublicId == id);
+
+                        if (user == null)
+                        {
+                            _logger.LogWarning($"Tentativa de buscar aluno com ID {id} não encontrado.");
+                            throw new KeyNotFoundException($"Aluno com ID {id} não encontrado.");
+                        }
+
+                        var studentDto = new StudentDto(
+                            user.PublicId.ToString(),
+                            user.Name,
+                            user.Email,
+                            user.Subscription?.Status ??
+                            "Sem Assinatura", 
+                            user.Subscription?.Plan?.Name ?? "N/A", 
+                            user.CreatedAt);
+
+                        return studentDto;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(
+                            ex,
+                            "Falha ao buscar o aluno no banco de dados."
+                        );
+                        throw new AppServiceException(
+                            "An error occurred while querying student data.",
+                            ex
+                        );
+                    }
         }
     }
 }

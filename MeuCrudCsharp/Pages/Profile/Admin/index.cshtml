@@ -90,6 +90,25 @@
                     </form>
                 </div>
             </div>
+            
+            <div id="studentDetailsModal" class="modal"> 
+                <div class="modal-content"> 
+                    <div class="modal-header">
+                        <h5 class="modal-title">Detalhes do Aluno</h5>
+                        <!-- O botão de fechar agora usa a classe padrão "close-button" -->
+                        <button type="button" class="close-button" data-bs-dismiss="modal" aria-label="Close">&times;</button>
+                    </div>
+                    <!-- Renomeei para "modal-body-details" para ser mais específico -->
+                    <div class="modal-body-details mt-3">
+                        <p><strong>ID Público:</strong> <span id="modalStudentId"></span></p>
+                        <p><strong>Nome Completo:</strong> <span id="modalStudentName"></span></p>
+                        <p><strong>Email:</strong> <span id="modalStudentEmail"></span></p>
+                        <p><strong>Status da Assinatura:</strong> <span id="modalStudentStatus"></span></p>
+                        <p><strong>Plano Contratado:</strong> <span id="modalStudentPlan"></span></p>
+                        <p><strong>Data de Cadastro:</strong> <span id="modalStudentRegistrationDate"></span></p>
+                    </div>
+                </div>
+            </div>
 
         </div> </main> </div> <script src="~/js/admin/Profile/admin-main.js" type="module" defer asp-append-version="true"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>

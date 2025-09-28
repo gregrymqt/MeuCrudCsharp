@@ -285,36 +285,47 @@ body.sidebar-visible .admin-sidebar {
     }
 }
 
-/* CSS FALTANTE: ESTILOS PARA MODAIS */
+/* --- ESTILOS UNIFICADOS PARA TODOS OS MODAIS --- */
+
 .modal {
-    display: none; /* Inicia oculto */
+    /* Escondido por padrão */
+    display: none;
+
+    /* Overlay com opacidade */
     position: fixed;
     z-index: 1050;
     left: 0;
     top: 0;
     width: 100%;
     height: 100%;
-    overflow: auto;
-    background-color: rgba(0, 0, 0, 0.5); /* Fundo escurecido */
-    animation: fadeIn 0.3s;
+    background-color: rgba(0, 0, 0, 0.6); /* Fundo escurecido */
+
+    /* Centraliza o conteúdo do modal (o .modal-content) */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    /* Animação suave de entrada */
+    animation: fadeIn 0.3s ease-in-out;
 }
 
 .modal-content {
-    background-color: var(--white);
-    margin: 10% auto;
+    background-color: #fff; /* Use suas variáveis CSS se preferir */
     padding: 2rem;
     border-radius: 8px;
-    max-width: 500px;
+    max-width: 550px; /* Um pouco maior para os detalhes */
     width: 90%;
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
     position: relative;
+    max-height: 90vh; /* Evita que o modal seja maior que a tela */
+    overflow-y: auto; /* Adiciona scroll se o conteúdo for grande */
 }
 
 .modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: 1px solid #dee2e6;
     padding-bottom: 1rem;
     margin-bottom: 1.5rem;
 }
@@ -339,13 +350,24 @@ body.sidebar-visible .admin-sidebar {
     opacity: 0.8;
 }
 
-.form-container {
-    background-color: var(--white);
-    padding: 1.5rem;
-    border-radius: 8px;
-    border: 1px solid var(--border-color);
-    box-shadow: 0 4px 6px -1px var(--shadow-color);
+/* Corpo do modal de detalhes */
+.modal-body-details p {
+    margin-bottom: 0.75rem;
+    font-size: 1rem;
+    line-height: 1.5;
 }
+
+.modal-body-details strong {
+    display: inline-block;
+    min-width: 160px; /* Alinha os valores */
+    color: #555;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
 
 .form-grid {
     display: grid;

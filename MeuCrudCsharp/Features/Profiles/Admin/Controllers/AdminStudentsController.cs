@@ -56,5 +56,20 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Controllers
                 return StatusCode(500, "An internal error occurred while fetching students.");
             }
         }
+        
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetAllStudents(Guid id)
+        {
+            try
+            {
+                var student = await _studentService.GetStudentByIdAsync(id);
+                return Ok(student);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while fetching students.");
+                return StatusCode(500, "An internal error occurred while fetching students.");
+            }
+        }
     }
 }

@@ -1,7 +1,10 @@
 ﻿import * as api from '../api/adminAPI.js';
+import {openModal, closeModal} from '../ui/modals.js';
+import cacheService from '../../../../core/cacheService.js';
 
 
 const studentsTableBody = document.getElementById('students-table-body');
+const studentDetailsModal = document.getElementById('studentDetailsModal'); // O modal que você adicionou ao HTML
 
 /**
  * Mapeia o status da API para uma classe CSS correspondente.
@@ -40,13 +43,14 @@ function renderStudentsTable(students) {
         const email = student.email ?? 'Email não informado';
         const subscriptionStatus = student.subscriptionStatus ?? 'Desconhecido';
         const Id = student.id;
-            // Formatação segura da data
-            let
-        registrationDate = 'Data inválida';
-        try {
-            registrationDate = new Date(student.registrationDate).toLocaleDateString('pt-BR');
-        } catch (e) {
-            console.warn(`Data de registro inválida para o aluno ${name}: ${student.registrationDate}`);
+        let registrationDate = 'Data não registrada'; // Mensagem padrão melhor
+        if (student.registrationDate) { // Verifica se não é null ou undefined
+            try {
+                registrationDate = new Date(student.registrationDate).toLocaleDateString('pt-BR');
+            } catch (e) {
+                console.warn(`Data de registro inválida: ${student.registrationDate}`);
+                registrationDate = 'Data inválida';
+            }
         }
 
         // **MELHORIA:** Usando classes CSS em vez de estilos inline para o status
@@ -81,5 +85,92 @@ export async function loadStudents() {
     }
 }
 
+async function loadStudentsPublicID(id) {
+    const cacheKey = `student_details_${id}`; // Chave de cache única por aluno
+
+    // 1. Tenta buscar do cache primeiro
+    const cachedStudent = cacheService.get(cacheKey);
+    if (cachedStudent) {
+        console.log(`Cache HIT para o aluno ID: ${id}`);
+        return cachedStudent;
+    }
+
+    // 2. Se não estiver no cache (cache miss), busca na API
+    try {
+        console.log(`Cache MISS. Buscando na API para o aluno ID: ${id}`);
+        const student = await api.getStudentsPublicId(id);
+
+        // 3. Salva o resultado da API no cache para futuras requisições
+        if (student) {
+            cacheService.set(cacheKey, student); // Usa a duração padrão de 5 minutos
+        }
+
+        return student;
+    } catch (error) {
+        alert(`Erro ao buscar aluno: ${error.message}`);
+        console.error(error);
+        return null;
+    }
+}
+
+async function openStudentModal(studentId) {
+    const student = await loadStudentsPublicID(studentId);
+
+    if (!student) return;
+
+    try {
+        document.getElementById('modalStudentId').textContent = student.id ?? 'Não informado';
+        document.getElementById('modalStudentName').textContent = student.name ?? 'Não informado';
+        document.getElementById('modalStudentEmail').textContent = student.email ?? 'Não informado';
+        document.getElementById('modalStudentStatus').textContent = student.subscriptionStatus ?? 'Desconhecido';
+        document.getElementById('modalStudentPlan').textContent = student.planName ?? 'N/A';
+
+        let registrationDate = 'Data não informada';
+        if (student.registrationDate) {
+            try {
+                registrationDate = new Date(student.registrationDate).toLocaleDateString('pt-BR', {
+                    day: '2-digit', month: '2-digit', year: 'numeric',
+                    hour: '2-digit', minute: '2-digit'
+                });
+            } catch (e) {
+                console.warn("Formato de data inválido recebido:", student.registrationDate);
+                registrationDate = 'Data inválida';
+            }
+        }
+        document.getElementById('modalStudentRegistrationDate').textContent = registrationDate;
+
+        // **MUDANÇA PRINCIPAL**: Usando a função importada do seu módulo de modais
+        openModal(studentDetailsModal);
+
+    } catch (error) {
+        console.error("Falha ao preencher os detalhes do aluno no modal:", error);
+        alert("Ocorreu um erro ao exibir os detalhes do aluno.");
+    }
+}
+
+
 export function initializeStudentsPanel() {
+    // 1. Carrega a lista inicial de alunos
+    loadStudents();
+
+    // 2. Adiciona o event listener para os botões de detalhes (delegação de evento)
+    document.addEventListener('click', (event) => {
+        const detailsButton = event.target.closest('.btn-view-details');
+        if (detailsButton) {
+            const studentId = detailsButton.dataset.studentId;
+            if (studentId) {
+                openStudentModal(studentId);
+            }
+        }
+    });
+
+    // 3. Adiciona o event listener para fechar o modal
+    // Busca o botão de fechar dentro do modal de detalhes
+    const closeModalButton = studentDetailsModal.querySelector('[data-bs-dismiss="modal"]');
+    if(closeModalButton) {
+        closeModalButton.addEventListener('click', () => {
+            // **MUDANÇA PRINCIPAL**: Usando a função importada do seu módulo de modais
+            closeModal(studentDetailsModal);
+        });
+    }
 }

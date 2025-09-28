@@ -1,47 +1,33 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
 
-namespace MeuCrudCsharp.Features.Profiles.Admin.Dtos
-{
-    /// <summary>
-    /// Represents a student's profile data, intended for display in administrative interfaces.
-    /// </summary>
-    public class StudentDto
-    {
-        /// <summary>
-        /// The unique identifier for the student.
-        /// </summary>
-        [Required]
-        public Guid Id { get; set; }
+namespace MeuCrudCsharp.Features.Profiles.Admin.Dtos;
 
-        /// <summary>
-        /// The full name of the student.
-        /// </summary>
-        [Required]
-        [StringLength(100)]
-        public string? Name { get; set; }
+/// <summary>
+/// Represents a student's profile data, intended for display in administrative interfaces.
+/// </summary>
+/// <param name="Id">The unique identifier for the student.</param>
+/// <param name="Name">The full name of the student.</param>
+/// <param name="Email">The email address of the student.</param>
+/// <param name="SubscriptionStatus">The current status of the student's subscription (e.g., "active", "cancelled", "paused").</param>
+/// <param name="PlanName">The name of the plan the student is subscribed to (e.g., "Premium Annual Plan").</param>
+/// <param name="RegistrationDate">The date and time when the student registered.</param>
+public record StudentDto(
+    [Required]
+    string? Id,
 
-        /// <summary>
-        /// The email address of the student.
-        /// </summary>
-        [Required]
-        [EmailAddress]
-        public string? Email { get; set; }
+    [Required]
+    [StringLength(100)]
+    string? Name,
 
-        /// <summary>
-        /// The current status of the student's subscription (e.g., "active", "cancelled", "paused").
-        /// </summary>
-        public string? SubscriptionStatus { get; set; }
+    [Required]
+    [EmailAddress]
+    string? Email,
 
-        /// <summary>
-        /// The name of the plan the student is subscribed to (e.g., "Premium Annual Plan").
-        /// </summary>
-        public string? PlanName { get; set; }
+    string? SubscriptionStatus,
 
-        /// <summary>
-        /// The date and time when the student registered.
-        /// </summary>
-        [Required]
-        public DateTime RegistrationDate { get; set; }
-    }
-}
+    string? PlanName,
+    
+    [Required]
+    DateTime? RegistrationDate
+);

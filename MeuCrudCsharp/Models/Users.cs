@@ -7,6 +7,8 @@ namespace MeuCrudCsharp.Models
     public class Users : IdentityUser
     {
         // ... suas propriedades existentes como Name, AvatarUrl, etc.
+
+        public Guid PublicId { get; set; } = Guid.NewGuid();
         public string? Name { get; set; }
         public string? AvatarUrl { get; set; }
         public DateTime CreatedAt { get; set; } // Recomendado ter uma data de criação
