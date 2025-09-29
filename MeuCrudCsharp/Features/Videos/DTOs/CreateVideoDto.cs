@@ -39,5 +39,11 @@ namespace MeuCrudCsharp.Features.Videos.DTOs
         /// </summary>
         [Required(ErrorMessage = "A thumbnail file is required.")]
         public IFormFile? ThumbnailFile { get; set; }
+
+        /// <summary>
+        /// The original filename of the uploaded video file (e.g., "my-vacation.mp4").
+        /// </summary>
+        [Required(ErrorMessage = "The original file name is required.")]
+        public string? OriginalFileName { get; set; } // ✅ ADICIONE ESTA PROPRIEDADE
     }
 }

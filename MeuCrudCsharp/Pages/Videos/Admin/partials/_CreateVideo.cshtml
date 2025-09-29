@@ -5,9 +5,14 @@
                 <form id="create-video-form" enctype="multipart/form-data">
                     <div class="form-group">
                         <label for="video-file-input">1. Enviar Arquivo de Vídeo</label>
-                        <input type="file" id="video-file-input" class="form-control" accept="video/mp4,video/x-m4v,video/*">
+                        <div class="file-input-wrapper">
+                            <input type="file" id="video-file-input" class="form-control" accept="video/mp4,video/x-m4v,video/*">
+                            <span class="file-input-reset" style="display: none;">&times;</span>
+                        </div>
                         <div id="upload-status" class="upload-status"></div>
                     </div>
+                    <input type="hidden" id="storageIdentifier" name="StorageIdentifier" />
+                    <input type="hidden" id="originalFileName" name="OriginalFileName" />
                     <fieldset id="metadata-fieldset" disabled>
                         <legend class="fieldset-legend">2. Detalhes do Vídeo</legend>
                         <input type="hidden" id="rageage-identifier-input">

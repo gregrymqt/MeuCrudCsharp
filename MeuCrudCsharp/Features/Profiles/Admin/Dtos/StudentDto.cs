@@ -29,5 +29,7 @@ public record StudentDto(
     string? PlanName,
     
     [Required]
-    DateTime? RegistrationDate
+    DateTime? RegistrationDate,
+    
+    string? SubscriptionId
 );

@@ -65,7 +65,8 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Services
                                     ? u.Subscription.Status
                                     : "Sem Assinatura",
                                 u.Subscription != null ? u.Subscription.Plan.Name : "N/A",
-                                u.CreatedAt
+                                u.CreatedAt,
+                                u.Subscription != null ? u.Subscription.Id : "Sem Assinatura"
                             ))
                             .ToListAsync();
                     }
@@ -111,7 +112,8 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Services
                             user.Subscription?.Status ??
                             "Sem Assinatura", 
                             user.Subscription?.Plan?.Name ?? "N/A", 
-                            user.CreatedAt);
+                            user.CreatedAt,
+                            user.Subscription?.Id ?? "Sem Assinatura");
 
                         return studentDto;
                     }

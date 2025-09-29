@@ -1,5 +1,5 @@
 ﻿@page
-@model MeuCrudCsharp.Pages.Profile.Admin.indexModel
+@model MeuCrudCsharp.Pages.Profile.Admin.IndexModel
 @{
     ViewData["Title"] = "Gerenciar Planos de Assinatura"; 
 }
@@ -91,7 +91,7 @@
                 </div>
             </div>
             
-            <div id="studentDetailsModal" class="modal"> 
+            <div id="studentDetailsModal" class="modal" style="display: none;"> 
                 <div class="modal-content"> 
                     <div class="modal-header">
                         <h5 class="modal-title">Detalhes do Aluno</h5>
@@ -101,6 +101,7 @@
                     <!-- Renomeei para "modal-body-details" para ser mais específico -->
                     <div class="modal-body-details mt-3">
                         <p><strong>ID Público:</strong> <span id="modalStudentId"></span></p>
+                        <p><strong>ID da Assinatura:</strong> <span id="modalSubscriptionId"></span></p>
                         <p><strong>Nome Completo:</strong> <span id="modalStudentName"></span></p>
                         <p><strong>Email:</strong> <span id="modalStudentEmail"></span></p>
                         <p><strong>Status da Assinatura:</strong> <span id="modalStudentStatus"></span></p>

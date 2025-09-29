@@ -202,7 +202,8 @@ body.sidebar-visible .admin-sidebar {
 @media (min-width: 768px) {
     .admin-main-content {
         padding: 2rem;
-        flex-grow: 1; /* Faz o conteúdo principal ocupar o espaço restante */
+        flex-grow: 1;
+        margin-left: 260px;
     }
 
     .mobile-header {
@@ -539,4 +540,14 @@ body.sidebar-visible .admin-sidebar {
 
 .status-badge.status-cancelled {
     background-color: var(--danger-color);
+}
+
+
+.action-form {
+    display: none; 
+    margin-top: 1.5rem; 
+}
+
+.action-form.active {
+    display: block; 
 }

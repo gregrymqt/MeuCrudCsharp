@@ -1,17 +1,18 @@
 ﻿import * as api from '../api/videosAPI.js';
-import { createVideoHubConnection } from '../services/signalRService.js';
-import { setupModal, setupThumbnailPreview } from './commonUI.js';
+import {createVideoHubConnection} from '../services/signalRService.js';
+import {setupModal, setupThumbnailPreview} from './commonUI.js';
 
 
 // --- Estado do Painel ---
-let crudState = { currentPage: 1, isLoading: false, allDataLoaded: false };
+let crudState = {currentPage: 1, isLoading: false, allDataLoaded: false};
 
 // --- Seletores de DOM ---
 const createForm = document.getElementById('create-video-form');
 const fileInput = document.getElementById('video-file-input');
+const resetButton = document.querySelector('.file-input-reset');
 const uploadStatusDiv = document.getElementById('upload-status');
 const metadataFieldset = document.getElementById('metadata-fieldset');
-const storageIdentifierInput = document.getElementById('storage-identifier-input');
+const storageIdentifierInput = document.getElementById('storageIdentifier');
 const saveButton = document.getElementById('save-video-button');
 const courseSelect = document.getElementById('video-course-select');
 const newCourseInput = document.getElementById('video-course-new-name');
@@ -120,7 +121,7 @@ function monitorProcessingProgress(storageId) {
     const hubCallbacks = {
         onProgress: (data) => {
             uploadStatusDiv.innerHTML = `<p><strong>Status:</strong> ${data.message} (${data.progress}%)</p>`;
-            Swal.update({ text: `${data.message} (${data.progress}%)` });
+            Swal.update({text: `${data.message} (${data.progress}%)`});
 
             if (data.isComplete || data.isError) {
                 videoHub.stop();
@@ -146,9 +147,24 @@ export function initializeCrudPanel() {
         const file = event.target.files[0];
         if (!file) return;
 
+        if (fileInput.files.length > 0) {
+            resetButton.style.display = 'block';
+        } else {
+            // Se o usuário abrir a caixa de diálogo e cancelar, a contagem será 0
+            resetButton.style.display = 'none';
+        }
+
+        const originalFileNameInput = document.getElementById('originalFileName');
+        originalFileNameInput.value = file.name;
+
         metadataFieldset.disabled = true;
         saveButton.disabled = true;
-        Swal.fire({ title: 'Enviando...', text: 'Aguarde o upload do arquivo.', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+        Swal.fire({
+            title: 'Enviando...',
+            text: 'Aguarde o upload do arquivo.',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
 
         const formData = new FormData();
         formData.append('videoFile', file);
@@ -158,13 +174,32 @@ export function initializeCrudPanel() {
             const result = await api.uploadVideoFile(formData);
             storageIdentifierInput.value = result.storageIdentifier;
             uploadStatusDiv.innerHTML = `<p><strong>Aguardando início do processamento...</strong></p>`;
-            Swal.update({ title: 'Processando Vídeo...', text: 'Isso pode levar alguns minutos.' });
+            Swal.update({title: 'Processando Vídeo...', text: 'Isso pode levar alguns minutos.'});
 
             // CORREÇÃO: Usando o serviço do SignalR
             monitorProcessingProgress(result.storageIdentifier);
+
+            metadataFieldset.disabled = false;
+            saveButton.disabled = false;
         } catch (error) {
             Swal.fire('Erro!', error.message, 'error');
             uploadStatusDiv.innerHTML = `<p style="color:red;"><strong>Erro:</strong> ${error.message}</p>`;
+
+            metadataFieldset.disabled = true;
+            saveButton.disabled = true;
+        }
+    });
+
+    resetButton.addEventListener('click', function() {
+        // Limpa o valor do input de arquivo. Isso remove a seleção.
+        fileInput.value = '';
+
+        // Esconde o botão 'X' novamente
+        resetButton.style.display = 'none';
+
+        // Opcional: Limpa também qualquer mensagem de status
+        if (uploadStatusDiv) {
+            uploadStatusDiv.innerHTML = '';
         }
     });
 
@@ -245,7 +280,7 @@ export function initializeCrudPanel() {
 }
 
 export function resetAndLoadCrud() {
-    crudState = { currentPage: 1, isLoading: false, allDataLoaded: false };
+    crudState = {currentPage: 1, isLoading: false, allDataLoaded: false};
     videosTableBody.innerHTML = '';
     loadData();
 }

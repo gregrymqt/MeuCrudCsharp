@@ -39,6 +39,7 @@
     <Folder Include="Log\" />
     <Folder Include="Migrations\" />
     <Folder Include="wwwroot\js\admin\Profile\modules\" />
+    <Folder Include="wwwroot\videos\" />
   </ItemGroup>
   <ItemGroup>
     <_ContentIncludedByDefault Remove="wwwroot\js\token\getTokens.js" />

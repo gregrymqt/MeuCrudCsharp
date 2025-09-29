@@ -58,7 +58,7 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Controllers
         }
         
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetAllStudents(Guid id)
+        public async Task<IActionResult> GetStudentById(Guid id)
         {
             try
             {

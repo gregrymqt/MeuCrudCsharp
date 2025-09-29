@@ -56,7 +56,50 @@ async function handleFormSubmit(form, apiCall) {
     });
 }
 
+function initializeActionSelector() {
+    // 1. Pega os elementos principais da página
+    const actionSelector = document.getElementById('subscription-action-selector');
+    const allForms = document.querySelectorAll('.action-form');
+    const resultsContainer = document.getElementById('action-results-container');
+
+    // Garante que o seletor existe antes de adicionar o evento
+    if (!actionSelector) {
+        return;
+    }
+
+    // 2. Adiciona um evento que dispara toda vez que o usuário muda a opção
+    actionSelector.addEventListener('change', function() {
+        // Pega o valor da opção selecionada (ex: "search", "update-value")
+        const selectedValue = this.value;
+
+        // 3. Esconde TODOS os formulários para limpar o estado anterior
+        allForms.forEach(form => {
+            form.classList.remove('active');
+        });
+
+        // Limpa também qualquer resultado de operação anterior
+        if (resultsContainer) {
+            resultsContainer.innerHTML = '';
+        }
+
+        // 4. Se o usuário selecionou uma opção válida (não a primeira)...
+        if (selectedValue) {
+            // Constrói o ID do formulário dinamicamente. Ex: "form-" + "search" = "form-search"
+            const targetFormId = `form-${selectedValue}`;
+            const targetForm = document.getElementById(targetFormId);
+
+            // 5. Se o formulário correspondente foi encontrado, mostra-o adicionando a classe 'active'
+            if (targetForm) {
+                targetForm.classList.add('active');
+            }
+        }
+    });
+}
+
 export function initializeSubscriptionsPanel() {
+
+    initializeActionSelector();
+    
     if (!actionSelector) {
         console.error("Elementos essenciais do painel de assinaturas não foram encontrados.");
         return;
@@ -93,4 +136,28 @@ export function initializeSubscriptionsPanel() {
         const id = e.target.querySelector('#reactivate-id').value;
         return api.updateSubscriptionStatus(id, 'authorized');
     });
+}
+
+export function loadSubscriptions() {
+    const panel = document.getElementById('content-subscriptions');
+    if (!panel) {
+        console.error('Painel de conteúdo de assinaturas #content-subscriptions não encontrado.');
+        return;
+    }
+
+    fetch('/Profile/Admin?handler=SubscriptionsPartial')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Erro na rede: ${response.statusText}`);
+            }
+            return response.text();
+        })
+        .then(html => {
+            panel.innerHTML = html;
+            initializeSubscriptionsPanel();
+        })
+        .catch(error => {
+            console.error('Falha ao carregar o painel de assinaturas:', error);
+            panel.innerHTML = '<p class="error-message">Não foi possível carregar o conteúdo das assinaturas. Tente recarregar a página.</p>';
+        });
 }

@@ -1,17 +1,10 @@
-using System;
-using System.IO;
-using System.Threading.Tasks;
 using Hangfire;
 using MeuCrudCsharp.Features.Base;
 using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.Videos.DTOs;
 using MeuCrudCsharp.Features.Videos.Interfaces;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 
 namespace MeuCrudCsharp.Features.Videos.Controller
 {
@@ -53,19 +46,12 @@ namespace MeuCrudCsharp.Features.Videos.Controller
             var inputPath = Path.Combine(folder, videoFile.FileName);
             await using var fs = new FileStream(inputPath, FileMode.Create);
             await videoFile.CopyToAsync(fs);
-
-            var hlsPath = Path.Combine(folder, "hls");
-            _jobs.Enqueue<IVideoProcessingService>(svc =>
-                svc.ProcessVideoToHlsAsync(inputPath, hlsPath, storageId)
-            );
-
-            return Ok(
-                new
-                {
-                    Message = "Upload recebido. V�deo ser� processado em segundo plano.",
-                    StorageIdentifier = storageId,
-                }
-            );
+            
+            return Ok(new 
+            { 
+                StorageIdentifier = storageId,
+                OriginalFileName = videoFile.FileName 
+            });
         }
 
         // <summary>

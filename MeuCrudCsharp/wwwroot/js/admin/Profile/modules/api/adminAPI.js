@@ -63,7 +63,7 @@ export const getStudentsPublicId = (id) => apiService.fetch(`/api/admin/students
 // API DE ASSINATURAS (Subscriptions)
 // ==========================================================================================
 
-export const searchSubscription = (query) => apiService.fetch(`/api/admin/subscriptions/subscriptions/search?query=${encodeURIComponent(query)}`);
+export const searchSubscription = (query) => apiService.fetch(`/api/admin/subscriptions/search?query=${encodeURIComponent(query)}`);
 export const updateSubscriptionValue = (id, amount) => apiService.fetch(`/api/admin/subscriptions/${id}/value`, { method: 'PUT', body: JSON.stringify({ transactionAmount: amount }) });
 export const updateSubscriptionStatus = (id, status) => apiService.fetch(`/api/admin/subscriptions/${id}/status`, { method: 'PUT', body: JSON.stringify({ status: status }) });
 

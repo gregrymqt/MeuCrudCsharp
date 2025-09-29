@@ -112,6 +112,7 @@ export async function loadPlans(source) {
 
         // 3. Renderiza a tabela com os dados
         renderPlansTable(plans);
+        initializePlansPanel();
     } catch (error) {
         // 4. Mostra uma mensagem de erro em caso de falha
         plansTableBody.innerHTML = `<tr><td colspan="5" class="text-center py-10 text-red-600 font-semibold">${error.message}</td></tr>`;
@@ -121,7 +122,7 @@ export async function loadPlans(source) {
     }
 }
 
-export function initializePlansPanel() {
+function initializePlansPanel() {
     // Event delegation para a tabela de planos
 
     fetchButtonsContainer.addEventListener('click', (e) => {

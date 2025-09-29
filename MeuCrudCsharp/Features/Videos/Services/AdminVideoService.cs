@@ -1,14 +1,12 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿
+using Hangfire;
 using MeuCrudCsharp.Data;
-using MeuCrudCsharp.Features.Caching;
 using MeuCrudCsharp.Features.Caching.Interfaces;
 using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.Videos.DTOs;
 using MeuCrudCsharp.Features.Videos.Interfaces;
 using MeuCrudCsharp.Models;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 
 namespace MeuCrudCsharp.Features.Videos.Services
 {
@@ -22,8 +20,10 @@ namespace MeuCrudCsharp.Features.Videos.Services
         private readonly ApiDbContext _context;
         private readonly ICacheService _cacheService;
         private readonly IFileStorageService _fileStorageService;
+        private readonly IWebHostEnvironment _env;
         private readonly ILogger<AdminVideoService> _logger;
         private const string VideosCacheVersionKey = "videos_cache_version";
+        private readonly IBackgroundJobClient _jobs;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AdminVideoService"/> class.
@@ -36,7 +36,8 @@ namespace MeuCrudCsharp.Features.Videos.Services
             ApiDbContext context,
             ICacheService cacheService,
             IFileStorageService fileStorageService,
-            ILogger<AdminVideoService> logger
+            ILogger<AdminVideoService> logger,
+            IWebHostEnvironment env
         )
         {
             _context = context;
@@ -102,13 +103,21 @@ namespace MeuCrudCsharp.Features.Videos.Services
                 StorageIdentifier = createDto.StorageIdentifier,
                 CourseId = course.Id,
                 ThumbnailUrl = thumbnailUrl,
-                // PublicId é gerado automaticamente no model
+                Status = VideoStatus.Processing
             };
 
             _context.Videos.Add(video);
             await _context.SaveChangesAsync();
             await _cacheService.InvalidateCacheByKeyAsync(VideosCacheVersionKey);
 
+            var folder = Path.Combine(_env.WebRootPath, "videos", video.StorageIdentifier);
+            var inputPath = Path.Combine(folder, createDto.OriginalFileName);
+            var hlsPath = Path.Combine(folder, "hls");
+
+            _jobs.Enqueue<IVideoProcessingService>(svc =>
+                svc.ProcessVideoToHlsAsync(inputPath, hlsPath, video.StorageIdentifier)
+            );
+            
             // Atribui Course para que o mapper use o nome corretamente
             video.Course = course;
             return VideoMapper.ToDto(video);

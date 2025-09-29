@@ -106,6 +106,7 @@ export async function loadCourses() {
         coursesTableBody.innerHTML = `<tr><td colspan="3" class="text-center">Carregando...</td></tr>`;
         const response = await api.getCourses(); // Chama a rota paginada
         handleApiResponse(response); // Usa o manipulador inteligente
+        initializeCoursesPanel();
     } catch (error) {
         coursesTableBody.innerHTML = `<tr><td colspan="3" class="text-center text-danger">${error.message}</td></tr>`;
     }
@@ -130,7 +131,7 @@ export async function searchCourses(name) {
     }
 }
 
-export function initializeCoursesPanel() {
+function initializeCoursesPanel() {
     let debounceTimer; // Variável para controlar o debounce
 
     // MODIFICADO: Adiciona os listeners de busca

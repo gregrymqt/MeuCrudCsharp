@@ -43,6 +43,7 @@ function renderStudentsTable(students) {
         const email = student.email ?? 'Email não informado';
         const subscriptionStatus = student.subscriptionStatus ?? 'Desconhecido';
         const Id = student.id;
+        const subscriptionId = student.subscriptionId ?? 'Sem assinatura'
         let registrationDate = 'Data não registrada'; // Mensagem padrão melhor
         if (student.registrationDate) { // Verifica se não é null ou undefined
             try {
@@ -64,6 +65,7 @@ function renderStudentsTable(students) {
     <td data-label="Status da Assinatura">
         <span class="status-badge ${statusClass}">${subscriptionStatus}</span>
     </td>
+    <td data-label="Id da Assinatura">${subscriptionId}</td>
     <td data-label="Data de Cadastro">${registrationDate}</td>
     <td data-label="Ações" class="text-right">
         <button class="btn btn-secondary btn-sm btn-view-details" data-student-id="${Id}">Detalhes</button>
@@ -80,6 +82,7 @@ export async function loadStudents() {
         studentsTableBody.innerHTML = `<tr><td colspan="4" class="text-center">Carregando...</td></tr>`;
         const students = await api.getStudents();
         renderStudentsTable(students);
+        initializeStudentsPanel();
     } catch (error) {
         studentsTableBody.innerHTML = `<tr><td colspan="4" class="text-center text-danger">${error.message}</td></tr>`;
     }
@@ -91,7 +94,6 @@ async function loadStudentsPublicID(id) {
     // 1. Tenta buscar do cache primeiro
     const cachedStudent = cacheService.get(cacheKey);
     if (cachedStudent) {
-        console.log(`Cache HIT para o aluno ID: ${id}`);
         return cachedStudent;
     }
 
@@ -124,6 +126,7 @@ async function openStudentModal(studentId) {
         document.getElementById('modalStudentEmail').textContent = student.email ?? 'Não informado';
         document.getElementById('modalStudentStatus').textContent = student.subscriptionStatus ?? 'Desconhecido';
         document.getElementById('modalStudentPlan').textContent = student.planName ?? 'N/A';
+        document.getElementById('modalSubscriptionId').textContent = student.subscriptionId ?? 'Não Informado';
 
         let registrationDate = 'Data não informada';
         if (student.registrationDate) {
@@ -149,9 +152,7 @@ async function openStudentModal(studentId) {
 }
 
 
-export function initializeStudentsPanel() {
-    // 1. Carrega a lista inicial de alunos
-    loadStudents();
+function initializeStudentsPanel() {
 
     // 2. Adiciona o event listener para os botões de detalhes (delegação de evento)
     document.addEventListener('click', (event) => {
