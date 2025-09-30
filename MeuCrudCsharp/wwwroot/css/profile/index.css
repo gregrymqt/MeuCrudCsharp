@@ -16,6 +16,7 @@
     --warning-color: #ffc107;
     --danger-color: #dc3545;
     --info-color: #17a2b8;
+    --sidebar-bg: #212529;
 
     /* Fontes e Espaçamentos */
     --base-font-family: 'Inter', sans-serif;
@@ -25,7 +26,11 @@
     --transition-speed: 0.3s ease;
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
 
 body {
     font-family: var(--base-font-family);
@@ -37,57 +42,149 @@ body {
 /* =================================================================== */
 /* 2. LAYOUT PRINCIPAL (MOBILE-FIRST)                                  */
 /* =================================================================== */
-.profile-container { display: flex; min-height: 100vh; }
-
-.profile-sidebar {
-    position: fixed;
-    top: 0;
-    left: -280px; /* Começa escondida */
-    width: 280px;
-    height: 100%;
-    background-color: var(--background-color);
-    border-right: 1px solid var(--border-color);
-    z-index: 1000;
-    transition: left var(--transition-speed);
+.admin-layout {
     display: flex;
-    flex-direction: column;
+    min-height: 100vh;
 }
 
-/* Estado visível da sidebar (ativado via JS) */
-body.sidebar-visible .profile-sidebar { left: 0; }
+.admin-sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 1000;
+    width: 260px;
+    background-color: var(--sidebar-bg);
+    flex-direction: column;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease-in-out;
+    color: #d2d3d5;
+}
+
+.admin-main-content {
+    width: 100%;
+    padding: 1rem;
+}
+
+/* Estado visível da sidebar (ativado via JS na tag <body>) */
+body.sidebar-visible .admin-sidebar {
+    /* Apenas esta linha é necessária para trazer a sidebar de volta */
+    transform: translateX(0);
+}
+
+/* Overlay escuro que aparece sobre o conteúdo quando a sidebar está aberta no mobile */
 body.sidebar-visible::after {
     content: '';
     position: fixed;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background-color: rgba(0,0,0,0.5);
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
     z-index: 999;
 }
 
-.profile-main-content {
-    width: 100%;
-    padding: 1rem;
-    padding-top: 5rem; /* Espaço para o header mobile */
+/* =================================================================== */
+/* 3. COMPONENTES                                                      */
+/* =================================================================== */
+
+/* --- Header Mobile --- */
+
+.menu-toggle {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: var(--text-dark);
+    cursor: pointer;
 }
 
-/* =================================================================== */
-/* 3. COMPONENTES (SIDEBAR, HEADER, SEÇÕES)                            */
-/* =================================================================== */
-/* --- Sidebar --- */
-.sidebar-header {
-    padding: 1.5rem;
-    font-size: 1.25rem;
-    font-weight: 700;
-    border-bottom: 1px solid var(--border-color);
+.menu-toggle-btn {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--text-dark);
 }
-.sidebar-nav {
-    padding: 1rem 0;
-    flex-grow: 1;
+
+.mobile-header {
+    display: flex; /* Fica visível no mobile */
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 1rem;
+    background-color: var(--white);
+    border-radius: 8px;
+    box-shadow: 0 2px 4px var(--shadow-color);
+    margin-bottom: 1.5rem;
+}
+
+.mobile-header h1 {
+    margin: 0;
+    font-size: 1.25rem;
+}
+.admin-content-wrapper {
+    width: 100%;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
 }
-.sidebar-nav ul { list-style: none; }
-.sidebar-nav li { padding: 0 1rem; }
+
+/* --- Sidebar --- */
+.sidebar-header {
+    padding: 0 1.5rem 1.5rem 1.5rem;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--white);
+    border-bottom: 1px solid #343a40;
+}
+
+.sidebar-nav {
+    margin-top: 1rem;
+    list-style: none;
+    padding: 0;
+}
+
+.sidebar-nav li a {
+    display: flex;
+    align-items: center;
+    padding: 0.8rem 1.5rem;
+    color: var(--sidebar-text);
+    text-decoration: none;
+    font-weight: 500;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.sidebar-nav ul {
+    list-style: none;
+}
+
+.sidebar-nav .sidebar-link {
+    display: flex;
+    align-items: center;
+    padding: 0.9rem 1.5rem;
+    color: var(--sidebar-text);
+    text-decoration: none;
+    transition: background-color 0.2s, color 0.2s;
+    border-left: 3px solid transparent;
+}
+
+.sidebar-nav .sidebar-link:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+    color: var(--sidebar-text-hover);
+}
+
+.sidebar-nav .sidebar-link.active {
+    background-color: var(--primary-color);
+    color: var(--background-white);
+    font-weight: 600;
+}
+
+.sidebar-nav .sidebar-link i {
+    width: 20px;
+    margin-right: 1rem;
+    text-align: center;
+}
+
+
+
 .profile-nav-link {
     display: flex;
     align-items: center;
@@ -108,17 +205,7 @@ body.sidebar-visible::after {
 }
 .logout-btn { background: none; border: none; width: 100%; }
 
-/* --- Header Mobile --- */
-.profile-mobile-header {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 0 1rem; height: 60px;
-    background-color: var(--background-color);
-    box-shadow: var(--card-shadow);
-    position: fixed; top: 0; left: 0;
-    width: 100%;
-    z-index: 900;
-}
-.profile-mobile-header h1 { font-size: 1.1rem; }
+
 .menu-toggle { background: none; border: none; font-size: 1.5rem; cursor: pointer; }
 
 /* --- Seções de Conteúdo --- */
@@ -197,13 +284,31 @@ body.sidebar-visible::after {
 /* =================================================================== */
 /* 5. ESTILOS PARA DESKTOP (MEDIA QUERY)                               */
 /* =================================================================== */
-@media (min-width: 992px) {
-    .profile-mobile-header { display: none; }
-    .profile-sidebar { position: static; left: 0; flex-shrink: 0; }
-    body.sidebar-visible::after { display: none; }
-    .profile-main-content {
+@media (min-width: 768px) {
+    /* DEPOIS (código corrigido) */
+    .admin-content-wrapper {
         flex-grow: 1;
-        padding: 2rem;
     }
-    .main-section { max-width: 900px; margin: 0 auto; }
+
+    .admin-main-content {
+        padding: 2rem;
+        /* A propriedade flex-grow foi movida para o wrapper */
+    }
+
+    .mobile-header {
+        /* **ESCONDE O CABEÇALHO MOBILE NO DESKTOP** */
+        display: none;
+    }
+
+    .admin-sidebar {
+        /* **TORNA A SIDEBAR VISÍVEL E FIXA NO DESKTOP** */
+        display: flex;
+        position: static; /* Remove o 'fixed' do mobile */
+        animation: none; /* Remove a animação de slide */
+    }
+
+    body.sidebar-visible .admin-sidebar {
+        /* Garante que o estado 'visible' não afete o desktop */
+        position: static;
+    }
 }

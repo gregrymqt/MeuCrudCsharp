@@ -8,26 +8,24 @@
       integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw=="
       crossorigin="anonymous" referrerpolicy="no-referrer"/>
 <link rel="stylesheet" href="~/css/profile/index.css" asp-append-version="true"/>
-<div class="profile-container">
+
+<div class="admin-layout">
     
-    <!--      SIDEBAR            -->
     <partial name="partials/_UserSideBar"/>
 
-    <!--   CONTEÚDO PRINCIPAL    -->
-    <main class="profile-main-content">
+    <div class="admin-content-wrapper">
 
-        <!-- Cabeçalho visível apenas no mobile -->
-        <partial name="partials/_HeaderMobile"/>
+        <header class="mobile-header">
+            <partial name="partials/_HeaderMobile"/>
+        </header>
 
-        <!-- Seção: Meu Perfil -->
-        <partial name="partials/_ProfileContent"/>
-
-        <!-- Seção: Histórico de Pagamentos -->
-        <partial name="partials/_PaymentHistory"/>
-
-        <!-- Seção: Gerenciar Assinatura -->
-        <partial name="partials/_SubscriptionContent"/>
-    </main>
+        <main class="admin-main-content">
+            <partial name="partials/_ProfileContent"/>
+            <partial name="partials/_PaymentHistory"/>
+            <partial name="partials/_SubscriptionContent"/>
+        </main>
+        
+    </div>
 </div>
 
 @section Scripts {

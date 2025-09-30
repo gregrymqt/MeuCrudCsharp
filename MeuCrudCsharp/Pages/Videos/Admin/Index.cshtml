@@ -10,31 +10,23 @@
 
 <!-- 2. Estrutura HTML Principal -->
 <div class="admin-layout">
-
-    <!--SIDEBAR -->
     <partial name="partials/_AdminSideBar"/>
 
-    <!--   CONTEÚDO PRINCIPAL    -->
-    <main class="admin-main-content">
-        <!-- Cabeçalho visível apenas no mobile -->
+    <div class="admin-content-wrapper">
+
         <header class="mobile-header">
             <partial name="partials/_HeaderMobile"/>
         </header>
 
-        <div class="admin-container">
-            <!-- PAINEL 1: CADASTRAR VÍDEO-->
-            <partial name="partials/_CreateVideo"/>
-
-            <!-- PAINEL 2: GERENCIAR CONTEÚDO-->
-            <partial name="partials/_ManagerContent"/>
-
-            <!-- PAINEL 3: ASSISTIR VÍDEO -->
-            <partial name="partials/_ViewVideo"/>
-
-            <!-- PAINEL 4: CRIAR CURSO-->
-            <partial name="partials/_CreateCourse"/>
-        </div>
-    </main>
+        <main class="admin-main-content">
+            <div class="admin-container">
+                <partial name="partials/_CreateVideo"/>
+                <partial name="partials/_ManagerContent"/>
+                <partial name="partials/_ViewVideo"/>
+                <partial name="partials/_CreateCourse"/>
+            </div>
+        </main>
+    </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>

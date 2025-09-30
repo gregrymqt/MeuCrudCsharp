@@ -37,30 +37,30 @@ body {
 /* =================================================================== */
 .admin-layout {
     display: flex;
+    min-height: 100vh;
 }
 
 .admin-sidebar {
     position: fixed;
-    top: 0;
     left: 0;
-    width: var(--sidebar-width);
-    height: 100%;
-    background-color: var(--sidebar-bg);
+    top: 0;
+    bottom: 0;
     z-index: 1000;
-    transform: translateX(-100%); /* Começa escondida fora da tela */
-    transition: transform 0.3s ease-in-out;
-    display: flex;
+    width: 260px;
+    background-color: var(--sidebar-bg);
     flex-direction: column;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease-in-out;
 }
 
 .admin-main-content {
     width: 100%;
-    transition: margin-left 0.3s ease-in-out;
-    padding-top: var(--mobile-header-height); /* Espaço para o header mobile */
+    padding: 1rem;
 }
 
 /* Estado visível da sidebar (ativado via JS na tag <body>) */
 body.sidebar-visible .admin-sidebar {
+    /* Apenas esta linha é necessária para trazer a sidebar de volta */
     transform: translateX(0);
 }
 
@@ -81,20 +81,6 @@ body.sidebar-visible::after {
 /* =================================================================== */
 
 /* --- Header Mobile --- */
-.admin-mobile-header {
-    display: flex; /* Visível por padrão no fluxo mobile-first */
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 1rem;
-    height: var(--mobile-header-height);
-    background-color: var(--background-white);
-    box-shadow: var(--shadow-md);
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    z-index: 900;
-}
 
 .menu-toggle {
     background: none;
@@ -104,8 +90,16 @@ body.sidebar-visible::after {
     cursor: pointer;
 }
 
+.menu-toggle-btn {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--text-dark);
+}
+
 .mobile-header {
-    display: flex;
+    display: flex; /* Fica visível no mobile */
     align-items: center;
     justify-content: space-between;
     padding: 0.5rem 1rem;
@@ -119,18 +113,35 @@ body.sidebar-visible::after {
     margin: 0;
     font-size: 1.25rem;
 }
+.admin-content-wrapper {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+}
 
 /* --- Sidebar --- */
 .sidebar-header {
-    padding: 1.5rem;
-    font-size: 1.25rem;
-    color: var(--sidebar-text-hover);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 0 1.5rem 1.5rem 1.5rem;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--white);
+    border-bottom: 1px solid #343a40;
 }
 
 .sidebar-nav {
-    flex-grow: 1;
-    overflow-y: auto;
+    margin-top: 1rem;
+    list-style: none;
+    padding: 0;
+}
+
+.sidebar-nav li a {
+    display: flex;
+    align-items: center;
+    padding: 0.8rem 1.5rem;
+    color: var(--sidebar-text);
+    text-decoration: none;
+    font-weight: 500;
+    transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 .sidebar-nav ul {
@@ -309,31 +320,34 @@ body.sidebar-visible::after {
     border: none;
 }
 
-
 /* =================================================================== */
 /* 4. ESTILOS PARA DESKTOP (A PARTIR DE 768px)                         */
 /* =================================================================== */
 @media (min-width: 768px) {
-    .admin-mobile-header {
-        display: none; /* Esconde o header mobile no desktop */
-    }
-
-    .admin-sidebar {
-        position: static; /* Volta a fazer parte do layout */
-        transform: translateX(0); /* Garante que está visível */
-        flex-shrink: 0;
+    /* DEPOIS (código corrigido) */
+    .admin-content-wrapper {
+        flex-grow: 1;
     }
 
     .admin-main-content {
-        margin-left: var(--sidebar-width); /* Empurra o conteúdo para a direita */
-        padding-top: 0; /* Remove o padding que era para o header mobile */
-    }
-
-    .admin-container {
         padding: 2rem;
+        /* A propriedade flex-grow foi movida para o wrapper */
     }
 
-    body.sidebar-visible::after {
-        display: none; /* Não precisa do overlay no desktop */
+    .mobile-header {
+        /* **ESCONDE O CABEÇALHO MOBILE NO DESKTOP** */
+        display: none; 
+    }
+
+    .admin-sidebar {
+        /* **TORNA A SIDEBAR VISÍVEL E FIXA NO DESKTOP** */
+        display: flex; 
+        position: static; /* Remove o 'fixed' do mobile */ 
+        animation: none; /* Remove a animação de slide */ 
+    }
+
+    body.sidebar-visible .admin-sidebar {
+        /* Garante que o estado 'visible' não afete o desktop */
+        position: static; 
     }
 }

@@ -1,44 +1,58 @@
 ﻿export function initializeSidebarNavigation() {
     const menuToggleBtn = document.getElementById('menu-toggle-btn');
+    const sidebar = document.querySelector('.admin-sidebar'); // Seletor corrigido
+    const body = document.body;
+
+    if (!menuToggleBtn || !sidebar) {
+        console.error("Elementos da sidebar não encontrados.");
+        return;
+    }
+
+    // --- LÓGICA PARA ABRIR/FECHAR A SIDEBAR ---
+
+    // 1. Abrir/Fechar com o clique no botão
+    menuToggleBtn.addEventListener('click', (e) => {
+        e.stopPropagation(); // Impede que o clique se propague para outros elementos
+        body.classList.toggle('sidebar-visible');
+    });
+
+    // 2. Fechar ao clicar FORA da sidebar (no overlay)
+    document.addEventListener('click', (e) => {
+        // Se a sidebar está visível E o clique não foi nela ou em algo dentro dela
+        if (body.classList.contains('sidebar-visible') && !sidebar.contains(e.target)) {
+            body.classList.remove('sidebar-visible');
+        }
+    });
+
+
+    // --- LÓGICA DE NAVEGAÇÃO INTERNA DA SIDEBAR (SEU CÓDIGO ORIGINAL) ---
     const sidebarLinks = document.querySelectorAll('.profile-nav-link');
     const contentSections = document.querySelectorAll('.main-section');
     const mobileHeaderTitle = document.getElementById('mobile-header-title');
 
-    if (!menuToggleBtn || sidebarLinks.length === 0) return;
-
-    // Abrir/fechar sidebar no mobile
-    menuToggleBtn.addEventListener('click', () => {
-        document.body.classList.toggle('sidebar-visible');
-    });
-
-    // Navegar entre as seções
     sidebarLinks.forEach(link => {
         link.addEventListener('click', (e) => {
             e.preventDefault();
-
             const targetId = link.dataset.target;
-            if (!targetId) return; // Ignora links sem 'data-target' como o de logout
+            if (!targetId) return;
 
-            // Atualiza links e seções
             sidebarLinks.forEach(l => l.classList.remove('active'));
             contentSections.forEach(s => s.classList.remove('active'));
 
             link.classList.add('active');
             document.getElementById(targetId)?.classList.add('active');
 
-            // Atualiza título mobile
             if (mobileHeaderTitle && link.querySelector('span')) {
                 mobileHeaderTitle.textContent = link.querySelector('span').textContent;
             }
 
-            // Fecha sidebar no mobile após o clique
-            if (window.innerWidth < 992) {
-                document.body.classList.remove('sidebar-visible');
+            // Fecha a sidebar no mobile após o clique (breakpoint corrigido)
+            if (window.innerWidth < 768) {
+                body.classList.remove('sidebar-visible');
             }
         });
     });
 
-    // Ativa a primeira seção por padrão
     if (sidebarLinks.length > 0) {
         sidebarLinks[0].click();
     }

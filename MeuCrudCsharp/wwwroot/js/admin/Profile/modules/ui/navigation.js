@@ -42,3 +42,17 @@
         });
     });
 }
+export function initializeMenuToggle() {
+    // 1. Seleciona o botão e o corpo da página
+    const menuToggleBtn = document.getElementById('menu-toggle');
+    const body = document.body;
+
+    // 2. Garante que o botão existe na página antes de continuar
+    if (menuToggleBtn) {
+        // 3. Adiciona um "ouvinte" de evento de clique
+        menuToggleBtn.addEventListener('click', () => {
+            // 4. Alterna (adiciona/remove) a classe no body. É isso que faz a mágica! ✨
+            body.classList.toggle('sidebar-visible');
+        });
+    }
+}
