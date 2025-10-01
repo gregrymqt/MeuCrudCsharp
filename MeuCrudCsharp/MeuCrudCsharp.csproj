@@ -43,5 +43,6 @@
   </ItemGroup>
   <ItemGroup>
     <_ContentIncludedByDefault Remove="wwwroot\js\token\getTokens.js" />
+    <_ContentIncludedByDefault Remove="Pages\Payment\Method\SelectPaymentMethod.cshtml" />
   </ItemGroup>
 </Project>

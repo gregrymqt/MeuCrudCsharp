@@ -1,4 +1,4 @@
-﻿// /js/modules/services/mercadopagoService.js
+﻿// /js/modules/services/RenderService.js
 
 import { showError } from '../ui/paymentUI.js';
 

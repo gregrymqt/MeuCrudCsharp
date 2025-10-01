@@ -1,0 +1,60 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Pagamento";
+}
+<link rel="stylesheet" href="~/css/payment/base.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/payment/chooser.css" asp-append-version="true" />
+
+@* Se os parciais de PIX e Cartão são carregados AQUI DENTRO,
+   você pode carregar TODOS os arquivos CSS aqui para simplificar: *@
+<link rel="stylesheet" href="~/css/payment/pix.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/payment/credit_card.css" asp-append-version="true" />
+
+<body data-plano-tipo="@Model.Plano?.ToLower()">
+
+@if (Model.IsPlanoMensal)
+{
+    <header class="mobile-header">
+        <button id="menu-toggle" class="menu-button">
+            <span>&#9776;</span> Opções de Pagamento
+        </button>
+    </header>
+
+    <div class="payment-container-mensal">
+        <aside id="sidebar" class="sidebar">
+            <nav>
+                <ul>
+                    <li><a href="#" class="sidebar-link active" data-target="#credit-card-payment">Cartão de Crédito</a></li>
+                    <li><a href="#" class="sidebar-link" data-target="#pix-payment">PIX</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main class="payment-content">
+            <div id="credit-card-payment" class="payment-method-view active">
+                <partial name="partials/CreditCard" />
+            </div>
+            <div id="pix-payment" class="payment-method-view">
+                <partial name="partials/Pix" />
+            </div>
+        </main>
+    </div>
+}
+else
+{
+    <div class="payment-container-anual">
+        <main class="payment-content">
+            <div id="credit-card-payment" class="payment-method-view active">
+                <partial name="partials/CreditCard" />
+            </div>
+        </main>
+    </div>
+}
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.1/signalr.min.js"></script>
+    <script src="~/js/payment/main.js"></script>
+}
+
+</body>

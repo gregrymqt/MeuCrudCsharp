@@ -1,17 +1,12 @@
-using System;
 using System.Security.Claims;
-using System.Threading.Tasks;
 using MeuCrudCsharp.Features.MercadoPago.Payments.Controllers;
-using MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces;
 using MeuCrudCsharp.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace MeuCrudCsharp.Pages.Payment.Type
+namespace MeuCrudCsharp.Pages.Payment.partials
 {
     [Authorize]
     public class CreditCardModel : PageModel

@@ -1,12 +1,10 @@
 using System.Security.Claims;
-using EllipticCurve;
-using MercadoPago.Resource.User;
 using MeuCrudCsharp.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
-namespace MeuCrudCsharp.Pages.Payment.Type;
+namespace MeuCrudCsharp.Pages.Payment.partials;
 
 [Authorize]
 public class Pix : PageModel

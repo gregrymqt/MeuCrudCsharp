@@ -8,7 +8,7 @@ import apiService from '../../../../core/apiService.js'; // Ajuste o caminho se 
  * @param {object} paymentData - Dados do pagamento (nome, email, valor, etc.).
  * @returns {Promise<object>} Os dados do PIX gerado (QR Code, etc.).
  */
-export async function postCreatePayment(paymentData) {
+export async function createPixPayment(paymentData) {
     try {
         // 3. USA o apiService para a chamada POST, que lida com tudo automaticamente.
         return await apiService.fetch('/api/pix/createpix', {

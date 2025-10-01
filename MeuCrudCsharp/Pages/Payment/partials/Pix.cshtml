@@ -1,0 +1,25 @@
+<div id="pix-payment-module" class="pix-container">
+    <header class="pix-header">
+        <h1>Pagamento com PIX</h1>
+    </header>
+    <nav class="payment-tabs-nav">
+        <a href="#" class="tab-link active" data-step="1">1. Seus Dados</a>
+        <a href="#" class="tab-link disabled" data-step="2">2. Pagar</a>
+        <a href="#" class="tab-link disabled" data-step="3">3. Status</a>
+    </nav>
+    <div id="pix-content-container" class="tabs-content">
+    </div>
+    <div id="loading-spinner" class="spinner" style="display: none;"></div>
+    <div id="form-error" class="error-message" style="display: none;"></div>
+</div>
+
+<script>
+    window.paymentConfig = {
+        userId: @Model.user.Id,
+        publicKey: '@Model.PublicKey', // Passando a Public Key do MP
+        transactionAmount: 150.50,
+        description: "Assinatura Plano Anual"
+    };
+</script>
+<script src="https://sdk.mercadopago.com/js/v2"></script>
+<script src="~/js/payment/main.js" type="module"></script>
