@@ -48,17 +48,25 @@ body {
 }
 
 .admin-sidebar {
+    /* Posicionamento fora da tela para mobile */
     position: fixed;
-    left: 0;
     top: 0;
-    bottom: 0;
+    left: 0;
+    height: 100vh;
     z-index: 1000;
-    width: 260px;
-    background-color: var(--sidebar-bg);
+
+    /* Aparência */
+    width: 260px; /* Largura total quando aberta */
+    background-color: #212529; /* Cor de fundo escura */
+    color: #f8f9fa;
+
+    /* Layout interno e animação */
+    display: flex;
     flex-direction: column;
-    transform: translateX(-100%);
     transition: transform 0.3s ease-in-out;
-    color: #d2d3d5;
+
+    /* **AQUI ESTÁ O "TRUQUE" PARA ESCONDER NO MOBILE** */
+    transform: translateX(-100%);
 }
 
 .admin-main-content {
@@ -68,7 +76,6 @@ body {
 
 /* Estado visível da sidebar (ativado via JS na tag <body>) */
 body.sidebar-visible .admin-sidebar {
-    /* Apenas esta linha é necessária para trazer a sidebar de volta */
     transform: translateX(0);
 }
 
@@ -123,16 +130,13 @@ body.sidebar-visible::after {
 }
 .admin-content-wrapper {
     width: 100%;
-    display: flex;
-    flex-direction: column;
 }
 
 /* --- Sidebar --- */
 .sidebar-header {
-    padding: 0 1.5rem 1.5rem 1.5rem;
+    padding: 1.5rem;
     font-size: 1.5rem;
     font-weight: 700;
-    color: var(--white);
     border-bottom: 1px solid #343a40;
 }
 
@@ -142,25 +146,16 @@ body.sidebar-visible::after {
     padding: 0;
 }
 
-.sidebar-nav li a {
-    display: flex;
-    align-items: center;
-    padding: 0.8rem 1.5rem;
-    color: var(--sidebar-text);
-    text-decoration: none;
-    font-weight: 500;
-    transition: background-color 0.2s ease, color 0.2s ease;
-}
-
 .sidebar-nav ul {
     list-style: none;
+    padding: 0;
 }
 
 .sidebar-nav .sidebar-link {
     display: flex;
     align-items: center;
     padding: 0.9rem 1.5rem;
-    color: var(--sidebar-text);
+    color: #adb5bd; /* --sidebar-text */
     text-decoration: none;
     transition: background-color 0.2s, color 0.2s;
     border-left: 3px solid transparent;
@@ -168,19 +163,26 @@ body.sidebar-visible::after {
 
 .sidebar-nav .sidebar-link:hover {
     background-color: rgba(255, 255, 255, 0.05);
-    color: var(--sidebar-text-hover);
+    color: #f8f9fa; /* --sidebar-text-hover */
 }
 
 .sidebar-nav .sidebar-link.active {
-    background-color: var(--primary-color);
-    color: var(--background-white);
+    background-color: #007bff; /* --primary-color */
+    color: #fff; /* --background-white */
     font-weight: 600;
+    border-left-color: #63a9ff;
 }
 
 .sidebar-nav .sidebar-link i {
     width: 20px;
     margin-right: 1rem;
     text-align: center;
+    font-size: 1.1rem;
+}
+
+.sidebar-nav .sidebar-link span {
+    /* Permite uma transição suave de fade-out */
+    transition: opacity 0.2s ease;
 }
 
 
@@ -281,34 +283,66 @@ body.sidebar-visible::after {
 .btn-success { background-color: var(--success-color); color: white; }
 .text-danger { color: var(--danger-color); font-weight: 600; }
 
-/* =================================================================== */
-/* 5. ESTILOS PARA DESKTOP (MEDIA QUERY)                               */
-/* =================================================================== */
+
+/* ============================================================== */
+/* ESTADO COLAPSADO (TABLET/DESKTOP: de 768px até 1499px)         */
+/* ============================================================== */
 @media (min-width: 768px) {
-    /* DEPOIS (código corrigido) */
-    .admin-content-wrapper {
-        flex-grow: 1;
-    }
-
-    .admin-main-content {
-        padding: 2rem;
-        /* A propriedade flex-grow foi movida para o wrapper */
-    }
-
     .mobile-header {
-        /* **ESCONDE O CABEÇALHO MOBILE NO DESKTOP** */
-        display: none;
+        display: none; /* Esconde o header mobile */
     }
 
     .admin-sidebar {
-        /* **TORNA A SIDEBAR VISÍVEL E FIXA NO DESKTOP** */
-        display: flex;
-        position: static; /* Remove o 'fixed' do mobile */
-        animation: none; /* Remove a animação de slide */
+        position: static; /* Traz a sidebar de volta para o fluxo normal do documento */
+
+        /* **AQUI ESTÁ A CORREÇÃO PRINCIPAL** */
+        /* Resetamos o transform para que ela não fique mais à esquerda */
+        transform: none;
+
+        /* Largura colapsada, apenas para os ícones */
+        width: 250px;
+        transition: width 0.3s ease-in-out; /* Animação para quando expandir */
     }
 
-    body.sidebar-visible .admin-sidebar {
-        /* Garante que o estado 'visible' não afete o desktop */
-        position: static;
+    /* Escondemos o texto dos links e o header */
+    .admin-sidebar .sidebar-link span,
+    .admin-sidebar .sidebar-header {
+        opacity: 1;
+        visibility: visible;
+        white-space: nowrap; /* Evita quebra de linha durante a animação */
+    }
+
+    /* Centralizamos os ícones */
+    .sidebar-nav .sidebar-link {
+        justify-content: center;
+    }
+    .sidebar-nav .sidebar-link i {
+        margin-right: 0;
+    }
+}
+
+
+/* =========================================================== */
+/* ESTADO EXPANDIDO (DESKTOP GRANDE: de 1500px em diante)      */
+/* =========================================================== */
+@media (min-width: 1500px) {
+    .admin-sidebar {
+        /* Define a largura total da sidebar */
+        width: 260px;
+    }
+
+    /* Mostramos o texto dos links e o header novamente */
+    .admin-sidebar .sidebar-link span,
+    .admin-sidebar .sidebar-header {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    /* Voltamos os links ao alinhamento original */
+    .sidebar-nav .sidebar-link {
+        justify-content: flex-start;
+    }
+    .sidebar-nav .sidebar-link i {
+        margin-right: 1rem;
     }
 }
