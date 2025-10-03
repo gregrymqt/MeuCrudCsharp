@@ -58,14 +58,13 @@ namespace MeuCrudCsharp.Features.MercadoPago.Plans.Controllers
                 return NotFound(new { message = $"Plano com PublicId {id} não encontrado." });
             }
 
-            // Instancia o novo record com a estrutura específica
             var planDetails = new PlanDetailViewModel(
                 plan.PublicId,
                 plan.Name,
                 plan.Description,
                 plan.TransactionAmount,
-                plan.Frequency,
-                plan.FrequencyType,
+                plan.FrequencyInterval,
+                plan.FrequencyType.ToString(),
                 plan.CurrencyId,
                 plan.IsActive
             );

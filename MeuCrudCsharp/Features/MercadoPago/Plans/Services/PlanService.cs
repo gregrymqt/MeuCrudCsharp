@@ -166,19 +166,55 @@ namespace MeuCrudCsharp.Features.MercadoPago.Plans.Services
 
         private PlanDto MapDbPlanToDto(Plan dbPlan)
         {
-            bool isAnnual = dbPlan.Frequency == 12 &&
-                            String.Equals(dbPlan.FrequencyType, "months", StringComparison.OrdinalIgnoreCase);
+            // A nova lógica para determinar o tipo de plano de forma flexível
+            string planType = GetPlanTypeDescription(dbPlan.FrequencyInterval, dbPlan.FrequencyType);
+
+            // A lógica para determinar se o plano é anual, para o caso de precisar
+            // de alguma flag específica no DTO.
+            bool isAnnual = dbPlan.FrequencyInterval == 12 && dbPlan.FrequencyType == PlanFrequencyType.Months;
 
             return new PlanDto
             (
                 dbPlan.PublicId.ToString(),
                 dbPlan.Name,
-                isAnnual ? "anual" : "mensal",
-                FormatPriceDisplay(dbPlan.TransactionAmount, dbPlan.Frequency),
-                FormatBillingInfo(dbPlan.TransactionAmount, dbPlan.Frequency),
+                planType, // <-- Usa a descrição flexível (ex: "Mensal", "Trimestral", "Anual")
+                FormatPriceDisplay(dbPlan.TransactionAmount, dbPlan.FrequencyInterval), // <-- Usa a propriedade correta
+                FormatBillingInfo(dbPlan.TransactionAmount, dbPlan.FrequencyInterval), // <-- Usa a propriedade correta
                 GetDefaultFeatures(),
                 isAnnual
             );
+        }
+
+        /// <summary>
+        /// Função auxiliar para criar uma descrição amigável do tipo de plano.
+        /// </summary>
+        private string GetPlanTypeDescription(int interval, PlanFrequencyType frequencyType)
+        {
+            if (frequencyType == PlanFrequencyType.Months)
+            {
+                switch (interval)
+                {
+                    case 1:
+                        return "Mensal";
+                    case 3:
+                        return "Trimestral";
+                    case 6:
+                        return "Semestral";
+                    case 12:
+                        return "Anual";
+                    default:
+                        // Fallback para outros intervalos de meses (ex: 2, 4 meses)
+                        return $"Pacote de {interval} meses";
+                }
+            }
+
+            if (frequencyType == PlanFrequencyType.Days)
+            {
+                // Lógica para planos baseados em dias, se você tiver
+                return interval == 1 ? "Diário" : $"Pacote de {interval} dias";
+            }
+
+            return "Plano Padrão"; // Fallback genérico
         }
 
 // Método para evitar repetição da lista de features

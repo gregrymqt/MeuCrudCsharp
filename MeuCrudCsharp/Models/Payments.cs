@@ -22,7 +22,7 @@ namespace MeuCrudCsharp.Models
         public DateTime? DateApproved { get; set; }
 
         [Required]
-        public int LastFourDigits { get; set; }
+        public string? LastFourDigits { get; set; }
 
         [Required]
         [MaxLength(15)]

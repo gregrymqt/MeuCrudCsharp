@@ -48,17 +48,30 @@ public record SubscriptionWithCardRequestDto(
 );
 
 /// <summary>
-/// Representa a resposta detalhada da API do provedor para uma assinatura.
+/// Representa a resposta da API do Mercado Pago ao criar ou consultar uma assinatura.
 /// </summary>
 public record SubscriptionResponseDto(
     [property: JsonPropertyName("id")] string? Id,
     [property: JsonPropertyName("status")] string? Status,
     [property: JsonPropertyName("preapproval_plan_id")] string? PreapprovalPlanId,
-    [property: JsonPropertyName("payer_id")] long PayerId,
+    [property: JsonPropertyName("payer_id")] long? PayerId,
     [property: JsonPropertyName("payer_email")] string? PayerEmail,
+    [property: JsonPropertyName("reason")] string? Reason,
     [property: JsonPropertyName("date_created")] DateTime DateCreated,
-    [property: JsonPropertyName("next_invoice_date")] DateTime? NextBillingDate,
-    [property: JsonPropertyName("card")] SubscriptionCardDto? Card
+    [property: JsonPropertyName("last_modified")] DateTime LastModified,
+    [property: JsonPropertyName("next_payment_date")] DateTime? NextPaymentDate,
+    [property: JsonPropertyName("auto_recurring")] AutoRecurringDto? AutoRecurring
+);
+
+/// <summary>
+/// Representa o bloco de informações de recorrência da assinatura.
+/// </summary>
+public record AutoRecurringDto(
+    [property: JsonPropertyName("frequency")] int Frequency,
+    [property: JsonPropertyName("frequency_type")] string? FrequencyType,
+    [property: JsonPropertyName("transaction_amount")] decimal TransactionAmount,
+    [property: JsonPropertyName("currency_id")] string? CurrencyId,
+    [property: JsonPropertyName("start_date")] DateTime StartDate
 );
 
 /// <summary>

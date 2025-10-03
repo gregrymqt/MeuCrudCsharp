@@ -10,7 +10,6 @@ using MeuCrudCsharp.Features.MercadoPago.Clients.Interfaces;
 using MeuCrudCsharp.Features.MercadoPago.Payments.Dtos;
 using MeuCrudCsharp.Features.MercadoPago.Subscriptions.DTOs;
 using MeuCrudCsharp.Features.MercadoPago.Subscriptions.Interfaces;
-
 using MeuCrudCsharp.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -53,13 +52,13 @@ namespace MeuCrudCsharp.Features.MercadoPago.Subscriptions.Services
         }
 
         /// <inheritdoc />
-        public async Task<SubscriptionResponseDto> CreateSubscriptionAndCustomerIfNeededAsync(
+        public async Task<Subscription> CreateSubscriptionAndCustomerIfNeededAsync(
             CreateSubscriptionDto createDto,
             ClaimsPrincipal users
         )
         {
             var userIdString = _userContext.GetCurrentUserId();
-            
+
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userIdString);
             if (user == null)
             {
@@ -92,17 +91,28 @@ namespace MeuCrudCsharp.Features.MercadoPago.Subscriptions.Services
 
             var localPlan = await _context
                 .Plans.AsNoTracking()
-                .FirstOrDefaultAsync(p =>
-                    p.ExternalPlanId == subscriptionResponse.PreapprovalPlanId
-                );
+                .FirstOrDefaultAsync(p => p.ExternalPlanId == subscriptionResponse.PreapprovalPlanId);
 
             if (localPlan == null)
             {
-                throw new ResourceNotFoundException(
-                    $"Plan with external ID '{subscriptionResponse.PreapprovalPlanId}' not found."
-                );
+                throw new ResourceNotFoundException($"Plan with external ID '{subscriptionResponse.PreapprovalPlanId}' not found.");
             }
 
+            // LÓGICA MOVIDA DO OUTRO MÉTODO PARA CÁ:
+            var now = DateTime.UtcNow;
+            var periodStartDate = subscriptionResponse.AutoRecurring?.StartDate ?? now;
+            DateTime periodEndDate;
+
+            if (subscriptionResponse.NextPaymentDate.HasValue)
+            {
+                periodEndDate = subscriptionResponse.NextPaymentDate.Value;
+            }
+            else
+            {
+                periodEndDate = periodStartDate.AddMonths(localPlan.FrequencyInterval);
+            }
+    
+            // Agora criamos a entidade Subscription completa, com todos os dados.
             var newSubscription = new Subscription
             {
                 UserId = userIdString,
@@ -110,8 +120,13 @@ namespace MeuCrudCsharp.Features.MercadoPago.Subscriptions.Services
                 ExternalId = subscriptionResponse.Id,
                 Status = subscriptionResponse.Status,
                 PayerEmail = subscriptionResponse.PayerEmail,
-                CreatedAt = DateTime.UtcNow,
+                CreatedAt = now,
                 LastFourCardDigits = savedCard.LastFourDigits,
+                CurrentPeriodStartDate = periodStartDate,
+                CurrentPeriodEndDate = periodEndDate,
+                // O PaymentId do primeiro pagamento pode vir do webhook ou de uma consulta posterior.
+                // Por enquanto, podemos deixá-lo nulo ou usar o ID da assinatura.
+                PaymentId = subscriptionResponse.Id 
             };
 
             _context.Subscriptions.Add(newSubscription);
@@ -122,7 +137,62 @@ namespace MeuCrudCsharp.Features.MercadoPago.Subscriptions.Services
                 newSubscription.ExternalId,
                 userIdString
             );
-            return subscriptionResponse;
+
+            // Retornamos a entidade que acabamos de criar no nosso banco.
+            return newSubscription;
+        }
+
+        public async Task<Subscription> ActivateSubscriptionFromSinglePaymentAsync(
+            string userId,
+            Guid planPublicId,
+            string paymentId,
+            string payerEmail,
+            string? lastFourCardDigits 
+            )
+        {
+            // 1. Encontrar o plano no nosso banco de dados
+            var localPlan = await _context.Plans.AsNoTracking()
+                .FirstOrDefaultAsync(p => p.PublicId == planPublicId);
+
+            if (localPlan == null)
+            {
+                _logger.LogError("Tentativa de ativar assinatura para um plano inexistente. PublicId: {PlanPublicId}",
+                    planPublicId);
+                throw new ResourceNotFoundException($"Plano com ID '{planPublicId}' não encontrado.");
+            }
+
+            var now = DateTime.UtcNow;
+
+            // 2. Calcular a data de expiração com base na duração do plano
+            var expirationDate = now.AddMonths(localPlan.FrequencyInterval); // Supondo que a frequência seja em meses
+
+            // 3. Criar a nova entidade de assinatura local
+            var newSubscription = new Subscription
+            {
+                UserId = userId,
+                PlanId = localPlan.Id,
+                ExternalId = paymentId, // Para pagamentos únicos, o ExternalId pode ser o próprio PaymentId
+                Status = "active",
+                PayerEmail = payerEmail,
+                PaymentId = paymentId,
+                CreatedAt = now,
+                CurrentPeriodStartDate = now,
+                CurrentPeriodEndDate = expirationDate,
+                LastFourCardDigits = lastFourCardDigits 
+            };
+
+            _context.Subscriptions.Add(newSubscription);
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation(
+                "Assinatura {SubscriptionId} ativada para o usuário {UserId} via pagamento único {PaymentId}. Válida até {ExpirationDate}",
+                newSubscription.Id,
+                userId,
+                paymentId,
+                expirationDate
+            );
+
+            return newSubscription;
         }
 
         /// <inheritdoc />
@@ -135,7 +205,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Subscriptions.Services
                 (object?)null
             );
             return JsonSerializer.Deserialize<SubscriptionResponseDto>(responseBody)
-                ?? throw new AppServiceException("Failed to deserialize subscription data.");
+                   ?? throw new AppServiceException("Failed to deserialize subscription data.");
         }
 
         /// <inheritdoc />
@@ -197,7 +267,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Subscriptions.Services
         )
         {
             var endpoint = $"/v1/preapproval/{subscriptionId}";
-            var payload = new UpdateSubscriptionStatusDto( dto.Status);
+            var payload = new UpdateSubscriptionStatusDto(dto.Status);
             var responseBody = await SendMercadoPagoRequestAsync(HttpMethod.Put, endpoint, payload);
             var mpSubscriptionResponse =
                 JsonSerializer.Deserialize<SubscriptionResponseDto>(responseBody)
@@ -228,6 +298,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Subscriptions.Services
                     subscriptionId
                 );
             }
+
             return mpSubscriptionResponse;
         }
 
@@ -257,9 +328,9 @@ namespace MeuCrudCsharp.Features.MercadoPago.Subscriptions.Services
                 payload
             );
             return JsonSerializer.Deserialize<SubscriptionResponseDto>(responseBody)
-                ?? throw new AppServiceException(
-                    "Failed to deserialize the subscription creation response."
-                );
+                   ?? throw new AppServiceException(
+                       "Failed to deserialize the subscription creation response."
+                   );
         }
     }
 }

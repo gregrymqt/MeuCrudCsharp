@@ -23,25 +23,29 @@ function renderPlansTable(plans) {
 
     plans.forEach(plan => {
         // Verificação segura para cada propriedade do plano
-        const name = plan.name ?? 'Nome Indisponível';
-        const type = plan.slug === 'anual' ? 'Anual' : 'Mensal';
-        const price = plan.priceDisplay ?? 'R$ 0,00';
-        const status = plan.status ?? 'active';
-        const publicId = plan.publicId ?? 'ID_INDISPONIVEL';
+        const name = plan.Name ?? 'Nome Indisponível'; // Propriedades em C# são PascalCase
+
+        // CORREÇÃO: Usamos a propriedade 'Type' que vem diretamente do back-end.
+        // O DTO que criamos já faz a lógica de "Mensal", "Trimestral", "Anual", etc.
+        const type = plan.Type ?? 'Tipo Indisponível';
+
+        const price = plan.PriceDisplay ?? 'R$ 0,00';
+        const status = plan.IsActive ? 'Active' : 'Inactive'; // O DTO tem IsActive (booleano)
+        const publicId = plan.PublicId ?? 'ID_INDISPONIVEL';
 
         const row = document.createElement('tr');
         row.innerHTML = `
-            <td>${name}</td>
-            <td>${type}</td>
-            <td>${price}</td>
-            <td>
-                <span class="status-badge status-${status.toLowerCase()}">${status}</span>
-            </td>
-                <td class="text-right">
+        <td>${name}</td>
+        <td>${type}</td>
+        <td>${price}</td>
+        <td>
+            <span class="status-badge status-${status.toLowerCase()}">${status}</span>
+        </td>
+        <td class="text-right">
             <button class="btn btn-secondary btn-sm btn-edit" data-public-id="${publicId}">Editar</button>
             <button class="btn btn-danger btn-sm btn-delete" data-public-id="${publicId}">Excluir</button>
         </td>
-        `;
+    `;
         plansTableBody.appendChild(row);
     });
 }
@@ -152,21 +156,22 @@ function initializePlansPanel() {
         const saveButton = createPlanForm.querySelector('button[type="submit"]');
         saveButton.disabled = true;
         saveButton.textContent = 'Creating...';
-        const planInterval = document.getElementById('plan-type').value;
 
-        const frequency = planInterval === 'yearly' ? 12 : 1;
-        const frequency_type = 'months'; // Para ambos os casos, a unidade será 'meses'
+        // Lê os valores dos novos campos do formulário
+        const frequency = parseInt(document.getElementById('plan-interval').value, 10);
+        const frequency_type = document.getElementById('plan-frequency-type').value;
 
         const planData = {
             reason: document.getElementById('plan-reason').value,
             auto_recurring: {
-                frequency: frequency,                 // Usando a variável 'frequency'
-                frequency_type: frequency_type,       // Usando a variável 'frequency_type'
+                frequency: frequency,                 // Usando a variável do input 'plan-interval'
+                frequency_type: frequency_type,       // Usando a variável do select 'plan-frequency-type'
                 transaction_amount: parseFloat(document.getElementById('plan-amount').value),
+                currency_id: 'BRL' // É bom sempre enviar a moeda
             },
             description: document.getElementById('plan-description').value,
-            back_url: "https://b1027b9a8e2b.ngrok-free.app/"
-        };
+            back_url: "https://b1027b9a8e2b.ngrok-free.app/" // Lembre-se de ajustar a URL conforme necessário
+        }
 
         try {
             // NOVO: Passa o token encontrado para a função da API

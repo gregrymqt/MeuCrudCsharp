@@ -123,10 +123,10 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
                         {
                             SubscriptionId = subscription.ExternalId,
                             PlanName = subscription.Plan.Name,
-                            Status = mpSubscription.Status,
+                            Status = mpSubscription.Status, // Status sempre atualizado do MP
                             Amount = subscription.Plan.TransactionAmount,
-                            NextBillingDate = mpSubscription.NextBillingDate,
-                            LastFourCardDigits = mpSubscription.Card?.LastFourDigits,
+                            NextBillingDate = mpSubscription.NextPaymentDate, // <-- CORRIGIDO
+                            LastFourCardDigits = subscription.LastFourCardDigits, // <-- CORRIGIDO
                         };
                     }
                     catch (Exception ex)

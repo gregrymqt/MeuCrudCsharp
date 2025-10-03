@@ -1,12 +1,15 @@
 ﻿using System;
+using System.Text.Json;
 using System.Threading.Tasks;
 using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Features.Emails.Interfaces;
 using MeuCrudCsharp.Features.Emails.ViewModels;
 using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.MercadoPago.Notification.Interfaces;
+using MeuCrudCsharp.Features.MercadoPago.Notification.Record;
 using MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces;
 using MeuCrudCsharp.Features.MercadoPago.Refunds.Interfaces;
+using MeuCrudCsharp.Features.MercadoPago.Subscriptions.Interfaces;
 using MeuCrudCsharp.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -25,6 +28,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Notification.Services
         private readonly ILogger<NotificationPaymentService> _logger;
         private readonly IMercadoPagoPaymentService _mercadoPagoService;
         private readonly IRefundNotification _refundNotification;
+        private readonly ISubscriptionService  _subscriptionService;
 
         /// <summary>
         /// Inicializa uma nova instância da classe <see cref="NotificationPayment"/>.
@@ -35,14 +39,15 @@ namespace MeuCrudCsharp.Features.MercadoPago.Notification.Services
         /// <param name="logger">O serviço de logging.</param>
         /// <param name="mercadoPagoService">O serviço de logging.</param>
         /// <param name="refundNotification">O serviço de logging.</param>
-
         public NotificationPaymentService(
             ApiDbContext context,
             IEmailSenderService emailSender,
             IRazorViewToStringRenderer razorRenderer,
             ILogger<NotificationPaymentService> logger,
             IMercadoPagoPaymentService mercadoPagoService, // <-- INJEÇÃO DO SERVIÇO DO MP
-            IRefundNotification refundNotification // <-- INJEÇÃO DO SERVIÇO SIGNALR
+            IRefundNotification refundNotification, // <-- INJEÇÃO DO SERVIÇO SIGNALR
+            ISubscriptionService subscriptionService
+            
         )
         {
             _context = context;
@@ -51,6 +56,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Notification.Services
             _logger = logger;
             _mercadoPagoService = mercadoPagoService;
             _refundNotification = refundNotification;
+            _subscriptionService = subscriptionService;
         }
 
         /// <inheritdoc />
@@ -66,229 +72,263 @@ namespace MeuCrudCsharp.Features.MercadoPago.Notification.Services
                 internalPaymentId
             );
 
-            // O try/catch foi movido para o job, que é o responsável pela transação e tratamento de falhas.
-            // Se ocorrer um erro aqui, o job fará o rollback.
-            var localPayment =
-                await SearchForPaymentAsync(internalPaymentId); // Supondo que este método inclua a Subscription
-
+            var localPayment = await SearchForPaymentAsync(internalPaymentId);
             if (localPayment == null)
-                throw new ResourceNotFoundException(
-                    $"Pagamento com ID {internalPaymentId} não foi encontrado para notificação.");
+                throw new ResourceNotFoundException($"Pagamento com ID {internalPaymentId} não foi encontrado.");
 
-            var user = localPayment.User; // Obtém o usuário a partir do pagamento
+            var user = localPayment.User;
             if (user == null)
                 throw new ResourceNotFoundException(
                     $"Usuário associado ao pagamento {internalPaymentId} não foi encontrado.");
 
-            // A chamada para a API externa permanece, conforme sua lógica atual.
+            // 1. Busca o status mais recente do pagamento no Mercado Pago
             var externPayment = await _mercadoPagoService.GetPaymentStatusAsync(localPayment.ExternalId);
-
-            bool sendConfirmationEmail = false;
-            bool sendRejectionEmail = false;
-            bool sendRefundEmail = false;
-
-            // Apenas modifica os objetos em memória
-            switch (externPayment.Status)
+            if (externPayment == null)
             {
-                case "approved":
-                    localPayment.Status = "approved";
+                _logger.LogWarning("Não foi possível obter detalhes do pagamento externo {ExternalId}",
+                    localPayment.ExternalId);
+                // Você pode querer lançar uma exceção aqui para que o Hangfire tente novamente.
+                throw new Exception($"Falha ao obter detalhes do pagamento {localPayment.ExternalId} do Mercado Pago.");
+            }
+
+            // 2. A LÓGICA PRINCIPAL COMEÇA AQUI
+            if (externPayment.Status == "approved")
+            {
+                // 3. Verifica se a assinatura JÁ EXISTE.
+                if (localPayment.Subscription == null)
+                {
+                    // 3a. SE NÃO EXISTE, é um pagamento único (PIX ou Cartão)! VAMOS CRIAR A ASSINATURA.
+                    _logger.LogInformation(
+                        "Pagamento {PaymentId} aprovado. Nenhuma assinatura local encontrada, criando uma nova...",
+                        internalPaymentId);
+
+                    // Extrai os metadados que você salvou na criação do pagamento
+                    var metadata = JsonSerializer.Deserialize<PaymentMetadata>(externPayment.ExternalReference);
+                    if (metadata == null || metadata.PlanPublicId == Guid.Empty)
+                    {
+                        throw new InvalidOperationException(
+                            $"Metadados (ExternalReference) inválidos ou ausentes no pagamento {externPayment.Id}. Não é possível criar a assinatura.");
+                    }
+
+                    // CHAMA O SERVIÇO ESPECIALIZADO PARA CRIAR A ASSINATURA NO BANCO
+                    // (Este é o método ActivateSubscriptionFromSinglePaymentAsync que desenhamos antes,
+                    // que deve estar em um ISubscriptionService injetado nesta classe)
+                    await _subscriptionService.ActivateSubscriptionFromSinglePaymentAsync(
+                        user.Id,
+                        metadata.PlanPublicId,
+                        externPayment.Id.ToString(),
+                        externPayment.Payer.Email,
+                        localPayment.LastFourDigits
+                    );
+
+                    _logger.LogInformation("Assinatura de pagamento único criada com sucesso para o usuário {UserId}.",
+                        user.Id);
+                }
+                else
+                {
+                    // 3b. SE JÁ EXISTE, é um pagamento de uma assinatura recorrente. Apenas atualizamos o status.
+                    _logger.LogInformation(
+                        "Pagamento {PaymentId} aprovado. Atualizando status da assinatura existente {SubscriptionId}.",
+                        internalPaymentId, localPayment.Subscription.Id);
                     localPayment.Subscription.Status = "active";
-                    sendConfirmationEmail = true;
-                    break;
+                }
 
-                case "rejected":
-                case "cancelled":
-                    localPayment.Status = externPayment.Status;
-                    // Talvez atualizar o status da Subscription para "cancelled" também?
-                    sendRejectionEmail = true;
-                    break;
-
-                case "refunded":
-                    localPayment.Status = "refunded";
-                    localPayment.Subscription.Status = "refunded";
-                    await _refundNotification.SendRefundStatusUpdate(
-                        localPayment.UserId, "completed", "Seu reembolso foi processado com sucesso!");
-                    sendRefundEmail = true;
-                    break;
+                // Atualiza o status do pagamento local para 'approved'
+                localPayment.Status = "approved";
+                await _context.SaveChangesAsync();
+                await SendConfirmationEmailAsync(user, internalPaymentId);
             }
-
-            // Chama SaveChanges UMA ÚNICA VEZ
-            await _context.SaveChangesAsync();
-            _logger.LogInformation("Status do pagamento {PaymentId} atualizado para {Status}.", internalPaymentId,
-                localPayment.Status);
-
-            // Envia os e-mails após a confirmação da transação no banco
-            if (sendConfirmationEmail) await SendConfirmationEmailAsync(user, internalPaymentId);
-            if (sendRejectionEmail) await SendRejectionEmailAsync(user, internalPaymentId);
-            if (sendRefundEmail) await SendRefundConfirmationEmailAsync(user, internalPaymentId);
-        }
-
-        /// <summary>
-        /// Busca o status de um pagamento no banco de dados local.
-        /// </summary>
-        /// <param name="paymentId">O ID do pagamento a ser consultado.</param>
-        /// <returns>A string representando o status do pagamento, ou nulo se não encontrado.</returns>
-        /// <exception cref="ArgumentException">Lançada se o <paramref name="paymentId"/> não for um GUID válido.</exception>
-        /// <exception cref="AppServiceException">Lançada se ocorrer um erro ao acessar o banco de dados.</exception>
-        private async Task<Models.Payments?> SearchForPaymentAsync(string paymentId)
-        {
-            try
+            else if (new[] { "rejected", "cancelled", "refunded" }.Contains(externPayment.Status))
             {
-                var payment = await _context
-                    .Payments.AsNoTracking()
-                    .FirstOrDefaultAsync(p => p.Id == paymentId);
-
-                return payment;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(
-                    ex,
-                    "Erro ao buscar o status do pagamento {PaymentId} no banco de dados.",
-                    paymentId
-                );
-                throw new AppServiceException($"Falha ao consultar o pagamento {paymentId}.", ex);
-            }
-        }
-
-        /// <summary>
-        /// Renderiza e envia um e-mail de confirmação de pagamento para o usuário.
-        /// </summary>
-        /// <param name="user">O usuário que receberá o e-mail.</param>
-        /// <param name="paymentId">O ID do pagamento confirmado.</param>
-        /// <exception cref="ExternalApiException">Lançada se houver uma falha ao renderizar o template ou enviar o e-mail.</exception>
-        private async Task SendConfirmationEmailAsync(Users user, string paymentId)
-        {
-            try
-            {
-                var subject = "Seu pagamento foi aprovado! 🎉";
-                var viewModel = new ConfirmationEmailViewModel
+                // Lógica para outros status (rejeitado, cancelado, etc.)
+                localPayment.Status = externPayment.Status;
+                if (localPayment.Subscription != null)
                 {
-                    UserName = user.Name,
-                    PaymentId = paymentId,
-                };
-                var htmlBody = await _razorRenderer.RenderViewToStringAsync(
-                    "~/Pages/EmailTemplates/Confirmation/Email.cshtml",
-                    viewModel
-                );
-                var plainTextBody =
-                    $"Olá, {viewModel.UserName}! Seu pagamento com ID {viewModel.PaymentId} foi aprovado com sucesso.";
+                    localPayment.Subscription.Status = externPayment.Status;
+                }
 
-                await _emailSender.SendEmailAsync(user.Email, subject, htmlBody, plainTextBody);
-                _logger.LogInformation(
-                    "E-mail de confirmação enviado com sucesso para {UserEmail} referente ao pagamento {PaymentId}.",
-                    user.Email,
-                    paymentId
-                );
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(
-                    ex,
-                    "Falha ao enviar e-mail de CONFIRMAÇÃO para {UserEmail} (PaymentId: {PaymentId}).",
-                    user.Email,
-                    paymentId
-                );
-                // Lança uma exceção específica de API externa para sinalizar o tipo de erro
-                throw new ExternalApiException(
-                    "Falha ao renderizar ou enviar o e-mail de confirmação.",
-                    ex
-                );
+                await _context.SaveChangesAsync();
+
+                if (externPayment.Status == "refunded")
+                {
+                    await _refundNotification.SendRefundStatusUpdate(localPayment.UserId, "completed",
+                        "Seu reembolso foi processado com sucesso!");
+                    await SendRefundConfirmationEmailAsync(user, internalPaymentId);
+                }
+                else
+                {
+                    await SendRejectionEmailAsync(user, internalPaymentId);
+                }
             }
         }
 
-        // Repetimos o mesmo padrão para o e-mail de rejeição
-        /// <summary>
-        /// Renderiza e envia um e-mail de rejeição de pagamento para o usuário.
-        /// </summary>
-        /// <param name="user">O usuário que receberá o e-mail.</param>
-        /// <param name="paymentId">O ID do pagamento rejeitado.</param>
-        /// <exception cref="ExternalApiException">Lançada se houver uma falha ao renderizar o template ou enviar o e-mail.</exception>
-        private async Task SendRejectionEmailAsync(Users user, string paymentId)
-        {
-            try
-            {
-                var subject = "Atenção: Ocorreu um problema com seu pagamento";
-                var viewModel = new RefundConfirmationEmailViewModel
-                {
-                    UserName = user.Name,
-                    PaymentId = paymentId,
-                    ConfirmationDate = DateTime.UtcNow, // Use a data atual
-                    AccountUrl = "https://seusite.com/minha-conta", // Coloque a URL real aqui
-                };
-                var htmlBody = await _razorRenderer.RenderViewToStringAsync(
-                    "~/Pages/EmailTemplates/Rejection/Email.cshtml",
-                    viewModel
-                );
-                var plainTextBody =
-                    $"Olá, {user.Name}. Infelizmente, ocorreu um problema com o seu pagamento de ID {paymentId} e ele foi rejeitado.";
-
-                await _emailSender.SendEmailAsync(user.Email, subject, htmlBody, plainTextBody);
-                _logger.LogInformation(
-                    "E-mail de rejeição enviado com sucesso para {UserEmail} referente ao pagamento {PaymentId}.",
-                    user.Email,
-                    paymentId
-                );
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(
-                    ex,
-                    "Falha ao enviar e-mail de REJEIÇÃO para {UserEmail} (PaymentId: {PaymentId}).",
-                    user.Email,
-                    paymentId
-                );
-                throw new ExternalApiException(
-                    "Falha ao renderizar ou enviar o e-mail de rejeição.",
-                    ex
-                );
-            }
-        }
 
         /// <summary>
-        /// Renderiza e envia um e-mail de confirmação do reembolso do pagamento para o usuário.
-        /// </summary>
-        /// <param name="user">O usuário que receberá o e-mail.</param>
-        /// <param name="paymentId">O ID do pagamento confirmado.</param>
-        /// <exception cref="ExternalApiException">Lançada se houver uma falha ao renderizar o template ou enviar o e-mail.</exception>
-        private async Task SendRefundConfirmationEmailAsync(Users user, string paymentId)
-        {
-            try
+            /// Busca o status de um pagamento no banco de dados local.
+            /// </summary>
+            /// <param name="paymentId">O ID do pagamento a ser consultado.</param>
+            /// <returns>A string representando o status do pagamento, ou nulo se não encontrado.</returns>
+            /// <exception cref="ArgumentException">Lançada se o <paramref name="paymentId"/> não for um GUID válido.</exception>
+            /// <exception cref="AppServiceException">Lançada se ocorrer um erro ao acessar o banco de dados.</exception>
+            private async Task<Models.Payments?> SearchForPaymentAsync(string paymentId)
             {
-                var subject = "Seu Reembolso foi aprovado! 🎉";
-                var viewModel = new ConfirmationEmailViewModel
+                try
                 {
-                    UserName = user.Name,
-                    PaymentId = paymentId,
-                };
-                var htmlBody = await _razorRenderer.RenderViewToStringAsync(
-                    "~/Pages/EmailTemplates/Refund/Email.cshtml",
-                    viewModel
-                );
-                var plainTextBody =
-                    $"Olá, {viewModel.UserName}! Seu pagamento com ID {viewModel.PaymentId} foi Reembolsado com sucesso.";
+                    var payment = await _context
+                        .Payments.AsNoTracking()
+                        .FirstOrDefaultAsync(p => p.Id == paymentId);
 
-                await _emailSender.SendEmailAsync(user.Email, subject, htmlBody, plainTextBody);
-                _logger.LogInformation(
-                    "E-mail de confirmação de reembolso enviado com sucesso para {UserEmail} referente ao pagamento {PaymentId}.",
-                    user.Email,
-                    paymentId
-                );
+                    return payment;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(
+                        ex,
+                        "Erro ao buscar o status do pagamento {PaymentId} no banco de dados.",
+                        paymentId
+                    );
+                    throw new AppServiceException($"Falha ao consultar o pagamento {paymentId}.", ex);
+                }
             }
-            catch (Exception ex)
+
+            /// <summary>
+            /// Renderiza e envia um e-mail de confirmação de pagamento para o usuário.
+            /// </summary>
+            /// <param name="user">O usuário que receberá o e-mail.</param>
+            /// <param name="paymentId">O ID do pagamento confirmado.</param>
+            /// <exception cref="ExternalApiException">Lançada se houver uma falha ao renderizar o template ou enviar o e-mail.</exception>
+            private async Task SendConfirmationEmailAsync(Users user, string paymentId)
             {
-                _logger.LogError(
-                    ex,
-                    "Falha ao enviar e-mail de CONFIRMAÇÃO para {UserEmail} (PaymentId: {PaymentId}).",
-                    user.Email,
-                    paymentId
-                );
-                // Lança uma exceção específica de API externa para sinalizar o tipo de erro
-                throw new ExternalApiException(
-                    "Falha ao renderizar ou enviar o e-mail de confirmação.",
-                    ex
-                );
+                try
+                {
+                    var subject = "Seu pagamento foi aprovado! 🎉";
+                    var viewModel = new ConfirmationEmailViewModel
+                    {
+                        UserName = user.Name,
+                        PaymentId = paymentId,
+                    };
+                    var htmlBody = await _razorRenderer.RenderViewToStringAsync(
+                        "~/Pages/EmailTemplates/Confirmation/Email.cshtml",
+                        viewModel
+                    );
+                    var plainTextBody =
+                        $"Olá, {viewModel.UserName}! Seu pagamento com ID {viewModel.PaymentId} foi aprovado com sucesso.";
+
+                    await _emailSender.SendEmailAsync(user.Email, subject, htmlBody, plainTextBody);
+                    _logger.LogInformation(
+                        "E-mail de confirmação enviado com sucesso para {UserEmail} referente ao pagamento {PaymentId}.",
+                        user.Email,
+                        paymentId
+                    );
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(
+                        ex,
+                        "Falha ao enviar e-mail de CONFIRMAÇÃO para {UserEmail} (PaymentId: {PaymentId}).",
+                        user.Email,
+                        paymentId
+                    );
+                    // Lança uma exceção específica de API externa para sinalizar o tipo de erro
+                    throw new ExternalApiException(
+                        "Falha ao renderizar ou enviar o e-mail de confirmação.",
+                        ex
+                    );
+                }
+            }
+
+            // Repetimos o mesmo padrão para o e-mail de rejeição
+            /// <summary>
+            /// Renderiza e envia um e-mail de rejeição de pagamento para o usuário.
+            /// </summary>
+            /// <param name="user">O usuário que receberá o e-mail.</param>
+            /// <param name="paymentId">O ID do pagamento rejeitado.</param>
+            /// <exception cref="ExternalApiException">Lançada se houver uma falha ao renderizar o template ou enviar o e-mail.</exception>
+            private async Task SendRejectionEmailAsync(Users user, string paymentId)
+            {
+                try
+                {
+                    var subject = "Atenção: Ocorreu um problema com seu pagamento";
+                    var viewModel = new RefundConfirmationEmailViewModel
+                    {
+                        UserName = user.Name,
+                        PaymentId = paymentId,
+                        ConfirmationDate = DateTime.UtcNow, // Use a data atual
+                        AccountUrl = "https://seusite.com/minha-conta", // Coloque a URL real aqui
+                    };
+                    var htmlBody = await _razorRenderer.RenderViewToStringAsync(
+                        "~/Pages/EmailTemplates/Rejection/Email.cshtml",
+                        viewModel
+                    );
+                    var plainTextBody =
+                        $"Olá, {user.Name}. Infelizmente, ocorreu um problema com o seu pagamento de ID {paymentId} e ele foi rejeitado.";
+
+                    await _emailSender.SendEmailAsync(user.Email, subject, htmlBody, plainTextBody);
+                    _logger.LogInformation(
+                        "E-mail de rejeição enviado com sucesso para {UserEmail} referente ao pagamento {PaymentId}.",
+                        user.Email,
+                        paymentId
+                    );
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(
+                        ex,
+                        "Falha ao enviar e-mail de REJEIÇÃO para {UserEmail} (PaymentId: {PaymentId}).",
+                        user.Email,
+                        paymentId
+                    );
+                    throw new ExternalApiException(
+                        "Falha ao renderizar ou enviar o e-mail de rejeição.",
+                        ex
+                    );
+                }
+            }
+
+            /// <summary>
+            /// Renderiza e envia um e-mail de confirmação do reembolso do pagamento para o usuário.
+            /// </summary>
+            /// <param name="user">O usuário que receberá o e-mail.</param>
+            /// <param name="paymentId">O ID do pagamento confirmado.</param>
+            /// <exception cref="ExternalApiException">Lançada se houver uma falha ao renderizar o template ou enviar o e-mail.</exception>
+            private async Task SendRefundConfirmationEmailAsync(Users user, string paymentId)
+            {
+                try
+                {
+                    var subject = "Seu Reembolso foi aprovado! 🎉";
+                    var viewModel = new ConfirmationEmailViewModel
+                    {
+                        UserName = user.Name,
+                        PaymentId = paymentId,
+                    };
+                    var htmlBody = await _razorRenderer.RenderViewToStringAsync(
+                        "~/Pages/EmailTemplates/Refund/Email.cshtml",
+                        viewModel
+                    );
+                    var plainTextBody =
+                        $"Olá, {viewModel.UserName}! Seu pagamento com ID {viewModel.PaymentId} foi Reembolsado com sucesso.";
+
+                    await _emailSender.SendEmailAsync(user.Email, subject, htmlBody, plainTextBody);
+                    _logger.LogInformation(
+                        "E-mail de confirmação de reembolso enviado com sucesso para {UserEmail} referente ao pagamento {PaymentId}.",
+                        user.Email,
+                        paymentId
+                    );
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(
+                        ex,
+                        "Falha ao enviar e-mail de CONFIRMAÇÃO para {UserEmail} (PaymentId: {PaymentId}).",
+                        user.Email,
+                        paymentId
+                    );
+                    // Lança uma exceção específica de API externa para sinalizar o tipo de erro
+                    throw new ExternalApiException(
+                        "Falha ao renderizar ou enviar o e-mail de confirmação.",
+                        ex
+                    );
+                }
             }
         }
     }
-}

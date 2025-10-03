@@ -37,16 +37,27 @@ public class MercadoPagoPlanService : MercadoPagoServiceBase, IMercadoPagoPlanSe
     /// <inheritdoc />
     public async Task<Plan> CreatePlanAsync(CreatePlanDto createDto)
     {
-        // 1. Crie a entidade que será salva no SEU banco de dados.
+        // Validação e conversão do tipo de frequência (string para enum)
+        if (!Enum.TryParse<PlanFrequencyType>(createDto.AutoRecurring.FrequencyType, ignoreCase: true,
+                out var frequencyTypeEnum))
+        {
+            throw new ArgumentException(
+                $"O valor '{createDto.AutoRecurring.FrequencyType}' é inválido para o tipo de frequência. Use 'Days' ou 'Months'.");
+        }
+
+        // 1. Crie a entidade usando as propriedades corretas do seu modelo.
         var newPlan = new Plan
         {
             Name = createDto.Reason,
             Description = createDto.Description,
             TransactionAmount = createDto.AutoRecurring.TransactionAmount,
             CurrencyId = createDto.AutoRecurring.CurrencyId,
-            Frequency = createDto.AutoRecurring.Frequency,
-            FrequencyType = createDto.AutoRecurring.FrequencyType,
+
+            FrequencyInterval = createDto.AutoRecurring.Frequency, // Mapeia para a nova propriedade
+            FrequencyType = frequencyTypeEnum, // Usa o enum que acabamos de validar e converter
+
             IsActive = true,
+            // O ExternalPlanId será preenchido após a criação no Mercado Pago
         };
 
         // ✅ Salve primeiro para gerar um ID local único.
@@ -120,16 +131,25 @@ public class MercadoPagoPlanService : MercadoPagoServiceBase, IMercadoPagoPlanSe
 
             if (updateDto.Reason != null) localPlan.Name = updateDto.Reason;
             if (updateDto.TransactionAmount.HasValue) localPlan.TransactionAmount = updateDto.TransactionAmount.Value;
-            if (updateDto.FrequencyType != null) localPlan.FrequencyType = updateDto.FrequencyType;
             if (updateDto.Frequency.HasValue)
-                localPlan.Frequency = updateDto.Frequency.Value; 
-            
+                localPlan.FrequencyInterval = updateDto.Frequency.Value;
+            if (updateDto.FrequencyType != null)
+            {
+                if (!Enum.TryParse<PlanFrequencyType>(updateDto.FrequencyType, ignoreCase: true,
+                        out var frequencyTypeEnum))
+                {
+                    throw new ArgumentException(
+                        $"O valor '{updateDto.FrequencyType}' é inválido para o tipo de frequência. Use 'Days' ou 'Months'.");
+                }
+                localPlan.FrequencyType = frequencyTypeEnum;
+            }
+
             var payloadForMercadoPago = new
             {
                 reason = localPlan.Name,
                 transaction_amount = localPlan.TransactionAmount,
-                frequency = localPlan.Frequency,
-                frequency_type = localPlan.FrequencyType
+                frequency = localPlan.FrequencyInterval, // Usa a propriedade correta
+                frequency_type = localPlan.FrequencyType.ToString().ToLower() // Converte o enum para string minúscula (ex: "months")
             };
 
             var externalPlanId = localPlan.ExternalPlanId;

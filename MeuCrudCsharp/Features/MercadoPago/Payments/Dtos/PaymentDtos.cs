@@ -19,24 +19,20 @@ public record CreatePixPaymentRequest(
 public record CreditCardPaymentRequestDto(
     [Required(ErrorMessage = "O token do cartão é obrigatório.")]
     string? Token,
-
     [Required(ErrorMessage = "O número de parcelas é obrigatório.")]
     [Range(1, int.MaxValue, ErrorMessage = "O número de parcelas deve ser no mínimo 1.")]
     int Installments,
-
     [Required(ErrorMessage = "O método de pagamento é obrigatório.")]
     string? PaymentMethodId,
-
     string? IssuerId,
-
     [Required(ErrorMessage = "Os dados do pagador são obrigatórios.")]
     PayerRequestDto? Payer,
-
     [Required(ErrorMessage = "O valor do pagamento é obrigatório.")]
     [Range(typeof(decimal), "0.01", "1000000.00", ErrorMessage = "O valor do pagamento deve ser positivo.")]
     decimal Amount,
-
-    string? Plano
+    string? Plano,
+    [Required(ErrorMessage = "O ID do plano é obrigatório.")]
+    Guid PlanExternalId
 );
 
 /// <summary>
@@ -52,8 +48,11 @@ public record IdentificationDto(
 /// </summary>
 public record MercadoPagoPaymentDetails(
     [property: JsonPropertyName("id")] long Id,
-    [property: JsonPropertyName("status")] string Status
-    // Adicione outros campos que precisar, como "status_detail"
+    [property: JsonPropertyName("status")] string Status,
+    [property: JsonPropertyName("external_reference")]
+    string ExternalReference,
+    [property: JsonPropertyName("payer")]
+    PayerRequestDto Payer
 );
 
 /// <summary>

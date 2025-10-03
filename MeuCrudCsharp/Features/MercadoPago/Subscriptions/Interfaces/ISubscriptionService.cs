@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.MercadoPago.Subscriptions.DTOs;
+using MeuCrudCsharp.Models;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Subscriptions.Interfaces
 {
@@ -19,7 +20,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Subscriptions.Interfaces
         /// <returns>A task that represents the asynchronous operation. The task result contains the details of the created subscription.</returns>
         /// <exception cref="AppServiceException">Thrown for business logic errors, such as an invalid user or plan.</exception>
         /// <exception cref="ExternalApiException">Thrown if there is a communication failure with the payment provider API.</exception>
-        Task<SubscriptionResponseDto> CreateSubscriptionAndCustomerIfNeededAsync(
+        Task<Subscription> CreateSubscriptionAndCustomerIfNeededAsync(
             CreateSubscriptionDto createDto,
             ClaimsPrincipal user
         );
@@ -54,6 +55,15 @@ namespace MeuCrudCsharp.Features.MercadoPago.Subscriptions.Interfaces
         Task<SubscriptionResponseDto> UpdateSubscriptionValueAsync(
             string subscriptionId,
             UpdateSubscriptionValueDto dto
+        );
+        
+        // NOVO MÉTODO: Apenas para ativar uma assinatura local após um pagamento único.
+        Task<Subscription> ActivateSubscriptionFromSinglePaymentAsync(
+            string userId,
+            Guid planPublicId,
+            string paymentId,
+            string payerEmail,
+            string? lastFourCardDigits 
         );
     }
 }

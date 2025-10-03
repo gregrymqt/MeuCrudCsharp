@@ -20,10 +20,15 @@
                             <input type="text" id="plan-reason" class="form-control" placeholder="Ex: Acesso Mensal Premium" required>
                         </div>
                         <div class="form-group">
-                            <label for="plan-type">Tipo de Plano</label>
-                            <select id="plan-type" class="form-select">
-                                <option value="monthly" selected>Mensal</option>
-                                <option value="yearly">Anual</option>
+                            <label for="plan-interval">Intervalo da Frequência</label>
+                            <input type="number" id="plan-interval" class="form-control" value="1" min="1" required>
+                            <small class="form-text text-muted">Ex: 1 para mensal, 3 para trimestral, 12 para anual.</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="plan-frequency-type">Unidade de Tempo</label>
+                            <select id="plan-frequency-type" class="form-select">
+                                <option value="Months" selected>Meses</option>
+                                <option value="Days">Dias</option>
                             </select>
                         </div>
                         <div class="form-group">
