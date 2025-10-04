@@ -1,14 +1,13 @@
 import * as ui from './modules/ui/ui.js';
 import * as api from './modules/api/api.js';
 import * as helpers from '../shared/ui-helpers.js';
-// 1. ADICIONADO: Import do novo criador de handlers
 import { createStatusHandler } from '../shared/status-handler.js';
-// Presumindo que seu SignalR Service unificado está na pasta shared
 import { createPaymentHubConnection } from '../shared/signalr.js';
 import {initializeMercadoPago} from "../../core/mercadoPagoService";
 
 // --- Estado do Módulo ---
-let mercadoPagoInstance = null;
+let mpInstance;
+let pixData;
 
 // --- Manipuladores de Eventos e Fluxo ---
 
@@ -69,51 +68,40 @@ async function handleFormSubmit(event) {
  */
 export async function init() {
     try {
-        const { userId, publicKey } = window.paymentConfig;
-        if (!userId || !publicKey) {
-            throw new Error("Configurações essenciais (userId, publicKey) não encontradas.");
-        }
+        // 1. LER OS DADOS DO HTML (A ÚNICA FONTE DA VERDADE)
+        const dataElement = document.getElementById('pix-data');
+        if (!dataElement?.textContent) throw new Error("Dados de configuração do PIX não encontrados.");
+        pixData = JSON.parse(dataElement.textContent);
 
-        mercadoPagoInstance = initializeMercadoPago();
+        mpInstance = initializeMercadoPago(pixData.publicKey);
         const container = document.getElementById('pix-content-container');
 
-        // 3. ALTERADO: A inicialização do SignalR agora usa o novo padrão
-        const hubConnection = createPaymentHubConnection();
-        await hubConnection.start();
-
-        // Cria o handler de status dinamicamente usando a fábrica
-        const pixStatusHandler = createStatusHandler({
-            hubConnection: hubConnection,
-            // (Opcional) Adiciona um feedback para o usuário enquanto aguarda
-            onUpdate: (message) => console.log(`PIX Status Update: ${message}`),
-            onSuccess: (data) => {
+        // 2. INICIAR O SIGNALR (usando o ID do usuário vindo do backend)
+        const hubConnection = createPaymentHubConnection({
+            onUpdate: (message) => console.log(`PIX Status: ${message}`),
+            onSuccess: () => {
                 ui.renderStatusView(container, 'approved');
                 helpers.updateTabState(3);
+                hubConnection.stop();
             },
-            onFailure: (data) => {
+            onFailure: () => {
                 ui.renderStatusView(container, 'rejected');
                 helpers.updateTabState(3);
+                hubConnection.stop();
             }
         });
+        await hubConnection.start();
+        await hubConnection.invoke("SubscribeToPaymentStatus", pixData.payer.Id);
 
-        // Supondo que o seu `createPaymentHubConnection` unificado agora aceite
-        if (hubConnection.onUpdate) {
-            hubConnection.onUpdate(pixStatusHandler);
-        }
-
-        await hubConnection.subscribe(userId);
-
-        // O resto da inicialização permanece igual
-        ui.renderForm(container);
+        // 3. RENDERIZAR O FORMULÁRIO INICIAL (com dados pré-preenchidos)
+        ui.renderForm(container, pixData.payer);
         helpers.updateTabState(1);
         await loadIdentificationTypes();
+
         const form = container.querySelector('#form-checkout');
         form.addEventListener('submit', handleFormSubmit);
 
-        console.log("Módulo PIX inicializado e pronto.");
-
     } catch (error) {
-        console.error("Erro fatal na inicialização do PIX:", error);
-        helpers.displayError("Ocorreu um erro ao carregar o pagamento. Tente recarregar a página.");
+        helpers.displayError(`Ocorreu um erro fatal ao carregar o pagamento: ${error.message}`);
     }
 }

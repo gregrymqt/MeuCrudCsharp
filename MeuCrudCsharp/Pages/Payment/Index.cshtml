@@ -2,6 +2,8 @@
 @model IndexModel
 @{
     ViewData["Title"] = "Pagamento";
+    var isPlanoMensal = Model.IsPlanoMensal;
+
 }
 <link rel="stylesheet" href="~/css/payment/base.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/payment/chooser.css" asp-append-version="true" />
@@ -13,44 +15,51 @@
 
 <body data-plano-tipo="@Model.Plano?.ToLower()">
 
-@if (Model.IsPlanoMensal)
-{
-    <header class="mobile-header">
-        <button id="menu-toggle" class="menu-button">
-            <span>&#9776;</span> Opções de Pagamento
-        </button>
-    </header>
+<header class="mobile-header">
+    <button id="menu-toggle" class="menu-button">
+        <span>&#9776;</span> Opções de Pagamento
+    </button>
+</header>
 
-    <div class="payment-container-mensal">
-        <aside id="sidebar" class="sidebar">
-            <nav>
-                <ul>
-                    <li><a href="#" class="sidebar-link active" data-target="#credit-card-payment">Cartão de Crédito</a></li>
-                    <li><a href="#" class="sidebar-link" data-target="#pix-payment">PIX</a></li>
-                </ul>
-            </nav>
-        </aside>
+<div class="payment-container">
+    <aside id="sidebar" class="sidebar">
+        <nav>
+            <h3 class="sidebar-title">À Vista</h3>
+            <ul>
+                <li>
+                    <a href="#" class="sidebar-link @(isPlanoMensal ? "active" : "")" data-target="#pix-payment">PIX</a>
+                </li>
+                <li>
+                    <a href="#" class="sidebar-link" data-target="#credit-card-single-payment">Cartão de Crédito</a>
+                </li>
+            </ul>
 
-        <main class="payment-content">
-            <div id="credit-card-payment" class="payment-method-view active">
-                <partial name="partials/CreditCard" />
-            </div>
-            <div id="pix-payment" class="payment-method-view">
-                <partial name="partials/Pix" />
-            </div>
-        </main>
-    </div>
-}
-else
-{
-    <div class="payment-container-anual">
-        <main class="payment-content">
-            <div id="credit-card-payment" class="payment-method-view active">
-                <partial name="partials/CreditCard" />
-            </div>
-        </main>
-    </div>
-}
+            <h3 class="sidebar-title">Parcelado</h3>
+            <ul>
+                <li>
+                    <a href="#" class="sidebar-link @(!isPlanoMensal ? "active" : "")" data-target="#credit-card-installments-payment">Cartão de Crédito</a>
+                </li>
+            </ul>
+        </nav>
+    </aside>
+
+    <main class="payment-content">
+        <div id="pix-payment" class="payment-method-view @(isPlanoMensal ? "active" : "")">
+            <h2>Pagamento com PIX</h2>
+            <partial name="partials/Pix" />
+        </div>
+
+        <div id="credit-card-single-payment" class="payment-method-view">
+            <h2>Pagamento com Cartão de Crédito (À Vista)</h2>
+            <partial name="partials/CreditCard" />
+        </div>
+
+        <div id="credit-card-installments-payment" class="payment-method-view @(!isPlanoMensal ? "active" : "")">
+            <h2>Pagamento com Cartão de Crédito (Parcelado)</h2>
+            <partial name="partials/CreditCard" />
+        </div>
+    </main>
+</div>
 
 @section Scripts {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.1/signalr.min.js"></script>

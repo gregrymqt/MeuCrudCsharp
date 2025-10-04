@@ -1,20 +1,15 @@
-﻿// /js/modules/api/paymentAPI.js
-
-// 1. IMPORTA o serviço central de API.
-//    Não há mais nenhuma lógica de fetch duplicada neste arquivo.
-import apiService from '../../../../core/apiService.js'; // Ajuste o caminho se sua estrutura de pastas for diferente
+﻿import apiService from '../../../../core/apiService.js'; // Ajuste o caminho conforme necessário
 
 /**
  * Envia os dados do formulário de pagamento para o back-end.
- * Utiliza o apiService central para garantir robustez e consistência na autenticação.
  * @param {object} formData - Os dados do formulário coletados pelo Brick do Mercado Pago.
+ * @param {string} processUrl - A URL do endpoint do backend para processar o pagamento.
  * @returns {Promise<object>} A resposta da API.
  */
-export function processPayment(formData) {
-    // 2. USA o apiService.fetch importado.
-    // A chamada agora é uma linha, pois toda a complexidade (tokens, headers, erros)
-    // é gerenciada pelo serviço central.
-    return apiService.fetch(window.paymentConfig.processPaymentUrl, {
+export function processPayment(formData, processUrl) {
+    // A função agora usa a URL que recebeu como parâmetro.
+    // Ela não sabe e não precisa saber de onde essa URL veio.
+    return apiService.fetch(processUrl, {
         method: "POST",
         body: JSON.stringify(formData)
     });

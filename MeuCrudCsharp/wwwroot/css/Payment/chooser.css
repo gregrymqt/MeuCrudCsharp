@@ -1,7 +1,7 @@
-/* Estilos para a página com a sidebar (Plano Mensal) */
-.payment-container-mensal {
+/* Unifica o container principal */
+.payment-container {
     display: flex;
-    flex-direction: column;
+    flex-direction: column; /* Padrão mobile-first */
     height: 100vh;
 }
 
@@ -39,30 +39,71 @@
     transform: translateX(0);
 }
 
+/* Título da seção na sidebar */
+.sidebar-title {
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    color: var(--text-light);
+    padding: 1rem 1.5rem 0.5rem;
+    font-weight: bold;
+}
+
+.sidebar nav ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
 .sidebar nav a {
     display: block;
-    padding: 1rem 1.5rem;
+    padding: 0.8rem 1.5rem 0.8rem 2rem; /* Adiciona um recuo */
     text-decoration: none;
-    color: var(--text-light);
-    border-left: 3px solid transparent;
+    color: var(--text-dark);
+    border-left: 4px solid transparent;
 }
 
 .sidebar nav a.active {
     color: var(--primary-color);
-    font-weight: bold;
+    font-weight: 600;
     border-left-color: var(--primary-color);
+    background-color: #f0f7ff;
 }
 
-/* Em telas maiores, o header mobile some e a sidebar fica fixa */
+.sidebar nav a:hover:not(.active) {
+    background-color: var(--bg-light);
+}
+
+.payment-content {
+    padding: 1rem;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Controla a visibilidade dos formulários */
+.payment-method-view {
+    display: none;
+}
+
+.payment-method-view.active {
+    display: block;
+}
+
+/* Em telas maiores, a sidebar fica fixa e o conteúdo ao lado */
 @media (min-width: 768px) {
     .mobile-header {
         display: none;
     }
-    .payment-container-mensal {
+    .payment-container {
         flex-direction: row;
     }
     .sidebar {
         position: static;
         transform: translateX(0);
+        flex-shrink: 0; /* Impede que a sidebar encolha */
+    }
+    .payment-content {
+        flex-grow: 1; /* Faz o conteúdo principal ocupar o espaço restante */
+        padding: 2rem;
+        overflow-y: auto; /* Adiciona scroll se o conteúdo for grande */
     }
 }

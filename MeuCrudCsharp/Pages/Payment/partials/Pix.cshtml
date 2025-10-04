@@ -1,6 +1,14 @@
+@page
+@model PixModel 
+@{
+    // O ViewData pode ser definido na Index principal se a partial for renderizada lá
+    ViewData["Title"] = "Pagamento PIX";
+}
+
 <div id="pix-payment-module" class="pix-container">
     <header class="pix-header">
         <h1>Pagamento com PIX</h1>
+        <p>Plano: <strong>@Model.ViewModel.Description</strong> | Valor: <strong>@Model.ViewModel.TransactionAmount.ToString("C")</strong></p>
     </header>
     <nav class="payment-tabs-nav">
         <a href="#" class="tab-link active" data-step="1">1. Seus Dados</a>
@@ -13,13 +21,8 @@
     <div id="form-error" class="error-message" style="display: none;"></div>
 </div>
 
-<script>
-    window.paymentConfig = {
-        userId: @Model.user.Id,
-        publicKey: '@Model.PublicKey', // Passando a Public Key do MP
-        transactionAmount: 150.50,
-        description: "Assinatura Plano Anual"
-    };
+<script id="pix-data" type="application/json">
+    @Json.Serialize(Model.ViewModel)
 </script>
+
 <script src="https://sdk.mercadopago.com/js/v2"></script>
-<script src="~/js/payment/main.js" type="module"></script>

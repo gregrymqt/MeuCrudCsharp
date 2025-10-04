@@ -1,44 +1,50 @@
-﻿// /js/modules/ui/paymentUI.js
-
-// Seletores de DOM centralizados
+﻿// Seletores de DOM para os elementos definidos no seu HTML
 const DOMElements = {
     paymentContainer: document.getElementById('paymentBrick_container'),
     statusContainer: document.getElementById('statusScreenBrick_container'),
     errorContainer: document.getElementById('error-container'),
-    loadingMessage: document.getElementById('loading-message'),
+    loadingContainer: document.getElementById('loading-container'),
+    mainModule: document.getElementById('credit-card-module'),
 };
 
 /** Exibe o formulário de pagamento e esconde o resto. */
 export function showPaymentForm() {
+    DOMElements.loadingContainer.style.display = 'none';
     DOMElements.paymentContainer.style.display = 'block';
     DOMElements.statusContainer.style.display = 'none';
+    DOMElements.errorContainer.textContent = '';
     DOMElements.errorContainer.style.display = 'none';
-    DOMElements.loadingMessage.style.display = 'none';
 }
 
-/** Exibe a tela de status e esconde o resto. */
+/** Exibe a tela de status (pós-pagamento). */
 export function showStatusScreen() {
-    DOMElements.paymentContainer.style.display = 'none';
+    DOMElements.mainModule.innerHTML = ''; // Limpa tudo para dar espaço à tela de status
+    DOMElements.mainModule.appendChild(DOMElements.statusContainer);
     DOMElements.statusContainer.style.display = 'block';
-    DOMElements.errorContainer.style.display = 'none';
-    DOMElements.loadingMessage.style.display = 'none';
 }
 
-/** Exibe uma mensagem de carregamento/processamento. */
-export function showLoading(message) {
-    DOMElements.loadingMessage.querySelector('p').textContent = message;
-    DOMElements.loadingMessage.style.display = 'block';
-    DOMElements.paymentContainer.style.display = 'none';
-    DOMElements.statusContainer.style.display = 'none';
-    DOMElements.errorContainer.style.display = 'none';
+/**
+ * Controla a exibição do indicador de carregamento.
+ * @param {boolean} show - True para mostrar, false para esconder.
+ * @param {string} [message] - Mensagem opcional para exibir.
+ */
+export function showLoading(show, message = 'Processando...') {
+    if (show) {
+        DOMElements.loadingContainer.querySelector('p').textContent = message;
+        DOMElements.loadingContainer.style.display = 'flex'; // Usar flex para centralizar
+        DOMElements.paymentContainer.style.display = 'none';
+        DOMElements.statusContainer.style.display = 'none';
+    } else {
+        DOMElements.loadingContainer.style.display = 'none';
+    }
 }
 
-/** Exibe uma mensagem de erro e mostra o formulário de pagamento novamente. */
+/** Exibe uma mensagem de erro. */
 export function showError(message) {
     DOMElements.errorContainer.textContent = message;
     DOMElements.errorContainer.style.display = 'block';
-    DOMElements.loadingMessage.style.display = 'none';
-    DOMElements.paymentContainer.style.display = 'block'; // Permite tentar de novo
-    DOMElements.statusContainer.style.display = 'none';
+    // Esconde o loading e reexibe o formulário para o usuário tentar novamente
+    showLoading(false);
+    DOMElements.paymentContainer.style.display = 'block';
     console.error(message);
 }

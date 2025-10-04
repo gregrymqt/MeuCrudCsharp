@@ -1,26 +1,40 @@
-﻿// /js/modules/services/RenderService.js
-
-import { showError } from '../ui/paymentUI.js';
+﻿import { showError } from '../ui/paymentUI.js';
 
 let bricksBuilder;
+let mpInstance;
 
-/** Renderiza o Brick de Pagamento. */
-export function renderPaymentBrick(callbacks) {
-    const settings = {
-        initialization: {
-            amount: window.paymentConfig.amount,
-            preferenceId: window.paymentConfig.preferenceId
-        },
-        customization: {
-            paymentMethods: { creditCard: "all", ticket: "all", pix: "all" }
-        },
-        callbacks: callbacks // Passa os callbacks diretamente (onReady, onSubmit, onError)
-    };
+/**
+ * Inicializa o serviço de renderização com a instância do Mercado Pago.
+ * @param {MercadoPago} mp - A instância do SDK do Mercado Pago.
+ */
+export function initializeRenderService(mp) {
+    mpInstance = mp;
+    bricksBuilder = mp.bricks();
+}
+
+/**
+ * Renderiza o Brick de Pagamento com base nas configurações fornecidas.
+ * @param {object} settings - O objeto de configuração completo para o Brick.
+ */
+export function renderPaymentBrick(settings) {
+    if (!bricksBuilder) {
+        showError("O serviço de renderização não foi inicializado.");
+        return;
+    }
+    // A função agora é "burra": ela apenas pega as configurações prontas
+    // e manda o SDK criar o Brick.
     bricksBuilder.create("payment", "paymentBrick_container", settings);
 }
 
-/** Renderiza o Brick de Status da Tela. */
+/**
+ * Renderiza o Brick de Status da Tela.
+ * @param {string} paymentId - O ID do pagamento gerado.
+ */
 export function renderStatusScreenBrick(paymentId) {
+    if (!bricksBuilder) {
+        showError("O serviço de renderização não foi inicializado.");
+        return;
+    }
     const settings = {
         initialization: { paymentId: paymentId },
         callbacks: {
@@ -28,7 +42,8 @@ export function renderStatusScreenBrick(paymentId) {
             onError: (error) => showError('Erro ao exibir status: ' + error.message)
         }
     };
+    // Limpa o container para garantir que não haja duplicatas
     const container = document.getElementById('statusScreenBrick_container');
-    container.innerHTML = ''; // Limpa antes de renderizar
+    container.innerHTML = '';
     bricksBuilder.create('statusScreen', 'statusScreenBrick_container', settings);
 }

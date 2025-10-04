@@ -2,14 +2,41 @@
  * Renderiza o formulário inicial de dados do pagador.
  * @param {HTMLElement} container - O elemento onde o formulário será renderizado.
  */
-export function renderForm(container) {
+/**
+ * Renderiza o formulário inicial de dados do pagador, com campos pré-preenchidos.
+ * @param {HTMLElement} container - O elemento onde o formulário será renderizado.
+ * @param {object} payerData - Dados do pagador vindos do backend ({ email, firstName, id }).
+ */
+export function renderForm(container, payerData) {
     container.innerHTML = `
         <form id="form-checkout" novalidate>
-            <div class="form-group half-width">
-                <label for="identificationType">Tipo de documento</label>
-                <select id="pix-identification-type" name="identificationType" required></select>
+            <p class="form-description">Confirme seus dados para gerar o código PIX.</p>
+            <div class="form-row">
+                <div class="form-group half-width">
+                    <label for="payerFirstName">Nome</label>
+                    <input type="text" id="payerFirstName" name="payerFirstName" value="${payerData.firstName || ''}" required />
+                </div>
+                <div class="form-group half-width">
+                    <label for="payerLastName">Sobrenome</label>
+                    <input type="text" id="payerLastName" name="payerLastName" required />
+                </div>
             </div>
-            </form>
+            <div class="form-group">
+                <label for="email">E-mail</label>
+                <input type="email" id="email" name="email" value="${payerData.email || ''}" required />
+            </div>
+            <div class="form-row">
+                <div class="form-group half-width">
+                    <label for="identificationType">Tipo de documento</label>
+                    <select id="pix-identification-type" name="identificationType" required></select>
+                </div>
+                <div class="form-group half-width">
+                    <label for="identificationNumber">Número do documento</label>
+                    <input type="text" id="identificationNumber" name="identificationNumber" required />
+                </div>
+            </div>
+            <button type="submit" id="form-submit-button" class="btn-submit">Gerar PIX</button>
+        </form>
     `;
 }
 

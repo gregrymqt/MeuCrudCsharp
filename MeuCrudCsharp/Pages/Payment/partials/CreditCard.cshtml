@@ -1,53 +1,55 @@
 ﻿@page
 @model CreditCardModel
 @{
-    ViewData["Title"] = "Pagamento com Cartão de Crédito";
+    // Usando o ViewModel que criamos anteriormente para ter dados organizados
+    var viewModel = Model.ViewModel;
+    ViewData["Title"] = $"Pagamento para {viewModel.PlanName}";
 }
 
-<link rel="stylesheet" href="~/css/credit_card.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/payment/credit_card.css" asp-append-version="true" />
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
 
 <div id="credit-card-module" class="payment-module">
 
     <header class="payment-header">
-        <i class="fas fa-credit-card header-icon"></i>
-        <h1>Pagamento Seguro</h1>
+        <i class="fas fa-shield-alt header-icon"></i>
+        <h1>Pagamento 100% Seguro</h1>
     </header>
 
     <div class="order-summary">
-        <p>Você está assinando o <strong>Plano @Model.Plano</strong></p>
+        <p>Você está adquirindo o <strong>@viewModel.PlanName</strong></p>
         <div class="order-total">
-            <span>Total</span>
-            <strong>R$ @Model.Valor.ToString("F2")</strong>
+            <span>TOTAL</span>
+            <strong>@viewModel.FormattedPrice</strong>
         </div>
     </div>
 
     <div class="brick-container">
         <div id="paymentBrick_container"></div>
 
-        <div id="statusScreenBrick_container" style="display: none;"></div>
+        <div id="statusScreenBrick_container"></div>
         
         <div id="loading-container" class="loading-indicator">
             <div class="spinner"></div>
-            <p>Carregando formulário de pagamento...</p>
+            <p>Carregando o formulário...</p>
         </div>
     </div>
 
-    <div id="error-container" class="error-message" style="display: none;"></div>
+    <div id="error-container" class="error-message"></div>
 
 </div>
 
-<script src="https://sdk.mercadopago.com/js/v2"></script>
-
-<script>
-    // Passando dados do servidor para o cliente de forma segura e organizada
-    window.paymentConfig = {
-        preferenceId: '@Model.PreferenceId',
-        amount: @Model.Valor.ToString(System.Globalization.CultureInfo.InvariantCulture),
-        // A URL para o seu backend que processará o pagamento
-        processPaymentUrl: '@Url.Page("/api/credit/card/process-payment", "ProcessPayment")',
-        userId: '@Model.user.Id',
-    };
+<script id="payment-data" type="application/json">
+    @Json.Serialize(new 
+    {
+        publicKey = viewModel.PublicKey,
+        planName = viewModel.PlanName,
+        amount = viewModel.Price,
+        preferenceId = viewModel.PreferenceId, // Será null se for assinatura
+        preapprovalPlanId = viewModel.PreapprovalPlanId, // Será null se for pagamento único
+        processUrl = Url.Page("/api/credit/card/process-payment", "ProcessPayment"), // URL segura gerada pelo Razor
+        id = viewModel.Id
+    })
 </script>
 
-<script src="~/js/payment/Credit-Card/creditCard-main.js" type="module" asp-append-version="true"></script>
+<script src="~/js/payment/Credit-Card/credit-card.js" type="module" asp-append-version="true"></script>
