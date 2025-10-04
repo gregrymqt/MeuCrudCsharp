@@ -1,0 +1,35 @@
+/* =================================================================== */
+/* ARQUIVO: base.css                                                 */
+/* Define variáveis globais, fontes e um reset básico.               */
+/* =================================================================== */
+
+:root {
+    --primary-color: #007bff;
+    --primary-color-dark: #0056b3;
+    --background-light: #f8f9fa;
+    --background-white: #ffffff;
+    --text-dark: #343a40;
+    --text-light: #6c757d;
+    --border-color: #dee2e6;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
+    --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+    --sidebar-bg: #212529;
+    --sidebar-text: #adb5bd;
+    --sidebar-text-hover: #ffffff;
+    --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    --sidebar-width: 260px;
+    --mobile-header-height: 60px;
+}
+
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: var(--font-family);
+    background-color: var(--background-light);
+    color: var(--text-dark);
+    line-height: 1.6;
+}

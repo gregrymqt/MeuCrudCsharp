@@ -1,0 +1,91 @@
+/* =================================================================== */
+/* ARQUIVO: layout.css                                               */
+/* Controla o layout principal, a sidebar e a responsividade.        */
+/* =================================================================== */
+
+/* --- LAYOUT PRINCIPAL (MOBILE-FIRST) --- */
+.admin-layout {
+    display: flex;
+    min-height: 100vh;
+}
+
+.admin-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    z-index: 1000;
+    width: 260px;
+    background-color: #212529;
+    color: #f8f9fa;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.3s ease-in-out;
+    transform: translateX(-100%); /* Escondida por padrão */
+}
+
+.admin-content-wrapper {
+    width: 100%;
+}
+
+.admin-main-content {
+    width: 100%;
+    padding: 1rem;
+}
+
+/* Estado visível da sidebar (ativado via JS na tag <body>) */
+body.sidebar-visible .admin-sidebar {
+    transform: translateX(0);
+}
+
+/* Overlay para mobile */
+body.sidebar-visible::after {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+}
+
+/* --- SEÇÕES DE CONTEÚDO --- */
+.main-section {
+    display: none;
+    animation: fadeIn 0.5s ease;
+}
+.main-section.active {
+    display: block;
+}
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+
+/* ============================================================== */
+/* LAYOUT RESPONSIVO (TABLET/DESKTOP)                             */
+/* ============================================================== */
+@media (min-width: 768px) {
+    .mobile-header {
+        display: none; /* Esconde o header mobile */
+    }
+
+    body.sidebar-visible::after {
+        display: none; /* Esconde o overlay */
+    }
+
+    .admin-sidebar {
+        position: static;
+        transform: none;
+        width: 250px; /* Largura padrão para desktop */
+        transition: width 0.3s ease-in-out;
+    }
+}
+
+@media (min-width: 1500px) {
+    .admin-sidebar {
+        width: 260px; /* Largura expandida para telas grandes */
+    }
+}

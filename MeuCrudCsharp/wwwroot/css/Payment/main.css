@@ -1,0 +1,8 @@
+/* =================================================================== */
+/* ARQUIVO: main.css                                                 */
+/* Ponto de entrada principal que importa todos os outros módulos.     */
+/* =================================================================== */
+
+@import url('module_payment/base.css');
+@import url('module_payment/layout.css');
+@import url('module_payment/components.css');
