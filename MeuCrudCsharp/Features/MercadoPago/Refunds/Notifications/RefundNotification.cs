@@ -1,34 +1,39 @@
 ﻿using MeuCrudCsharp.Features.Hubs;
 using MeuCrudCsharp.Features.MercadoPago.Refunds.Interfaces;
 using Microsoft.AspNetCore.SignalR;
+using System.Linq;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Refunds.Notifications
 {
     public class RefundNotification : IRefundNotification
     {
         private readonly IHubContext<RefundProcessingHub> _hubContext;
+        // 1. Injetar o ConnectionMapping
+        private readonly ConnectionMapping<string> _mapping;
 
-        public RefundNotification(IHubContext<RefundProcessingHub> hubContext)
+        public RefundNotification(
+            IHubContext<RefundProcessingHub> hubContext, 
+            ConnectionMapping<string> mapping) // Adicionado aqui
         {
             _hubContext = hubContext;
+            _mapping = mapping;
         }
 
         public async Task SendRefundStatusUpdate(string userId, string status, string message)
         {
-            var groupName = $"user-{userId}";
+            // 2. Obter as conexões do usuário
+            var connectionIds = _mapping.GetConnections(userId).ToList();
 
-            // Envia uma mensagem para um método no cliente chamado "ReceiveRefundStatus"
-            // para todos os membros do grupo (ou seja, todas as abas abertas daquele usuário).
-            await _hubContext
-                .Clients.Group(groupName)
-                .SendAsync(
-                    "ReceiveRefundStatus",
-                    new
-                    {
-                        Status = status, // ex: "completed", "failed"
-                        Message = message,
-                    }
-                );
+            if (connectionIds.Any())
+            {
+                // 3. Enviar para a lista de conexões específicas
+                await _hubContext
+                    .Clients.Clients(connectionIds)
+                    .SendAsync(
+                        "ReceiveRefundStatus",
+                        new { Status = status, Message = message }
+                    );
+            }
         }
     }
 }

@@ -67,8 +67,6 @@ export function renderCreditCardBrick(paymentType) {
 
             // Inicia a conexão
             await hubConnection.start();
-            await hubConnection.invoke("SubscribeToPaymentStatus", paymentData.id);
-
 
             // Dispara a chamada à API para iniciar o processo de pagamento no backend
             // O backend, ao receber isso, começará a enviar atualizações via SignalR

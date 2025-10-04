@@ -1,16 +1,35 @@
-﻿using System.Text.RegularExpressions;
-using Microsoft.AspNetCore.SignalR;
-
+﻿using Microsoft.AspNetCore.SignalR;
 namespace MeuCrudCsharp.Features.Hubs
 {
     public class VideoProcessingHub : Hub
     {
-        // Cliente chama este método para entrar em um grupo e receber atualizações
+        private readonly ConnectionMapping<string> _mapping;
+
+        public VideoProcessingHub(ConnectionMapping<string> mapping)
+        {
+            _mapping = mapping;
+        }
+
         public async Task SubscribeToJobProgress(string storageIdentifier)
         {
-            // O nome do grupo é único para cada trabalho de processamento
             var groupName = $"processing-{storageIdentifier}";
             await Groups.AddToGroupAsync(Context.ConnectionId, groupName);
+            _mapping.Add(storageIdentifier, Context.ConnectionId);
+        }
+    
+        public override async Task OnDisconnectedAsync(Exception? exception)
+        {
+            // Agora funciona! Pegamos a chave (storageIdentifier) a partir da conexão.
+            var key = _mapping.GetKey(Context.ConnectionId);
+
+            if (key != null)
+            {
+                var groupName = $"processing-{key}";
+                await Groups.RemoveFromGroupAsync(Context.ConnectionId, groupName);
+                _mapping.Remove(Context.ConnectionId);
+            }
+
+            await base.OnDisconnectedAsync(exception);
         }
     }
 }

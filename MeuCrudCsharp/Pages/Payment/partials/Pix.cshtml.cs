@@ -17,14 +17,6 @@ public class PixViewModel
     public string PublicKey { get; set; }
     public decimal TransactionAmount { get; set; }
     public string Description { get; set; }
-    public PayerInfo Payer { get; set; }
-
-    public class PayerInfo
-    {
-        public string Id { get; set; }
-        public string Email { get; set; }
-        public string FirstName { get; set; }
-    }
 }
 
 [Authorize]
@@ -33,7 +25,6 @@ public class PixModel : PageModel // Renomeado de 'Pix' para 'PixModel' por conv
     // Supondo que você tenha uma classe de configurações como a do Cartão
     private readonly MercadoPagoSettings _mercadoPagoSettings;
     private readonly ILogger<PixModel> _logger;
-    private readonly ApiDbContext _apiDbContext;
 
 
     [BindProperty]
@@ -44,20 +35,16 @@ public class PixModel : PageModel // Renomeado de 'Pix' para 'PixModel' por conv
     public string? Plano { get; set; }
 
     public PixModel(ILogger<PixModel> logger,
-        IOptions<MercadoPagoSettings> mercadoPagoSettings,
-        ApiDbContext apiDbContext)
+        IOptions<MercadoPagoSettings> mercadoPagoSettings)
     {
         _logger = logger;
         _mercadoPagoSettings = mercadoPagoSettings.Value;
-        _apiDbContext = apiDbContext;
     }
 
     public async Task<IActionResult> OnGet()
     {
         try
         {
-            var user = await _apiDbContext.Users.FirstOrDefaultAsync(u => u.UserName == User.Identity.Name);
-            
             // Lógica para pegar os detalhes do plano (similar ao Cartão de Crédito)
             if (string.IsNullOrWhiteSpace(Plano) || !_mercadoPagoSettings.Plans.TryGetValue(Plano.Capitalize(), out var planoSelecionado))
             {
@@ -71,12 +58,6 @@ public class PixModel : PageModel // Renomeado de 'Pix' para 'PixModel' por conv
                 PublicKey = _mercadoPagoSettings.PublicKey,
                 TransactionAmount = planoSelecionado.Price,
                 Description = $"Assinatura Plano {Plano.Capitalize()}",
-                Payer = new PixViewModel.PayerInfo
-                {
-                    Id = user.PublicId.ToString(),
-                    Email = user.Email,
-                    FirstName = user.Name
-                }
             };
 
             return Page();

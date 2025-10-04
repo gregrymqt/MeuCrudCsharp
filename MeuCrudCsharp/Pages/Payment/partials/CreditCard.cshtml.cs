@@ -17,7 +17,6 @@ public class CreditCardViewModel
     public string? PreferenceId { get; set; }
     public string? PreapprovalPlanId { get; set; }
     public string? PublicKey { get; set; }
-    public string? Id { get; set; }
 }
 
 public class CreditCardModel : PageModel
@@ -25,7 +24,6 @@ public class CreditCardModel : PageModel
     private readonly PreferenceController _preferenceController;
     private readonly ILogger<CreditCardModel> _logger;
     private readonly MercadoPagoSettings _mercadoPagoSettings;
-    private readonly ApiDbContext  _apiDbContext;
 
     [BindProperty]
     public CreditCardViewModel ViewModel { get; set; } = new();
@@ -36,13 +34,11 @@ public class CreditCardModel : PageModel
     public CreditCardModel(
         PreferenceController preferenceController,
         ILogger<CreditCardModel> logger,
-        IOptions<MercadoPagoSettings> mercadoPagoSettings,
-        ApiDbContext apiDbContext)
+        IOptions<MercadoPagoSettings> mercadoPagoSettings)
     {
         _preferenceController = preferenceController;
         _logger = logger;
         _mercadoPagoSettings = mercadoPagoSettings.Value;
-        _apiDbContext = apiDbContext;
     }
 
     public async Task<IActionResult> OnGetAsync()
@@ -64,13 +60,11 @@ public class CreditCardModel : PageModel
                 return RedirectToPage("/Subscription/Index");
             }
             
-            var user = await _apiDbContext.Users.FirstOrDefaultAsync( u => u.UserName == User.Identity.Name);
 
             // Popula as informações básicas do ViewModel
             ViewModel.PlanName = planoNormalizado;
             ViewModel.Price = planoSelecionado.Price;
             ViewModel.PublicKey = _mercadoPagoSettings.PublicKey;
-            ViewModel.Id = user.PublicId.ToString();
             
             ViewModel.PreapprovalPlanId = planoSelecionado.Id;
             

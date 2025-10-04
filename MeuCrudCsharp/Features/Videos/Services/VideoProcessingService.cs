@@ -20,7 +20,7 @@ namespace MeuCrudCsharp.Features.Videos.Services
     {
         private readonly ILogger<VideoProcessingService> _logger;
         private readonly IServiceProvider _serviceProvider;
-        private readonly IHubContext<VideoProcessingHub> _hubContext; // ⭐️ 1. Injetar o HubContext
+        private readonly IVideoNotificationService _videoNotificationService; // ⭐️ 1. Injetar o HubContext
         private const string _ffmpegPath = "ffmpeg";
         private const string _ffprobePath = "ffprobe";
 
@@ -33,12 +33,11 @@ namespace MeuCrudCsharp.Features.Videos.Services
         public VideoProcessingService(
             ILogger<VideoProcessingService> logger,
             IServiceProvider serviceProvider,
-            IHubContext<VideoProcessingHub> hubContext
-        ) // ⭐️ 1. Receber no construtor
+            IVideoNotificationService videoNotificationService) // ⭐️ 1. Receber no construtor
         {
             _logger = logger;
             _serviceProvider = serviceProvider;
-            _hubContext = hubContext; // ⭐️ 1. Armazenar a referência
+            _videoNotificationService = videoNotificationService;
         }
 
         // ✅ 2. O método principal agora orquestra as notificações do SignalR
@@ -61,7 +60,7 @@ namespace MeuCrudCsharp.Features.Videos.Services
 
             try
             {
-                await SendProgressUpdate(groupName, "Iniciando...", 0);
+                await _videoNotificationService.SendProgressUpdate(groupName, "Iniciando...", 0);
 
                 if (!File.Exists(inputFilePath))
                     throw new FileNotFoundException(
@@ -70,7 +69,7 @@ namespace MeuCrudCsharp.Features.Videos.Services
 
                 Directory.CreateDirectory(outputDirectory);
 
-                await SendProgressUpdate(groupName, "Obtendo duração do vídeo...", 5);
+                await _videoNotificationService.SendProgressUpdate(groupName, "Obtendo duração do vídeo...", 5);
                 var duration = await GetVideoDurationAsync(inputFilePath);
                 video.Duration = duration; // Salva a duração no início
 
@@ -85,7 +84,7 @@ namespace MeuCrudCsharp.Features.Videos.Services
                     if (progress.HasValue)
                     {
                         // Envia a porcentagem calculada via SignalR
-                        return SendProgressUpdate(groupName, "Convertendo...", progress.Value);
+                        return _videoNotificationService.SendProgressUpdate(groupName, "Convertendo...", progress.Value);
                     }
                     return Task.CompletedTask;
                 };
@@ -94,7 +93,7 @@ namespace MeuCrudCsharp.Features.Videos.Services
                 await RunProcessWithProgressAsync(_ffmpegPath, arguments, onProgress);
 
                 video.Status = VideoStatus.Available;
-                await SendProgressUpdate(
+                await _videoNotificationService.SendProgressUpdate(
                     groupName,
                     "Processamento concluído!",
                     100,
@@ -115,7 +114,7 @@ namespace MeuCrudCsharp.Features.Videos.Services
                 if (video != null)
                     video.Status = VideoStatus.Error;
 
-                await SendProgressUpdate(groupName, $"Erro: {ex.Message}", 100, isError: true);
+                await _videoNotificationService.SendProgressUpdate(groupName, $"Erro: {ex.Message}", 100, isError: true);
                 throw; // Relança a exceção para que o Hangfire/job runner saiba que falhou
             }
             finally
@@ -231,28 +230,6 @@ namespace MeuCrudCsharp.Features.Videos.Services
             return null;
         }
 
-        // Método auxiliar para enviar notificações via Hub (o que já tínhamos)
-        private Task SendProgressUpdate(
-            string groupName,
-            string message,
-            int progress,
-            bool isComplete = false,
-            bool isError = false
-        )
-        {
-            return _hubContext
-                .Clients.Group(groupName)
-                .SendAsync(
-                    "ProgressUpdate",
-                    new
-                    {
-                        Message = message,
-                        Progress = progress,
-                        IsComplete = isComplete,
-                        IsError = isError,
-                    }
-                );
-        }
 
         /// <summary>
         /// Gets the duration of a video file using ffprobe.

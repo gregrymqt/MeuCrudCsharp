@@ -91,8 +91,7 @@ export async function init() {
             }
         });
         await hubConnection.start();
-        await hubConnection.invoke("SubscribeToPaymentStatus", pixData.payer.Id);
-
+        
         // 3. RENDERIZAR O FORMULÁRIO INICIAL (com dados pré-preenchidos)
         ui.renderForm(container, pixData.payer);
         helpers.updateTabState(1);

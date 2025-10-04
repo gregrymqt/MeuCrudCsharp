@@ -1,3 +1,4 @@
+using MeuCrudCsharp.Features.Hubs;
 using MeuCrudCsharp.Features.MercadoPago.Jobs;
 
 namespace MeuCrudCsharp.Extensions;
@@ -27,6 +28,7 @@ public static class DependencyInjectionExtensions
                 "MeuCrudCsharp.Features.Profiles.Admin.Services",
                 "MeuCrudCsharp.Features.Profiles.UserAccount.Services",
                 "MeuCrudCsharp.Features.Videos.Services",
+                "MeuCrudCsharp.Features.Videos.Notification",
                 "MeuCrudCsharp.Features.Caching.Services",
                 "MeuCrudCsharp.Features.Authorization",
                 "MeuCrudCsharp.Features.Auth",
@@ -47,7 +49,9 @@ public static class DependencyInjectionExtensions
         builder.Services.Configure<SendGridSettings>(builder.Configuration.GetSection(SendGridSettings.SectionName));
         builder.Services.Configure<GoogleSettings>(builder.Configuration.GetSection(GoogleSettings.SectionName));
         builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"));
+        builder.Services.AddSingleton<ConnectionMapping<string>>();
 
+        
         return builder;
     }
 }
