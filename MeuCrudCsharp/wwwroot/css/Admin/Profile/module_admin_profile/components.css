@@ -197,6 +197,16 @@ textarea.form-control { resize: vertical; }
     font-weight: 600;
 }
 
+/* 1. Esconde todos os formulários de ação por padrão */
+.action-form {
+    display: none;
+}
+
+/* 2. Mostra APENAS o formulário que estiver com a classe .active */
+.action-form.active {
+    display: block; /* ou 'flex', se o seu formulário usar flexbox */
+}
+
 /* --- Media Queries para Componentes --- */
 @media (min-width: 768px) {
     .form-grid {

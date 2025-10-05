@@ -55,6 +55,15 @@
     cursor: pointer;
 }
 
+.content-panel {
+    display: none;
+}
+
+/* 2. Mostra APENAS o painel que estiver com a classe .active */
+.content-panel.active {
+    display: block; /* ou 'flex', 'grid', etc., dependendo do layout interno do seu painel */
+}
+
 /* --- Estilos para Desktop --- */
 @media (min-width: 1024px) {
     .admin-layout {
