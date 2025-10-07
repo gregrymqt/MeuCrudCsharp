@@ -16,7 +16,7 @@ public record AutoRecurringDto(
     string FrequencyType,
     [property: JsonPropertyName("transaction_amount")]
     decimal TransactionAmount,
-    [property: JsonPropertyName("currencyId")]
+    [property: JsonPropertyName("currency_id")]
     string CurrencyId
 );
 

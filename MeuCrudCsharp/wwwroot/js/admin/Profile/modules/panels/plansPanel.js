@@ -176,7 +176,7 @@ function initializePlansPanel() {
                 frequency: frequency,                 // Usando a variável do input 'plan-interval'
                 frequency_type: frequency_type,       // Usando a variável do select 'plan-frequency-type'
                 transaction_amount: parseFloat(document.getElementById('plan-amount').value),
-                currencyId: 'BRL' // É bom sempre enviar a moeda
+                currency_id: 'BRL' // É bom sempre enviar a moeda
             },
             description: document.getElementById('plan-description').value
         }

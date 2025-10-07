@@ -107,7 +107,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Subscriptions.Services
         )
         {
             // CORREÇÃO 1: Usando o _planRepository para buscar o plano.
-            var localPlan = await _planRepository.GetByPublicIdAsync(planPublicId);
+            var localPlan = await _planRepository.GetByPublicIdAsync(planPublicId,true);
 
             if (localPlan == null)
             {

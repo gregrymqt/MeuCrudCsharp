@@ -1,4 +1,7 @@
 
+using MeuCrudCsharp.Features.MercadoPago.Plans.DTOs;
+using MeuCrudCsharp.Models;
+
 namespace MeuCrudCsharp.Features.MercadoPago.Plans.Utils
 {
     public static class PlanUtils
@@ -48,6 +51,25 @@ namespace MeuCrudCsharp.Features.MercadoPago.Plans.Utils
                 return $"Cobrado R$ {amount:F2} anualmente".Replace('.', ',');
             }
             return "&nbsp;";
+        }
+        public static void ApplyUpdateDtoToPlan(Plan localPlan, UpdatePlanDto updateDto)
+        {
+            if (updateDto.Reason != null) localPlan.Name = updateDto.Reason;
+            if (updateDto.TransactionAmount.HasValue) localPlan.TransactionAmount = updateDto.TransactionAmount.Value;
+            if (updateDto.Frequency.HasValue)
+                localPlan.FrequencyInterval = updateDto.Frequency.Value;
+            if (updateDto.FrequencyType != null)
+            {
+                if (!Enum.TryParse<PlanFrequencyType>(updateDto.FrequencyType, ignoreCase: true,
+                        out var frequencyTypeEnum))
+                {
+                    throw new ArgumentException(
+                        $"O valor '{updateDto.FrequencyType}' é inválido para o tipo de frequência. Use 'Days' ou 'Months'.");
+                }
+
+                localPlan.FrequencyType = frequencyTypeEnum;
+            }
+          
         }
     }
 }

@@ -8,13 +8,14 @@ public interface IPlanRepository
     Task AddAsync(Plan plan);
     void Update(Plan plan);
     Task<int> SaveChangesAsync();
+    void Remove(object payload);
 
     // --- Métodos de Leitura ---
 
     /// <summary>
     /// Busca um plano pelo seu ID público. Lança ResourceNotFoundException se não encontrar.
     /// </summary>
-    Task<Plan?> GetByPublicIdAsync(Guid publicId);
+    Task<Plan?> GetByPublicIdAsync(Guid publicId, bool asNoTracking);
 
     /// <summary>
     /// Busca um plano ativo pelo seu ID externo (do provedor de pagamento).

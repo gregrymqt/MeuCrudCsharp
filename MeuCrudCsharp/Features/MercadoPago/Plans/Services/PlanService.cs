@@ -4,6 +4,7 @@ using MeuCrudCsharp.Features.MercadoPago.Base;
 using MeuCrudCsharp.Features.MercadoPago.Plans.DTOs;
 using MeuCrudCsharp.Features.MercadoPago.Plans.Interfaces;
 using MeuCrudCsharp.Features.MercadoPago.Plans.Mappers;
+using MeuCrudCsharp.Features.MercadoPago.Plans.Utils;
 using MeuCrudCsharp.Models;
 using Microsoft.Extensions.Options;
 
@@ -52,7 +53,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Plans.Services
         public async Task<PlanEditDto> GetPlanEditDtoByIdAsync(Guid publicId)
         {
             // Este método interno continua buscando a entidade do banco
-            var plan = await _planRepository.GetByPublicIdAsync(publicId);
+            var plan = await _planRepository.GetByPublicIdAsync(publicId, asNoTracking: true);
 
             if (plan == null)
             {
@@ -95,10 +96,10 @@ namespace MeuCrudCsharp.Features.MercadoPago.Plans.Services
                 var mercadoPagoPayload = new
                 {
                     reason = createDto.Reason,
+                    description = createDto.Description,
                     auto_recurring = createDto.AutoRecurring,
                     back_url = _generalSettings.BaseUrl,
-                    external_reference = newPlan.Id.ToString(), // ✅ Use o ID local como referência externa.
-                    description = createDto.Description
+                    external_reference = newPlan.Id.ToString(),
                 };
 
                 var mpPlanResponse = await _mercadoPagoPlanService.CreatePlanAsync(mercadoPagoPayload);
@@ -117,70 +118,119 @@ namespace MeuCrudCsharp.Features.MercadoPago.Plans.Services
             }
             catch (ExternalApiException ex)
             {
-                // Se a API externa falhar, idealmente você deveria tratar o "plano órfão"
-                // que foi criado localmente. Poderia deletá-lo ou marcá-lo como "falhou".
-                _logger.LogError(ex, "Erro da API ao criar plano '{PlanName}'.", createDto.Reason);
+                _logger.LogError(ex, "Erro na API externa ao criar plano '{PlanName}'. Iniciando rollback...",
+                    createDto.Reason);
+
+                // ✅ AÇÃO DE COMPENSAÇÃO (ROLLBACK)
+                // A chamada para a API falhou, então removemos o plano "órfão" que criamos localmente.
+                _planRepository.Remove(newPlan);
+                await _planRepository.SaveChangesAsync();
+                _logger.LogInformation("Rollback concluído. Plano local '{PlanName}' foi removido do banco de dados.",
+                    createDto.Reason);
+
+                // Relança a exceção para que o controller possa recebê-la e informar o erro ao usuário.
                 throw;
             }
         }
 
         public async Task<Plan> UpdatePlanAsync(Guid publicId, UpdatePlanDto updateDto)
         {
-            // 1. Busca a entidade local
-            var localPlan = await _planRepository.GetByPublicIdAsync(publicId);
+            // 1. Busca a entidade local (agora rastreada pelo EF Core)
+            var localPlan = await _planRepository.GetByPublicIdAsync(publicId, asNoTracking: false)
+                            ?? throw new ResourceNotFoundException($"Plano com ID {publicId} não encontrado.");
 
-            if (updateDto.Reason != null) localPlan.Name = updateDto.Reason;
-            if (updateDto.TransactionAmount.HasValue) localPlan.TransactionAmount = updateDto.TransactionAmount.Value;
-            if (updateDto.Frequency.HasValue)
-                localPlan.FrequencyInterval = updateDto.Frequency.Value;
-            if (updateDto.FrequencyType != null)
+            // 2. Guarda os valores originais para possível rollback
+            var originalValues = new
             {
-                if (!Enum.TryParse<PlanFrequencyType>(updateDto.FrequencyType, ignoreCase: true,
-                        out var frequencyTypeEnum))
-                {
-                    throw new ArgumentException(
-                        $"O valor '{updateDto.FrequencyType}' é inválido para o tipo de frequência. Use 'Days' ou 'Months'.");
-                }
-
-                localPlan.FrequencyType = frequencyTypeEnum;
-            }
-
-            var payloadForMercadoPago = new
-            {
-                reason = localPlan.Name,
-                transaction_amount = localPlan.TransactionAmount,
-                frequency = localPlan.FrequencyInterval, // Usa a propriedade correta
-                frequency_type =
-                    localPlan.FrequencyType.ToString().ToLower() // Converte o enum para string minúscula (ex: "months")
+                Name = localPlan.Name,
+                TransactionAmount = localPlan.TransactionAmount,
+                FrequencyInterval = localPlan.FrequencyInterval,
+                FrequencyType = localPlan.FrequencyType
             };
-            await _mercadoPagoPlanService.UpdatePlanAsync(localPlan.ExternalPlanId, payloadForMercadoPago);
 
-            // 4. Persiste as alterações localmente (somente se a API não falhou)
-            _planRepository.Update(localPlan);
+            PlanUtils.ApplyUpdateDtoToPlan(localPlan, updateDto);
             await _planRepository.SaveChangesAsync();
+            _logger.LogInformation("Alterações locais para o plano {PlanId} salvas temporariamente.", localPlan.Id);
 
-            // 5. Limpa o cache
-            await _cacheService.RemoveAsync(CacheKeys.ActiveDbPlans);
-            await _cacheService.RemoveAsync(CacheKeys.ActiveApiPlans);
-            _logger.LogInformation("Plano {PlanId} atualizado com sucesso.", localPlan.ExternalPlanId);
+            try
+            {
+                var payloadForMercadoPago = new
+                {
+                    reason = localPlan.Name,
+                    transaction_amount = localPlan.TransactionAmount,
+                    frequency = localPlan.FrequencyInterval, 
+                    frequency_type =
+                        localPlan.FrequencyType.ToString()
+                            .ToLower() 
+                };
+                await _mercadoPagoPlanService.UpdatePlanAsync(localPlan.ExternalPlanId, payloadForMercadoPago);
 
-            return localPlan;
+                await _cacheService.RemoveAsync(CacheKeys.ActiveDbPlans);
+                await _cacheService.RemoveAsync(CacheKeys.ActiveApiPlans);
+                _logger.LogInformation("Plano {PlanId} atualizado com sucesso no DB e na API externa.",
+                    localPlan.ExternalPlanId);
+
+                return localPlan;
+            }
+            catch (ExternalApiException ex)
+            {
+                _logger.LogError(ex, "Erro na API externa ao atualizar plano '{PlanName}'. Iniciando rollback...",
+                    localPlan.Name);
+                
+                localPlan.Name = originalValues.Name;
+                localPlan.TransactionAmount = originalValues.TransactionAmount;
+                localPlan.FrequencyInterval = originalValues.FrequencyInterval;
+                localPlan.FrequencyType = originalValues.FrequencyType;
+
+                await _planRepository.SaveChangesAsync();
+                _logger.LogInformation("Rollback concluído. Alterações locais no plano '{PlanName}' foram desfeitas.",
+                    localPlan.Name);
+
+                throw;
+            }
         }
+
 
         public async Task DeletePlanAsync(Guid publicId)
         {
-            var localPlan = await _planRepository.GetByPublicIdAsync(publicId);
+            var localPlan = await _planRepository.GetByPublicIdAsync(publicId, asNoTracking: false)
+                            ?? throw new ResourceNotFoundException($"Plano com ID {publicId} não encontrado.");
 
-            // 1. Desativa na API externa primeiro
-            await _mercadoPagoPlanService.CancelPlanAsync(localPlan.ExternalPlanId);
+            var originalIsActive = localPlan.IsActive;
 
-            // 2. Desativa ("soft delete") localmente
+            if (!originalIsActive)
+            {
+                _logger.LogWarning("Tentativa de desativar o plano {PlanId} que já está inativo.",
+                    localPlan.ExternalPlanId);
+                return;
+            }
+
             localPlan.IsActive = false;
-            _planRepository.Update(localPlan);
             await _planRepository.SaveChangesAsync();
+            _logger.LogInformation("Plano {PlanId} desativado localmente de forma temporária.",
+                localPlan.ExternalPlanId);
 
-            await _cacheService.RemoveAsync("ActiveSubscriptionPlans");
-            _logger.LogInformation("Plano {PlanId} desativado com sucesso.", localPlan.ExternalPlanId);
+            try
+            {
+                await _mercadoPagoPlanService.CancelPlanAsync(localPlan.ExternalPlanId);
+
+                await _cacheService.RemoveAsync(CacheKeys.ActiveDbPlans);
+                await _cacheService.RemoveAsync(CacheKeys.ActiveApiPlans);
+                _logger.LogInformation("Plano {PlanId} desativado com sucesso no DB e na API externa.",
+                    localPlan.ExternalPlanId);
+            }
+            catch (ExternalApiException ex)
+            {
+                _logger.LogError(ex, "Erro na API externa ao desativar plano '{PlanName}'. Iniciando rollback...",
+                    localPlan.Name);
+                
+                localPlan.IsActive = originalIsActive; 
+                await _planRepository.SaveChangesAsync();
+                _logger.LogInformation("Rollback concluído. Plano '{PlanName}' foi reativado localmente.",
+                    localPlan.Name);
+
+                throw;
+            }
         }
 
         public async Task<List<PlanDto>> GetActiveApiPlansAsync()
@@ -256,6 +306,5 @@ namespace MeuCrudCsharp.Features.MercadoPago.Plans.Services
                 throw new AppServiceException("Não foi possível carregar os planos.", dbEx);
             }
         }
-        
     }
 }

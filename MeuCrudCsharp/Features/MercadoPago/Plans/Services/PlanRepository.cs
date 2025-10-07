@@ -26,11 +26,24 @@ public class PlanRepository : IPlanRepository
     public async Task<int> SaveChangesAsync() =>
         await _context.SaveChangesAsync();
 
+    public void Remove(object payload) =>
+         _context.Remove(payload);
 
-    public async Task<Plan?> GetByPublicIdAsync(Guid publicId) =>
-        await _context.Plans
-            .AsNoTracking()
-            .FirstOrDefaultAsync(p => p.PublicId == publicId);
+
+    public async Task<Plan?> GetByPublicIdAsync(Guid publicId, bool asNoTracking = true) // 'true' é um bom padrão para leituras
+    {
+        // 1. Inicia a consulta base. Neste ponto, nada foi executado no banco.
+        IQueryable<Plan> query = _context.Plans;
+
+        // 2. Aplica o AsNoTracking() APENAS SE a variável for true.
+        if (asNoTracking)
+        {
+            query = query.AsNoTracking();
+        }
+
+        // 3. Executa a consulta final no banco de dados com a condição.
+        return await query.FirstOrDefaultAsync(p => p.PublicId == publicId);
+    }
 
 
     public async Task<Plan?> GetActiveByExternalIdAsync(string externalId) =>
