@@ -2,9 +2,11 @@
 using Hangfire;
 using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Features.Caching.Interfaces;
+using MeuCrudCsharp.Features.Courses.Interfaces;
 using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.Videos.DTOs;
 using MeuCrudCsharp.Features.Videos.Interfaces;
+using MeuCrudCsharp.Features.Videos.Mappers;
 using MeuCrudCsharp.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -24,6 +26,7 @@ namespace MeuCrudCsharp.Features.Videos.Services
         private readonly ILogger<AdminVideoService> _logger;
         private const string VideosCacheVersionKey = "videos_cache_version";
         private readonly IBackgroundJobClient _jobs;
+        private readonly ICourseService  _courseService;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AdminVideoService"/> class.
@@ -32,18 +35,24 @@ namespace MeuCrudCsharp.Features.Videos.Services
         /// <param name="cacheService">The caching service for versioned cache entries.</param>
         /// <param name="fileStorageService">The file storage service for saving and deleting thumbnails and video assets.</param>
         /// <param name="logger">The logger for recording informational messages and errors.</param>
+        // CONSTRUTOR CORRIGIDO
         public AdminVideoService(
             ApiDbContext context,
             ICacheService cacheService,
             IFileStorageService fileStorageService,
             ILogger<AdminVideoService> logger,
-            IWebHostEnvironment env
+            IWebHostEnvironment env,
+            IBackgroundJobClient jobs,
+            ICourseService courseService
         )
         {
             _context = context;
             _cacheService = cacheService;
             _fileStorageService = fileStorageService;
             _logger = logger;
+            _env = env; 
+            _jobs = jobs; 
+            _courseService = courseService;
         }
 
         /// <inheritdoc />
@@ -91,17 +100,16 @@ namespace MeuCrudCsharp.Features.Videos.Services
         /// <inheritdoc />
         public async Task<VideoDto> CreateVideoAsync(CreateVideoDto createDto)
         {
-            var course = await GetOrCreateCourseAsync(createDto.CourseName);
-            var thumbnailUrl = await _fileStorageService.SaveThumbnailAsync(
-                createDto.ThumbnailFile
-            );
+            var course = await _courseService.GetOrCreateCourseByNameAsync(createDto.CourseName);
+
+            var thumbnailUrl = await _fileStorageService.SaveThumbnailAsync(createDto.ThumbnailFile);
 
             var video = new Video
             {
                 Title = createDto.Title,
                 Description = createDto.Description,
                 StorageIdentifier = createDto.StorageIdentifier,
-                CourseId = course.Id,
+                CourseId = course.Id, // AGORA FUNCIONA!
                 ThumbnailUrl = thumbnailUrl,
                 Status = VideoStatus.Processing
             };
@@ -110,15 +118,15 @@ namespace MeuCrudCsharp.Features.Videos.Services
             await _context.SaveChangesAsync();
             await _cacheService.InvalidateCacheByKeyAsync(VideosCacheVersionKey);
 
-            var folder = Path.Combine(_env.WebRootPath, "videos", video.StorageIdentifier);
-            var inputPath = Path.Combine(folder, createDto.OriginalFileName);
-            var hlsPath = Path.Combine(folder, "hls");
+            _logger.LogInformation("Enfileirando job de processamento para o vídeo {StorageIdentifier}", video.StorageIdentifier);
 
             _jobs.Enqueue<IVideoProcessingService>(svc =>
-                svc.ProcessVideoToHlsAsync(inputPath, hlsPath, video.StorageIdentifier)
+                svc.ProcessVideoToHlsAsync(
+                    video.StorageIdentifier,      // Identificador do vídeo/pasta
+                    createDto.OriginalFileName    // Nome do arquivo original
+                )
             );
-            
-            // Atribui Course para que o mapper use o nome corretamente
+    
             video.Course = course;
             return VideoMapper.ToDto(video);
         }
@@ -175,22 +183,12 @@ namespace MeuCrudCsharp.Features.Videos.Services
         }
 
         /// <summary>
-        /// Bumps the cache version for videos, effectively invalidating all existing
-        /// <c>GetAllVideosAsync</c> cache entries.
-        /// </summary>
-        /// <returns>A task representing the asynchronous operation.</returns>
-
-        /// <summary>
         /// Retrieves a <see cref="Video"/> entity by <paramref name="publicId"/>.
         /// </summary>
         /// <param name="publicId">The public identifier of the video.</param>
         /// <param name="includeCourse">
         /// If true, includes the related <see cref="Course"/> entity in the query.
         /// </param>
-        /// <returns>The matching <see cref="Video"/> entity.</returns>
-        /// <exception cref="ResourceNotFoundException">
-        /// Thrown if no video with the given <paramref name="publicId"/> is found.
-        /// </exception>
         private async Task<Video> FindVideoByPublicIdOrFailAsync(
             Guid publicId,
             bool includeCourse = true
@@ -212,25 +210,6 @@ namespace MeuCrudCsharp.Features.Videos.Services
 
             return video;
         }
-
-        /// <summary>
-        /// Finds an existing <see cref="Course"/> by name or creates a new one if none exists.
-        /// </summary>
-        /// <param name="courseName">The name of the course to retrieve or create.</param>
-        /// <returns>
-        /// The existing or newly created <see cref="Course"/> entity.
-        /// </returns>
-        private async Task<Models.Course> GetOrCreateCourseAsync(string courseName)
-        {
-            var course = await _context.Courses.FirstOrDefaultAsync(c => c.Name == courseName);
-            if (course == null)
-            {
-                course = new Models.Course { Name = courseName };
-                _context.Courses.Add(course);
-                // SaveChangesAsync será chamado pela chamada de criação/atualização principal
-            }
-
-            return course;
-        }
+        
     }
 }

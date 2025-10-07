@@ -54,7 +54,7 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Controllers
         {
             try
             {
-                var userId = _userContext.GetCurrentUserId();
+                var userId = await _userContext.GetCurrentUserId();
                 var success = await _userAccountService.UpdateSubscriptionCardAsync(
                     userId,
                     request?.Token
@@ -85,7 +85,7 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Controllers
         {
             try
             {
-                var userId = _userContext.GetCurrentUserId();
+                var userId = await _userContext.GetCurrentUserId();
                 var success = await _userAccountService.UpdateSubscriptionStatusAsync(userId, dto.Status);
 
                 if (!success)

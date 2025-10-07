@@ -1,5 +1,4 @@
-﻿
-using MeuCrudCsharp.Features.Base;
+﻿using MeuCrudCsharp.Features.Base;
 using MeuCrudCsharp.Features.MercadoPago.Plans.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 

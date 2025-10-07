@@ -14,7 +14,7 @@ public class UserContext : IUserContext
         _httpContextAccessor = httpContextAccessor;
     }
 
-    public string GetCurrentUserId()
+    public async Task<string> GetCurrentUserId()
     {
         return _httpContextAccessor.HttpContext?.User.FindFirstValue(
             ClaimTypes.NameIdentifier

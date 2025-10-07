@@ -1,12 +1,11 @@
-﻿using System.Text.Json;
-using MeuCrudCsharp.Data;
-using MeuCrudCsharp.Features.Caching.Interfaces;
+﻿using MeuCrudCsharp.Features.Caching.Interfaces;
 using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.MercadoPago.Base;
 using MeuCrudCsharp.Features.MercadoPago.Plans.DTOs;
 using MeuCrudCsharp.Features.MercadoPago.Plans.Interfaces;
+using MeuCrudCsharp.Features.MercadoPago.Plans.Mappers;
 using MeuCrudCsharp.Models;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Plans.Services
 {
@@ -14,11 +13,19 @@ namespace MeuCrudCsharp.Features.MercadoPago.Plans.Services
     /// Implements <see cref="IPlanService"/> to manage the lifecycle of subscription plans.
     /// This service coordinates operations between the local database and the Mercado Pago API.
     /// </summary>
-    public class PlanService : MercadoPagoServiceBase, IPlanService
+    public class PlanService : IPlanService
     {
+        private static class CacheKeys
+        {
+            public static readonly string ActiveDbPlans = "ActiveDbPlans";
+            public static readonly string ActiveApiPlans = "ActiveApiPlans";
+        }
+
         private readonly ICacheService _cacheService;
         private readonly IPlanRepository _planRepository;
         private readonly IMercadoPagoPlanService _mercadoPagoPlanService;
+        private readonly GeneralSettings _generalSettings;
+        private readonly ILogger<PlanService> _logger;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="PlanService"/> class.
@@ -29,26 +36,31 @@ namespace MeuCrudCsharp.Features.MercadoPago.Plans.Services
         /// <param name="logger">The logger for recording events and errors, passed to the base class.</param>
         public PlanService(
             ICacheService cacheService,
-            IHttpClientFactory httpClient,
             ILogger<PlanService> logger,
             IPlanRepository planRepository,
-            IMercadoPagoPlanService mercadoPagoPlanService
+            IMercadoPagoPlanService mercadoPagoPlanService,
+            IOptions<GeneralSettings> generalSettings
         )
-            : base(httpClient, logger)
         {
             _cacheService = cacheService;
             _planRepository = planRepository;
             _mercadoPagoPlanService = mercadoPagoPlanService;
+            _generalSettings = generalSettings.Value;
+            _logger = logger;
         }
 
-        public async Task<Plan> GetPlanByIdAsync(Guid publicId)
+        public async Task<PlanEditDto> GetPlanEditDtoByIdAsync(Guid publicId)
         {
-            if (publicId == Guid.Empty)
+            // Este método interno continua buscando a entidade do banco
+            var plan = await _planRepository.GetByPublicIdAsync(publicId);
+
+            if (plan == null)
             {
-                throw new ArgumentException("PublicId cannot be empty");
+                return null; // Não encontrado
             }
-            return await _planRepository.GetByPublicIdAsync(publicId);
-            
+
+            // Usa o novo método de mapeamento para retornar o DTO de edição
+            return PlanMapper.MapPlanToEditDto(plan);
         }
 
         public async Task<Plan> CreatePlanAsync(CreatePlanDto createDto)
@@ -84,7 +96,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Plans.Services
                 {
                     reason = createDto.Reason,
                     auto_recurring = createDto.AutoRecurring,
-                    back_url = createDto.BackUrl,
+                    back_url = _generalSettings.BaseUrl,
                     external_reference = newPlan.Id.ToString(), // ✅ Use o ID local como referência externa.
                     description = createDto.Description
                 };
@@ -97,7 +109,8 @@ namespace MeuCrudCsharp.Features.MercadoPago.Plans.Services
                 await _planRepository.SaveChangesAsync();
 
                 // 6. Pós-processamento (cache, log)
-                await _cacheService.RemoveAsync("ActiveSubscriptionPlans");
+                await _cacheService.RemoveAsync(CacheKeys.ActiveDbPlans);
+                await _cacheService.RemoveAsync(CacheKeys.ActiveApiPlans);
                 _logger.LogInformation("Plano '{PlanName}' criado com sucesso.", newPlan.Name);
 
                 return newPlan;
@@ -147,7 +160,8 @@ namespace MeuCrudCsharp.Features.MercadoPago.Plans.Services
             await _planRepository.SaveChangesAsync();
 
             // 5. Limpa o cache
-            await _cacheService.RemoveAsync("DbPlansCacheKey");
+            await _cacheService.RemoveAsync(CacheKeys.ActiveDbPlans);
+            await _cacheService.RemoveAsync(CacheKeys.ActiveApiPlans);
             _logger.LogInformation("Plano {PlanId} atualizado com sucesso.", localPlan.ExternalPlanId);
 
             return localPlan;
@@ -173,7 +187,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Plans.Services
         {
             // O cache continua sendo responsabilidade do serviço de orquestração
             var cachedPlans = await _cacheService.GetOrCreateAsync(
-                "ApiPlansCacheKey", // Corrigido
+                CacheKeys.ActiveApiPlans, // Corrigido
                 async () =>
                 {
                     // 1. Busca todos os planos ativos da API
@@ -193,7 +207,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Plans.Services
                     {
                         if (localPlansDict.TryGetValue(apiPlan.Id, out var localPlan))
                         {
-                            mappedPlans.Add(MapApiPlanToDto(apiPlan, localPlan));
+                            mappedPlans.Add(PlanMapper.MapApiPlanToDto(apiPlan, localPlan));
                         }
                         else
                         {
@@ -218,8 +232,8 @@ namespace MeuCrudCsharp.Features.MercadoPago.Plans.Services
             _logger.LogInformation("Buscando planos ativos do banco de dados (com cache).");
 
             var cachedPlans = await _cacheService.GetOrCreateAsync(
-                "DbPlansCacheKey", // Corrigido
-                FetchAndMapPlansFromDatabaseAsync, // A função de fábrica agora chama o repositório
+                CacheKeys.ActiveDbPlans, // Usa a chave centralizada
+                FetchAndMapPlansFromDatabaseAsync,
                 TimeSpan.FromMinutes(15)
             );
 
@@ -234,7 +248,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Plans.Services
                 var plansFromDb = await _planRepository.GetActivePlansAsync();
 
                 // 2. Mapeia as entidades para o DTO (esta lógica permanece no serviço)
-                return plansFromDb.Select(MapDbPlanToDto).ToList();
+                return plansFromDb.Select(PlanMapper.MapDbPlanToDto).ToList();
             }
             catch (Exception dbEx) // A captura de exceção de DB faz mais sentido aqui
             {
@@ -242,124 +256,6 @@ namespace MeuCrudCsharp.Features.MercadoPago.Plans.Services
                 throw new AppServiceException("Não foi possível carregar os planos.", dbEx);
             }
         }
-
-// --- MÉTODOS AUXILIARES ---
-
-        private PlanDto MapDbPlanToDto(Plan dbPlan)
-        {
-            string planType = GetPlanTypeDescription(dbPlan.FrequencyInterval, dbPlan.FrequencyType);
-
-            bool isAnnual = dbPlan.FrequencyInterval == 12 && dbPlan.FrequencyType == PlanFrequencyType.Months;
-
-            return new PlanDto
-            (
-                dbPlan.PublicId.ToString(),
-                dbPlan.Name,
-                planType, // <-- Usa a descrição flexível (ex: "Mensal", "Trimestral", "Anual")
-                FormatPriceDisplay(dbPlan.TransactionAmount, dbPlan.FrequencyInterval), // <-- Usa a propriedade correta
-                FormatBillingInfo(dbPlan.TransactionAmount, dbPlan.FrequencyInterval), // <-- Usa a propriedade correta
-                GetDefaultFeatures(),
-                isAnnual
-            );
-        }
-
-        private  PlanDto MapApiPlanToDto(PlanResponseDto apiPlan,
-            Plan localPlan)
-        {
-            bool isAnnual = apiPlan.AutoRecurring!.Frequency == 12 &&
-                            String.Equals(apiPlan.AutoRecurring.FrequencyType, "months",
-                                StringComparison.OrdinalIgnoreCase);
-
-            return new PlanDto
-            (
-                localPlan.PublicId.ToString(),
-                apiPlan.Reason,
-                isAnnual ? "anual" : "mensal",
-                FormatPriceDisplay(apiPlan.AutoRecurring.TransactionAmount,
-                    apiPlan.AutoRecurring.Frequency),
-                FormatBillingInfo(apiPlan.AutoRecurring.TransactionAmount,
-                    apiPlan.AutoRecurring.Frequency),
-                GetDefaultFeatures(),
-                isAnnual
-            );
-        }
-
-        /// <summary>
-        /// Função auxiliar para criar uma descrição amigável do tipo de plano.
-        /// </summary>
-        private string GetPlanTypeDescription(int interval, PlanFrequencyType frequencyType)
-        {
-            if (frequencyType == PlanFrequencyType.Months)
-            {
-                switch (interval)
-                {
-                    case 1:
-                        return "Mensal";
-                    case 3:
-                        return "Trimestral";
-                    case 6:
-                        return "Semestral";
-                    case 12:
-                        return "Anual";
-                    default:
-                        // Fallback para outros intervalos de meses (ex: 2, 4 meses)
-                        return $"Pacote de {interval} meses";
-                }
-            }
-
-            if (frequencyType == PlanFrequencyType.Days)
-            {
-                // Lógica para planos baseados em dias, se você tiver
-                return interval == 1 ? "Diário" : $"Pacote de {interval} dias";
-            }
-
-            return "Plano Padrão"; // Fallback genérico
-        }
-
-// Método para evitar repetição da lista de features
-        public List<string> GetDefaultFeatures() => new List<string>
-        {
-            "Acesso a todos os cursos",
-            "Vídeos novos toda semana",
-            "Suporte via comunidade",
-            "Cancele quando quiser",
-        };
-
-        /// <summary>
-        /// Formats the price for display on the UI.
-        /// </summary>
-        /// <param name="amount">The transaction amount.</param>
-        /// <param name="frequency">The frequency type (e.g., "years", "months").</param>
-        /// <returns>A formatted price string (e.g., "R$ 41,58" or "R$ 499,00").</returns>
-        public string FormatPriceDisplay(decimal amount, int frequency)
-        {
-            // Se for anual (frequência 12), calculamos o valor mensal equivalente para exibição.
-            if (frequency == 12)
-            {
-                var monthlyPrice = amount / 12;
-                return $"R$ {monthlyPrice:F2}".Replace('.', ',');
-            }
-
-            // Se for mensal (frequência 1), apenas formatamos o valor.
-            return $"R$ {amount:F2}".Replace('.', ',');
-        }
-
-        /// <summary>
-        /// Formats the billing information for display on the UI.
-        /// </summary>
-        /// <param name="amount">The transaction amount.</param>
-        /// <param name="frequency">The frequency type (e.g., "years", "months").</param>
-        /// <returns>A formatted billing info string (e.g., "Cobrado R$ 499,00 anualmente").</returns>
-        public string FormatBillingInfo(decimal amount, int frequency)
-        {
-            // A lógica agora verifica se a frequência é de 12 (anual)
-            if (frequency == 12)
-            {
-                return $"Cobrado R$ {amount:F2} anualmente".Replace('.', ',');
-            }
-
-            // Para qualquer outra frequência (como 1 mês), não mostramos nada.
-            return "&nbsp;";
-        }
+        
     }
 }

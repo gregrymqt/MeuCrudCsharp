@@ -13,7 +13,9 @@ const editPlanReason = document.getElementById('edit-plan-reason');
 const fetchButtonsContainer = document.getElementById('fetch-buttons');
 
 
+// ✨ FUNÇÃO CORRIGIDA ✨
 function renderPlansTable(plans) {
+    const plansTableBody = document.getElementById('plans-table-body'); // Supondo que você tenha essa variável
     plansTableBody.innerHTML = ''; // Limpa a tabela antes de popular
 
     if (!plans || plans.length === 0) {
@@ -22,30 +24,31 @@ function renderPlansTable(plans) {
     }
 
     plans.forEach(plan => {
-        // Verificação segura para cada propriedade do plano
-        const name = plan.Name ?? 'Nome Indisponível'; // Propriedades em C# são PascalCase
+        // Correção: Acessar as propriedades em camelCase, exatamente como no JSON
+        const name = plan.name ?? 'Nome Indisponível';
 
-        // CORREÇÃO: Usamos a propriedade 'Type' que vem diretamente do back-end.
-        // O DTO que criamos já faz a lógica de "Mensal", "Trimestral", "Anual", etc.
-        const type = plan.Type ?? 'Tipo Indisponível';
+        // Correção: A propriedade que define o tipo no seu JSON é 'slug'
+        const type = plan.slug ?? 'Tipo Indisponível';
 
-        const price = plan.PriceDisplay ?? 'R$ 0,00';
-        const status = plan.IsActive ? 'Active' : 'Inactive'; // O DTO tem IsActive (booleano)
-        const publicId = plan.PublicId ?? 'ID_INDISPONIVEL';
+        const price = plan.priceDisplay ?? 'R$ 0,00';
+        
+        const status = plan.isActive ? 'Active' : 'Inactive'; 
+
+        const publicId = plan.publicId ?? 'ID_INDISPONIVEL';
 
         const row = document.createElement('tr');
         row.innerHTML = `
-        <td>${name}</td>
-        <td>${type}</td>
-        <td>${price}</td>
-        <td>
-            <span class="status-badge status-${status.toLowerCase()}">${status}</span>
-        </td>
-        <td class="text-right">
-            <button class="btn btn-secondary btn-sm btn-edit" data-public-id="${publicId}">Editar</button>
-            <button class="btn btn-danger btn-sm btn-delete" data-public-id="${publicId}">Excluir</button>
-        </td>
-    `;
+            <td>${name}</td>
+            <td>${type}</td>
+            <td>${price}</td>
+            <td>
+                <span class="status-badge status-${status.toLowerCase()}">${status}</span>
+            </td>
+            <td class="text-right">
+                <button class="btn btn-secondary btn-sm btn-edit" data-public-id="${publicId}">Editar</button>
+                <button class="btn btn-danger btn-sm btn-delete" data-public-id="${publicId}">Excluir</button>
+            </td>
+        `;
         plansTableBody.appendChild(row);
     });
 }
@@ -77,16 +80,22 @@ async function openEditPlanModal(planId) {
     try {
         const plan = await api.getPlanById(planId);
 
+        // Preenche os campos usando os dados brutos do DTO
         editPlanId.value = plan.publicId;
         editPlanReason.value = plan.name;
+
+        // CORREÇÃO: Usa o valor numérico diretamente
         document.getElementById('edit-plan-amount').value = plan.transactionAmount;
+
         const frequencySelect = document.getElementById('edit-plan-frequency-type');
+
+        // CORREÇÃO: Lógica mais simples e direta
         if (plan.frequency === 12 && plan.frequencyType === 'months') {
             frequencySelect.value = 'years';
         } else {
             frequencySelect.value = 'months';
         }
-        
+
         openModal(editModal);
 
     } catch (error) {
@@ -167,10 +176,9 @@ function initializePlansPanel() {
                 frequency: frequency,                 // Usando a variável do input 'plan-interval'
                 frequency_type: frequency_type,       // Usando a variável do select 'plan-frequency-type'
                 transaction_amount: parseFloat(document.getElementById('plan-amount').value),
-                currency_id: 'BRL' // É bom sempre enviar a moeda
+                currencyId: 'BRL' // É bom sempre enviar a moeda
             },
-            description: document.getElementById('plan-description').value,
-            back_url: "https://b1027b9a8e2b.ngrok-free.app/" // Lembre-se de ajustar a URL conforme necessário
+            description: document.getElementById('plan-description').value
         }
 
         try {

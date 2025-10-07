@@ -8,6 +8,7 @@ using MeuCrudCsharp.Features.Videos.Interfaces;
 using MeuCrudCsharp.Models;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 
 namespace MeuCrudCsharp.Features.Videos.Services
@@ -20,9 +21,10 @@ namespace MeuCrudCsharp.Features.Videos.Services
     {
         private readonly ILogger<VideoProcessingService> _logger;
         private readonly IServiceProvider _serviceProvider;
-        private readonly IVideoNotificationService _videoNotificationService; // ⭐️ 1. Injetar o HubContext
-        private const string _ffmpegPath = "ffmpeg";
-        private const string _ffprobePath = "ffprobe";
+        private readonly IVideoNotificationService _videoNotificationService;
+        private readonly IProcessRunnerService _processRunnerService;
+        private readonly FFmpegSettings _ffmpegSettings;
+        private readonly IWebHostEnvironment _env;
 
         // Regex para capturar a informação de tempo (time=HH:mm:ss.ms) da saída do FFmpeg
         private static readonly Regex FfmpegProgressRegex = new Regex(
@@ -33,25 +35,29 @@ namespace MeuCrudCsharp.Features.Videos.Services
         public VideoProcessingService(
             ILogger<VideoProcessingService> logger,
             IServiceProvider serviceProvider,
-            IVideoNotificationService videoNotificationService) // ⭐️ 1. Receber no construtor
+            IVideoNotificationService videoNotificationService,
+            IProcessRunnerService processRunnerService,
+            IOptions<FFmpegSettings> ffmpegSettings,
+            IWebHostEnvironment env) // <-- INJETAR AQUI
         {
             _logger = logger;
             _serviceProvider = serviceProvider;
             _videoNotificationService = videoNotificationService;
+            _processRunnerService = processRunnerService;
+            _ffmpegSettings = ffmpegSettings.Value;
+            _env = env; // <-- ATRIBUIR AQUI
         }
 
-        // ✅ 2. O método principal agora orquestra as notificações do SignalR
-        public async Task ProcessVideoToHlsAsync(
-            string inputFilePath,
-            string outputDirectory,
-            string storageIdentifier
-        )
+        public async Task ProcessVideoToHlsAsync(string storageIdentifier, string originalFileName)
         {
+            // 1. MONTAR OS CAMINHOS DE ARQUIVO AQUI
+            var basePath = Path.Combine(_env.WebRootPath, "uploads"); // Define o diretório base de uploads
+            var outputDirectory = Path.Combine(basePath, storageIdentifier);
+            var inputFilePath = Path.Combine(outputDirectory, originalFileName);
+            
             await using var scope = _serviceProvider.CreateAsyncScope();
             var context = scope.ServiceProvider.GetRequiredService<ApiDbContext>();
-            Video? video = await context.Videos.FirstOrDefaultAsync(v =>
-                v.StorageIdentifier == storageIdentifier
-            );
+            Video? video = await context.Videos.FirstOrDefaultAsync(v => v.StorageIdentifier == storageIdentifier);
 
             if (video == null)
                 throw new ResourceNotFoundException($"Vídeo {storageIdentifier} não encontrado.");
@@ -63,34 +69,29 @@ namespace MeuCrudCsharp.Features.Videos.Services
                 await _videoNotificationService.SendProgressUpdate(groupName, "Iniciando...", 0);
 
                 if (!File.Exists(inputFilePath))
-                    throw new FileNotFoundException(
-                        $"Arquivo de entrada não encontrado: {inputFilePath}"
-                    );
-
-                Directory.CreateDirectory(outputDirectory);
-
+                    throw new FileNotFoundException($"Arquivo de entrada não encontrado: {inputFilePath}");
+                
                 await _videoNotificationService.SendProgressUpdate(groupName, "Obtendo duração do vídeo...", 5);
                 var duration = await GetVideoDurationAsync(inputFilePath);
-                video.Duration = duration; // Salva a duração no início
+                video.Duration = duration;
 
                 var manifestPath = Path.Combine(outputDirectory, "manifest.m3u8");
                 var arguments =
                     $"-i \"{inputFilePath}\" -c:v libx264 -c:a aac -hls_time 10 -hls_playlist_type vod -hls_segment_filename \"{Path.Combine(outputDirectory, "segment%03d.ts")}\" \"{manifestPath}\"";
 
-                // Define a função de callback que será executada para cada linha de progresso do FFmpeg
                 Func<string, Task> onProgress = rawFfmpegOutput =>
                 {
                     var progress = ParseFfmpegProgress(rawFfmpegOutput, duration.TotalSeconds);
                     if (progress.HasValue)
                     {
-                        // Envia a porcentagem calculada via SignalR
-                        return _videoNotificationService.SendProgressUpdate(groupName, "Convertendo...", progress.Value);
+                        return _videoNotificationService.SendProgressUpdate(groupName, "Convertendo...",
+                            progress.Value);
                     }
+
                     return Task.CompletedTask;
                 };
 
-                // Chama o processo FFmpeg passando o callback de progresso
-                await RunProcessWithProgressAsync(_ffmpegPath, arguments, onProgress);
+                await _processRunnerService.RunProcessWithProgressAsync(_ffmpegSettings.FfmpegPath, arguments, onProgress);
 
                 video.Status = VideoStatus.Available;
                 await _videoNotificationService.SendProgressUpdate(
@@ -99,23 +100,15 @@ namespace MeuCrudCsharp.Features.Videos.Services
                     100,
                     isComplete: true
                 );
-                _logger.LogInformation(
-                    "Vídeo {StorageIdentifier} processado com sucesso.",
-                    storageIdentifier
-                );
+                _logger.LogInformation("Vídeo {StorageIdentifier} processado com sucesso.", storageIdentifier);
             }
             catch (Exception ex)
             {
-                _logger.LogError(
-                    ex,
-                    "Falha crítica ao processar o vídeo {StorageIdentifier}.",
-                    storageIdentifier
-                );
-                if (video != null)
-                    video.Status = VideoStatus.Error;
-
-                await _videoNotificationService.SendProgressUpdate(groupName, $"Erro: {ex.Message}", 100, isError: true);
-                throw; // Relança a exceção para que o Hangfire/job runner saiba que falhou
+                _logger.LogError(ex, "Falha crítica ao processar o vídeo {StorageIdentifier}.", storageIdentifier);
+                if (video != null) video.Status = VideoStatus.Error;
+                await _videoNotificationService.SendProgressUpdate(groupName, $"Erro: {ex.Message}", 100,
+                    isError: true);
+                throw;
             }
             finally
             {
@@ -124,85 +117,6 @@ namespace MeuCrudCsharp.Features.Videos.Services
                     await context.SaveChangesAsync();
                 }
             }
-        }
-
-        private async Task RunProcessWithProgressAsync(
-            string filePath,
-            string arguments,
-            Func<string, Task> onProgress
-        )
-        {
-            var processStartInfo = new ProcessStartInfo
-            {
-                FileName = filePath,
-                Arguments = arguments,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true,
-            };
-
-            using var process = Process.Start(processStartInfo);
-            if (process == null)
-                throw new AppServiceException($"Não foi possível iniciar o processo '{filePath}'.");
-
-            while (!process.StandardError.EndOfStream)
-            {
-                var line = await process.StandardError.ReadLineAsync();
-                if (line != null)
-                {
-                    await onProgress(line);
-                }
-            }
-
-            string error = await process.StandardError.ReadToEndAsync();
-            await process.WaitForExitAsync();
-
-            if (process.ExitCode != 0)
-            {
-                throw new AppServiceException(
-                    $"Processo '{filePath}' falhou com código {process.ExitCode}. Erro: {error}"
-                );
-            }
-        }
-
-        // ✅ CORRIGIDO: Método renomeado para maior clareza
-        private async Task<(
-            string StandardOutput,
-            string StandardError
-        )> RunProcessAndGetOutputAsync(string filePath, string arguments)
-        {
-            var processStartInfo = new ProcessStartInfo
-            {
-                FileName = filePath,
-                Arguments = arguments,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true,
-            };
-
-            using var process = Process.Start(processStartInfo);
-            if (process == null)
-            {
-                throw new AppServiceException($"Não foi possível iniciar o processo '{filePath}'.");
-            }
-
-            var outputTask = process.StandardOutput.ReadToEndAsync();
-            var errorTask = process.StandardError.ReadToEndAsync();
-
-            await process.WaitForExitAsync();
-
-            // Verifica o código de saída ANTES de retornar, para garantir que o processo foi bem-sucedido
-            if (process.ExitCode != 0)
-            {
-                string error = await errorTask;
-                throw new AppServiceException(
-                    $"Processo '{filePath}' falhou com código {process.ExitCode}. Erro: {error}"
-                );
-            }
-
-            return (await outputTask, await errorTask);
         }
 
         // ✅ 4. Novo método para "traduzir" a saída do FFmpeg em porcentagem
@@ -242,7 +156,10 @@ namespace MeuCrudCsharp.Features.Videos.Services
                 $"-v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 \"{inputFilePath}\"";
 
             // A chamada agora é explícita e sem ambiguidades, corrigindo o erro
-            var (output, error) = await RunProcessAndGetOutputAsync(_ffprobePath, arguments);
+            var result =
+                await _processRunnerService.RunProcessAndGetOutputAsync(_ffmpegSettings.FfprobePath, arguments);
+            var output = result.StandardOutput;
+            var error = result.StandardError;
 
             if (!string.IsNullOrEmpty(error))
             {

@@ -17,149 +17,77 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
     /// This service orchestrates data retrieval and actions related to user profiles, subscriptions,
     /// and payments, interacting with the database, cache, and the Mercado Pago API.
     /// </summary>
-    public class UserAccountService : MercadoPagoServiceBase, IUserAccountService
+    public class UserAccountService : IUserAccountService // Não precisa mais herdar de MercadoPagoServiceBase
     {
-        private readonly ApiDbContext _context;
+        private readonly IUserAccountRepository _repository;
         private readonly ICacheService _cacheService;
+        private readonly IMercadoPagoSubscriptionService _mpSubscriptionService;
         private readonly IClientService _clientService;
+        private readonly ILogger<UserAccountService> _logger;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="UserAccountService"/> class.
-        /// </summary>
-        /// <param name="context">The database context.</param>
-        /// <param name="cacheService">The caching service for performance optimization.</param>
-        /// <param name="httpClient">The HTTP client for making API requests, passed to the base class.</param>
-        /// <param name="logger">The logger for recording events and errors, passed to the base class.</param>
         public UserAccountService(
-            ApiDbContext context,
+            IUserAccountRepository repository,
             ICacheService cacheService,
-            IHttpClientFactory httpClient,
-            ILogger<UserAccountService> logger,
-            IClientService clientService
-        )
-            : base(httpClient, logger)
+            IMercadoPagoSubscriptionService mpSubscriptionService,
+            IClientService clientService,
+            ILogger<UserAccountService> logger)
         {
-            _context = context;
+            _repository = repository;
             _cacheService = cacheService;
+            _mpSubscriptionService = mpSubscriptionService;
             _clientService = clientService;
+            _logger = logger;
         }
 
-        /// <inheritdoc />
         public async Task<UserProfileDto> GetUserProfileAsync(string userId)
         {
-            string cacheKey = $"UserProfile_{userId}";
-            return await _cacheService.GetOrCreateAsync(
-                cacheKey,
-                async () =>
-                {
-                    try
-                    {
-                        var user = await _context
-                            .Users.AsNoTracking()
-                            .FirstOrDefaultAsync(u => u.Id == userId.ToString());
-                        if (user == null)
-                            throw new ResourceNotFoundException(
-                                $"User with ID {userId} not found."
-                            );
+            return await _cacheService.GetOrCreateAsync($"UserProfile_{userId}", async () =>
+            {
+                var user = await _repository.GetUserByIdAsync(userId)
+                           ?? throw new ResourceNotFoundException($"User with ID {userId} not found.");
 
-                        return new UserProfileDto
-                        {
-                            Name = user.Name,
-                            Email = user.Email,
-                            AvatarUrl = user.AvatarUrl,
-                        };
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(
-                            ex,
-                            "Error fetching user profile {UserId} from the database.",
-                            userId
-                        );
-                        throw new AppServiceException(
-                            "An error occurred while fetching the profile data.",
-                            ex
-                        );
-                    }
-                },
-                TimeSpan.FromMinutes(15)
-            );
+                // Lógica de mapeamento pode ir para um Mapper ou ficar aqui se for simples
+                return new UserProfileDto { Name = user.Name, Email = user.Email, AvatarUrl = user.AvatarUrl };
+            }, TimeSpan.FromMinutes(15));
         }
 
-        /// <inheritdoc />
         public async Task<SubscriptionDetailsDto?> GetUserSubscriptionDetailsAsync(string userId)
         {
-            string cacheKey = $"SubscriptionDetails_{userId}";
-            return await _cacheService.GetOrCreateAsync(
-                cacheKey,
-                async () =>
+            return await _cacheService.GetOrCreateAsync($"SubscriptionDetails_{userId}", async () =>
+            {
+                // Orquestração: 1. Busca dados locais
+                var subscription = await _repository.GetActiveSubscriptionByUserIdAsync(userId);
+                if (subscription?.Plan == null) return null;
+
+                // Orquestração: 2. Busca dados externos
+                var mpSubscription = await _mpSubscriptionService.GetSubscriptionAsync(subscription.ExternalId);
+                if (mpSubscription == null) return null;
+
+                // Orquestração: 3. Combina os dados
+                return new SubscriptionDetailsDto
                 {
-                    try
-                    {
-                        var subscription = await _context
-                            .Subscriptions.AsNoTracking()
-                            .Include(s => s.Plan)
-                            .FirstOrDefaultAsync(s =>
-                                s.UserId == userId && s.Status != "cancelled"
-                            );
-
-                        if (subscription?.Plan == null)
-                            return null;
-
-                        var endpoint = $"/preapproval/{subscription.ExternalId}";
-                        var responseBody = await SendMercadoPagoRequestAsync(
-                            HttpMethod.Get,
-                            endpoint,
-                            (object?)null
-                        );
-                        var mpSubscription = JsonSerializer.Deserialize<SubscriptionResponseDto>(
-                            responseBody
-                        );
-
-                        if (mpSubscription == null)
-                            return null;
-
-                        return new SubscriptionDetailsDto
-                        {
-                            SubscriptionId = subscription.ExternalId,
-                            PlanName = subscription.Plan.Name,
-                            Status = mpSubscription.Status, // Status sempre atualizado do MP
-                            Amount = subscription.Plan.TransactionAmount,
-                            NextBillingDate = mpSubscription.NextPaymentDate, // <-- CORRIGIDO
-                            LastFourCardDigits = subscription.LastFourCardDigits, // <-- CORRIGIDO
-                        };
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(
-                            ex,
-                            "Error fetching subscription details for user {UserId}.",
-                            userId
-                        );
-                        throw new AppServiceException(
-                            "An error occurred while fetching your subscription details.",
-                            ex
-                        );
-                    }
-                }
-            );
+                    SubscriptionId = subscription.ExternalId,
+                    PlanName = subscription.Plan.Name,
+                    Status = mpSubscription.Status,
+                    Amount = subscription.Plan.TransactionAmount,
+                    NextBillingDate = mpSubscription.NextPaymentDate,
+                    LastFourCardDigits = subscription.LastFourCardDigits,
+                };
+            });
         }
 
         /// <inheritdoc />
-        public async Task<IEnumerable<Payments>> GetUserPaymentHistoryAsync(string userId)
+        public async Task<IEnumerable<Payments>> GetUserPaymentHistoryAsync(string userId, int pageNumber = 1,
+            int pageSize = 10)
         {
             try
             {
-                string? cacheKey = $"PaymentHistory_{userId}";
+                // A chave de cache agora inclui a página e o tamanho
                 return await _cacheService.GetOrCreateAsync(
-                    cacheKey,
+                    $"PaymentHistory_{userId}_Page{pageNumber}_Size{pageSize}",
                     async () =>
                     {
-                        return await _context
-                            .Payments.AsNoTracking()
-                            .Where(p => p.UserId == userId)
-                            .OrderByDescending(p => p.CreatedAt)
-                            .ToListAsync();
+                        return await _repository.GetPaymentHistoryByUserIdAsync(userId, pageNumber, pageSize);
                     },
                     TimeSpan.FromMinutes(10)
                 );
@@ -167,193 +95,79 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error fetching payment history for user {UserId}.", userId);
-                throw new ResourceNotFoundException(
+                // ✅ Sugestão: Usar AppServiceException para consistência
+                throw new AppServiceException(
                     "An error occurred while fetching your payment history.",
                     ex
                 );
             }
         }
 
-        /// <inheritdoc />
         public async Task<bool> UpdateSubscriptionCardAsync(string userId, string newCardToken)
         {
+            var subscription = await _repository.GetActiveSubscriptionByUserIdAsync(userId)
+                               ?? throw new ResourceNotFoundException("Active subscription not found for card update.");
+
+            await _mpSubscriptionService.UpdateSubscriptionCardAsync(subscription.ExternalId, newCardToken);
+
+            await _cacheService.RemoveAsync($"SubscriptionDetails_{userId}");
+            _logger.LogInformation("Card for subscription {SubscriptionId} updated.", subscription.ExternalId);
+
+            // A lógica secundária permanece como responsabilidade do serviço orquestrador
             try
             {
-                var subscription = await FindActiveSubscriptionAsync(userId, "for card update");
-
-                var endpoint = $"/preapproval/{subscription.ExternalId}";
-                var payload = new UpdateCardTokenDto { NewCardToken = newCardToken };
-                await SendMercadoPagoRequestAsync(HttpMethod.Put, endpoint, payload);
-
-                await _cacheService.RemoveAsync($"SubscriptionDetails_{userId}");
-
-                _logger.LogInformation(
-                    "Card for subscription {SubscriptionId} of user {UserId} was updated.",
-                    subscription.ExternalId,
-                    userId
-                );
-                try
-                {
-                        await _clientService.AddCardToCustomerAsync(newCardToken);
-                        _logger.LogInformation(
-                            "Sucesso na operação secundária: Novo cartão também foi adicionado ao perfil do cliente no MP."
-                        );
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(
-                        ex,
-                        "A atualização do cartão na assinatura do usuário {UserId} funcionou, mas falhou ao adicionar o mesmo cartão ao seu perfil de cliente. Isso não impacta a assinatura atual.",
-                        userId
-                    );
-                }
-
-                await _cacheService.RemoveAsync($"SubscriptionDetails_{userId}");
-                return true;
-            }
-            catch (ExternalApiException ex)
-            {
-                _logger.LogError(
-                    ex,
-                    "External API error while trying to update the card for user {UserId}.",
-                    userId
-                );
-                throw;
+                await _clientService.AddCardToCustomerAsync(newCardToken);
             }
             catch (Exception ex)
             {
-                _logger.LogError(
-                    ex,
-                    "Unexpected error while updating the card for user {UserId}.",
-                    userId
-                );
-                throw new AppServiceException("An error occurred while updating your card.", ex);
+                _logger.LogWarning(ex, "Card updated on subscription but failed to add to customer profile.");
             }
+
+            return true;
         }
 
-        /// <summary>
-        /// Método unificado para atualizar o status de uma assinatura (pausar, reativar, cancelar).
-        /// </summary>
-        /// <param name="userId">O ID do usuário logado.</param>
-        /// <param name="newStatus">O novo status desejado ('paused', 'authorized', 'cancelled').</param>
-        /// <returns>True se a operação for bem-sucedida.</returns>
         public async Task<bool> UpdateSubscriptionStatusAsync(string userId, string newStatus)
         {
-            // 1. Validação do status recebido para segurança
-            var allowedStatuses = new[] { "paused", "authorized", "cancelled" };
-            if (!allowedStatuses.Contains(newStatus))
+            var allowed = new[] { "paused", "authorized", "cancelled" };
+            if (!allowed.Contains(newStatus))
+                throw new AppServiceException("Invalid subscription status.");
+
+            var subscription = await _repository.GetActiveSubscriptionByUserIdAsync(userId)
+                               ?? throw new ResourceNotFoundException(
+                                   "Active subscription not found for status update.");
+
+            var result = await _mpSubscriptionService.UpdateSubscriptionStatusAsync(subscription.ExternalId, newStatus);
+
+            if (result.Status == newStatus)
             {
-                _logger.LogWarning(
-                    "Tentativa de atualização de assinatura com status inválido '{Status}' para o usuário {UserId}.",
-                    newStatus, userId);
-                throw new AppServiceException("Status de assinatura inválido.");
+                subscription.Status = (newStatus == "authorized") ? "active" : newStatus;
+                subscription.UpdatedAt = DateTime.UtcNow;
+                await _repository.SaveChangesAsync();
+                await _cacheService.RemoveAsync($"SubscriptionDetails_{userId}");
+                _logger.LogInformation("Subscription {Id} updated to {Status}.", subscription.ExternalId,
+                    subscription.Status);
+                return true;
             }
 
-            try
-            {
-                // 2. Encontra a assinatura do usuário no seu banco de dados
-                var subscription = await FindActiveSubscriptionAsync(userId, $"for status update to '{newStatus}'");
-
-                // 3. Prepara e envia a requisição para o Mercado Pago
-                var endpoint = $"/preapproval/{subscription.ExternalId}";
-                var payload = new { status = newStatus }; // Usa o status recebido como parâmetro
-                var responseBody = await SendMercadoPagoRequestAsync(HttpMethod.Put, endpoint, payload);
-                var result = JsonSerializer.Deserialize<SubscriptionResponseDto>(responseBody);
-
-                // 4. Verifica a resposta do Mercado Pago e atualiza seu banco de dados
-                if (result?.Status == newStatus)
-                {
-                    // Mapeia o status do MP para o status do seu sistema (ex: "authorized" -> "active")
-                    subscription.Status = (newStatus == "authorized") ? "active" : newStatus;
-                    subscription.UpdatedAt = DateTime.UtcNow;
-                    await _context.SaveChangesAsync();
-                    await _cacheService.RemoveAsync($"SubscriptionDetails_{userId}");
-
-                    _logger.LogInformation(
-                        "Assinatura {SubscriptionId} do usuário {UserId} atualizada para o status '{Status}'.",
-                        subscription.ExternalId,
-                        userId,
-                        subscription.Status
-                    );
-                    return true;
-                }
-
-                _logger.LogWarning(
-                    "Mercado Pago não confirmou a atualização de status para '{Status}' para a assinatura {SubscriptionId}.",
-                    newStatus,
-                    subscription.ExternalId
-                );
-                return false;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(
-                    ex,
-                    "Erro inesperado ao tentar atualizar o status da assinatura para '{Status}' para o usuário {UserId}.",
-                    newStatus,
-                    userId
-                );
-                throw new AppServiceException($"Ocorreu um erro ao tentar atualizar sua assinatura para '{newStatus}'.",
-                    ex);
-            }
+            return false;
         }
 
         /// <inheritdoc />
-        public async Task<Payments> GetPaymentForReceiptAsync(string userId, string paymentId)
+        public async Task<PaymentReceiptDto> GetPaymentForReceiptAsync(string userId, string paymentId)
         {
-            try
-            {
-                _logger.LogInformation(
-                    "Fetching payment {PaymentId} for user {UserId}.",
-                    paymentId,
-                    userId
-                );
+            var payment = await _repository.GetPaymentByIdAndUserIdAsync(userId, paymentId)
+                          ?? throw new ResourceNotFoundException($"Pagamento {paymentId} não encontrado para o usuário.");
 
-                var payment = await _context
-                    .Payments.AsNoTracking()
-                    .Include(p => p.User)
-                    .FirstOrDefaultAsync(p => p.Id == paymentId && p.UserId == userId);
-
-                if (payment == null)
-                {
-                    throw new ResourceNotFoundException(
-                        $"Payment with ID {paymentId} not found or does not belong to user {userId}."
-                    );
-                }
-
-                return payment;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(
-                    ex,
-                    "Error fetching payment {PaymentId} from the database.",
-                    paymentId
-                );
-                throw new AppServiceException(
-                    "An error occurred while fetching your payment data.",
-                    ex
-                );
-            }
-        }
-
-        /// <summary>
-        /// Finds a user's active or paused subscription.
-        /// </summary>
-        /// <param name="userId">The user's unique identifier.</param>
-        /// <param name="action">A description of the action being performed, for logging and error messages.</param>
-        /// <returns>The user's active or paused <see cref="Subscription"/> entity.</returns>
-        /// <exception cref="ResourceNotFoundException">Thrown if no active or paused subscription is found.</exception>
-        private async Task<Subscription> FindActiveSubscriptionAsync(string userId, string action)
-        {
-            var subscription = await _context.Subscriptions.FirstOrDefaultAsync(s =>
-                s.UserId == userId && (s.Status == "active" || s.Status == "paused")
+            // Mapeamento da entidade para o DTO
+            return new PaymentReceiptDto(
+                payment.Id,
+                payment.CreatedAt,
+                payment.Amount,
+                payment.Status,
+                payment.User.Name,
+                payment.CustomerCpf,
+                payment.LastFourDigits// Supondo que a relação User foi incluída no repositório
             );
-
-            if (subscription == null)
-                throw new ResourceNotFoundException($"Active subscription not found {action}.");
-
-            return subscription;
         }
     }
 }

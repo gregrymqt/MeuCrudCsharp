@@ -50,7 +50,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Refunds.Services
         /// <exception cref="UnauthorizedAccessException">Thrown if the user is not authenticated.</exception>
         public async Task RequestUserRefundAsync()
         {
-            var userId = _userContext.GetCurrentUserId();
+            var userId = await _userContext.GetCurrentUserId();
 
             var subscription = await _context.Subscriptions.FirstOrDefaultAsync(s =>
                 s.UserId == userId && s.Status == "active"

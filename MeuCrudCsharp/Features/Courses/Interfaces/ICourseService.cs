@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using MeuCrudCsharp.Features.Courses.DTOs;
 using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.Videos.DTOs;
+using MeuCrudCsharp.Models;
 
 namespace MeuCrudCsharp.Features.Courses.Interfaces
 {
@@ -55,6 +56,9 @@ namespace MeuCrudCsharp.Features.Courses.Interfaces
         Task DeleteCourseAsync(Guid id);
 
 
-        Task<Models.Course> FindCourseByPublicIdOrFailAsync(Guid publicId);
+        Task<Course> FindCourseByPublicIdOrFailAsync(Guid publicId);
+
+
+        Task<Course> GetOrCreateCourseByNameAsync(string courseName);
     }
 }

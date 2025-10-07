@@ -47,3 +47,9 @@ public class GoogleSettings
     public string? ClientId { get; set; }
     public string? ClientSecret { get; set; }
 }
+
+public class FFmpegSettings
+{
+    public string FfmpegPath { get; set; } = string.Empty;
+    public string FfprobePath { get; set; } = string.Empty;
+}

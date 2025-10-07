@@ -1,5 +1,4 @@
-﻿
-using MeuCrudCsharp.Data;
+﻿using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Features.Caching;
 using MeuCrudCsharp.Features.Caching.Interfaces;
 using MeuCrudCsharp.Features.Courses.DTOs;
@@ -7,6 +6,7 @@ using MeuCrudCsharp.Features.Courses.Interfaces;
 using MeuCrudCsharp.Features.Courses.Mappers;
 using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.Videos.DTOs;
+using MeuCrudCsharp.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace MeuCrudCsharp.Features.Courses.Services
@@ -45,18 +45,17 @@ namespace MeuCrudCsharp.Features.Courses.Services
         /// <returns>O DTO do curso encontrado.</returns>
         /// <exception cref="ResourceNotFoundException">Lançada se o curso com o ID especificado não for encontrado.</exception>
         // Na sua classe de serviço (ex: CourseService.cs)
+        // MÉTODO SearchCoursesByNameAsync COM MELHORIA DE PERFORMANCE
         public async Task<IEnumerable<CourseDto>> SearchCoursesByNameAsync(string name)
         {
-            // ✅ A busca usa Contains() para encontrar resultados parciais
-            // ✅ ToLower() garante que a busca não diferencie maiúsculas de minúsculas
+            // ✅ Sugestão: Use a sobrecarga de Contains que ignora o case.
+            // O EF Core pode traduzir isso para uma forma mais otimizada (como ILIKE no PostgreSQL).
             var courses = await _context
                 .Courses.AsNoTracking()
-                .Where(c => c.Name.ToLower().Contains(name.ToLower()))
-                .Select(c => CourseMapper.ToDto(c)) // Use um DTO simples para a lista
+                .Where(c => c.Name.Contains(name, StringComparison.OrdinalIgnoreCase))
+                .Select(c => CourseMapper.ToDto(c))
                 .ToListAsync();
 
-            // ✅ Retorna a lista (que pode estar vazia). Não lança mais exceção.
-            //    Um resultado de busca vazio não é um erro.
             return courses;
         }
 
@@ -160,9 +159,13 @@ namespace MeuCrudCsharp.Features.Courses.Services
         /// <exception cref="ResourceNotFoundException">Lançada se o curso não for encontrado.</exception>
         /// <exception cref="AppServiceException">Lançada se o curso possuir vídeos associados, impedindo a exclusão.</exception>
         /// <remarks>A exclusão só é permitida se o curso não tiver nenhum vídeo vinculado.</remarks>
+        // MÉTODO DeleteCourseAsync CORRIGIDO
         public async Task DeleteCourseAsync(Guid publicId)
         {
-            var course = await FindCourseByPublicIdOrFailAsync(publicId);
+            // ✅ CORREÇÃO: Busque o curso E inclua os vídeos para a validação.
+            var course = await _context.Courses
+                .Include(c => c.Videos) // Carrega a lista de vídeos associados
+                .FirstOrDefaultAsync(c => c.PublicId == publicId);
 
             if (course == null)
             {
@@ -183,7 +186,7 @@ namespace MeuCrudCsharp.Features.Courses.Services
             _logger.LogInformation("Curso {CourseId} deletado com sucesso.", publicId);
         }
 
-        public  async Task<Models.Course> FindCourseByPublicIdOrFailAsync(Guid publicId)
+        public async Task<Models.Course> FindCourseByPublicIdOrFailAsync(Guid publicId)
         {
             var course = await _context.Courses.FirstOrDefaultAsync(c => c.PublicId == publicId);
             if (course == null)
@@ -192,12 +195,33 @@ namespace MeuCrudCsharp.Features.Courses.Services
                     $"Curso com o PublicId {publicId} não foi encontrado."
                 );
             }
-            
-            await _cacheService.InvalidateCacheByKeyAsync(CoursesCacheVersionKey);
 
             return course;
         }
         
+        public async Task<Course> GetOrCreateCourseByNameAsync(string courseName)
+        {
+            if (string.IsNullOrWhiteSpace(courseName))
+            {
+                throw new ArgumentException("O nome do curso não pode ser vazio.", nameof(courseName));
+            }
+
+            // Busca o curso pelo nome, ignorando case
+            var course = await _context.Courses
+                .FirstOrDefaultAsync(c => c.Name.Equals(courseName, StringComparison.OrdinalIgnoreCase));
+
+            if (course == null)
+            {
+                _logger.LogInformation("Curso '{CourseName}' não encontrado. Criando um novo.", courseName);
+                course = new Course { Name = courseName };
+                _context.Courses.Add(course);
+                // IMPORTANTE: O SaveChangesAsync será chamado pelo método que chamou este,
+                // garantindo que tudo seja salvo em uma única transação.
+            }
+
+            return course;
+        }
+
 
         private Task<string> GetCacheVersionAsync()
         {

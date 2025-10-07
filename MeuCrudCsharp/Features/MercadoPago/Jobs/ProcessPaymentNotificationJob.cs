@@ -1,6 +1,5 @@
 ﻿using Hangfire;
 using MeuCrudCsharp.Data;
-using MeuCrudCsharp.Features.Caching;
 using MeuCrudCsharp.Features.Caching.Interfaces;
 using MeuCrudCsharp.Features.Exceptions; // Nossas exceções
 using MeuCrudCsharp.Features.MercadoPago.Notification.Interfaces;
@@ -102,7 +101,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Jobs
                 }
 
                 await _notificationPayment.VerifyAndProcessNotificationAsync(
-                    pagamentoLocal.Id.ToString() // Passando o ID interno
+                    pagamentoLocal.Id // Passando o ID interno
                 );
 
                 await transaction.CommitAsync();

@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using MeuCrudCsharp.Features.Profiles.UserAccount.DTOs;
+using MeuCrudCsharp.Models;
 
 namespace MeuCrudCsharp.Features.Profiles.UserAccount.Interfaces
 {
@@ -29,7 +30,7 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Interfaces
         /// </summary>
         /// <param name="userId">The unique identifier of the user.</param>
         /// <returns>A task that represents the asynchronous operation. The task result contains a collection of the user's payments.</returns>
-        Task<IEnumerable<Models.Payments>> GetUserPaymentHistoryAsync(string userId);
+        Task<IEnumerable<Payments>> GetUserPaymentHistoryAsync(string userId, int pageNumber = 1, int pageSize = 10);
 
         /// <summary>
         /// Retrieves a specific payment record for a user, intended for generating a receipt.
@@ -37,7 +38,7 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Interfaces
         /// <param name="userId">The unique identifier of the user who owns the payment.</param>
         /// <param name="paymentId">The unique identifier of the payment.</param>
         /// <returns>A task that represents the asynchronous operation. The task result contains the specific payment record.</returns>
-        Task<Models.Payments> GetPaymentForReceiptAsync(string userId, string paymentId);
+        Task<PaymentReceiptDto> GetPaymentForReceiptAsync(string userId, string paymentId);
 
         /// <summary>
         /// Updates the payment card associated with the user's active subscription.

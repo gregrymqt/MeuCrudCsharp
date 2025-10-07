@@ -1,13 +1,13 @@
-﻿using Microsoft.AspNetCore.Mvc;
-
+﻿using MeuCrudCsharp.Features.Base;
+using Microsoft.AspNetCore.Mvc;
 using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.MercadoPago.Plans.DTOs;
 using MeuCrudCsharp.Features.MercadoPago.Plans.Interfaces;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Plans.Controllers;
-[ApiController]
-[Route("api/[controller]")]
-public class AdminPlansController : ControllerBase
+
+[Route("api/admin/plans")]
+public class AdminPlansController : ApiControllerBase
 {
     // A única dependência da Controller agora é a IPlanService
     private readonly IPlanService _planService;
@@ -50,7 +50,7 @@ public class AdminPlansController : ControllerBase
         try
         {
             // CORREÇÃO: Chamando o método padrão para buscar planos do nosso sistema.
-            var plans = await _planService.GetActiveDbPlansAsync();
+            var plans = await _planService.GetActiveApiPlansAsync();
             return Ok(plans);
         }
         catch (AppServiceException ex)
@@ -64,20 +64,18 @@ public class AdminPlansController : ControllerBase
     /// Busca um plano específico pelo seu ID.
     /// </summary>
     [HttpGet("{id:guid}")]
-    [ActionName(nameof(GetPlanById))] // Usando nameof para evitar erros de digitação
+    [ActionName(nameof(GetPlanById))]
     public async Task<IActionResult> GetPlanById(Guid id)
     {
-        // CORREÇÃO: Chamando o _planService.
-        var planDto = await _planService.GetPlanByIdAsync(id);
+        // Chama o novo método que retorna o DTO específico para edição
+        var planEditDto = await _planService.GetPlanEditDtoByIdAsync(id);
 
-        if (planDto == null)
+        if (planEditDto == null)
         {
             return NotFound(new { message = $"Plano com ID {id} não encontrado." });
         }
 
-        // Se você precisa de um ViewModel específico, o mapeamento é feito aqui.
-        // Se o PlanDto for suficiente, pode retorná-lo diretamente.
-        return Ok(planDto);
+        return Ok(planEditDto);
     }
 
     /// <summary>

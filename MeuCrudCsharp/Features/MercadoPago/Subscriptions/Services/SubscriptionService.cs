@@ -59,7 +59,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Subscriptions.Services
         /// <inheritdoc />
         public async Task<Subscription> CreateSubscriptionAndCustomerIfNeededAsync(CreateSubscriptionDto createDto)
         {
-            var userId = _userContext.GetCurrentUserId();
+            var userId = await _userContext.GetCurrentUserId();
             var user = await _userRepository.GetByIdAsync(userId); // 1. Usa o repositório de usuários
             if (user == null) throw new AppServiceException("Usuário não encontrado.");
 

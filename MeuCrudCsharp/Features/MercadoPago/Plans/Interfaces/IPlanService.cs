@@ -17,7 +17,7 @@ public interface IPlanService
     /// </summary>
     /// <param name="publicId">O ID público do plano a ser buscado.</param>
     /// <returns>O DTO do plano encontrado ou null se não existir.</returns>
-    Task<Plan> GetPlanByIdAsync(Guid publicId);
+    Task<PlanEditDto> GetPlanEditDtoByIdAsync(Guid publicId);
 
     /// <summary>
     /// Cria um novo plano de assinatura no sistema e no provedor de pagamento.
@@ -40,5 +40,12 @@ public interface IPlanService
     /// <param name="publicId">O ID público do plano a ser desativado.</param>
     /// <returns>Uma tarefa que representa a operação assíncrona.</returns>
     Task DeletePlanAsync(Guid publicId);
-    
+
+
+    /// <summary>
+    /// retorna todos os planos, buscando na api do Mercado Pago 
+    /// </summary>
+    /// <returns>Todos os planos</returns>
+    Task<List<PlanDto>> GetActiveApiPlansAsync();
+
 }

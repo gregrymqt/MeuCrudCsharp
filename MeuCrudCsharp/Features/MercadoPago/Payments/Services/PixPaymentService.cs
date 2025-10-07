@@ -55,7 +55,7 @@ public class PixPaymentService : IPixPaymentService
                 {
                     // Reutilizamos a sua lógica original de criação de PIX aqui dentro.
                     // A chave de idempotência do cliente será usada como referência externa.
-                    var result = await CreatePixPaymentAsync(_userContext.GetCurrentUserId(),request, idempotencyKey);
+                    var result = await CreatePixPaymentAsync(await _userContext.GetCurrentUserId(),request, idempotencyKey);
                 
                     // Em caso de sucesso, retornamos o DTO de resposta com status 200 (OK) ou 201 (Created).
                     return new CachedResponse(result, 200); 

@@ -32,11 +32,18 @@ public static class WebServicesExtensions
         // --- 2. Configuração da Política de CORS ---
         builder.Services.AddCors(options =>
         {
+            var generalSettings = builder.Configuration.GetSection("General").Get<GeneralSettings>();
+            
+            if (generalSettings is null || string.IsNullOrEmpty(generalSettings.BaseUrl))
+            {
+                throw new InvalidOperationException(
+                    "Configurações do Mercado Pago não encontradas ou o AccessToken está vazio.");
+            }
             options.AddPolicy(name: CorsPolicyName,
                 policy =>
                 {
                     policy.WithOrigins(
-                            "https://214aeb274764.ngrok-free.app", // Exemplo para Ngrok
+                            generalSettings.BaseUrl, // Exemplo para Ngrok
                             "http://localhost:5045"             // Exemplo para desenvolvimento local
                         )
                         .AllowAnyHeader()

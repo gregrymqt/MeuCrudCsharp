@@ -51,8 +51,7 @@ public static class DependencyInjectionExtensions
         builder.Services.Configure<GoogleSettings>(builder.Configuration.GetSection(GoogleSettings.SectionName));
         builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"));
         builder.Services.AddSingleton<ConnectionMapping<string>>();
-
-        
+        builder.Services.Configure<FFmpegSettings>(builder.Configuration.GetSection("FFmpegSettings"));
         return builder;
     }
 }

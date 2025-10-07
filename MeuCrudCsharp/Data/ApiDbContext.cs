@@ -16,7 +16,9 @@ namespace MeuCrudCsharp.Data
         /// </summary>
         /// <param name="options">Opções de configuração do Entity Framework Core.</param>
         public ApiDbContext(DbContextOptions<ApiDbContext> options)
-            : base(options) { }
+            : base(options)
+        {
+        }
 
         /// <summary>
         /// Conjunto de entidades de pagamentos avulsos.
@@ -67,8 +69,12 @@ namespace MeuCrudCsharp.Data
                 .WithMany() // Uma assinatura pode ter muitos pagamentos (não há propriedade de coleção em Subscription)
                 .HasForeignKey(p => p.SubscriptionId)
                 .OnDelete(DeleteBehavior.Restrict); // <-- AQUI ESTÁ A SOLUÇÃO!
+
+
+            // Configura a propriedade FrequencyType da entidade Plan
+            modelBuilder.Entity<Plan>()
+                .Property(p => p.FrequencyType)
+                .HasConversion<string>(); // <-- Mágica acontece aqui!
         }
     }
 }
-
-

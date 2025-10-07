@@ -76,7 +76,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Clients.Services;
             string cardToken
         )
         {
-            var customerId = GetCurrentUserCustomerIdAsync();
+            var customerId = await GetCurrentUserCustomerIdAsync();
             _logger.LogInformation(
                 "Adicionando novo cartão para o cliente MP: {CustomerId}",
                 customerId
@@ -114,7 +114,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Clients.Services;
             string cardId
         )
         {
-            var customerId = GetCurrentUserCustomerIdAsync();
+            var customerId = await GetCurrentUserCustomerIdAsync();
 
             _logger.LogInformation(
                 "Deletando o cartão {CardId} do cliente MP: {CustomerId}",
@@ -150,7 +150,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Clients.Services;
         /// <exception cref="AppServiceException">Lançada se a desserialização da resposta falhar.</exception>
         public async Task<List<CardResponseDto>> ListCardsFromCustomerAsync()
         {
-            var customerId = GetCurrentUserCustomerIdAsync();
+            var customerId = await GetCurrentUserCustomerIdAsync();
 
             _logger.LogInformation("Listando cartões para o cliente MP: {CustomerId}", customerId);
 
@@ -177,32 +177,46 @@ namespace MeuCrudCsharp.Features.MercadoPago.Clients.Services;
             }, expirationTime);
         }
         
+        // MÉTODO GetCurrentUserCustomerIdAsync OTIMIZADO
+
         private async Task<string> GetCurrentUserCustomerIdAsync()
         {
-            var userIdString = _userContext.GetCurrentUserId();
+            var userIdString = await _userContext.GetCurrentUserId();
             if (string.IsNullOrEmpty(userIdString))
             {
                 throw new AppServiceException("Não foi possível identificar o usuário na sessão.");
             }
 
-            var users = _dbContext.Users;
+            // ✅ MELHORIA: Usa o cache para buscar o ID do cliente do MP
+            var cacheKey = $"mp-customer-id:{userIdString}";
+            var expirationTime = TimeSpan.FromHours(1); // O ID do cliente raramente muda
 
-            // 2. Find the user in the database.
-            var user = await users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userIdString);
-
-            if (user == null)
-                throw new AppServiceException("User not found.");
-
-            if (string.IsNullOrEmpty(user.MercadoPagoCustomerId))
+            return await _cacheService.GetOrCreateAsync(cacheKey, async () =>
             {
-                _logger.LogWarning(
-                    "User {UserId} does not have an associated payment customer profile.",
-                    user.Id
+                _logger.LogInformation(
+                    "Cache miss para {CacheKey}. Buscando MP Customer ID do banco de dados.",
+                    cacheKey
                 );
-                throw new AppServiceException("Usuário não possui um cliente de pagamentos associado.");
-            }
+        
+                var user = await _dbContext.Users
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(u => u.Id == userIdString);
 
-            return user.MercadoPagoCustomerId;
+                if (user == null)
+                    throw new AppServiceException("User not found.");
+
+                if (string.IsNullOrEmpty(user.MercadoPagoCustomerId))
+                {
+                    _logger.LogWarning(
+                        "User {UserId} does not have an associated payment customer profile.",
+                        user.Id
+                    );
+                    throw new AppServiceException("Usuário não possui um cliente de pagamentos associado.");
+                }
+
+                return user.MercadoPagoCustomerId;
+
+            }, expirationTime);
         }
     }
 

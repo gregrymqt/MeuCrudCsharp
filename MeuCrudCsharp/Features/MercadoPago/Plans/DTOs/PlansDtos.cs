@@ -16,7 +16,7 @@ public record AutoRecurringDto(
     string FrequencyType,
     [property: JsonPropertyName("transaction_amount")]
     decimal TransactionAmount,
-    [property: JsonPropertyName("CurrencyId")]
+    [property: JsonPropertyName("currencyId")]
     string CurrencyId
 );
 
@@ -31,10 +31,6 @@ public record CreatePlanDto(
     [property: JsonPropertyName("auto_recurring")]
     [Required(ErrorMessage = "Auto-recurring details are required.")]
     AutoRecurringDto? AutoRecurring,
-    [property: JsonPropertyName("back_url")]
-    [Required(ErrorMessage = "The back URL is required.")]
-    [Url(ErrorMessage = "The back URL must be a valid URL.")]
-    string? BackUrl,
     [property: JsonPropertyName("description")]
     [Required(ErrorMessage = "The description is required.")]
     string? Description
@@ -103,7 +99,20 @@ public record PlanDto(
     [Required] [StringLength(50)] string? PriceDisplay,
     [Required] [StringLength(100)] string? BillingInfo,
     List<string> Features,
-    bool IsRecommended
+    bool IsRecommended,
+    bool IsActive
+);
+
+/// <summary>
+/// Data for editModal in front-end
+/// </summary>
+
+public record PlanEditDto(
+    string PublicId,
+    string Name,
+    decimal TransactionAmount,
+    int Frequency,
+    string FrequencyType
 );
 
 /// <summary>

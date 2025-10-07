@@ -127,7 +127,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
             CreditCardPaymentRequestDto paymentData
         )
         {
-            var userId = _userContext.GetCurrentUserId();
+            var userId = await _userContext.GetCurrentUserId();
             var user = await _context.Users.FindAsync(userId);
 
             if (
@@ -321,7 +321,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
             CreditCardPaymentRequestDto subscriptionData
         )
         {
-            var userIdString = _userContext.GetCurrentUserId();
+            var userIdString = await _userContext.GetCurrentUserId();
 
             try
             {
@@ -345,12 +345,6 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
                     $"{_generalSettings.BaseUrl}/Subscription/Success", // O nome pode ser obtido depois ou não ser necessário aqui
                     "Nome do Plano"
                 );
-
-                var user = _httpContextAccessor.HttpContext?.User;
-                if (user == null)
-                {
-                    throw new UnauthorizedAccessException("Contexto do usuário não encontrado.");
-                }
 
                 await _notificationService.SendStatusUpdateAsync(
                     userIdString,

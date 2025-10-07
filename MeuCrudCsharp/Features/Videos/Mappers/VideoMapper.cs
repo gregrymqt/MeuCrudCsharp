@@ -1,8 +1,7 @@
-﻿using MeuCrudCsharp.Models;
-using System;
-using System.ComponentModel.DataAnnotations;
+﻿using MeuCrudCsharp.Features.Videos.DTOs;
+using MeuCrudCsharp.Models;
 
-namespace MeuCrudCsharp.Features.Videos.DTOs
+namespace MeuCrudCsharp.Features.Videos.Mappers
 {
     // Features/Videos/DTOs/VideoMapper.cs
     public static class VideoMapper

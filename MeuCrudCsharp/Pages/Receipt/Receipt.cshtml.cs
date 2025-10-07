@@ -1,13 +1,12 @@
-using System;
 using System.Security.Claims;
-using System.Threading.Tasks;
 using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.MercadoPago.ViewModels;
 using MeuCrudCsharp.Features.Profiles.UserAccount.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.Extensions.Logging;
+
+namespace MeuCrudCsharp.Pages.Receipt;
 
 [Authorize]
 public class ReceiptModel : PageModel
@@ -44,7 +43,7 @@ public class ReceiptModel : PageModel
                 userIdString,
                 paymentId
             );
-
+            
             // Regra de negócio: apenas recibos de pagamentos aprovados podem ser vistos.
             if (payment.Status != "aprovado")
             {
@@ -63,12 +62,12 @@ public class ReceiptModel : PageModel
             {
                 CompanyName = "Nome da Sua Empresa",
                 CompanyCnpj = "XX.XXX.XXX/0001-XX",
-                PaymentId = payment.Id.ToString(),
-                PaymentDate = payment.DateApproved ?? DateTime.Now,
-                CustomerName = payment.User.Name,
+                PaymentId = payment.PaymentId,
+                PaymentDate = payment.CreatedAt,
+                CustomerName = payment.UserName,
                 CustomerCpf = payment.CustomerCpf,
                 Amount = payment.Amount,
-                PaymentMethod = $"Cartão de Crédito final {payment.LastFourDigits}",
+                PaymentMethod = $"Cartão de Crédito final {payment.lastFourDigits}",
             };
 
             return Page();
