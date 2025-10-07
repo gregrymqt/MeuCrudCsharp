@@ -12,238 +12,48 @@ namespace MeuCrudCsharp.Features.MercadoPago.Plans.Services;
 
 public class MercadoPagoPlanService : MercadoPagoServiceBase, IMercadoPagoPlanService
 {
-    private readonly ApiDbContext _context;
-    private readonly ICacheService _cacheService;
+
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PlanService"/> class.
     /// </summary>
-    /// <param name="context">The database context.</param>
-    /// <param name="cacheService">The caching service for performance optimization.</param>
     /// <param name="httpClient">The HTTP client for making API requests, passed to the base class.</param>
     /// <param name="logger">The logger for recording events and errors, passed to the base class.</param>
+
     public MercadoPagoPlanService(
-        ApiDbContext context,
-        ICacheService cacheService,
         IHttpClientFactory httpClient,
         ILogger<IMercadoPagoPlanService> logger
     )
-        : base(httpClient, logger)
+        : base(httpClient, logger) {}
+
+    public async Task<PlanResponseDto> CreatePlanAsync(object payload)
     {
-        _context = context;
-        _cacheService = cacheService;
+        const string endpoint = "/preapproval_plan";
+        var responseBody = await SendMercadoPagoRequestAsync(HttpMethod.Post, endpoint, payload);
+        return JsonSerializer.Deserialize<PlanResponseDto>(responseBody);
     }
 
-    /// <inheritdoc />
-    public async Task<Plan> CreatePlanAsync(CreatePlanDto createDto)
+    public async Task<PlanResponseDto> UpdatePlanAsync(string externalPlanId, object payload)
     {
-        // Validação e conversão do tipo de frequência (string para enum)
-        if (!Enum.TryParse<PlanFrequencyType>(createDto.AutoRecurring.FrequencyType, ignoreCase: true,
-                out var frequencyTypeEnum))
-        {
-            throw new ArgumentException(
-                $"O valor '{createDto.AutoRecurring.FrequencyType}' é inválido para o tipo de frequência. Use 'Days' ou 'Months'.");
-        }
-
-        // 1. Crie a entidade usando as propriedades corretas do seu modelo.
-        var newPlan = new Plan
-        {
-            Name = createDto.Reason,
-            Description = createDto.Description,
-            TransactionAmount = createDto.AutoRecurring.TransactionAmount,
-            CurrencyId = createDto.AutoRecurring.CurrencyId,
-
-            FrequencyInterval = createDto.AutoRecurring.Frequency, // Mapeia para a nova propriedade
-            FrequencyType = frequencyTypeEnum, // Usa o enum que acabamos de validar e converter
-
-            IsActive = true,
-            // O ExternalPlanId será preenchido após a criação no Mercado Pago
-        };
-
-        // ✅ Salve primeiro para gerar um ID local único.
-        _context.Plans.Add(newPlan);
-        await _context.SaveChangesAsync();
-
-        // 2. Crie um payload específico para o Mercado Pago.
-        var mercadoPagoPayload = new
-        {
-            reason = createDto.Reason,
-            auto_recurring = createDto.AutoRecurring,
-            back_url = createDto.BackUrl,
-            external_reference = newPlan.Id.ToString(), // ✅ Use o ID local como referência externa.
-            description = createDto.Description
-        };
-
-        try
-        {
-            // 3. Envie o payload para o Mercado Pago.
-            const string endpoint = "/preapproval_plan";
-            var responseBody = await SendMercadoPagoRequestAsync(
-                HttpMethod.Post,
-                endpoint,
-                mercadoPagoPayload
-            );
-            var mpPlanResponse = JsonSerializer.Deserialize<PlanResponseDto>(responseBody);
-
-            // 4. Atualize sua entidade com o ID externo retornado pelo MP.
-            newPlan.ExternalPlanId = mpPlanResponse.Id;
-            _context.Plans.Update(newPlan);
-            await _context.SaveChangesAsync();
-
-            await _cacheService.RemoveAsync("ActiveSubscriptionPlans");
-            _logger.LogInformation(
-                "Plano '{PlanName}' criado com sucesso no MP (ID: {MpPlanId}) e salvo localmente (ID: {LocalPlanId}).",
-                newPlan.Name,
-                newPlan.ExternalPlanId,
-                newPlan.Id
-            );
-            return newPlan;
-        }
-        catch (ExternalApiException ex)
-        {
-            _logger.LogError(
-                ex,
-                "Erro da API externa ao tentar criar o plano '{PlanName}'.",
-                createDto.Reason
-            );
-            throw;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(
-                ex,
-                "Erro inesperado ao criar o plano '{PlanName}'.",
-                createDto.Reason
-            );
-            throw new AppServiceException(
-                "Ocorreu um erro em nosso sistema ao criar o plano.",
-                ex
-            );
-        }
+        var endpoint = $"/preapproval_plan/{externalPlanId}";
+        var responseBody = await SendMercadoPagoRequestAsync(HttpMethod.Put, endpoint, payload);
+        return JsonSerializer.Deserialize<PlanResponseDto>(responseBody);
     }
 
-    /// <inheritdoc />
-    public async Task<Plan> UpdatePlanAsync(Guid publicId, UpdatePlanDto updateDto)
+    public async Task CancelPlanAsync(string externalPlanId)
     {
-        try
-        {
-            var localPlan = await GetPlanByPublicIdAsync(publicId);
-
-            if (updateDto.Reason != null) localPlan.Name = updateDto.Reason;
-            if (updateDto.TransactionAmount.HasValue) localPlan.TransactionAmount = updateDto.TransactionAmount.Value;
-            if (updateDto.Frequency.HasValue)
-                localPlan.FrequencyInterval = updateDto.Frequency.Value;
-            if (updateDto.FrequencyType != null)
-            {
-                if (!Enum.TryParse<PlanFrequencyType>(updateDto.FrequencyType, ignoreCase: true,
-                        out var frequencyTypeEnum))
-                {
-                    throw new ArgumentException(
-                        $"O valor '{updateDto.FrequencyType}' é inválido para o tipo de frequência. Use 'Days' ou 'Months'.");
-                }
-                localPlan.FrequencyType = frequencyTypeEnum;
-            }
-
-            var payloadForMercadoPago = new
-            {
-                reason = localPlan.Name,
-                transaction_amount = localPlan.TransactionAmount,
-                frequency = localPlan.FrequencyInterval, // Usa a propriedade correta
-                frequency_type = localPlan.FrequencyType.ToString().ToLower() // Converte o enum para string minúscula (ex: "months")
-            };
-
-            var externalPlanId = localPlan.ExternalPlanId;
-            var endpoint = $"/preapproval_plan/{externalPlanId}";
-            await SendMercadoPagoRequestAsync(HttpMethod.Put, endpoint, payloadForMercadoPago);
-
-            await _context.SaveChangesAsync();
-            await _cacheService.RemoveAsync("DbPlansCacheKey"); // Use a chave de cache correta
-
-            _logger.LogInformation("Plano {PlanId} atualizado com sucesso.", externalPlanId);
-            return localPlan;
-        }
-        catch (ResourceNotFoundException)
-        {
-            throw;
-        }
-        catch (ExternalApiException ex)
-        {
-            _logger.LogError(
-                ex,
-                "Erro da API externa ao tentar atualizar o plano {PlanId}.",
-                publicId
-            );
-            throw;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(
-                ex,
-                "Erro inesperado ao atualizar o plano {PlanId}.",
-                publicId
-            );
-            throw new AppServiceException(
-                "Ocorreu um erro em nosso sistema ao atualizar o plano.",
-                ex
-            );
-        }
+        var endpoint = $"/preapproval_plan/{externalPlanId}";
+        var payload = new { status = "cancelled" };
+        await SendMercadoPagoRequestAsync(HttpMethod.Put, endpoint, payload);
     }
 
-    /// <inheritdoc />
-    /// <remarks>
-    /// This performs a "soft delete". In Mercado Pago, plans are not deleted but are instead
-    /// deactivated by setting their status to 'cancelled'. Locally, the 'IsActive' flag is set to false.
-    /// </remarks>
-    public async Task DeletePlanAsync(Guid publicId)
+    public async Task<IEnumerable<PlanResponseDto>> SearchActivePlansAsync()
     {
-        try
-        {
-            var localPlan = await GetPlanByPublicIdAsync(publicId);
-            var externalPlanId = localPlan.ExternalPlanId;
+        const string endpoint = "/preapproval_plan/search";
+        var responseBody = await SendMercadoPagoRequestAsync(HttpMethod.Get, endpoint, (object?)null);
+        var apiResponse = JsonSerializer.Deserialize<PlanSearchResponseDto>(responseBody);
 
-            var endpoint = $"/preapproval_plan/{externalPlanId}";
-            var payload = new { status = "cancelled" };
-            await SendMercadoPagoRequestAsync(HttpMethod.Put, endpoint, payload);
-
-            localPlan.IsActive = false; // Soft delete
-            await _context.SaveChangesAsync();
-
-            await _cacheService.RemoveAsync("ActiveSubscriptionPlans");
-            _logger.LogInformation("Plano {PlanId} desativado com sucesso.", externalPlanId);
-        }
-        catch (ExternalApiException ex)
-        {
-            _logger.LogError(
-                ex,
-                "Erro da API externa ao tentar desativar o plano {PlanId}.",
-                publicId
-            );
-            throw;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(
-                ex,
-                "Erro inesperado ao desativar o plano {PlanId}.",
-                publicId
-            );
-            throw new AppServiceException(
-                "Ocorreu um erro em nosso sistema ao desativar o plano.",
-                ex
-            );
-        }
-    }
-
-    public async Task<Plan> GetPlanByPublicIdAsync(Guid publicId)
-    {
-        var plan = await _context.Plans
-            .FirstOrDefaultAsync(p => p.PublicId == publicId);
-
-        if (plan == null)
-        {
-            throw new ResourceNotFoundException($"Plano com PublicId {publicId} não encontrado.");
-        }
-
-        return plan;
+        return apiResponse?.Results?.Where(plan => plan.Status == "active" && plan.AutoRecurring != null)
+               ?? Enumerable.Empty<PlanResponseDto>();
     }
 }

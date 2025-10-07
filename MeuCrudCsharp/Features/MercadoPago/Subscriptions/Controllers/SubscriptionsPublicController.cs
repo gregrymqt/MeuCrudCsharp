@@ -57,8 +57,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Subscriptions.Controllers
             {
                 var subscriptionResponse =
                     await _subscriptionService.CreateSubscriptionAndCustomerIfNeededAsync(
-                        createDto,
-                        User
+                        createDto
                     );
                 return Ok(subscriptionResponse);
             }

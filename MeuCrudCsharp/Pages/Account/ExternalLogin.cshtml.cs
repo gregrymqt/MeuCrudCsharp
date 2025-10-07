@@ -1,6 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using System.Security.Claims;
-using MeuCrudCsharp.Features.Auth;
+using MeuCrudCsharp.Features.Auth.Interfaces;
 using MeuCrudCsharp.Models;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
@@ -13,19 +12,16 @@ namespace MeuCrudCsharp.Pages.Account
     [AllowAnonymous]
     public class ExternalLoginModel : PageModel
     {
-        private readonly UserManager<Users> _userManager;
         private readonly SignInManager<Users> _signInManager;
         private readonly ILogger<ExternalLoginModel> _logger;
         private readonly IAppAuthService _authService;
 
         public ExternalLoginModel(
-            UserManager<Users> userManager,
             SignInManager<Users> signInManager,
             ILogger<ExternalLoginModel> logger,
             IAppAuthService appAuthService
         )
         {
-            _userManager = userManager;
             _signInManager = signInManager;
             _logger = logger;
             _authService = appAuthService;

@@ -6,8 +6,10 @@ using MeuCrudCsharp.Features.Auth.Interfaces;
 using MeuCrudCsharp.Features.Caching.Interfaces;
 using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.MercadoPago.Base;
+using MeuCrudCsharp.Features.MercadoPago.Clients.DTOs;
 using MeuCrudCsharp.Features.MercadoPago.Clients.Interfaces;
 using MeuCrudCsharp.Features.MercadoPago.Payments.Dtos;
+using MeuCrudCsharp.Features.MercadoPago.Plans.Interfaces;
 using MeuCrudCsharp.Features.MercadoPago.Subscriptions.DTOs;
 using MeuCrudCsharp.Features.MercadoPago.Subscriptions.Interfaces;
 using MeuCrudCsharp.Models;
@@ -20,125 +22,79 @@ namespace MeuCrudCsharp.Features.MercadoPago.Subscriptions.Services
     /// This service orchestrates the creation and management of subscriptions by coordinating
     /// with the local database, the payment provider (Mercado Pago), and a caching layer.
     /// </summary>
-    public class SubscriptionService : MercadoPagoServiceBase, ISubscriptionService
+    public class SubscriptionService : ISubscriptionService
     {
-        private readonly ApiDbContext _context;
-        private readonly IClientService _clientService;
+        private readonly ILogger<SubscriptionService> _logger;
         private readonly ICacheService _cacheService;
         private readonly IUserContext _userContext;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="SubscriptionService"/> class.
-        /// </summary>
-        /// <param name="httpClient">The HTTP client for making API requests, passed to the base class.</param>
-        /// <param name="logger">The logger for recording events and errors.</param>
-        /// <param name="context">The database context.</param>
-        /// <param name="clientService">The service for managing payment provider customers and cards.</param>
-        /// <param name="cacheService">The caching service for performance optimization.</param>
+        // NOVAS DEPENDÊNCIAS (Abstrações)
+        private readonly IMercadoPagoSubscriptionService _mpSubscriptionService;
+        private readonly ISubscriptionRepository _subscriptionRepository;
+        private readonly IPlanRepository _planRepository; // Assumindo que você tenha um repositório de Planos
+        private readonly IUserRepository _userRepository; // Assumindo que você tenha um repositório de Usuários
+        private readonly IClientService _clientService; // Este já estava bem separado!
+
+        // O DbContext foi REMOVIDO daqui.
         public SubscriptionService(
-            IHttpClientFactory httpClient,
             ILogger<SubscriptionService> logger,
-            ApiDbContext context,
-            IClientService clientService,
             ICacheService cacheService,
-            IUserContext userContext
-        )
-            : base(httpClient, logger)
+            IUserContext userContext,
+            IMercadoPagoSubscriptionService mpSubscriptionService,
+            ISubscriptionRepository subscriptionRepository,
+            IPlanRepository planRepository,
+            IUserRepository userRepository,
+            IClientService clientService)
         {
-            _context = context;
-            _clientService = clientService;
+            _logger = logger;
             _cacheService = cacheService;
             _userContext = userContext;
+            _mpSubscriptionService = mpSubscriptionService;
+            _subscriptionRepository = subscriptionRepository;
+            _planRepository = planRepository;
+            _userRepository = userRepository;
+            _clientService = clientService;
         }
 
         /// <inheritdoc />
-        public async Task<Subscription> CreateSubscriptionAndCustomerIfNeededAsync(
-            CreateSubscriptionDto createDto,
-            ClaimsPrincipal users
-        )
+        public async Task<Subscription> CreateSubscriptionAndCustomerIfNeededAsync(CreateSubscriptionDto createDto)
         {
-            var userIdString = _userContext.GetCurrentUserId();
+            var userId = _userContext.GetCurrentUserId();
+            var user = await _userRepository.GetByIdAsync(userId); // 1. Usa o repositório de usuários
+            if (user == null) throw new AppServiceException("Usuário não encontrado.");
 
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userIdString);
-            if (user == null)
+            // Lógica de negócio para criar o cliente se necessário
+            if (string.IsNullOrEmpty(user.MercadoPagoCustomerId))
             {
-                throw new AppServiceException("User not found.");
-            }
-
-            string customerId = user.MercadoPagoCustomerId;
-
-            if (string.IsNullOrEmpty(customerId))
-            {
-                _logger.LogInformation(
-                    "User {UserId} does not have a customer in the payment provider. Creating one now...",
-                    userIdString
-                );
-
                 var newCustomer = await _clientService.CreateCustomerAsync(user.Email, user.Name);
-                customerId = newCustomer.Id;
-                user.MercadoPagoCustomerId = customerId;
+                user.MercadoPagoCustomerId = newCustomer.Id;
+                await _userRepository.SaveChangesAsync(); // Salva a atualização no usuário
             }
 
-            var savedCard = await _clientService.AddCardToCustomerAsync(
-                createDto.CardTokenId
-            );
+            var savedCard = await _clientService.AddCardToCustomerAsync(createDto.CardTokenId);
 
-            var subscriptionResponse = await CreateSubscriptionAsync(
-                createDto.PreapprovalPlanId,
-                savedCard.Id,
-                createDto.PayerEmail
-            );
+            // 2. Chama o serviço de API para criar a assinatura externa
+            var subscriptionResponse = await _mpSubscriptionService.CreateSubscriptionAsync(
+                new SubscriptionWithCardRequestDto(
+                    createDto.PreapprovalPlanId, savedCard.Id,
+                    new PayerRequestDto(createDto.PayerEmail, null, null, null)
+                ));
 
-            var localPlan = await _context
-                .Plans.AsNoTracking()
-                .FirstOrDefaultAsync(p => p.ExternalPlanId == subscriptionResponse.PreapprovalPlanId);
-
+            // 3. Usa o repositório de planos para buscar o plano local
+            var localPlan = await _planRepository.GetActiveByExternalIdAsync(subscriptionResponse.PreapprovalPlanId);
             if (localPlan == null)
-            {
-                throw new ResourceNotFoundException($"Plan with external ID '{subscriptionResponse.PreapprovalPlanId}' not found.");
-            }
+                throw new ResourceNotFoundException(
+                    $"Plano com ID externo '{subscriptionResponse.PreapprovalPlanId}' não encontrado.");
 
-            // LÓGICA MOVIDA DO OUTRO MÉTODO PARA CÁ:
-            var now = DateTime.UtcNow;
-            var periodStartDate = subscriptionResponse.AutoRecurring?.StartDate ?? now;
-            DateTime periodEndDate;
+            // Lógica de negócio para calcular datas e criar a entidade local
+            var newSubscription = CreateSubscriptionEntity(userId, localPlan, savedCard, subscriptionResponse);
 
-            if (subscriptionResponse.NextPaymentDate.HasValue)
-            {
-                periodEndDate = subscriptionResponse.NextPaymentDate.Value;
-            }
-            else
-            {
-                periodEndDate = periodStartDate.AddMonths(localPlan.FrequencyInterval);
-            }
-    
-            // Agora criamos a entidade Subscription completa, com todos os dados.
-            var newSubscription = new Subscription
-            {
-                UserId = userIdString,
-                PlanId = localPlan.Id,
-                ExternalId = subscriptionResponse.Id,
-                Status = subscriptionResponse.Status,
-                PayerEmail = subscriptionResponse.PayerEmail,
-                CreatedAt = now,
-                LastFourCardDigits = savedCard.LastFourDigits,
-                CurrentPeriodStartDate = periodStartDate,
-                CurrentPeriodEndDate = periodEndDate,
-                // O PaymentId do primeiro pagamento pode vir do webhook ou de uma consulta posterior.
-                // Por enquanto, podemos deixá-lo nulo ou usar o ID da assinatura.
-                PaymentId = subscriptionResponse.Id 
-            };
+            // 4. Usa o repositório de assinaturas para persistir a nova entidade
+            await _subscriptionRepository.AddAsync(newSubscription);
+            await _subscriptionRepository.SaveChangesAsync();
 
-            _context.Subscriptions.Add(newSubscription);
-            await _context.SaveChangesAsync();
-
-            _logger.LogInformation(
-                "Subscription {SubscriptionId} created successfully for user {UserId}",
-                newSubscription.ExternalId,
-                userIdString
-            );
-
-            // Retornamos a entidade que acabamos de criar no nosso banco.
+            _logger.LogInformation("Assinatura {SubscriptionId} criada para o usuário {UserId}",
+                newSubscription.ExternalId, userId);
             return newSubscription;
         }
 
@@ -147,12 +103,11 @@ namespace MeuCrudCsharp.Features.MercadoPago.Subscriptions.Services
             Guid planPublicId,
             string paymentId,
             string payerEmail,
-            string? lastFourCardDigits 
-            )
+            string? lastFourCardDigits
+        )
         {
-            // 1. Encontrar o plano no nosso banco de dados
-            var localPlan = await _context.Plans.AsNoTracking()
-                .FirstOrDefaultAsync(p => p.PublicId == planPublicId);
+            // CORREÇÃO 1: Usando o _planRepository para buscar o plano.
+            var localPlan = await _planRepository.GetByPublicIdAsync(planPublicId);
 
             if (localPlan == null)
             {
@@ -162,175 +117,133 @@ namespace MeuCrudCsharp.Features.MercadoPago.Subscriptions.Services
             }
 
             var now = DateTime.UtcNow;
+            var expirationDate = now.AddMonths(localPlan.FrequencyInterval);
 
-            // 2. Calcular a data de expiração com base na duração do plano
-            var expirationDate = now.AddMonths(localPlan.FrequencyInterval); // Supondo que a frequência seja em meses
-
-            // 3. Criar a nova entidade de assinatura local
             var newSubscription = new Subscription
             {
                 UserId = userId,
                 PlanId = localPlan.Id,
-                ExternalId = paymentId, // Para pagamentos únicos, o ExternalId pode ser o próprio PaymentId
+                ExternalId = paymentId,
                 Status = "active",
                 PayerEmail = payerEmail,
                 PaymentId = paymentId,
                 CreatedAt = now,
                 CurrentPeriodStartDate = now,
                 CurrentPeriodEndDate = expirationDate,
-                LastFourCardDigits = lastFourCardDigits 
+                LastFourCardDigits = lastFourCardDigits
             };
 
-            _context.Subscriptions.Add(newSubscription);
-            await _context.SaveChangesAsync();
+            // CORREÇÃO 2: Usando o _subscriptionRepository para salvar.
+            await _subscriptionRepository.AddAsync(newSubscription);
+            await _subscriptionRepository.SaveChangesAsync();
 
+            // CORREÇÃO 3 (Erro 'AppendFormatted'): Usando placeholders do log estruturado.
             _logger.LogInformation(
                 "Assinatura {SubscriptionId} ativada para o usuário {UserId} via pagamento único {PaymentId}. Válida até {ExpirationDate}",
-                newSubscription.Id,
-                userId,
-                paymentId,
-                expirationDate
+                newSubscription.Id, userId, paymentId, expirationDate
             );
 
             return newSubscription;
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        /// Busca dados de uma assinatura diretamente da API do Mercado Pago.
+        /// </summary>
         public async Task<SubscriptionResponseDto> GetSubscriptionByIdAsync(string subscriptionId)
         {
-            var endpoint = $"/preapproval/{subscriptionId}";
-            var responseBody = await SendMercadoPagoRequestAsync(
-                HttpMethod.Get,
-                endpoint,
-                (object?)null
-            );
-            return JsonSerializer.Deserialize<SubscriptionResponseDto>(responseBody)
-                   ?? throw new AppServiceException("Failed to deserialize subscription data.");
+            // CORREÇÃO: A lógica foi movida para o serviço de API. O serviço principal apenas delega a chamada.
+            return await _mpSubscriptionService.GetSubscriptionByIdAsync(subscriptionId);
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        /// Atualiza o valor de uma assinatura na API externa e sincroniza o plano local.
+        /// </summary>
         public async Task<SubscriptionResponseDto> UpdateSubscriptionValueAsync(
             string subscriptionId,
             UpdateSubscriptionValueDto dto
         )
         {
-            _logger.LogInformation(
-                "Initiating value update for MP subscription: {SubscriptionId}",
-                subscriptionId
-            );
+            _logger.LogInformation("Iniciando atualização de valor para assinatura MP: {SubscriptionId}",
+                subscriptionId);
 
-            var endpoint = $"/v1/preapproval/{subscriptionId}";
+            // 1. Chama o serviço da API para fazer a atualização externa
+            var mpSubscriptionResponse = await _mpSubscriptionService.UpdateSubscriptionValueAsync(subscriptionId, dto);
 
-            var payload = new UpdateSubscriptionValueDto
-            (
-                dto.TransactionAmount
-            );
-
-            var responseBody = await SendMercadoPagoRequestAsync(HttpMethod.Put, endpoint, payload);
-            var mpSubscriptionResponse =
-                JsonSerializer.Deserialize<SubscriptionResponseDto>(responseBody)
-                ?? throw new AppServiceException(
-                    "Failed to deserialize the subscription update response."
-                );
-
-            // Sync the change with the local database (optional but recommended).
-            var localSubscription = await _context
-                .Subscriptions.Include(s => s.Plan)
-                .FirstOrDefaultAsync(s => s.ExternalId == subscriptionId);
+            // 2. CORREÇÃO: Usa o repositório para buscar a assinatura local e seu plano associado
+            var localSubscription =
+                await _subscriptionRepository.GetByExternalIdAsync(subscriptionId, includePlan: true);
 
             if (localSubscription?.Plan != null)
             {
                 localSubscription.Plan.TransactionAmount = dto.TransactionAmount;
-                await _context.SaveChangesAsync();
-                _logger.LogInformation(
-                    "Local plan value associated with subscription {SubscriptionId} has been updated.",
-                    subscriptionId
-                );
+                // CORREÇÃO: Salva as mudanças através do repositório
+                await _subscriptionRepository.SaveChangesAsync();
+
+                _logger.LogInformation("Valor do plano local associado à assinatura {SubscriptionId} foi atualizado.",
+                    subscriptionId);
+
+                // CORREÇÃO: Invalida o cache APENAS se a assinatura local foi encontrada
+                await _cacheService.RemoveAsync($"SubscriptionDetails_{localSubscription.UserId}");
             }
             else
             {
                 _logger.LogWarning(
-                    "Subscription {SubscriptionId} updated in MP, but the local plan was not found for synchronization.",
-                    subscriptionId
-                );
+                    "Assinatura {SubscriptionId} atualizada no MP, mas o plano local não foi encontrado para sincronização.",
+                    subscriptionId);
             }
-
-            await _cacheService.RemoveAsync($"SubscriptionDetails_{localSubscription.UserId}");
 
             return mpSubscriptionResponse;
         }
 
         /// <inheritdoc />
-        public async Task<SubscriptionResponseDto> UpdateSubscriptionStatusAsync(
-            string subscriptionId,
-            UpdateSubscriptionStatusDto dto
-        )
+        public async Task<SubscriptionResponseDto> UpdateSubscriptionStatusAsync(string subscriptionId,
+            UpdateSubscriptionStatusDto dto)
         {
-            var endpoint = $"/v1/preapproval/{subscriptionId}";
-            var payload = new UpdateSubscriptionStatusDto(dto.Status);
-            var responseBody = await SendMercadoPagoRequestAsync(HttpMethod.Put, endpoint, payload);
+            // 1. Atualiza primeiro na fonte externa (API)
             var mpSubscriptionResponse =
-                JsonSerializer.Deserialize<SubscriptionResponseDto>(responseBody)
-                ?? throw new AppServiceException(
-                    "Failed to deserialize the status update response."
-                );
+                await _mpSubscriptionService.UpdateSubscriptionStatusAsync(subscriptionId, dto);
 
-            var localSubscription = await _context.Subscriptions.FirstOrDefaultAsync(s =>
-                s.ExternalId == subscriptionId
-            );
-
+            // 2. Sincroniza o status no banco de dados local via repositório
+            var localSubscription = await _subscriptionRepository.GetByExternalIdAsync(subscriptionId);
             if (localSubscription != null)
             {
                 localSubscription.Status = dto.Status;
                 localSubscription.UpdatedAt = DateTime.UtcNow;
-                await _context.SaveChangesAsync();
+                await _subscriptionRepository.SaveChangesAsync();
                 await _cacheService.RemoveAsync($"SubscriptionDetails_{localSubscription.UserId}");
-                _logger.LogInformation(
-                    "Status for subscription {SubscriptionId} updated to {Status} in the local database.",
-                    subscriptionId,
-                    dto.Status
-                );
+                _logger.LogInformation("Status da assinatura {SubscriptionId} atualizado para {Status} localmente.",
+                    subscriptionId, dto.Status);
             }
             else
             {
                 _logger.LogWarning(
-                    "Subscription {SubscriptionId} was updated in Mercado Pago, but was not found in the local database for synchronization.",
-                    subscriptionId
-                );
+                    "Assinatura {SubscriptionId} atualizada no MP, mas não encontrada localmente para sincronização.",
+                    subscriptionId);
             }
 
             return mpSubscriptionResponse;
         }
 
-        /// <summary>
-        /// A private helper method to encapsulate the API call for creating a subscription.
-        /// </summary>
-        /// <param name="preapprovalPlanId">The ID of the pre-approval plan.</param>
-        /// <param name="cardId">The ID of the pre-saved card.</param>
-        /// <param name="payerEmail">The email of the payer.</param>
-        /// <returns>The response DTO from the subscription creation API call.</returns>
-        /// <exception cref="AppServiceException">Thrown if the API response cannot be deserialized.</exception>
-        private async Task<SubscriptionResponseDto> CreateSubscriptionAsync(
-            string preapprovalPlanId,
-            string cardId,
-            string payerEmail
-        )
+        private Subscription CreateSubscriptionEntity(string userId, Plan localPlan, CardResponseDto savedCard,
+            SubscriptionResponseDto subResponse)
         {
-            const string endpoint = "/preapproval";
-            var payload = new SubscriptionWithCardRequestDto(
-                preapprovalPlanId,
-                cardId,
-                new PayerRequestDto(payerEmail, null, null, null) // <-- Criação direta
-            );
-            var responseBody = await SendMercadoPagoRequestAsync(
-                HttpMethod.Post,
-                endpoint,
-                payload
-            );
-            return JsonSerializer.Deserialize<SubscriptionResponseDto>(responseBody)
-                   ?? throw new AppServiceException(
-                       "Failed to deserialize the subscription creation response."
-                   );
+            var now = DateTime.UtcNow;
+            var periodStartDate = subResponse.AutoRecurring?.StartDate ?? now;
+            var periodEndDate = subResponse.NextPaymentDate ?? periodStartDate.AddMonths(localPlan.FrequencyInterval);
+
+            return new Subscription
+            {
+                UserId = userId,
+                PlanId = localPlan.Id,
+                ExternalId = subResponse.Id,
+                Status = subResponse.Status,
+                PayerEmail = subResponse.PayerEmail,
+                CreatedAt = now,
+                LastFourCardDigits = savedCard.LastFourDigits,
+                CurrentPeriodStartDate = periodStartDate,
+                CurrentPeriodEndDate = periodEndDate,
+                PaymentId = subResponse.Id
+            };
         }
     }
 }

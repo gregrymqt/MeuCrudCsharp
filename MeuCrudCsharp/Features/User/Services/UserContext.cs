@@ -3,7 +3,7 @@ using System.Security.Claims;
 using MeuCrudCsharp.Features.Auth.Interfaces;
 using MeuCrudCsharp.Features.Exceptions;
 
-namespace MeuCrudCsharp.Features.Auth.Services;
+namespace MeuCrudCsharp.Features.Shared.User;
 
 public class UserContext : IUserContext
 {
@@ -16,18 +16,8 @@ public class UserContext : IUserContext
 
     public string GetCurrentUserId()
     {
-        var userIdString = _httpContextAccessor.HttpContext?.User.FindFirstValue(
+        return _httpContextAccessor.HttpContext?.User.FindFirstValue(
             ClaimTypes.NameIdentifier
-        );
-
-        if (string.IsNullOrEmpty(userIdString))
-        {
-            // É uma boa prática lançar uma exceção específica e clara.
-            throw new AppServiceException(
-                "A identificação do usuário não pôde ser encontrada na sessão atual."
-            );
-        }
-
-        return userIdString;
+        )?? throw new ArgumentException("No user id claim found");
     }
 }

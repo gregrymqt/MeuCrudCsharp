@@ -360,8 +360,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
                 // A chamada ao serviço agora retorna a nossa entidade 'Subscription' completa.
                 var createdSubscription =
                     await _subscriptionService.CreateSubscriptionAndCustomerIfNeededAsync(
-                        createSubscriptionDto,
-                        user
+                        createSubscriptionDto
                     );
 
                 // LÓGICA REMOVIDA: Toda a criação e salvamento do 'new Subscription' foi retirada daqui.

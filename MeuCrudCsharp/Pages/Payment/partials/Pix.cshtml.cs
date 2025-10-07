@@ -1,7 +1,6 @@
 // Pix.cshtml.cs
 using System.Security.Claims;
 using MeuCrudCsharp.Data;
-using MeuCrudCsharp.Features.Auth.Interfaces;
 using MeuCrudCsharp.Models;
 using MeuCrudCsharp.Pages.Payment.partials; // Supondo que Users esteja aqui
 using Microsoft.AspNetCore.Authorization;

@@ -31,9 +31,11 @@ public static class DependencyInjectionExtensions
                 "MeuCrudCsharp.Features.Videos.Notification",
                 "MeuCrudCsharp.Features.Caching.Services",
                 "MeuCrudCsharp.Features.Authorization",
-                "MeuCrudCsharp.Features.Auth",
+                "MeuCrudCsharp.Features.Auth.Services",
                 "MeuCrudCsharp.Features.Shared.User",
-                "MeuCrudCsharp.AppSettings"
+                "MeuCrudCsharp.AppSettings",
+                "MeuCrudCsharp.Users.Services",
+                "MeuCrudCsharp.Features.MercadoPago.Jobs"
             ))
             // Registra as classes como implementações de suas interfaces.
             .AsImplementedInterfaces()
@@ -42,7 +44,6 @@ public static class DependencyInjectionExtensions
 
         // Registra manualmente serviços que não seguem o padrão ou precisam de configuração especial.
         builder.Services.AddScoped<ProcessPaymentNotificationJob>();
-        builder.Services.AddScoped<IQueueService, BackgroundJobQueueService>();
         builder.Services.Configure<GeneralSettings>(builder.Configuration.GetSection(GeneralSettings.SectionName));
         builder.Services.Configure<MercadoPagoSettings>(
             builder.Configuration.GetSection(MercadoPagoSettings.SectionName));

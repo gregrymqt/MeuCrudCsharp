@@ -16,10 +16,9 @@ namespace MeuCrudCsharp.Features.MercadoPago.Plans.Services
     /// </summary>
     public class PlanService : MercadoPagoServiceBase, IPlanService
     {
-        private readonly ApiDbContext _context;
         private readonly ICacheService _cacheService;
-        private const string ApiPlansCacheKey = "ActiveApiPlans";
-        private const string DbPlansCacheKey = "ActiveDbPlans";
+        private readonly IPlanRepository _planRepository;
+        private readonly IMercadoPagoPlanService _mercadoPagoPlanService;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="PlanService"/> class.
@@ -29,123 +28,244 @@ namespace MeuCrudCsharp.Features.MercadoPago.Plans.Services
         /// <param name="httpClient">The HTTP client for making API requests, passed to the base class.</param>
         /// <param name="logger">The logger for recording events and errors, passed to the base class.</param>
         public PlanService(
-            ApiDbContext context,
             ICacheService cacheService,
             IHttpClientFactory httpClient,
-            ILogger<PlanService> logger
+            ILogger<PlanService> logger,
+            IPlanRepository planRepository,
+            IMercadoPagoPlanService mercadoPagoPlanService
         )
             : base(httpClient, logger)
         {
-            _context = context;
             _cacheService = cacheService;
+            _planRepository = planRepository;
+            _mercadoPagoPlanService = mercadoPagoPlanService;
         }
+
+        public async Task<Plan> GetPlanByIdAsync(Guid publicId)
+        {
+            if (publicId == Guid.Empty)
+            {
+                throw new ArgumentException("PublicId cannot be empty");
+            }
+            return await _planRepository.GetByPublicIdAsync(publicId);
+            
+        }
+
+        public async Task<Plan> CreatePlanAsync(CreatePlanDto createDto)
+        {
+            // 1. Validação de Lógica de Negócio
+            if (!Enum.TryParse<PlanFrequencyType>(createDto.AutoRecurring.FrequencyType, true,
+                    out var frequencyTypeEnum))
+            {
+                throw new ArgumentException(
+                    $"Valor de frequência inválido: '{createDto.AutoRecurring.FrequencyType}'.");
+            }
+
+            // 2. Criação da Entidade Local
+            var newPlan = new Plan
+            {
+                Name = createDto.Reason,
+                Description = createDto.Description,
+                TransactionAmount = createDto.AutoRecurring.TransactionAmount,
+                CurrencyId = createDto.AutoRecurring.CurrencyId,
+                FrequencyInterval = createDto.AutoRecurring.Frequency,
+                FrequencyType = frequencyTypeEnum,
+                IsActive = true,
+            };
+
+            // 3. Persistência inicial no banco de dados (para gerar o ID local)
+            await _planRepository.AddAsync(newPlan);
+            await _planRepository.SaveChangesAsync();
+
+            // 4. Criação do plano na API externa
+            try
+            {
+                var mercadoPagoPayload = new
+                {
+                    reason = createDto.Reason,
+                    auto_recurring = createDto.AutoRecurring,
+                    back_url = createDto.BackUrl,
+                    external_reference = newPlan.Id.ToString(), // ✅ Use o ID local como referência externa.
+                    description = createDto.Description
+                };
+
+                var mpPlanResponse = await _mercadoPagoPlanService.CreatePlanAsync(mercadoPagoPayload);
+
+                // 5. Atualiza a entidade local com o ID externo
+                newPlan.ExternalPlanId = mpPlanResponse.Id;
+                _planRepository.Update(newPlan);
+                await _planRepository.SaveChangesAsync();
+
+                // 6. Pós-processamento (cache, log)
+                await _cacheService.RemoveAsync("ActiveSubscriptionPlans");
+                _logger.LogInformation("Plano '{PlanName}' criado com sucesso.", newPlan.Name);
+
+                return newPlan;
+            }
+            catch (ExternalApiException ex)
+            {
+                // Se a API externa falhar, idealmente você deveria tratar o "plano órfão"
+                // que foi criado localmente. Poderia deletá-lo ou marcá-lo como "falhou".
+                _logger.LogError(ex, "Erro da API ao criar plano '{PlanName}'.", createDto.Reason);
+                throw;
+            }
+        }
+
+        public async Task<Plan> UpdatePlanAsync(Guid publicId, UpdatePlanDto updateDto)
+        {
+            // 1. Busca a entidade local
+            var localPlan = await _planRepository.GetByPublicIdAsync(publicId);
+
+            if (updateDto.Reason != null) localPlan.Name = updateDto.Reason;
+            if (updateDto.TransactionAmount.HasValue) localPlan.TransactionAmount = updateDto.TransactionAmount.Value;
+            if (updateDto.Frequency.HasValue)
+                localPlan.FrequencyInterval = updateDto.Frequency.Value;
+            if (updateDto.FrequencyType != null)
+            {
+                if (!Enum.TryParse<PlanFrequencyType>(updateDto.FrequencyType, ignoreCase: true,
+                        out var frequencyTypeEnum))
+                {
+                    throw new ArgumentException(
+                        $"O valor '{updateDto.FrequencyType}' é inválido para o tipo de frequência. Use 'Days' ou 'Months'.");
+                }
+
+                localPlan.FrequencyType = frequencyTypeEnum;
+            }
+
+            var payloadForMercadoPago = new
+            {
+                reason = localPlan.Name,
+                transaction_amount = localPlan.TransactionAmount,
+                frequency = localPlan.FrequencyInterval, // Usa a propriedade correta
+                frequency_type =
+                    localPlan.FrequencyType.ToString().ToLower() // Converte o enum para string minúscula (ex: "months")
+            };
+            await _mercadoPagoPlanService.UpdatePlanAsync(localPlan.ExternalPlanId, payloadForMercadoPago);
+
+            // 4. Persiste as alterações localmente (somente se a API não falhou)
+            _planRepository.Update(localPlan);
+            await _planRepository.SaveChangesAsync();
+
+            // 5. Limpa o cache
+            await _cacheService.RemoveAsync("DbPlansCacheKey");
+            _logger.LogInformation("Plano {PlanId} atualizado com sucesso.", localPlan.ExternalPlanId);
+
+            return localPlan;
+        }
+
+        public async Task DeletePlanAsync(Guid publicId)
+        {
+            var localPlan = await _planRepository.GetByPublicIdAsync(publicId);
+
+            // 1. Desativa na API externa primeiro
+            await _mercadoPagoPlanService.CancelPlanAsync(localPlan.ExternalPlanId);
+
+            // 2. Desativa ("soft delete") localmente
+            localPlan.IsActive = false;
+            _planRepository.Update(localPlan);
+            await _planRepository.SaveChangesAsync();
+
+            await _cacheService.RemoveAsync("ActiveSubscriptionPlans");
+            _logger.LogInformation("Plano {PlanId} desativado com sucesso.", localPlan.ExternalPlanId);
+        }
+
+        public async Task<List<PlanDto>> GetActiveApiPlansAsync()
+        {
+            // O cache continua sendo responsabilidade do serviço de orquestração
+            var cachedPlans = await _cacheService.GetOrCreateAsync(
+                "ApiPlansCacheKey", // Corrigido
+                async () =>
+                {
+                    // 1. Busca todos os planos ativos da API
+                    var activePlansFromApi = await _mercadoPagoPlanService.SearchActivePlansAsync();
+                    if (!activePlansFromApi.Any())
+                    {
+                        return new List<PlanDto>();
+                    }
+
+                    var externalIds = activePlansFromApi.Select(p => p.Id).ToList();
+                    var localPlans = await _planRepository.GetByExternalIdsAsync(externalIds);
+                    var localPlansDict = localPlans.ToDictionary(p => p.ExternalPlanId, p => p);
+
+                    // 3. Mapeia os DTOs em memória
+                    var mappedPlans = new List<PlanDto>();
+                    foreach (var apiPlan in activePlansFromApi)
+                    {
+                        if (localPlansDict.TryGetValue(apiPlan.Id, out var localPlan))
+                        {
+                            mappedPlans.Add(MapApiPlanToDto(apiPlan, localPlan));
+                        }
+                        else
+                        {
+                            _logger.LogWarning("Plano '{ExternalId}' existe no MP mas não localmente.", apiPlan.Id);
+                        }
+                    }
+
+                    return mappedPlans;
+                },
+                TimeSpan.FromMinutes(5)
+            );
+
+            return cachedPlans ?? new List<PlanDto>();
+        }
+
 
         /// <summary>
         /// Busca os planos ativos diretamente do banco de dados local.
-        /// Este é o método principal para ser usado por usuários comuns para performance.
         /// </summary>
-        /// <returns>Uma lista de PlanDto.</returns>
         public async Task<List<PlanDto>> GetActiveDbPlansAsync()
         {
             _logger.LogInformation("Buscando planos ativos do banco de dados (com cache).");
 
             var cachedPlans = await _cacheService.GetOrCreateAsync(
-                DbPlansCacheKey,
-                FetchPlansFromDatabaseAsync, // A função original já retorna Task<List<PlanDto>>
-                TimeSpan.FromMinutes(15) // Cache mais longo para dados que mudam com menos frequência.
+                "DbPlansCacheKey", // Corrigido
+                FetchAndMapPlansFromDatabaseAsync, // A função de fábrica agora chama o repositório
+                TimeSpan.FromMinutes(15)
             );
 
             return cachedPlans ?? new List<PlanDto>();
         }
 
-        /// <summary>
-        /// Busca os planos ativos diretamente da API do Mercado Pago.
-        /// Este método deve ser restrito a administradores para evitar rate limiting.
-        /// </summary>
-        /// <returns>Uma lista de PlanDto mapeada da resposta da API.</returns>
-        public async Task<List<PlanDto>> GetActiveApiPlansAsync()
+        private async Task<List<PlanDto>> FetchAndMapPlansFromDatabaseAsync()
         {
-            _logger.LogInformation("Buscando planos ativos da API (com cache).");
+            try
+            {
+                // 1. Acessa o banco de dados através do repositório
+                var plansFromDb = await _planRepository.GetActivePlansAsync();
 
-            // Utiliza o GetOrCreateAsync para buscar do cache ou, se não encontrar,
-            // executa a função para buscar da API e depois salva o resultado no cache.
-            var cachedPlans = await _cacheService.GetOrCreateAsync(
-                ApiPlansCacheKey,
-                async () =>
-                {
-                    // A lógica original de busca e mapeamento fica aqui dentro.
-                    var apiPlans = await FetchPlansFromMercadoPagoAsync();
-                    return apiPlans.ToList();
-                },
-                TimeSpan.FromMinutes(5) // Cache mais curto para dados que podem mudar com mais frequência.
-            );
-
-            // Retorna a lista do cache ou uma lista vazia se tudo falhar.
-            return cachedPlans ?? new List<PlanDto>();
+                // 2. Mapeia as entidades para o DTO (esta lógica permanece no serviço)
+                return plansFromDb.Select(MapDbPlanToDto).ToList();
+            }
+            catch (Exception dbEx) // A captura de exceção de DB faz mais sentido aqui
+            {
+                _logger.LogError(dbEx, "Falha ao buscar planos do repositório.");
+                throw new AppServiceException("Não foi possível carregar os planos.", dbEx);
+            }
         }
 
 // --- MÉTODOS AUXILIARES ---
 
-// Este método agora é o único responsável por buscar da API E mapear os resultados.
-        private async Task<IEnumerable<PlanDto>> FetchPlansFromMercadoPagoAsync()
+        private PlanDto MapDbPlanToDto(Plan dbPlan)
         {
-            const string endpoint = "/preapproval_plan/search";
-            var responseBody = await SendMercadoPagoRequestAsync(HttpMethod.Get, endpoint, (object?)null);
-            var apiResponse = JsonSerializer.Deserialize<PlanSearchResponseDto>(responseBody);
+            string planType = GetPlanTypeDescription(dbPlan.FrequencyInterval, dbPlan.FrequencyType);
 
-            // Usamos 'PlanResponseDto' aqui, que é o tipo que vem da API
-            var activePlansFromApi =
-                apiResponse?.Results?.Where(plan => plan.Status == "active" && plan.AutoRecurring != null)
-                ?? Enumerable.Empty<PlanResponseDto>();
+            bool isAnnual = dbPlan.FrequencyInterval == 12 && dbPlan.FrequencyType == PlanFrequencyType.Months;
 
-            var planResponseDtos = activePlansFromApi.ToList();
-            if (!planResponseDtos.Any())
-            {
-                return Enumerable.Empty<PlanDto>();
-            }
-
-            var mappingTasks = planResponseDtos.Select(MapApiPlanToDto);
-
-            // 2. Aguarde todas as tarefas terminarem em paralelo
-            var mappedPlans = await Task.WhenAll(mappingTasks);
-
-            // 3. Filtre qualquer resultado nulo (planos que não foram encontrados no banco) e retorne a lista
-            return mappedPlans.Where(p => p != null).ToList()!;
+            return new PlanDto
+            (
+                dbPlan.PublicId.ToString(),
+                dbPlan.Name,
+                planType, // <-- Usa a descrição flexível (ex: "Mensal", "Trimestral", "Anual")
+                FormatPriceDisplay(dbPlan.TransactionAmount, dbPlan.FrequencyInterval), // <-- Usa a propriedade correta
+                FormatBillingInfo(dbPlan.TransactionAmount, dbPlan.FrequencyInterval), // <-- Usa a propriedade correta
+                GetDefaultFeatures(),
+                isAnnual
+            );
         }
 
-        private async Task<List<PlanDto>> FetchPlansFromDatabaseAsync()
+        private  PlanDto MapApiPlanToDto(PlanResponseDto apiPlan,
+            Plan localPlan)
         {
-            try
-            {
-                var plansFromDb = await _context.Plans
-                    .AsNoTracking()
-                    .Where(p => p.IsActive)
-                    .OrderBy(p => p.TransactionAmount)
-                    .ToListAsync();
-
-                // Mapeia as entidades do banco para o nosso DTO de exibição
-                return plansFromDb.Select(MapDbPlanToDto).ToList();
-            }
-            catch (Exception dbEx)
-            {
-                _logger.LogError(dbEx, "Falha crítica: A API e o banco de dados falharam ao buscar os planos.");
-                throw new AppServiceException("Não foi possível carregar os planos de nenhuma fonte.", dbEx);
-            }
-        }
-
-        // Mude a assinatura para async Task<PlanDto?>
-        private async Task<PlanDto?> MapApiPlanToDto(PlanResponseDto apiPlan)
-        {
-            var localPlan = await GetPlanByExternalIdAsync(apiPlan.Id!);
-
-            if (localPlan == null)
-            {
-                _logger.LogWarning(
-                    "Um plano com ExternalPlanId '{ExternalId}' foi encontrado no Mercado Pago, mas não existe no banco de dados local.",
-                    apiPlan.Id);
-                return null;
-            }
-
             bool isAnnual = apiPlan.AutoRecurring!.Frequency == 12 &&
                             String.Equals(apiPlan.AutoRecurring.FrequencyType, "months",
                                 StringComparison.OrdinalIgnoreCase);
@@ -159,27 +279,6 @@ namespace MeuCrudCsharp.Features.MercadoPago.Plans.Services
                     apiPlan.AutoRecurring.Frequency),
                 FormatBillingInfo(apiPlan.AutoRecurring.TransactionAmount,
                     apiPlan.AutoRecurring.Frequency),
-                GetDefaultFeatures(),
-                isAnnual
-            );
-        }
-
-        private PlanDto MapDbPlanToDto(Plan dbPlan)
-        {
-            // A nova lógica para determinar o tipo de plano de forma flexível
-            string planType = GetPlanTypeDescription(dbPlan.FrequencyInterval, dbPlan.FrequencyType);
-
-            // A lógica para determinar se o plano é anual, para o caso de precisar
-            // de alguma flag específica no DTO.
-            bool isAnnual = dbPlan.FrequencyInterval == 12 && dbPlan.FrequencyType == PlanFrequencyType.Months;
-
-            return new PlanDto
-            (
-                dbPlan.PublicId.ToString(),
-                dbPlan.Name,
-                planType, // <-- Usa a descrição flexível (ex: "Mensal", "Trimestral", "Anual")
-                FormatPriceDisplay(dbPlan.TransactionAmount, dbPlan.FrequencyInterval), // <-- Usa a propriedade correta
-                FormatBillingInfo(dbPlan.TransactionAmount, dbPlan.FrequencyInterval), // <-- Usa a propriedade correta
                 GetDefaultFeatures(),
                 isAnnual
             );
@@ -218,7 +317,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Plans.Services
         }
 
 // Método para evitar repetição da lista de features
-        private List<string> GetDefaultFeatures() => new List<string>
+        public List<string> GetDefaultFeatures() => new List<string>
         {
             "Acesso a todos os cursos",
             "Vídeos novos toda semana",
@@ -232,7 +331,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Plans.Services
         /// <param name="amount">The transaction amount.</param>
         /// <param name="frequency">The frequency type (e.g., "years", "months").</param>
         /// <returns>A formatted price string (e.g., "R$ 41,58" or "R$ 499,00").</returns>
-        private string FormatPriceDisplay(decimal amount, int frequency)
+        public string FormatPriceDisplay(decimal amount, int frequency)
         {
             // Se for anual (frequência 12), calculamos o valor mensal equivalente para exibição.
             if (frequency == 12)
@@ -251,7 +350,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Plans.Services
         /// <param name="amount">The transaction amount.</param>
         /// <param name="frequency">The frequency type (e.g., "years", "months").</param>
         /// <returns>A formatted billing info string (e.g., "Cobrado R$ 499,00 anualmente").</returns>
-        private string FormatBillingInfo(decimal amount, int frequency)
+        public string FormatBillingInfo(decimal amount, int frequency)
         {
             // A lógica agora verifica se a frequência é de 12 (anual)
             if (frequency == 12)
@@ -261,13 +360,6 @@ namespace MeuCrudCsharp.Features.MercadoPago.Plans.Services
 
             // Para qualquer outra frequência (como 1 mês), não mostramos nada.
             return "&nbsp;";
-        }
-
-        public async Task<Plan?> GetPlanByExternalIdAsync(string externalId)
-        {
-            return await _context.Plans
-                .AsNoTracking()
-                .FirstOrDefaultAsync(p => p.IsActive && p.ExternalPlanId == externalId);
         }
     }
 }
