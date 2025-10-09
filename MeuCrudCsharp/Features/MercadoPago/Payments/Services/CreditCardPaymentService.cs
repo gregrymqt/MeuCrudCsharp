@@ -8,6 +8,7 @@ using MeuCrudCsharp.Features.Auth.Interfaces;
 using MeuCrudCsharp.Features.Caching.Interfaces;
 using MeuCrudCsharp.Features.Caching.Record;
 using MeuCrudCsharp.Features.Exceptions;
+using MeuCrudCsharp.Features.MercadoPago.Clients.DTOs;
 using MeuCrudCsharp.Features.MercadoPago.Clients.Interfaces;
 using MeuCrudCsharp.Features.MercadoPago.Notification.Interfaces;
 using MeuCrudCsharp.Features.MercadoPago.Notification.Record; // Nossas exceções
@@ -16,6 +17,7 @@ using MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces;
 using MeuCrudCsharp.Features.MercadoPago.Payments.Utils;
 using MeuCrudCsharp.Features.MercadoPago.Subscriptions.DTOs;
 using MeuCrudCsharp.Features.MercadoPago.Subscriptions.Interfaces;
+using MeuCrudCsharp.Models;
 using Microsoft.Extensions.Options;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
@@ -28,29 +30,28 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
         private const string IDEMPOTENCY_PREFIX = "CreditCardPayment";
         private readonly ApiDbContext _context;
         private readonly ISubscriptionService _subscriptionService;
-        private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly ILogger<CreditCardPaymentService> _logger;
         private readonly IPaymentNotificationService _notificationService;
         private readonly GeneralSettings _generalSettings;
         private readonly ICacheService _cacheService;
         private readonly IUserContext _userContext;
         private readonly IClientService _clientService;
+        private readonly IUserRepository _userRepository;
 
         public CreditCardPaymentService(
             ApiDbContext context,
             ISubscriptionService subscriptionService,
-            IHttpContextAccessor httpContextAccessor,
             ILogger<CreditCardPaymentService> logger,
             IPaymentNotificationService notificationService,
             IOptions<GeneralSettings> generalSettings,
             ICacheService cacheService,
             IUserContext userContext,
-            IClientService clientService
+            IClientService clientService,
+            IUserRepository userRepository
         )
         {
             if (userContext == null) throw new ArgumentNullException(nameof(userContext));
             _context = context;
-            _httpContextAccessor = httpContextAccessor;
             _logger = logger;
             _subscriptionService = subscriptionService;
             _notificationService = notificationService;
@@ -58,35 +59,28 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
             _cacheService = cacheService;
             _userContext = userContext;
             _clientService = clientService;
+            _userRepository = userRepository;
         }
 
-        /// <inheritdoc />
-        /// <summary>
-        /// Cria um pagamento ou assinatura com base na solicitação.
-        /// </summary>
-        /// <param name="request">Os dados da solicitação de pagamento.</param>
+
         public async Task<CachedResponse> CreatePaymentOrSubscriptionAsync(
             CreditCardPaymentRequestDto request,
-            string idempotencyKey // 1. A assinatura do método agora inclui a idempotencyKey
+            string idempotencyKey
         )
         {
-            // Validação "Fail-Fast"
             if (request == null)
                 throw new ArgumentNullException(nameof(request), "Os dados do pagamento não podem ser nulos.");
 
             var cacheKey = $"{IDEMPOTENCY_PREFIX}_idempotency_{idempotencyKey}";
 
-            // 2. A lógica de cache envolve toda a operação, garantindo a idempotência
             var response = await _cacheService.GetOrCreateAsync(
                 cacheKey,
                 async () =>
                 {
-                    // 3. Tratamento de erro para cachear falhas e garantir que não sejam reprocessadas
                     try
                     {
                         object result;
 
-                        // 4. A lógica de negócio original está dentro da "factory"
                         if (string.Equals(request.Plano, "anual", StringComparison.OrdinalIgnoreCase))
                         {
                             result = await CreateSubscriptionInternalAsync(request);
@@ -96,18 +90,17 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
                             result = await CreateSinglePaymentInternalAsync(request);
                         }
 
-                        // 5. O retorno de sucesso é padronizado para CachedResponse
-                        return new CachedResponse(result, 201); // 201 Created
+                        return new CachedResponse(result, 201);
                     }
                     catch (MercadoPagoApiException e)
                     {
                         var errorBody = new { error = "MercadoPago Error", message = e.ApiError.Message };
-                        return new CachedResponse(errorBody, 400); // 400 Bad Request
+                        return new CachedResponse(errorBody, 400);
                     }
                     catch (Exception ex)
                     {
                         var errorBody = new { message = "Ocorreu um erro inesperado.", error = ex.Message };
-                        return new CachedResponse(errorBody, 500); // 500 Internal Server Error
+                        return new CachedResponse(errorBody, 500);
                     }
                 },
                 TimeSpan.FromHours(24)
@@ -116,19 +109,13 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
             return response;
         }
 
-        /// <summary>
-        /// Cria um pagamento único com base nos dados fornecidos.
-        /// </summary>
-        /// <param name="creditCardPaymentData">Os dados do pagamento.</param>
-        /// <returns>Um objeto representando a resposta do pagamento.</returns>
-        /// <exception cref="ArgumentException">Se os dados do pagamento forem inválidos.</exception>
-        /// <exception cref="AppServiceException">Se ocorrer um erro ao criar o pagamento.</exception>
+
         private async Task<PaymentResponseDto> CreateSinglePaymentInternalAsync(
             CreditCardPaymentRequestDto paymentData
         )
         {
             var userId = await _userContext.GetCurrentUserId();
-            var user = await _context.Users.FindAsync(userId);
+            var user = await _userRepository.GetByIdAsync(userId);
 
             if (
                 paymentData.Payer?.Email is null
@@ -163,12 +150,11 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
                 CustomerCpf = paymentData.Payer.Identification.Number,
                 Amount = paymentData.Amount,
                 Installments = paymentData.Installments,
-                ExternalId = Guid.NewGuid().ToString(), 
+                ExternalId = Guid.NewGuid().ToString(),
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
             };
 
-            // Salva o registro inicial no banco
             _context.Payments.Add(novoPagamento);
             await _context.SaveChangesAsync();
             _logger.LogInformation(
@@ -197,7 +183,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
                 {
                     TransactionAmount = paymentData.Amount,
                     Token = paymentData.Token,
-                    Description = "Pagamento do curso - " + userId, // Descrição clara para o cliente
+                    Description = "Pagamento do curso - " + userId,
                     Installments = paymentData.Installments,
                     PaymentMethodId = paymentData.PaymentMethodId,
                     IssuerId = paymentData.IssuerId,
@@ -210,7 +196,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
                             Number = paymentData.Payer.Identification.Number,
                         },
                     },
-                    ExternalReference = novoPagamento.ExternalId, // Referência externa para rastreamento
+                    ExternalReference = novoPagamento.ExternalId,
                     NotificationUrl = $"{_generalSettings.BaseUrl}/webhook/mercadopago"
                 };
 
@@ -224,11 +210,11 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
                             "Pagamento aprovado com sucesso!",
                             "approved",
                             true,
-                            payment.Id.ToString() // <-- Enviando o ID para o front-end
+                            payment.Id.ToString()
                         )
                     );
                 }
-                else // Se foi 'rejected', 'cancelled', ou qualquer outro status de falha
+                else
                 {
                     await _notificationService.SendStatusUpdateAsync(
                         userId,
@@ -236,17 +222,18 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
                             payment.StatusDetail ?? "O pagamento foi recusado.",
                             "failed",
                             true,
-                            payment.Id.ToString() // <-- Enviando o ID para o front-end
+                            payment.Id.ToString()
                         )
                     );
                 }
+
                 novoPagamento.PaymentId = payment.Id.ToString();
                 novoPagamento.Status = PaymentStatusMapper.MapFromMercadoPago(payment.Status);
                 novoPagamento.DateApproved = payment.DateApproved;
                 novoPagamento.UpdatedAt = DateTime.UtcNow;
                 novoPagamento.LastFourDigits = lastFourDigitsDaFonteSegura;
 
-                await _context.SaveChangesAsync(); // O segundo e final save
+                await _context.SaveChangesAsync();
                 _logger.LogInformation(
                     "Pagamento {PaymentId} processado e atualizado no banco. Status: {Status}",
                     novoPagamento.PaymentId,
@@ -261,114 +248,77 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
                     null,
                     null);
             }
-            catch (MercadoPagoApiException mpex)
-            {
-                novoPagamento.Status = "falhou";
-                await _context.SaveChangesAsync();
-                _logger.LogError(
-                    mpex,
-                    "Erro da API do Mercado Pago: {ApiError}",
-                    mpex.ApiError.Message
-                );
-
-                // CORREÇÃO: Notifica o front-end sobre o erro ANTES de lançar a exceção
-                await _notificationService.SendStatusUpdateAsync(
-                    userId,
-                    new PaymentStatusUpdate(
-                        mpex.ApiError?.Message ?? "Erro ao comunicar com o provedor.",
-                        "error",
-                        true
-                    )
-                );
-
-                throw new ExternalApiException(
-                    mpex.ApiError?.Message ?? "Ocorreu um erro ao processar seu pagamento.",
-                    mpex
-                );
-            }
             catch (Exception ex)
             {
-                novoPagamento.Status = "erro_interno";
-                await _context.SaveChangesAsync();
-                _logger.LogError(
-                    ex,
-                    "Erro inesperado ao processar pagamento para {UserId}.",
-                    userId
-                );
+                _logger.LogError(ex, "Falha ao processar pagamento via MP. Iniciando rollback para {PaymentId}.",
+                    novoPagamento.Id);
 
-                // CORREÇÃO: Notifica o front-end sobre o erro ANTES de lançar a exceção
+                _context.Payments.Remove(novoPagamento);
+                await _context.SaveChangesAsync();
+                _logger.LogInformation("Rollback concluído. Registro de pagamento {PaymentId} removido.",
+                    novoPagamento.Id);
+
+                var errorMessage = (ex is MercadoPagoApiException mpex)
+                    ? mpex.ApiError?.Message ?? "Erro ao comunicar com o provedor."
+                    : "Ocorreu um erro inesperado em nosso sistema.";
+
                 await _notificationService.SendStatusUpdateAsync(
                     userId,
-                    new PaymentStatusUpdate(
-                        "Ocorreu um erro inesperado em nosso sistema.",
-                        "error",
-                        true
-                    )
+                    new PaymentStatusUpdate(errorMessage, "error", true)
                 );
 
-                throw new AppServiceException("Ocorreu um erro inesperado em nosso sistema.", ex);
+                if (ex is MercadoPagoApiException mpexForward)
+                {
+                    throw new ExternalApiException(errorMessage, mpexForward);
+                }
+
+                throw new AppServiceException(errorMessage, ex);
             }
         }
 
-        /// <summary>
-        /// Cria uma nova assinatura com base nos dados fornecidos.
-        /// </summary>
-        /// <param name="subscriptionData">Os dados da assinatura.</param>
-        /// <returns>Um objeto representando a resposta da criação da assinatura.</returns>
-        /// <exception cref="ArgumentException">Se os dados da assinatura forem inválidos.</exception>
-        /// <exception cref="AppServiceException">Se ocorrer um erro ao criar a assinatura.</exception>
         private async Task<object> CreateSubscriptionInternalAsync(
             CreditCardPaymentRequestDto subscriptionData
         )
         {
-            var userIdString = await _userContext.GetCurrentUserId();
+            var userId = await _userContext.GetCurrentUserId();
+            var user = await _userRepository.GetByIdAsync(userId);
+            if (user == null) throw new AppServiceException("Usuário não encontrado.");
 
             try
             {
-                await _notificationService.SendStatusUpdateAsync(
-                    userIdString,
-                    new PaymentStatusUpdate("Validando dados da assinatura...", "processing", false)
-                );
+                await _notificationService.SendStatusUpdateAsync(userId,
+                    new PaymentStatusUpdate("Validando seus dados...", "processing", false));
 
-                if (string.IsNullOrEmpty(subscriptionData.PlanExternalId
-                        .ToString())) // Supondo que o DTO foi atualizado
+                // 1. RESPONSABILIDADE DO PAGAMENTO: Garante que o cliente e o cartão existem no MP
+                if (string.IsNullOrEmpty(user.MercadoPagoCustomerId))
                 {
-                    throw new ArgumentException("O ID externo do plano é obrigatório.");
+                    var newCustomer = await _clientService.CreateCustomerAsync(user.Email, user.Name);
+                    user.MercadoPagoCustomerId = newCustomer.Id;
+                    await _userRepository.SaveChangesAsync();
                 }
-
-                // Apenas montamos o DTO para o serviço.
-                var createSubscriptionDto = new CreateSubscriptionDto
-                (
-                    subscriptionData.PlanExternalId.ToString(),
-                    subscriptionData?.Payer?.Email,
-                    subscriptionData?.Token,
-                    $"{_generalSettings.BaseUrl}/Subscription/Success", // O nome pode ser obtido depois ou não ser necessário aqui
-                    "Nome do Plano"
-                );
+                var savedCard = await _clientService.AddCardToCustomerAsync(subscriptionData.Token);
 
                 await _notificationService.SendStatusUpdateAsync(
-                    userIdString,
+                    userId,
                     new PaymentStatusUpdate("Criando sua assinatura...", "processing", false)
                 );
 
-                // A chamada ao serviço agora retorna a nossa entidade 'Subscription' completa.
-                var createdSubscription =
-                    await _subscriptionService.CreateSubscriptionAndCustomerIfNeededAsync(
-                        createSubscriptionDto
-                    );
-
-                // LÓGICA REMOVIDA: Toda a criação e salvamento do 'new Subscription' foi retirada daqui.
-                // A responsabilidade agora é 100% do serviço.
+                var createdSubscription = await _subscriptionService.CreateSubscriptionAsync(
+                    userId,
+                    subscriptionData.PlanExternalId.ToString(),
+                    savedCard.Id,
+                    subscriptionData.Payer.Email,
+                    savedCard.LastFourDigits
+                );
 
                 _logger.LogInformation(
                     "Fluxo de criação de assinatura concluído para o usuário {UserId}. ID da Assinatura: {SubscriptionId}",
-                    userIdString,
+                    userId,
                     createdSubscription.Id
                 );
 
-                // A notificação de sucesso agora pode usar os dados da assinatura que o serviço retornou.
                 await _notificationService.SendStatusUpdateAsync(
-                    userIdString,
+                    userId,
                     new PaymentStatusUpdate(
                         "Assinatura criada com sucesso!",
                         "approved",
@@ -380,21 +330,16 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
 
                 return new { Id = createdSubscription.ExternalId, Status = createdSubscription.Status };
             }
-            catch (ResourceNotFoundException) // Deixa a exceção específica passar para o controller
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Erro inesperado no fluxo de criação de assinatura para o usuário {UserId}.", userId);
+        
+                await _notificationService.SendStatusUpdateAsync(
+                    userId,
+                    new PaymentStatusUpdate(ex.Message, "error", true)
+                );
+        
                 throw;
-            }
-            catch (Exception ex) // Captura qualquer outro erro (da API do MP ou do banco)
-            {
-                _logger.LogError(
-                    ex,
-                    "Erro inesperado ao criar assinatura para o usuário {UserId}.",
-                    userIdString
-                );
-                throw new AppServiceException(
-                    "Ocorreu um erro inesperado em nosso sistema ao criar a assinatura.",
-                    ex
-                );
             }
         }
     }

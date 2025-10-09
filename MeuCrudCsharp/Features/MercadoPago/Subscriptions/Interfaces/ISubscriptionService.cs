@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using System.Threading.Tasks;
 using MeuCrudCsharp.Features.Exceptions;
+using MeuCrudCsharp.Features.MercadoPago.Clients.DTOs;
 using MeuCrudCsharp.Features.MercadoPago.Subscriptions.DTOs;
 using MeuCrudCsharp.Models;
 
@@ -11,8 +12,14 @@ namespace MeuCrudCsharp.Features.MercadoPago.Subscriptions.Interfaces
     /// </summary>
     public interface ISubscriptionService
     {
-        Task<Subscription> CreateSubscriptionAndCustomerIfNeededAsync(CreateSubscriptionDto createDto);
-
+        Task<Subscription> CreateSubscriptionAsync(
+            string userId,
+            string planExternalId,
+            string savedCardId,
+            string payerEmail,
+            string lastFourDigits
+        );
+        
         Task<Subscription> ActivateSubscriptionFromSinglePaymentAsync(
             string userId,
             Guid planPublicId,

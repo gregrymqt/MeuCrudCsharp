@@ -1,14 +1,11 @@
-﻿using System.Text.Json;
-using MeuCrudCsharp.Data;
-using MeuCrudCsharp.Features.Caching.Interfaces;
+﻿using MeuCrudCsharp.Features.Caching.Interfaces;
 using MeuCrudCsharp.Features.Exceptions;
-using MeuCrudCsharp.Features.MercadoPago.Base;
 using MeuCrudCsharp.Features.MercadoPago.Clients.Interfaces;
 using MeuCrudCsharp.Features.MercadoPago.Subscriptions.DTOs;
+using MeuCrudCsharp.Features.MercadoPago.Subscriptions.Interfaces;
 using MeuCrudCsharp.Features.Profiles.UserAccount.DTOs;
 using MeuCrudCsharp.Features.Profiles.UserAccount.Interfaces;
 using MeuCrudCsharp.Models;
-using Microsoft.EntityFrameworkCore;
 
 namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
 {
@@ -60,7 +57,7 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
                 if (subscription?.Plan == null) return null;
 
                 // Orquestração: 2. Busca dados externos
-                var mpSubscription = await _mpSubscriptionService.GetSubscriptionAsync(subscription.ExternalId);
+                var mpSubscription = await _mpSubscriptionService.GetSubscriptionByIdAsync(subscription.ExternalId);
                 if (mpSubscription == null) return null;
 
                 // Orquestração: 3. Combina os dados
@@ -135,8 +132,9 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
             var subscription = await _repository.GetActiveSubscriptionByUserIdAsync(userId)
                                ?? throw new ResourceNotFoundException(
                                    "Active subscription not found for status update.");
-
-            var result = await _mpSubscriptionService.UpdateSubscriptionStatusAsync(subscription.ExternalId, newStatus);
+            
+            var dto = new UpdateSubscriptionStatusDto(newStatus);
+            var result = await _mpSubscriptionService.UpdateSubscriptionStatusAsync(subscription.ExternalId, dto);
 
             if (result.Status == newStatus)
             {
@@ -156,7 +154,8 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
         public async Task<PaymentReceiptDto> GetPaymentForReceiptAsync(string userId, string paymentId)
         {
             var payment = await _repository.GetPaymentByIdAndUserIdAsync(userId, paymentId)
-                          ?? throw new ResourceNotFoundException($"Pagamento {paymentId} não encontrado para o usuário.");
+                          ?? throw new ResourceNotFoundException(
+                              $"Pagamento {paymentId} não encontrado para o usuário.");
 
             // Mapeamento da entidade para o DTO
             return new PaymentReceiptDto(
@@ -166,7 +165,7 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
                 payment.Status,
                 payment.User.Name,
                 payment.CustomerCpf,
-                payment.LastFourDigits// Supondo que a relação User foi incluída no repositório
+                payment.LastFourDigits // Supondo que a relação User foi incluída no repositório
             );
         }
     }

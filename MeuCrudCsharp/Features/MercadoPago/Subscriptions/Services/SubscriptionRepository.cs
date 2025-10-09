@@ -19,16 +19,26 @@ public class SubscriptionRepository : ISubscriptionRepository
         await _context.Subscriptions.AddAsync(subscription);
     }
 
-    public async Task<Subscription?> GetByExternalIdAsync(string externalId, bool includePlan = false)
+    public async Task<Subscription?> GetByExternalIdAsync(string externalId, bool includePlan = false, bool asNoTracking = true)
     {
-        IQueryable<Subscription> query = _context.Subscriptions.AsNoTracking();
+        IQueryable<Subscription> query = _context.Subscriptions;
+
+        if (asNoTracking)
+        {
+            query = query.AsNoTracking();
+        }
 
         if (includePlan)
         {
-            query = query.Include(s => s.Plan); 
+            query = query.Include(s => s.Plan);
         }
 
         return await query.FirstOrDefaultAsync(s => s.ExternalId == externalId);
+    }
+
+    public void Remove(Subscription subscription)
+    {
+        _context.Subscriptions.Remove(subscription);
     }
 
     public async Task<int> SaveChangesAsync()

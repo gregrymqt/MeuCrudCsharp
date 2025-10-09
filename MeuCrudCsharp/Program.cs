@@ -43,7 +43,9 @@ try
 }
 catch (Exception ex)
 {
-    Log.Fatal(ex, "A aplicação falhou ao iniciar.");
+    Log.Fatal(ex, "A aplicação falhou ao iniciar: {ExceptionMessage}", ex.Message);
+    Console.WriteLine($"FATAL EXCEPTION: {ex}"); // Added for immediate console visibility
+    Console.WriteLine($"STACK TRACE: {ex.StackTrace}"); // Added for immediate console visibility
 }
 finally
 {
