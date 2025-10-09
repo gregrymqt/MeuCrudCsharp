@@ -1,4 +1,4 @@
-import { fetchCardInfo } from '../api/subscriptionApi.js';
+import { fetchCardInfo } from '../api/userAccountAPI.js';
 
 function renderProfileCard(data) {
     const cardContainer = document.querySelector('#profile-content .profile-card');

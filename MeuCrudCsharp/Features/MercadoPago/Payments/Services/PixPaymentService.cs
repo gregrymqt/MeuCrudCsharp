@@ -42,8 +42,9 @@ public class PixPaymentService : IPixPaymentService
         _generalsettings = settings.Value;
         _userContext = userContext;
     }
-    
-    public async Task<CachedResponse> CreateIdempotentPixPaymentAsync(CreatePixPaymentRequest request, string idempotencyKey)
+
+    public async Task<CachedResponse> CreateIdempotentPixPaymentAsync(CreatePixPaymentRequest request,
+        string idempotencyKey)
     {
         var cacheKey = $"{IDEMPOTENCY_PREFIX}_idempotency_pix_{idempotencyKey}";
 
@@ -53,17 +54,20 @@ public class PixPaymentService : IPixPaymentService
             {
                 try
                 {
-                    // Reutilizamos a sua lógica original de criação de PIX aqui dentro.
-                    // A chave de idempotência do cliente será usada como referência externa.
-                    var result = await CreatePixPaymentAsync(await _userContext.GetCurrentUserId(),request, idempotencyKey);
-                
-                    // Em caso de sucesso, retornamos o DTO de resposta com status 200 (OK) ou 201 (Created).
-                    return new CachedResponse(result, 200); 
+                    var result = await CreatePixPaymentAsync(await _userContext.GetCurrentUserId(), request,
+                        idempotencyKey);
+
+                    return new CachedResponse(result, 200);
                 }
                 catch (MercadoPagoApiException mpex)
                 {
-                    var errorBody = new { error = "MercadoPago Error", message = mpex.ApiError?.Message ?? "Erro ao comunicar com o provedor." };
-                    _logger.LogError(mpex, "Erro da API do Mercado Pago (IdempotencyKey: {Key}): {ApiError}", idempotencyKey, mpex.ApiError?.Message);
+                    var errorBody = new
+                    {
+                        error = "MercadoPago Error",
+                        message = mpex.ApiError?.Message ?? "Erro ao comunicar com o provedor."
+                    };
+                    _logger.LogError(mpex, "Erro da API do Mercado Pago (IdempotencyKey: {Key}): {ApiError}",
+                        idempotencyKey, mpex.ApiError?.Message);
                     return new CachedResponse(errorBody, 400); // Bad Request
                 }
                 catch (Exception ex)
@@ -73,13 +77,14 @@ public class PixPaymentService : IPixPaymentService
                     return new CachedResponse(errorBody, 500); // Internal Server Error
                 }
             },
-            TimeSpan.FromHours(24) // Duração do cache de idempotência
+            TimeSpan.FromHours(24)
         );
 
         return response;
     }
 
-    private async Task<PaymentResponseDto> CreatePixPaymentAsync(string userId, CreatePixPaymentRequest request, string externalReference)
+    private async Task<PaymentResponseDto> CreatePixPaymentAsync(string userId, CreatePixPaymentRequest request,
+        string externalReference)
     {
         if (String.IsNullOrEmpty(userId))
         {
@@ -125,7 +130,7 @@ public class PixPaymentService : IPixPaymentService
             {
                 CustomHeaders = { { "X-Idempotency-Key", externalReference } }
             };
-            
+
             var paymentClient = new PaymentClient();
             var paymentRequest = new PaymentCreateRequest
             {
@@ -153,12 +158,11 @@ public class PixPaymentService : IPixPaymentService
             novoPixPayment.Status = PaymentStatusMapper.MapFromMercadoPago(payment.Status);
             novoPixPayment.DateApproved = payment.DateApproved;
             novoPixPayment.UpdatedAt = DateTime.UtcNow;
-            
+
             await _dbContext.SaveChangesAsync();
             _logger.LogInformation("Pagamento PIX {PaymentId} para o usuário {UserId} salvo com sucesso.",
                 novoPixPayment.PaymentId, userId);
 
-            // Notifica o front-end sobre o resultado final
             if (payment.Status == "approved" || payment.Status == "pending" || payment.Status == "in_process")
             {
                 await _notificationService.SendStatusUpdateAsync(
@@ -173,6 +177,7 @@ public class PixPaymentService : IPixPaymentService
                     new PaymentStatusUpdate(payment.StatusDetail ?? "O pagamento foi recusado.", "failed", true,
                         payment.Id.ToString()));
             }
+
             return new PaymentResponseDto
             (
                 payment.Status,
@@ -185,12 +190,10 @@ public class PixPaymentService : IPixPaymentService
         }
         catch (Exception ex)
         {
-            var statusFinal = "erro";
             var mensagemErro = "Ocorreu um erro inesperado em nosso sistema.";
 
             if (ex is MercadoPagoApiException mpex)
             {
-                statusFinal = "falhou";
                 mensagemErro = mpex.ApiError?.Message ?? "Erro ao comunicar com o provedor.";
                 _logger.LogError(mpex, "Erro da API do Mercado Pago: {ApiError}", mpex.ApiError?.Message);
             }
@@ -199,18 +202,20 @@ public class PixPaymentService : IPixPaymentService
                 _logger.LogError(ex, "Erro inesperado ao processar pagamento para {UserId}.", userId);
             }
 
-            // Se o objeto de pagamento foi criado, atualiza seu status para erro.
             if (novoPixPayment != null)
             {
-                novoPixPayment.Status = statusFinal;
-                novoPixPayment.UpdatedAt = DateTime.UtcNow;
-                await _dbContext.SaveChangesAsync(); // Salva o status de erro
+                _dbContext.Payments.Remove(novoPixPayment);
+
+                await _dbContext.SaveChangesAsync();
+
+                _logger.LogWarning(
+                    "Registro de pagamento para o usuário {UserId} foi removido do contexto devido a uma falha.",
+                    userId);
             }
 
             await _notificationService.SendStatusUpdateAsync(
                 userId, new PaymentStatusUpdate(mensagemErro, "error", true));
 
-            // Lança uma exceção mais genérica para a camada superior (Controller)
             throw new AppServiceException(mensagemErro, ex);
         }
     }

@@ -1,4 +1,4 @@
-import { fetchPaymentHistory } from '../api/subscriptionApi.js';
+import { fetchPaymentHistory } from '../api/userAccountAPI.js';
 
 function renderPaymentHistoryTable(history) {
     const tableBody = document.querySelector('#payment-history-content tbody');

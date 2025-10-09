@@ -1,3 +1,4 @@
+using MercadoPago.Config;
 using MeuCrudCsharp.Features.MercadoPago.Base;
 using Microsoft.AspNetCore.HttpOverrides;
 
@@ -28,6 +29,14 @@ public static class WebServicesExtensions
             client.DefaultRequestHeaders.Authorization =
                 new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", mercadoPagoSettings.AccessToken);
         });
+        
+        var mercadoPagoSettings = builder.Configuration.GetSection("MercadoPago").Get<MercadoPagoSettings>();
+        if (mercadoPagoSettings is null || string.IsNullOrEmpty(mercadoPagoSettings.AccessToken))
+        {
+            throw new InvalidOperationException(
+                "Configurações do Mercado Pago não encontradas ou o AccessToken está vazio.");
+        }
+        MercadoPagoConfig.AccessToken = mercadoPagoSettings.AccessToken;
 
         // --- 2. Configuração da Política de CORS ---
         builder.Services.AddCors(options =>

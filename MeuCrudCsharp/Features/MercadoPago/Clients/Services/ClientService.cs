@@ -1,6 +1,9 @@
 ﻿// Local: Features/Clients/Service/ClientService.cs
 
 using System.Text.Json;
+using MercadoPago.Client.Customer;
+using MercadoPago.Resource;
+using MercadoPago.Resource.Customer;
 using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Features.Auth.Interfaces;
 using MeuCrudCsharp.Features.Caching.Interfaces;
@@ -13,210 +16,195 @@ using Microsoft.EntityFrameworkCore;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Clients.Services;
 
-    /// <summary>
-    /// Serviço responsável por interagir com a API de Clientes do Mercado Pago,
-    /// gerenciando clientes e seus cartões.
-    /// Herda de <see cref="MercadoPagoServiceBase"/> para funcionalidades HTTP e autenticação.
-    /// </summary>
-    public class ClientService : MercadoPagoServiceBase, IClientService
+public class ClientService : MercadoPagoServiceBase, IClientService
+{
+    private readonly ICacheService _cacheService;
+    private readonly ApiDbContext _dbContext;
+    private readonly IUserContext _userContext;
+
+    public ClientService(IHttpClientFactory httpClient,
+        ILogger<ClientService> logger,
+        ICacheService cacheService,
+        ApiDbContext dbContext,
+        IUserContext userContext)
+        : base(httpClient, logger)
     {
-        private readonly ICacheService _cacheService;
-        private readonly ApiDbContext  _dbContext;
-        private readonly IUserContext _userContext;
+        _cacheService = cacheService;
+        _dbContext = dbContext;
+        _userContext = userContext;
+    }
 
-        /// <summary>
-        /// Inicializa uma nova instância do serviço de cliente.
-        /// </summary>
-        /// <param name="httpClient">Cliente HTTP para fazer requisições à API do Mercado Pago.</param>
-        /// <param name="logger">Logger para rastreamento e diagnóstico.</param>
-        public ClientService(IHttpClientFactory httpClient,
-            ILogger<ClientService> logger,
-            ICacheService cacheService,
-            ApiDbContext dbContext,
-            IUserContext userContext)
-            : base(httpClient, logger)
+    public async Task<CustomerWithCardResponseDto> CreateCustomerWithCardAsync(string email, string firstName, string cardToken)
+    {
+        _logger.LogInformation("Iniciando processo de criação de cliente com cartão para {Email}", email);
+        Customer newlyCreatedCustomer = null;
+
+        try
         {
-            _cacheService = cacheService;
-            _dbContext = dbContext;
-            _userContext = userContext;
+            // Etapa 1: Criar o cliente
+            var customerClient = new CustomerClient();
+            var customerRequest = new CustomerRequest { Email = email, FirstName = firstName };
+            newlyCreatedCustomer = await customerClient.CreateAsync(customerRequest);
+            _logger.LogInformation("Cliente criado com sucesso no MP. ID: {CustomerId}", newlyCreatedCustomer.Id);
+
+            CardInCustomerResponseDto addedCard = await AddCardToCustomerAsync(newlyCreatedCustomer.Id, cardToken);
+
+            return new CustomerWithCardResponseDto(
+                CustomerId: newlyCreatedCustomer.Id,
+                Email: newlyCreatedCustomer.Email,
+                Card: addedCard
+            );
         }
-
-        /// <summary>
-        /// Cria um novo cliente na plataforma Mercado Pago.
-        /// </summary>
-        /// <param name="email">E-mail do cliente.</param>
-        /// <param name="firstName">Primeiro nome do cliente.</param>
-        /// <returns>Dados do cliente recém-criado.</returns>
-        /// <exception cref="AppServiceException">Lançada se a desserialização da resposta falhar.</exception>
-        public async Task<CustomerResponseDto> CreateCustomerAsync(string email, string firstName)
+        catch (Exception ex)
         {
-            const string endpoint = "/v1/customers";
-            var payload = new CustomerRequestDto(email,firstName);
-
-            var responseBody = await SendMercadoPagoRequestAsync(
-                HttpMethod.Post,
-                endpoint,
-                payload
-            );
-
-            return JsonSerializer.Deserialize<CustomerResponseDto>(responseBody)
-                   ?? throw new AppServiceException(
-                       "Falha ao desserializar a resposta da criação do cliente."
-                   );
-        }
-
-        /// <summary>
-        /// Adiciona um novo cartão a um cliente existente no Mercado Pago.
-        /// </summary>
-        /// <param name="customerId">ID do cliente no Mercado Pago.</param>
-        /// <param name="cardToken">Token do cartão gerado pelo frontend.</param>
-        /// <returns>Dados do cartão adicionado.</returns>
-        /// <exception cref="AppServiceException">Lançada se a desserialização da resposta falhar.</exception>
-        public async Task<CardResponseDto> AddCardToCustomerAsync(
-            string cardToken
-        )
-        {
-            var customerId = await GetCurrentUserCustomerIdAsync();
-            _logger.LogInformation(
-                "Adicionando novo cartão para o cliente MP: {CustomerId}",
-                customerId
-            );
-
-            var endpoint = $"/v1/customers/{customerId}/cards";
-            var payload = new CardRequestDto(cardToken);
-
-            var responseBody = await SendMercadoPagoRequestAsync(
-                HttpMethod.Post,
-                endpoint,
-                payload
-            );
-
-            var cardResponse = JsonSerializer.Deserialize<CardResponseDto>(responseBody)
-                               ?? throw new AppServiceException(
-                                   "Falha ao desserializar a resposta ao adicionar cartão."
-                               );
-
-            // Invalida o cache após a operação ser bem-sucedida
-            var cacheKey = $"customer-cards:{customerId}";
-            await _cacheService.RemoveAsync(cacheKey);
-
-            return cardResponse;
-        }
-
-        /// <summary>
-        /// Remove um cartão específico de um cliente no Mercado Pago.
-        /// </summary>
-        /// <param name="customerId">ID do cliente no Mercado Pago.</param>
-        /// <param name="cardId">ID do cartão a ser removido.</param>
-        /// <returns>Dados do cartão que foi removido.</returns>
-        /// <exception cref="AppServiceException">Lançada se a desserialização da resposta falhar.</exception>
-        public async Task<CardResponseDto> DeleteCardFromCustomerAsync(
-            string cardId
-        )
-        {
-            var customerId = await GetCurrentUserCustomerIdAsync();
-
-            _logger.LogInformation(
-                "Deletando o cartão {CardId} do cliente MP: {CustomerId}",
-                cardId,
-                customerId
-            );
-
-            var endpoint = $"/v1/customers/{customerId}/cards/{cardId}";
-
-            var responseBody = await SendMercadoPagoRequestAsync(
-                HttpMethod.Delete,
-                endpoint,
-                (object?)null
-            );
-
-            var cardResponse = JsonSerializer.Deserialize<CardResponseDto>(responseBody)
-                               ?? throw new AppServiceException(
-                                   "Falha ao desserializar a resposta ao deletar cartão."
-                               );
-
-            // Invalida o cache após a operação ser bem-sucedida
-            var cacheKey = $"customer-cards:{customerId}";
-            await _cacheService.RemoveAsync(cacheKey);
-
-            return cardResponse;
-        }
-
-        /// <summary>
-        /// Lista todos os cartões associados a um cliente no Mercado Pago.
-        /// </summary>
-        /// <param name="customerId">ID do cliente no Mercado Pago.</param>
-        /// <returns>Lista de cartões do cliente.</returns>
-        /// <exception cref="AppServiceException">Lançada se a desserialização da resposta falhar.</exception>
-        public async Task<List<CardResponseDto>> ListCardsFromCustomerAsync()
-        {
-            var customerId = await GetCurrentUserCustomerIdAsync();
-
-            _logger.LogInformation("Listando cartões para o cliente MP: {CustomerId}", customerId);
-
-            // 1. Define uma chave única para o cache
-            var cacheKey = $"customer-cards:{customerId}";
-            var expirationTime = TimeSpan.FromMinutes(15); // Exemplo: cache por 15 minutos
-
-            // 2. Usa GetOrCreateAsync
-            //    - Tenta buscar do cache.
-            //    - Se não encontrar, executa a função "factory", busca na API e salva o resultado no cache.
-            return await _cacheService.GetOrCreateAsync(cacheKey, async () =>
+            if (newlyCreatedCustomer != null)
             {
-                _logger.LogInformation("Cache miss para {CacheKey}. Buscando da API.", cacheKey);
-                var endpoint = $"/v1/customers/{customerId}/cards";
-
-                var responseBody = await SendMercadoPagoRequestAsync(
-                    HttpMethod.Get,
-                    endpoint,
-                    (object?)null
-                );
-
-                return JsonSerializer.Deserialize<List<CardResponseDto>>(responseBody)
-                       ?? new List<CardResponseDto>();
-            }, expirationTime);
-        }
-        
-        // MÉTODO GetCurrentUserCustomerIdAsync OTIMIZADO
-
-        private async Task<string> GetCurrentUserCustomerIdAsync()
-        {
-            var userIdString = await _userContext.GetCurrentUserId();
-            if (string.IsNullOrEmpty(userIdString))
+                _logger.LogError(ex,
+                    "Falha ao adicionar cartão ao cliente recém-criado {CustomerId}. O cliente foi criado no MP, mas a operação falhou. A próxima tentativa reutilizará este cliente.",
+                    newlyCreatedCustomer.Id);
+            }
+            else
             {
-                throw new AppServiceException("Não foi possível identificar o usuário na sessão.");
+                _logger.LogError(ex, "Falha durante a criação do cliente para o email {Email}", email);
             }
 
-            // ✅ MELHORIA: Usa o cache para buscar o ID do cliente do MP
-            var cacheKey = $"mp-customer-id:{userIdString}";
-            var expirationTime = TimeSpan.FromHours(1); // O ID do cliente raramente muda
-
-            return await _cacheService.GetOrCreateAsync(cacheKey, async () =>
-            {
-                _logger.LogInformation(
-                    "Cache miss para {CacheKey}. Buscando MP Customer ID do banco de dados.",
-                    cacheKey
-                );
+            throw new AppServiceException(
+                "Não foi possível processar o cadastro do seu método de pagamento. Por favor, tente novamente.", ex);
+        }
+    }
+    
+    public async Task<CardInCustomerResponseDto> AddCardToCustomerAsync(string customerId, string cardToken)
+    {
+        _logger.LogInformation("Adicionando cartão ao cliente MP: {CustomerId}", customerId);
         
-                var user = await _dbContext.Users
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(u => u.Id == userIdString);
+        try
+        {
+            var customerClient = new CustomerClient();
+            var cardRequest = new CustomerCardCreateRequest { Token = cardToken };
+            CustomerCard addedCard = await customerClient.CreateCardAsync(customerId, cardRequest);
+            _logger.LogInformation("Cartão com final {LastFourDigits} adicionado com sucesso.", addedCard.LastFourDigits);
 
-                if (user == null)
-                    throw new AppServiceException("User not found.");
+            // Invalida o cache para forçar a atualização na próxima listagem de cartões
+            var cacheKey = $"customer-cards:{customerId}";
+            await _cacheService.RemoveAsync(cacheKey);
 
-                if (string.IsNullOrEmpty(user.MercadoPagoCustomerId))
-                {
-                    _logger.LogWarning(
-                        "User {UserId} does not have an associated payment customer profile.",
-                        user.Id
-                    );
-                    throw new AppServiceException("Usuário não possui um cliente de pagamentos associado.");
-                }
-
-                return user.MercadoPagoCustomerId;
-
-            }, expirationTime);
+            // Retorna o DTO do cartão criado
+            return new CardInCustomerResponseDto(
+                Id: addedCard.Id,
+                LastFourDigits: addedCard.LastFourDigits,
+                ExpirationMonth: addedCard.ExpirationMonth,
+                ExpirationYear: addedCard.ExpirationYear
+            );
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Falha ao tentar adicionar cartão para o cliente MP: {CustomerId}", customerId);
+            // Lança a exceção para que o método chamador (CreateCustomerWithCardAsync) possa tratá-la.
+            throw; 
         }
     }
 
+    public async Task<CardInCustomerResponseDto> DeleteCardFromCustomerAsync(
+        string cardId
+    )
+    {
+        var customerId = await GetCurrentUserCustomerIdAsync();
+
+        _logger.LogInformation(
+            "Deletando o cartão {CardId} do cliente MP: {CustomerId}",
+            cardId,
+            customerId
+        );
+
+        var endpoint = $"/v1/customers/{customerId}/cards/{cardId}";
+
+        var responseBody = await SendMercadoPagoRequestAsync(
+            HttpMethod.Delete,
+            endpoint,
+            (object?)null
+        );
+
+        var cardResponse = JsonSerializer.Deserialize<CardInCustomerResponseDto>(responseBody)
+                           ?? throw new AppServiceException(
+                               "Falha ao desserializar a resposta ao deletar cartão."
+                           );
+
+        var cacheKey = $"customer-cards:{customerId}";
+        await _cacheService.RemoveAsync(cacheKey);
+
+        return cardResponse;
+    }
+
+    public async Task<List<CardInCustomerResponseDto>> ListCardsFromCustomerAsync()
+    {
+        var customerId = await GetCurrentUserCustomerIdAsync();
+        _logger.LogInformation("Listando cartões para o cliente MP: {CustomerId}", customerId);
+
+        var cacheKey = $"customer-cards:{customerId}";
+        var expirationTime = TimeSpan.FromMinutes(15);
+
+        return await _cacheService.GetOrCreateAsync(cacheKey, async () =>
+        {
+            _logger.LogInformation("Cache miss para {CacheKey}. Buscando da API via SDK.", cacheKey);
+
+            // 1. Instancia o cliente do SDK e chama o método para listar os cartões
+            var customerClient = new CustomerClient();
+            ResourcesList<CustomerCard> customerCardsResponse = await customerClient.ListCardsAsync(customerId);
+
+            var jsonContent = customerCardsResponse.ApiResponse.Content;
+
+            if (string.IsNullOrEmpty(jsonContent))
+            {
+                return new List<CardInCustomerResponseDto>();
+            }
+            
+            var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            };
+
+            var cards = JsonSerializer.Deserialize<List<CardInCustomerResponseDto>>(jsonContent, options);
+
+            return cards ?? new List<CardInCustomerResponseDto>();
+        }, expirationTime);
+    }
+
+
+    private async Task<string> GetCurrentUserCustomerIdAsync()
+    {
+        var userIdString = await _userContext.GetCurrentUserId();
+        if (string.IsNullOrEmpty(userIdString))
+        {
+            throw new AppServiceException("Não foi possível identificar o usuário na sessão.");
+        }
+
+        var cacheKey = $"mp-customer-id:{userIdString}";
+        var expirationTime = TimeSpan.FromHours(1); // O ID do cliente raramente muda
+
+        return await _cacheService.GetOrCreateAsync(cacheKey, async () =>
+        {
+            _logger.LogInformation(
+                "Cache miss para {CacheKey}. Buscando MP Customer ID do banco de dados.",
+                cacheKey
+            );
+
+            var user = await _dbContext.Users
+                .AsNoTracking()
+                .FirstOrDefaultAsync(u => u.Id == userIdString);
+
+            if (user == null)
+                throw new AppServiceException("User not found.");
+
+            if (string.IsNullOrEmpty(user.MercadoPagoCustomerId))
+            {
+                _logger.LogWarning(
+                    "User {UserId} does not have an associated payment customer profile.",
+                    user.Id
+                );
+                throw new AppServiceException("Usuário não possui um cliente de pagamentos associado.");
+            }
+
+            return user.MercadoPagoCustomerId;
+        }, expirationTime);
+    }
+}

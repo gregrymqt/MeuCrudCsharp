@@ -1,6 +1,6 @@
 ﻿// /js/modules/subscriptionManager.js
-import { updateSubscriptionCard, updateSubscriptionStatus } from './api/subscriptionAPI.js';
-import { createAndRenderCardBrick } from './mercadopagoManager.js';
+import {updateSubscriptionCard, updateSubscriptionStatus} from './api/userAccountAPI.js';
+import {createAndRenderCardBrick} from './mercadopagoManager.js';
 
 // Flag para garantir que o Brick do Mercado Pago seja renderizado apenas uma vez.
 let cardBrickRendered = false;
@@ -12,7 +12,7 @@ let cardBrickRendered = false;
  */
 async function handleCardUpdate(formData) {
     try {
-        await updateSubscriptionCard({ newCardToken: formData.token });
+        await updateSubscriptionCard({newCardToken: formData.token});
         await Swal.fire('Sucesso!', 'Seu cartão foi atualizado com sucesso.', 'success');
         sessionStorage.clear(); // Limpa o cache para forçar a busca de novos dados na próxima página
         location.reload();
@@ -52,15 +52,43 @@ function attachAllListeners() {
         if (!action) return;
 
         const actionsConfig = {
-            pause: { status: 'paused', verb: 'Pausa', title: 'Pausar Assinatura?', text: 'As cobranças serão interrompidas.', icon: 'warning', confirmText: 'Sim, pausar!' },
-            cancel: { status: 'cancelled', verb: 'Cancela', title: 'Cancelar Assinatura?', text: 'Esta ação é definitiva.', icon: 'error', confirmText: 'Sim, cancelar!' },
-            reactivate: { status: 'authorized', verb: 'Reativa', title: 'Reativar Assinatura?', text: 'A cobrança será retomada.', icon: 'question', confirmText: 'Sim, reativar!' }
+            pause: {
+                status: 'paused',
+                verb: 'Pausa',
+                title: 'Pausar Assinatura?',
+                text: 'As cobranças serão interrompidas.',
+                icon: 'warning',
+                confirmText: 'Sim, pausar!'
+            },
+            cancel: {
+                status: 'cancelled',
+                verb: 'Cancela',
+                title: 'Cancelar Assinatura?',
+                text: 'Esta ação é definitiva.',
+                icon: 'error',
+                confirmText: 'Sim, cancelar!'
+            },
+            reactivate: {
+                status: 'authorized',
+                verb: 'Reativa',
+                title: 'Reativar Assinatura?',
+                text: 'A cobrança será retomada.',
+                icon: 'question',
+                confirmText: 'Sim, reativar!'
+            }
         };
         const config = actionsConfig[action];
 
-        const result = await Swal.fire({ title: config.title, text: config.text, icon: config.icon, showCancelButton: true, confirmButtonText: config.confirmText, cancelButtonText: 'Voltar' });
+        const result = await Swal.fire({
+            title: config.title,
+            text: config.text,
+            icon: config.icon,
+            showCancelButton: true,
+            confirmButtonText: config.confirmText,
+            cancelButtonText: 'Voltar'
+        });
         if (result.isConfirmed) {
-            Swal.fire({ title: `${config.verb}ndo...`, text: 'Aguarde um momento.', didOpen: () => Swal.showLoading() });
+            Swal.fire({title: `${config.verb}ndo...`, text: 'Aguarde um momento.', didOpen: () => Swal.showLoading()});
             try {
                 await updateSubscriptionStatus(config.status);
                 await Swal.fire('Sucesso!', `Sua assinatura foi ${config.verb.toLowerCase()}da.`, 'success');
@@ -79,7 +107,15 @@ function attachAllListeners() {
         initializeSignalR(); // Inicia o SignalR quando o formulário de reembolso está presente
         refundForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const result = await Swal.fire({ title: 'Você tem certeza?', text: "Seu acesso ao conteúdo será revogado.", icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'Sim, solicitar!', cancelButtonText: 'Cancelar' });
+            const result = await Swal.fire({
+                title: 'Você tem certeza?',
+                text: "Seu acesso ao conteúdo será revogado.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                confirmButtonText: 'Sim, solicitar!',
+                cancelButtonText: 'Cancelar'
+            });
             if (result.isConfirmed) {
                 try {
                     await requestRefund();

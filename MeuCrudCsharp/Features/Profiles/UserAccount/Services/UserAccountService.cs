@@ -1,4 +1,5 @@
-﻿using MeuCrudCsharp.Features.Caching.Interfaces;
+﻿using MeuCrudCsharp.Features.Auth.Interfaces;
+using MeuCrudCsharp.Features.Caching.Interfaces;
 using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.MercadoPago.Clients.Interfaces;
 using MeuCrudCsharp.Features.MercadoPago.Subscriptions.DTOs;
@@ -9,31 +10,30 @@ using MeuCrudCsharp.Models;
 
 namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
 {
-    /// <summary>
-    /// Implements <see cref="IUserAccountService"/> to manage user account operations.
-    /// This service orchestrates data retrieval and actions related to user profiles, subscriptions,
-    /// and payments, interacting with the database, cache, and the Mercado Pago API.
-    /// </summary>
-    public class UserAccountService : IUserAccountService // Não precisa mais herdar de MercadoPagoServiceBase
+  
+    public class UserAccountService : IUserAccountService 
     {
         private readonly IUserAccountRepository _repository;
         private readonly ICacheService _cacheService;
         private readonly IMercadoPagoSubscriptionService _mpSubscriptionService;
         private readonly IClientService _clientService;
         private readonly ILogger<UserAccountService> _logger;
+        private readonly IUserContext _userContext;
 
         public UserAccountService(
             IUserAccountRepository repository,
             ICacheService cacheService,
             IMercadoPagoSubscriptionService mpSubscriptionService,
             IClientService clientService,
-            ILogger<UserAccountService> logger)
+            ILogger<UserAccountService> logger,
+            IUserContext userContext)
         {
             _repository = repository;
             _cacheService = cacheService;
             _mpSubscriptionService = mpSubscriptionService;
             _clientService = clientService;
             _logger = logger;
+            _userContext = userContext;
         }
 
         public async Task<UserProfileDto> GetUserProfileAsync(string userId)
@@ -100,8 +100,11 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
             }
         }
 
-        public async Task<bool> UpdateSubscriptionCardAsync(string userId, string newCardToken)
+        public async Task<bool> UpdateSubscriptionCardAsync(string newCardToken)
         {
+            var userId = await _userContext.GetCurrentUserId();
+            var user = await _repository.GetUserByIdAsync(userId);
+
             var subscription = await _repository.GetActiveSubscriptionByUserIdAsync(userId)
                                ?? throw new ResourceNotFoundException("Active subscription not found for card update.");
 
@@ -113,7 +116,7 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
             // A lógica secundária permanece como responsabilidade do serviço orquestrador
             try
             {
-                await _clientService.AddCardToCustomerAsync(newCardToken);
+                await _clientService.AddCardToCustomerAsync(user.MercadoPagoCustomerId,newCardToken);
             }
             catch (Exception ex)
             {
@@ -123,8 +126,9 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
             return true;
         }
 
-        public async Task<bool> UpdateSubscriptionStatusAsync(string userId, string newStatus)
+        public async Task<bool> UpdateSubscriptionStatusAsync(string newStatus)
         {
+            var userId = await _userContext.GetCurrentUserId();
             var allowed = new[] { "paused", "authorized", "cancelled" };
             if (!allowed.Contains(newStatus))
                 throw new AppServiceException("Invalid subscription status.");
@@ -132,7 +136,7 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
             var subscription = await _repository.GetActiveSubscriptionByUserIdAsync(userId)
                                ?? throw new ResourceNotFoundException(
                                    "Active subscription not found for status update.");
-            
+
             var dto = new UpdateSubscriptionStatusDto(newStatus);
             var result = await _mpSubscriptionService.UpdateSubscriptionStatusAsync(subscription.ExternalId, dto);
 

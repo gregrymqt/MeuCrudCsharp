@@ -1,4 +1,4 @@
-import { fetchSubscriptionDetails } from '../api/subscriptionApi.js';
+import { fetchSubscriptionDetails } from '../api/userAccountAPI.js';
 
 function renderSubscriptionPanel(subscription) {
     const container = document.getElementById('subscription-content');
