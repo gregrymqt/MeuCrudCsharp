@@ -1,4 +1,5 @@
-﻿using MercadoPago.Client;
+﻿using System.Runtime.InteropServices;
+using MercadoPago.Client;
 using MercadoPago.Client.Common;
 using MercadoPago.Client.Payment;
 using MercadoPago.Error;
@@ -19,6 +20,8 @@ using MeuCrudCsharp.Features.MercadoPago.Subscriptions.DTOs;
 using MeuCrudCsharp.Features.MercadoPago.Subscriptions.Interfaces;
 using MeuCrudCsharp.Models;
 using Microsoft.Extensions.Options;
+using MercadoPago.Resource.User;
+
 
 namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
 {
@@ -61,8 +64,6 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
             _clientService = clientService;
             _userRepository = userRepository;
         }
-
-
         public async Task<CachedResponse> CreatePaymentOrSubscriptionAsync(
             CreditCardPaymentRequestDto request,
             string idempotencyKey

@@ -59,30 +59,31 @@ namespace MeuCrudCsharp.Features.MercadoPago.Base
                 requestUri
             );
 
-            request.Headers.Add("X-Idempotency-Key", Guid.NewGuid().ToString());
+            if (method == HttpMethod.Post || method == HttpMethod.Put || method == HttpMethod.Patch)
+            {
+                var idempotencyKey = Guid.NewGuid().ToString();
+                request.Headers.Add("X-Idempotency-Key", idempotencyKey);
+            }
 
             if (payload != null)
             {
-                // Usando as opções de serialização padrão do ASP.NET Core para consistência
-                var jsonContent = JsonSerializer.Serialize(
-                    payload,
-                    new JsonSerializerOptions
-                    {
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-                    }
-                );
-                request.Content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
+                var jsonPayload = JsonSerializer.Serialize(payload);
+                request.Content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+                _logger.LogInformation("Enviando para MP. Endpoint: {Endpoint}. Payload: {Payload}", endpoint, jsonPayload);
             }
+            
             try
             {
                 var response = await _httpClient.SendAsync(request);
 
-                response.EnsureSuccessStatusCode();
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    _logger.LogError("Erro na API do Mercado Pago. Status: {StatusCode}. Resposta: {ErrorContent}", response.StatusCode, errorContent);
+                    response.EnsureSuccessStatusCode(); 
+                }
 
-                var responseBody = await response.Content.ReadAsStringAsync();
-
-                return responseBody;
+                return await response.Content.ReadAsStringAsync();
             }
             catch (HttpRequestException ex)
             {

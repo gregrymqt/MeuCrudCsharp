@@ -17,27 +17,31 @@
                     <div class="form-grid">
                         <div class="form-group">
                             <label for="plan-reason">Nome do Plano</label>
-                            <input type="text" id="plan-reason" class="form-control" placeholder="Ex: Acesso Mensal Premium" required>
+                            <input type="text" id="plan-reason" class="form-control"
+                                   placeholder="Ex: Acesso Mensal Premium" required>
                         </div>
                         <div class="form-group">
                             <label for="plan-interval">Intervalo da Frequência</label>
                             <input type="number" id="plan-interval" class="form-control" value="1" min="1" required>
-                            <small class="form-text text-muted">Ex: 1 para mensal, 3 para trimestral, 12 para anual.</small>
+                            <small class="form-text text-muted">Ex: 1 para mensal, 3 para trimestral, 12 para
+                                anual.</small>
                         </div>
                         <div class="form-group">
                             <label for="plan-frequency-type">Unidade de Tempo</label>
                             <select id="plan-frequency-type" class="form-select">
-                                <option value="Months" selected>Meses</option>
-                                <option value="Days">Dias</option>
+                                <option value="months" selected>Meses</option>
+                                <option value="days">Dias</option>
                             </select>
                         </div>
                         <div class="form-group">
                             <label for="plan-amount">Valor (R$)</label>
-                            <input type="number" id="plan-amount" class="form-control" step="0.01" placeholder="Ex: 49.90" required>
+                            <input type="number" id="plan-amount" class="form-control" step="0.01"
+                                   placeholder="Ex: 49.90" required>
                         </div>
                         <div class="form-group">
                             <label for="plan-description">Descrição do Plano</label>
-                            <input type="text" id="plan-description" class="form-control" placeholder="Ex: Acesso a todos os cursos" required>
+                            <input type="text" id="plan-description" class="form-control"
+                                   placeholder="Ex: Acesso a todos os cursos" required>
                         </div>
                     </div>
                     <div class="form-actions">
@@ -46,7 +50,7 @@
                 </form>
             </div>
         </div>
-        
+
         <!-- Aba 2: Tabela de Planos Existentes -->
         <div id="manage-plans" class="tab-pane" role="tabpanel">
             <div class="panel-section">
@@ -63,27 +67,34 @@
                 <div class="table-wrapper">
                     <table class="data-table">
                         <thead>
-                            <tr>
-                                <th>Nome do Plano</th>
-                                <th>Tipo</th>
-                                <th>Valor</th>
-                                <th>Status</th>
-                                <th class="text-right">Ações</th>
-                            </tr>
+                        <tr>
+                            <th>Nome do Plano</th>
+                            <th>Tipo</th>
+                            <th>Valor</th>
+                            <th>Status</th>
+                            <th class="text-right">Ações</th>
+                        </tr>
                         </thead>
                         <tbody id="plans-table-body">
-                            <!-- Exemplo de como o JS deve renderizar a linha -->
-                            <tr>
-                                <td data-label="Nome do Plano">Acesso Premium</td>
-                                <td data-label="Tipo">Mensal</td>
-                                <td data-label="Valor">R$ 49.90</td>
-                                <td data-label="Status">Ativo</td>
-                                <td data-label="Ações" class="text-right">
-                                    <!-- Botões aqui -->
-                                </td>
-                            </tr>
+                        <!-- Exemplo de como o JS deve renderizar a linha -->
+                        <tr>
+                            <td data-label="Nome do Plano">Acesso Premium</td>
+                            <td data-label="Tipo">Mensal</td>
+                            <td data-label="Valor">R$ 49.90</td>
+                            <td data-label="Status">Ativo</td>
+                            <td data-label="Ações" class="text-right">
+                                <!-- Botões aqui -->
+                            </td>
+                        </tr>
                         </tbody>
                     </table>
+                </div>
+                <div id="plans-pagination" class="pagination-container">
+                    <button id="plans-prev-page-btn" class="btn btn-secondary" disabled>Anterior</button>
+                    <span class="pagination-info">
+                        Página <span id="plans-current-page">1</span> de <span id="plans-total-pages">1</span>
+                    </span>
+                    <button id="plans-next-page-btn" class="btn btn-secondary" disabled>Próximo</button>
                 </div>
             </div>
         </div>

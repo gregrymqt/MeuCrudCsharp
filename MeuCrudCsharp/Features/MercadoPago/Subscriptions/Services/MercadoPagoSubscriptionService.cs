@@ -19,7 +19,7 @@ public class MercadoPagoSubscriptionService : MercadoPagoServiceBase, IMercadoPa
         return JsonSerializer.Deserialize<SubscriptionResponseDto>(responseBody)
                ?? throw new AppServiceException("Falha ao desserializar a resposta de criação de assinatura.");
     }
-
+    
     public async Task<SubscriptionResponseDto?> GetSubscriptionByIdAsync(string subscriptionId)
     {
         var endpoint = $"/preapproval/{subscriptionId}"; // Padronizado sem /v1 para GET

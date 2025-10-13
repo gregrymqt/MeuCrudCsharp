@@ -37,59 +37,6 @@ public record CreatePlanDto(
 );
 
 /// <summary>
-/// DTO que representa os detalhes de um plano para ser exibido no front-end.
-/// </summary>
-public record PlanDetailViewModel
-{
-    public Guid PublicId { get; init; }
-    public string Name { get; init; }
-    public string? Description { get; init; }
-    public decimal Price { get; init; }
-    public int Interval { get; init; } // Corresponde ao FrequencyInterval
-    public string FrequencyType { get; init; } // Corresponde ao FrequencyType.ToString()
-    public string CurrencyId { get; init; }
-    public bool IsActive { get; init; }
-
-    /// <summary>
-    /// Propriedade auxiliar para gerar uma descrição amigável da frequência.
-    /// Ex: "Cobrança a cada 1 Mês" ou "Cobrança a cada 3 Meses"
-    /// </summary>
-    public string FrequencyDescription => $"Cobrança a cada {Interval} {GetFrequencyTypeNameInPortuguese()}";
-
-    public PlanDetailViewModel(
-        Guid publicId,
-        string name,
-        string? description,
-        decimal price,
-        int interval,
-        string frequencyType, // Recebe a string já convertida
-        string currencyId,
-        bool isActive
-    )
-    {
-        PublicId = publicId;
-        Name = name;
-        Description = description;
-        Price = price;
-        Interval = interval;
-        FrequencyType = frequencyType;
-        CurrencyId = currencyId;
-        IsActive = isActive;
-    }
-
-    private string GetFrequencyTypeNameInPortuguese()
-    {
-        // Converte o nome da frequência para português e ajusta o plural
-        string baseName = FrequencyType.Equals("Months", StringComparison.OrdinalIgnoreCase) ? "Mês" : "Dia";
-        if (Interval > 1)
-        {
-            return baseName == "Mês" ? "Meses" : "Dias";
-        }
-        return baseName;
-    }
-}
-
-/// <summary>
 /// Data for displaying a subscription plan on a public-facing UI.
 /// </summary>
 public record PlanDto(
@@ -143,12 +90,30 @@ public record PlanSearchResponseDto(
 /// </summary>
 public record UpdatePlanDto(
     [property: JsonPropertyName("reason")] string? Reason,
-    [property: JsonPropertyName("transaction_amount")]
-    decimal? TransactionAmount,
-
-    // Adicione esta propriedade
-    [property: JsonPropertyName("frequency")]
-    int? Frequency,
-    [property: JsonPropertyName("frequency_type")]
-    string? FrequencyType
+    [property: JsonPropertyName("auto_recurring")]
+    AutoRecurringDto? AutoRecurring
 );
+
+public class PagedResultDto<T>
+{
+    // A lista de itens para a página atual
+    public List<T> Items { get; set; }
+
+    // Metadados da Paginação
+    public int CurrentPage { get; set; }
+    public int PageSize { get; set; }
+    public int TotalCount { get; set; }
+    public int TotalPages => (int)Math.Ceiling((double)TotalCount / PageSize);
+
+    // Propriedades de conveniência para o Frontend
+    public bool HasPreviousPage => CurrentPage > 1;
+    public bool HasNextPage => CurrentPage < TotalPages;
+
+    public PagedResultDto(List<T> items, int currentPage, int pageSize, int totalCount)
+    {
+        Items = items;
+        CurrentPage = currentPage;
+        PageSize = pageSize;
+        TotalCount = totalCount;
+    }
+}

@@ -58,7 +58,7 @@ ul {
     top: 0;
     left: 0;
     width: 100%;
-    z-index: 1000; /* Header fica acima do conteúdo */
+    z-index: 1100; /* Header fica acima do conteúdo */
     box-shadow: 0 2px 4px var(--shadow-color);
 }
 

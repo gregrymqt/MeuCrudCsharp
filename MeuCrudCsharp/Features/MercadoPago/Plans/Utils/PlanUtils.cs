@@ -55,16 +55,16 @@ namespace MeuCrudCsharp.Features.MercadoPago.Plans.Utils
         public static void ApplyUpdateDtoToPlan(Plan localPlan, UpdatePlanDto updateDto)
         {
             if (updateDto.Reason != null) localPlan.Name = updateDto.Reason;
-            if (updateDto.TransactionAmount.HasValue) localPlan.TransactionAmount = updateDto.TransactionAmount.Value;
-            if (updateDto.Frequency.HasValue)
-                localPlan.FrequencyInterval = updateDto.Frequency.Value;
-            if (updateDto.FrequencyType != null)
+            if (updateDto.AutoRecurring.TransactionAmount != 0) localPlan.TransactionAmount = updateDto.AutoRecurring.TransactionAmount;
+            if (updateDto.AutoRecurring.Frequency != 0 )
+                localPlan.FrequencyInterval = updateDto.AutoRecurring.Frequency;
+            if (updateDto.AutoRecurring.FrequencyType != null)
             {
-                if (!Enum.TryParse<PlanFrequencyType>(updateDto.FrequencyType, ignoreCase: true,
+                if (!Enum.TryParse<PlanFrequencyType>(updateDto.AutoRecurring.FrequencyType, ignoreCase: true,
                         out var frequencyTypeEnum))
                 {
                     throw new ArgumentException(
-                        $"O valor '{updateDto.FrequencyType}' é inválido para o tipo de frequência. Use 'Days' ou 'Months'.");
+                        $"O valor '{updateDto.AutoRecurring.FrequencyType}' é inválido para o tipo de frequência. Use 'Days' ou 'Months'.");
                 }
 
                 localPlan.FrequencyType = frequencyTypeEnum;

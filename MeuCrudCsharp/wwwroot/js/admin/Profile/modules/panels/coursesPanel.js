@@ -132,131 +132,142 @@ export async function searchCourses(name) {
 }
 
 function initializeCoursesPanel() {
-    let debounceTimer; // Variável para controlar o debounce
+    if (searchCourseForm && !searchCourseForm.hasAttribute('data-events-attached')) {
+        let debounceTimer;
 
-    // MODIFICADO: Adiciona os listeners de busca
-    if (searchCourseForm) {
-        // 1. Busca ao submeter o formulário (clicando no botão ou pressionando Enter)
         searchCourseForm.addEventListener('submit', (e) => {
-            e.preventDefault(); // Impede o recarregamento da página
+            e.preventDefault();
             const searchTerm = searchCourseInput.value.trim();
             searchCourses(searchTerm);
         });
 
-        // 2. (UX Extra) Busca enquanto o usuário digita (com debounce)
+        const searchCourseInput = document.getElementById('search-course-input'); // Use o ID correto
         searchCourseInput.addEventListener('input', () => {
-            clearTimeout(debounceTimer); // Cancela o timer anterior
+            clearTimeout(debounceTimer);
             debounceTimer = setTimeout(() => {
                 const searchTerm = searchCourseInput.value.trim();
-
                 if (searchTerm === '') {
-                    loadCourses(); 
+                    loadCourses();
                 } else {
                     searchCourses(searchTerm);
                 }
-            }, 500); 
+            }, 500);
         });
+
+        searchCourseForm.setAttribute('data-events-attached', 'true');
+        console.log('Listeners do formulário de busca de cursos foram anexados.');
     }
 
-    coursesTableBody.addEventListener('click', async (e) => {
-        const target = e.target.closest('button[data-course-public-id]');
+    if (coursesTableBody && !coursesTableBody.hasAttribute('data-click-listener-attached')) {
+        coursesTableBody.addEventListener('click', async (e) => {
+            const target = e.target.closest('button[data-course-public-id]');
+            if (!target) return;
 
-        if (!target) return;
-
-        const courseId = target.dataset.coursePublicId;
-
-        if (!courseId) {
-            alert("ERRO: ID do curso não encontrado no elemento do botão!");
-            return;
-        }
-
-        try {
-            if (target.classList.contains('btn-edit-course')) {
-                const course = await api.getCoursesPublicId(courseId);
-                openEditCourseModal(course);
+            const courseId = target.dataset.coursePublicId;
+            if (!courseId) {
+                alert("ERRO: ID do curso não encontrado no elemento do botão!");
+                return;
             }
 
-            if (target.classList.contains('btn-delete-course')) {
-                await handleCourseDelete(courseId);
+            try {
+                if (target.classList.contains('btn-edit-course')) {
+                    const course = await api.getCoursesPublicId(courseId);
+                    openEditCourseModal(course);
+                }
+                if (target.classList.contains('btn-delete-course')) {
+                    await handleCourseDelete(courseId);
+                }
+            } catch (error) {
+                console.error('Falha na ação do curso:', error);
             }
-        } catch (error) {
-            console.error('Falha na ação do curso:', error);
-        }
-    });
-    
-    createCourseForm.addEventListener('submit', async (e) => {
-        // ... (código existente de criação)
-        e.preventDefault();
-        const submitButton = createCourseForm.querySelector('button[type="submit"]');
-        submitButton.disabled = true;
-        submitButton.textContent = 'Saving...';
+        });
 
-        const courseData = {
-            name: document.getElementById('course-name-new').value,
-            description: document.getElementById('course-description-new').value
-        };
+        coursesTableBody.setAttribute('data-click-listener-attached', 'true');
+        console.log('Listener da tabela de cursos foi anexado.');
+    }
 
-        try {
-            const response = await api.createCourse(courseData);
-            Swal.fire({
-                title: 'Success!',
-                text: `Course created successfully! ID: ${response.id}`,
-                icon: 'success',
-                timer: 2000,
-                showConfirmButton: false
-            });
-            createCourseForm.reset();
-            await loadCourses();
-        } catch (error) {
-            console.error('Error creating course:', error);
-            Swal.fire({
-                title: 'Error!',
-                text: error.message,
-                icon: 'error'
-            });
-        } finally {
-            submitButton.disabled = false;
-            submitButton.textContent = 'Save Course';
-        }
-    });
+    if (createCourseForm && !createCourseForm.hasAttribute('data-submit-listener-attached')) {
 
-    editCourseForm.addEventListener('submit', async (e) => {
-        // ... (código existente de edição)
-        e.preventDefault();
-        const courseId = editCourseId.value;
-        const submitButton = editCourseForm.querySelector('button[type="submit"]');
-        submitButton.disabled = true;
-        submitButton.textContent = 'Saving...';
+        createCourseForm.addEventListener('submit', async (e) => {
+            // ... (código existente de criação)
+            e.preventDefault();
+            const submitButton = createCourseForm.querySelector('button[type="submit"]');
+            submitButton.disabled = true;
+            submitButton.textContent = 'Saving...';
 
-        const updatedData = {
-            name: editCourseName.value,
-            description: editCourseDescription.value
-        };
+            const courseData = {
+                name: document.getElementById('course-name-new').value,
+                description: document.getElementById('course-description-new').value
+            };
 
-        try {
-            const response = await api.updateCourse(courseId, updatedData);
-            Swal.fire({
-                title: 'Updated!',
-                text: `Course updated successfully! ID: ${response.id}`,
-                icon: 'success',
-                timer: 2000,
-                showConfirmButton: false
-            });
-            closeModal(editCourseModal); // Correção: use a função importada
-            api.invalidateCache('allCourses'); // Invalida o cache para forçar recarga
-            await loadCourses();
-        } catch (error) {
-            console.error('Error updating course:', error);
-            Swal.fire({
-                title: 'Error!',
-                text: error.message,
-                icon: 'error'
-            });
-        } finally {
-            submitButton.disabled = false;
-            submitButton.textContent = 'Save Changes';
-        }
-    });
+            try {
+                const response = await api.createCourse(courseData);
+                Swal.fire({
+                    title: 'Success!',
+                    text: `Course created successfully! ID: ${response.id}`,
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+                createCourseForm.reset();
+                await loadCourses();
+            } catch (error) {
+                console.error('Error creating course:', error);
+                Swal.fire({
+                    title: 'Error!',
+                    text: error.message,
+                    icon: 'error'
+                });
+            } finally {
+                submitButton.disabled = false;
+                submitButton.textContent = 'Save Course';
+            }
+        });
+        createCourseForm.setAttribute('data-submit-listener-attached', 'true');
+        console.log('Listener do formulário de criação de cursos foi anexado.');
+    }
+
+    if (editCourseForm && !editCourseForm.hasAttribute('data-submit-listener-attached')) {
+
+        editCourseForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const courseId = editCourseId.value;
+            const submitButton = editCourseForm.querySelector('button[type="submit"]');
+            submitButton.disabled = true;
+            submitButton.textContent = 'Saving...';
+
+            const updatedData = {
+                name: editCourseName.value,
+                description: editCourseDescription.value
+            };
+
+            try {
+                const response = await api.updateCourse(courseId, updatedData);
+                Swal.fire({
+                    title: 'Updated!',
+                    text: `Course updated successfully! ID: ${response.id}`,
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+                closeModal(editCourseModal); // Correção: use a função importada
+                api.invalidateCache('allCourses'); // Invalida o cache para forçar recarga
+                await loadCourses();
+            } catch (error) {
+                console.error('Error updating course:', error);
+                Swal.fire({
+                    title: 'Error!',
+                    text: error.message,
+                    icon: 'error'
+                });
+            } finally {
+                submitButton.disabled = false;
+                submitButton.textContent = 'Save Changes';
+            }
+        });
+        editCourseForm.setAttribute('data-submit-listener-attached', 'true');
+        console.log('Listener do formulário de edição de cursos foi anexado.');
+    }
 
     document.getElementById('close-edit-course-modal')?.addEventListener('click', () => closeModal(editCourseModal));
 }

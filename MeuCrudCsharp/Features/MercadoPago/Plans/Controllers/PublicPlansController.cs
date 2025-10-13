@@ -1,4 +1,4 @@
-﻿using MeuCrudCsharp.Features.Base;
+﻿    using MeuCrudCsharp.Features.Base;
 using MeuCrudCsharp.Features.MercadoPago.Plans.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
@@ -33,12 +33,14 @@ namespace MeuCrudCsharp.Features.MercadoPago.Plans.Controllers
         /// <returns>A list of active plans available to the public.</returns>
         /// <response code="200">Returns the list of active plans.</response>
         /// <response code="500">If an unexpected server error occurs while fetching the plans.</response>
+        // Exemplo para o Public Controller (aplique o mesmo para o Admin)
         [HttpGet]
-        public async Task<IActionResult> GetPlans()
+        public async Task<IActionResult> GetPlans([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
         {
             try
             {
-                var plans = await _planService.GetActiveDbPlansAsync();
+                // Passa os parâmetros para o serviço
+                var plans = await _planService.GetActiveDbPlansAsync(page, pageSize);
                 return Ok(plans);
             }
             catch (Exception ex)

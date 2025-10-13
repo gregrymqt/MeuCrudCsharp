@@ -96,10 +96,9 @@ namespace MeuCrudCsharp.Features.MercadoPago.Plans.Services
                 var mercadoPagoPayload = new
                 {
                     reason = createDto.Reason,
-                    description = createDto.Description,
                     auto_recurring = createDto.AutoRecurring,
                     back_url = _generalSettings.BaseUrl,
-                    external_reference = newPlan.Id.ToString(),
+                    external_reference = newPlan.PublicId.ToString(),
                 };
 
                 var mpPlanResponse = await _mercadoPagoPlanService.CreatePlanAsync(mercadoPagoPayload);
@@ -156,12 +155,8 @@ namespace MeuCrudCsharp.Features.MercadoPago.Plans.Services
             {
                 var payloadForMercadoPago = new
                 {
-                    reason = localPlan.Name,
-                    transaction_amount = localPlan.TransactionAmount,
-                    frequency = localPlan.FrequencyInterval, 
-                    frequency_type =
-                        localPlan.FrequencyType.ToString()
-                            .ToLower() 
+                    reason = updateDto.Reason,
+                    auto_recurring = updateDto.AutoRecurring
                 };
                 await _mercadoPagoPlanService.UpdatePlanAsync(localPlan.ExternalPlanId, payloadForMercadoPago);
 
@@ -176,7 +171,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Plans.Services
             {
                 _logger.LogError(ex, "Erro na API externa ao atualizar plano '{PlanName}'. Iniciando rollback...",
                     localPlan.Name);
-                
+
                 localPlan.Name = originalValues.Name;
                 localPlan.TransactionAmount = originalValues.TransactionAmount;
                 localPlan.FrequencyInterval = originalValues.FrequencyInterval;
@@ -223,8 +218,8 @@ namespace MeuCrudCsharp.Features.MercadoPago.Plans.Services
             {
                 _logger.LogError(ex, "Erro na API externa ao desativar plano '{PlanName}'. Iniciando rollback...",
                     localPlan.Name);
-                
-                localPlan.IsActive = originalIsActive; 
+
+                localPlan.IsActive = originalIsActive;
                 await _planRepository.SaveChangesAsync();
                 _logger.LogInformation("Rollback concluído. Plano '{PlanName}' foi reativado localmente.",
                     localPlan.Name);
@@ -233,14 +228,15 @@ namespace MeuCrudCsharp.Features.MercadoPago.Plans.Services
             }
         }
 
-        public async Task<List<PlanDto>> GetActiveApiPlansAsync()
+        public async Task<PagedResultDto<PlanDto>> GetActiveApiPlansAsync(int page, int pageSize)
         {
-            // O cache continua sendo responsabilidade do serviço de orquestração
-            var cachedPlans = await _cacheService.GetOrCreateAsync(
-                CacheKeys.ActiveApiPlans, // Corrigido
+            // 1. Busca a LISTA COMPLETA do cache (ou da API se o cache estiver vazio)
+            var allCachedPlans = await _cacheService.GetOrCreateAsync(
+                CacheKeys.ActiveApiPlans,
                 async () =>
                 {
-                    // 1. Busca todos os planos ativos da API
+                    _logger.LogInformation("Cache de planos da API vazio. Buscando do Mercado Pago.");
+                    // A lógica interna para buscar todos os planos da API e mapeá-los permanece a mesma.
                     var activePlansFromApi = await _mercadoPagoPlanService.SearchActivePlansAsync();
                     if (!activePlansFromApi.Any())
                     {
@@ -251,7 +247,6 @@ namespace MeuCrudCsharp.Features.MercadoPago.Plans.Services
                     var localPlans = await _planRepository.GetByExternalIdsAsync(externalIds);
                     var localPlansDict = localPlans.ToDictionary(p => p.ExternalPlanId, p => p);
 
-                    // 3. Mapeia os DTOs em memória
                     var mappedPlans = new List<PlanDto>();
                     foreach (var apiPlan in activePlansFromApi)
                     {
@@ -267,42 +262,56 @@ namespace MeuCrudCsharp.Features.MercadoPago.Plans.Services
 
                     return mappedPlans;
                 },
-                TimeSpan.FromMinutes(5)
+                TimeSpan.FromMinutes(5) // Tempo de expiração do cache
             );
 
-            return cachedPlans ?? new List<PlanDto>();
+            var fullPlanList = allCachedPlans ?? new List<PlanDto>();
+
+            // 2. Aplica a paginação na lista completa que veio do cache
+            var totalCount = fullPlanList.Count;
+            var itemsForPage = fullPlanList
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            // 3. Retorna o objeto de resultado paginado
+            return new PagedResultDto<PlanDto>(
+                itemsForPage,
+                page,
+                pageSize,
+                totalCount
+            );
         }
 
 
         /// <summary>
         /// Busca os planos ativos diretamente do banco de dados local.
         /// </summary>
-        public async Task<List<PlanDto>> GetActiveDbPlansAsync()
+        public async Task<PagedResultDto<PlanDto>> GetActiveDbPlansAsync(int page, int pageSize)
         {
-            _logger.LogInformation("Buscando planos ativos do banco de dados (com cache).");
+            _logger.LogInformation("Buscando planos ativos paginados do banco de dados.");
 
-            var cachedPlans = await _cacheService.GetOrCreateAsync(
-                CacheKeys.ActiveDbPlans, // Usa a chave centralizada
-                FetchAndMapPlansFromDatabaseAsync,
-                TimeSpan.FromMinutes(15)
-            );
-
-            return cachedPlans ?? new List<PlanDto>();
-        }
-
-        private async Task<List<PlanDto>> FetchAndMapPlansFromDatabaseAsync()
-        {
             try
             {
-                // 1. Acessa o banco de dados através do repositório
-                var plansFromDb = await _planRepository.GetActivePlansAsync();
+                // 1. Chama o repositório com os parâmetros de paginação
+                var pagedResult = await _planRepository.GetActivePlansAsync(page, pageSize);
 
-                // 2. Mapeia as entidades para o DTO (esta lógica permanece no serviço)
-                return plansFromDb.Select(PlanMapper.MapDbPlanToDto).ToList();
+                // 2. Mapeia apenas os itens da página atual para DTOs
+                var planDtos = pagedResult.Items
+                    .Select(PlanMapper.MapDbPlanToDto)
+                    .ToList();
+
+                // 3. Cria um novo PagedResultDto com os itens mapeados e os metadados
+                return new PagedResultDto<PlanDto>(
+                    planDtos,
+                    pagedResult.CurrentPage,
+                    pagedResult.PageSize,
+                    pagedResult.TotalCount
+                );
             }
-            catch (Exception dbEx) // A captura de exceção de DB faz mais sentido aqui
+            catch (Exception dbEx)
             {
-                _logger.LogError(dbEx, "Falha ao buscar planos do repositório.");
+                _logger.LogError(dbEx, "Falha ao buscar planos paginados do repositório.");
                 throw new AppServiceException("Não foi possível carregar os planos.", dbEx);
             }
         }

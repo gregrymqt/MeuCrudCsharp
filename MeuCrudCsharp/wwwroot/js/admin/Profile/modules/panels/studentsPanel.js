@@ -5,6 +5,7 @@ import cacheService from '../../../../core/cacheService.js';
 
 const studentsTableBody = document.getElementById('students-table-body');
 const studentDetailsModal = document.getElementById('studentDetailsModal'); // O modal que você adicionou ao HTML
+let isStudentDocumentListenerAttached = false;
 
 /**
  * Mapeia o status da API para uma classe CSS correspondente.
@@ -154,24 +155,37 @@ async function openStudentModal(studentId) {
 
 function initializeStudentsPanel() {
 
-    // 2. Adiciona o event listener para os botões de detalhes (delegação de evento)
-    document.addEventListener('click', (event) => {
-        const detailsButton = event.target.closest('.btn-view-details');
-        if (detailsButton) {
-            const studentId = detailsButton.dataset.studentId;
-            if (studentId) {
-                openStudentModal(studentId);
+    // 1. Adiciona o event listener para os botões de detalhes (delegação de evento)
+    // VERIFICA A FLAG GLOBAL ANTES DE ADICIONAR O LISTENER
+    if (!isStudentDocumentListenerAttached) {
+        document.addEventListener('click', (event) => {
+            const detailsButton = event.target.closest('.btn-view-details');
+            if (detailsButton) {
+                const studentId = detailsButton.dataset.studentId;
+                if (studentId) {
+                    openStudentModal(studentId);
+                }
             }
-        }
-    });
+        });
 
-    // 3. Adiciona o event listener para fechar o modal
+        // ATUALIZA A FLAG PARA 'true' DEPOIS DE ADICIONAR O LISTENER
+        isStudentDocumentListenerAttached = true;
+        console.log('Listener de clique no DOCUMENTO para detalhes de estudantes foi anexado.');
+    }
+
+    // 2. Adiciona o event listener para fechar o modal
     // Busca o botão de fechar dentro do modal de detalhes
+    const studentDetailsModal = document.getElementById('studentDetailsModal'); // Garanta que você tem o modal
     const closeModalButton = studentDetailsModal.querySelector('[data-bs-dismiss="modal"]');
-    if(closeModalButton) {
+
+    // APLICA A TÉCNICA DA FLAG NO BOTÃO ESPECÍFICO
+    if (closeModalButton && !closeModalButton.hasAttribute('data-click-listener-attached')) {
         closeModalButton.addEventListener('click', () => {
-            // **MUDANÇA PRINCIPAL**: Usando a função importada do seu módulo de modais
+            // Usando a função importada do seu módulo de modais
             closeModal(studentDetailsModal);
         });
+
+        // ADICIONA A FLAG AO BOTÃO PARA NÃO REPETIR
+        closeModalButton.setAttribute('data-click-listener-attached', 'true');
     }
 }

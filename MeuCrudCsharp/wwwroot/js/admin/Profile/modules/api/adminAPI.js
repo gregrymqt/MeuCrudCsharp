@@ -34,13 +34,12 @@ async function fetchAndCache(cacheKey, url, forceRefresh = false) {
 // API DE PLANOS (Plans)
 // ==========================================================================================
 
-export const getPublicPlans = (forceRefresh = false) => fetchAndCache('allPublicPlans', '/api/public/plans', forceRefresh);
+export const getPublicPlans = (page =1, pageSize = 10 ,forceRefresh = false) => fetchAndCache('allPublicPlans', `/api/public/plans?page=${page}&${pageSize}`, forceRefresh);
 export const getAdminPlans = (forceRefresh = false) => fetchAndCache('allAdminPlans', '/api/admin/plans', forceRefresh);
 export const getPlanById = (id) => apiService.fetch(`/api/admin/plans/${id}`);
 export const createPlan = (planData) => apiService.fetch('/api/admin/plans', { method: 'POST', body: JSON.stringify(planData) });
 export const updatePlan = (id, planData) => apiService.fetch(`/api/admin/plans/${id}`, { method: 'PUT', body: JSON.stringify(planData) });
 export const deletePlan = (id) => apiService.fetch(`/api/admin/plans/${id}`, { method: 'DELETE' });
-
 // ==========================================================================================
 // API DE CURSOS (Courses)
 // ==========================================================================================

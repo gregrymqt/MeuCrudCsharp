@@ -45,17 +45,16 @@ public class AdminPlansController : ApiControllerBase
     /// Busca todos os planos ativos do sistema.
     /// </summary>
     [HttpGet]
-    public async Task<IActionResult> GetPlans()
+    public async Task<IActionResult> GetPlans([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
     {
         try
         {
-            // CORREÇÃO: Chamando o método padrão para buscar planos do nosso sistema.
-            var plans = await _planService.GetActiveApiPlansAsync();
+            // Agora passamos os parâmetros de paginação para o serviço
+            var plans = await _planService.GetActiveApiPlansAsync(page, pageSize);
             return Ok(plans);
         }
         catch (AppServiceException ex)
         {
-            // Este erro é mais genérico agora, pois a falha pode ser no banco.
             return StatusCode(500, new { message = "Erro ao buscar os planos.", error = ex.Message });
         }
     }

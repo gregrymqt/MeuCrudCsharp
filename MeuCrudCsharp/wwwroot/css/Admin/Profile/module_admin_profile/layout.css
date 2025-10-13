@@ -20,8 +20,8 @@
     transition: transform var(--transition-speed) ease;
     padding: var(--spacing-lg);
 }
-.admin-sidebar.is-open {
-    transform: translateX(0);
+body.sidebar-visible .admin-sidebar {
+    transform: translateX(0); 
 }
 
 /* Adicionado para agrupar o header e o main content */
@@ -30,6 +30,7 @@
     display: flex;
     flex-direction: column;
     width: 100%;
+    transition: margin-left var(--transition-speed) ease;
 }
 
 .admin-main-content {
@@ -64,8 +65,14 @@
     display: block; /* ou 'flex', 'grid', etc., dependendo do layout interno do seu painel */
 }
 
+@media (max-width: 768px) {
+    .mobile-header {
+        display: flex; /* Mostra o header em mobile */
+    }
+}
+
 /* --- Estilos para Desktop --- */
-@media (min-width: 1024px) {
+@media (min-width: 768px) {
     .admin-layout {
         display: grid;
         grid-template-columns: var(--sidebar-width) 1fr;

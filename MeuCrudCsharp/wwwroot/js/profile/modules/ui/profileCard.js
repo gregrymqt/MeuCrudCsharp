@@ -1,4 +1,4 @@
-import { fetchCardInfo } from '../api/userAccountAPI.js';
+import { fetchProfileSummary } from '../api/userAccountAPI.js';
 
 function renderProfileCard(data) {
     const cardContainer = document.querySelector('#profile-content .profile-card');
@@ -39,7 +39,7 @@ function renderProfileCard(data) {
  */
 export async function initializeProfileCard() {
     try {
-        const data = await fetchCardInfo();
+        const data = await fetchProfileSummary();
         renderProfileCard(data);
     } catch (error) {
         console.error('Falha ao inicializar o card de perfil:', error);

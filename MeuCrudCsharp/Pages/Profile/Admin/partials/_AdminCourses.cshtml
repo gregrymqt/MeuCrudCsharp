@@ -20,11 +20,13 @@
                     <div class="form-grid">
                         <div class="form-group">
                             <label for="course-name">Nome do Curso</label>
-                            <input type="text" id="course-name-new" class="form-control" placeholder="Ex: Dominando C#" required>
+                            <input type="text" id="course-name-new" class="form-control" placeholder="Ex: Dominando C#"
+                                   required>
                         </div>
                         <div class="form-group">
                             <label for="course-description">Descrição</label>
-                            <textarea id="course-description-new" class="form-control" rows="3" placeholder="Uma breve descrição sobre o curso..."></textarea>
+                            <textarea id="course-description-new" class="form-control" rows="3"
+                                      placeholder="Uma breve descrição sobre o curso..."></textarea>
                         </div>
                     </div>
                     <div class="form-actions">
@@ -50,23 +52,30 @@
                 <div class="table-wrapper">
                     <table class="data-table">
                         <thead>
-                            <tr>
-                                <th>Nome do Curso</th>
-                                <th>Descrição</th>
-                                <th class="text-right">Ações</th>
-                            </tr>
+                        <tr>
+                            <th>Nome do Curso</th>
+                            <th>Descrição</th>
+                            <th class="text-right">Ações</th>
+                        </tr>
                         </thead>
                         <tbody id="courses-table-body">
-                            <!-- Exemplo de como o JS deve renderizar a linha -->
-                            <tr>
-                                <td data-label="Nome do Curso">Dominando C#</td>
-                                <td data-label="Descrição">Um curso completo para iniciantes.</td>
-                                <td data-label="Ações" class="text-right">
-                                     <!-- Botões aqui -->
-                                </td>
-                            </tr>
+                        <!-- Exemplo de como o JS deve renderizar a linha -->
+                        <tr>
+                            <td data-label="Nome do Curso">Dominando C#</td>
+                            <td data-label="Descrição">Um curso completo para iniciantes.</td>
+                            <td data-label="Ações" class="text-right">
+                                <!-- Botões aqui -->
+                            </td>
+                        </tr>
                         </tbody>
                     </table>
+                </div>
+                <div id="courses-pagination" class="pagination-container">
+                    <button id="courses-prev-page-btn" class="btn btn-secondary" disabled>Anterior</button>
+                    <span class="pagination-info">
+                        Página <span id="courses-current-page">1</span> de <span id="courses-total-pages">1</span>
+                    </span>
+                    <button id="courses-next-page-btn" class="btn btn-secondary" disabled>Próximo</button>
                 </div>
             </div>
         </div>

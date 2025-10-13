@@ -2,6 +2,8 @@
 
 import * as api from '../api/adminAPI.js';
 import {openModal, closeModal} from '../ui/modals.js';
+import {initializePagination, updatePaginationState} from '../ui/pagination.js';
+
 
 // --- Seletores de DOM ---
 const plansTableBody = document.getElementById('plans-table-body');
@@ -11,6 +13,10 @@ const editForm = document.getElementById('edit-plan-form');
 const editPlanId = document.getElementById('edit-plan-id');
 const editPlanReason = document.getElementById('edit-plan-reason');
 const fetchButtonsContainer = document.getElementById('fetch-buttons');
+const editPlanAmount = document.getElementById('edit-plan-amount');
+const editPlanFrequencyType = document.getElementById('edit-plan-frequency-type');
+const PLANS_PER_PAGE = 10;
+let currentSource = 'db';
 
 
 // ✨ FUNÇÃO CORRIGIDA ✨
@@ -31,8 +37,8 @@ function renderPlansTable(plans) {
         const type = plan.slug ?? 'Tipo Indisponível';
 
         const price = plan.priceDisplay ?? 'R$ 0,00';
-        
-        const status = plan.isActive ? 'Active' : 'Inactive'; 
+
+        const status = plan.isActive ? 'Active' : 'Inactive';
 
         const publicId = plan.publicId ?? 'ID_INDISPONIVEL';
 
@@ -83,18 +89,8 @@ async function openEditPlanModal(planId) {
         // Preenche os campos usando os dados brutos do DTO
         editPlanId.value = plan.publicId;
         editPlanReason.value = plan.name;
-
-        // CORREÇÃO: Usa o valor numérico diretamente
-        document.getElementById('edit-plan-amount').value = plan.transactionAmount;
-
-        const frequencySelect = document.getElementById('edit-plan-frequency-type');
-
-        // CORREÇÃO: Lógica mais simples e direta
-        if (plan.frequency === 12 && plan.frequencyType === 'months') {
-            frequencySelect.value = 'years';
-        } else {
-            frequencySelect.value = 'months';
-        }
+        editPlanAmount.value = plan.transactionAmount;
+        editPlanFrequencyType.value = plan.frequencyType;
 
         openModal(editModal);
 
@@ -103,7 +99,7 @@ async function openEditPlanModal(planId) {
     }
 }
 
-export async function loadPlans(source) {
+async function fetchAndDisplayPlans(source, page = 1) {
     // 1. Mostra o estado de carregamento
     plansTableBody.innerHTML = `
         <tr>
@@ -120,128 +116,161 @@ export async function loadPlans(source) {
     buttons.forEach(button => button.disabled = true);
 
     try {
-        // 2. Busca os dados da fonte correta
-        const plans = source === 'api' ? await api.getAdminPlans() : await api.getPublicPlans();
+        // 1. A chamada de API agora passa a página e o tamanho
+        const result = source === 'api'
+            ? await api.getAdminPlans(page, PLANS_PER_PAGE)
+            : await api.getPublicPlans(page, PLANS_PER_PAGE);
 
-        // 3. Renderiza a tabela com os dados
-        renderPlansTable(plans);
-        initializePlansPanel();
+        // 2. Renderiza a tabela usando apenas a lista de 'items' da resposta
+        renderPlansTable(result.items);
+
+        // 3. Atualiza os controles de paginação com os metadados da resposta
+        updatePaginationState('plans', result);
+
     } catch (error) {
-        // 4. Mostra uma mensagem de erro em caso de falha
-        plansTableBody.innerHTML = `<tr><td colspan="5" class="text-center py-10 text-red-600 font-semibold">${error.message}</td></tr>`;
+        plansTableBody.innerHTML = `<tr><td colspan="5">${error.message}</td></tr>`;
+        // Esconde a paginação em caso de erro
+        document.getElementById('plans-pagination').style.display = 'none';
     } finally {
-        // 5. Reabilita os botões em qualquer cenário (sucesso ou erro)
         buttons.forEach(button => button.disabled = false);
     }
 }
 
-function initializePlansPanel() {
-    // Event delegation para a tabela de planos
+export function initializePlansPanel() {
 
-    fetchButtonsContainer.addEventListener('click', (e) => {
-        const target = e.target.closest('button');
-        if (!target) return;
+    if (fetchButtonsContainer && !fetchButtonsContainer.hasAttribute('data-click-handler-attached')) {
+        fetchButtonsContainer.addEventListener('click', (e) => {
+            const button = e.target.closest('button');
+            if (!button) return;
 
-        if (target.id === 'fetch-api-btn') {
-            loadPlans('api');
-        } else if (target.id === 'fetch-db-btn') {
-            loadPlans('db');
-        }
+            currentSource = button.id === 'fetch-api-btn' ? 'api' : 'db';
+            fetchAndDisplayPlans(currentSource, 1); // Sempre volta para a página 1 ao trocar a fonte
+        });
+        fetchButtonsContainer.setAttribute('data-click-handler-attached', 'true');
+    }
+
+    initializePagination('plans', (newPage) => {
+        fetchAndDisplayPlans(currentSource, newPage);
     });
 
-    plansTableBody.addEventListener('click', (e) => {
-        const target = e.target;
-        if (target.classList.contains('btn-edit')) {
-            openEditPlanModal(target.dataset.publicId);
-        }
-        if (target.classList.contains('btn-delete')) {
-            handlePlanDelete(target.dataset.publicId);
-        }
-    });
+    // Carga inicial dos dados
+    fetchAndDisplayPlans(currentSource, 1);
+
+    if (plansTableBody && !plansTableBody.hasAttribute('data-click-listener-attached')) {
+
+        plansTableBody.addEventListener('click', (e) => {
+            const target = e.target.closest('button');
+
+            if (!target) return;
+
+            if (target.classList.contains('btn-edit')) {
+                openEditPlanModal(target.dataset.publicId);
+            }
+
+            if (target.classList.contains('btn-delete')) {
+                handlePlanDelete(target.dataset.publicId);
+            }
+        });
+
+        // ADICIONA A FLAG PARA GARANTIR QUE O CÓDIGO ACIMA SÓ RODE UMA VEZ
+        plansTableBody.setAttribute('data-click-listener-attached', 'true');
+        console.log('Listener de delegação para a tabela de planos foi anexado.');
+    }
 
     // SEU MÉTODO addEventListener CORRIGIDO
-    createPlanForm?.addEventListener('submit', async function (e) {
-        e.preventDefault();
-        const saveButton = createPlanForm.querySelector('button[type="submit"]');
-        saveButton.disabled = true;
-        saveButton.textContent = 'Creating...';
+    if (createPlanForm && !createPlanForm.hasAttribute('data-listener-attached')) {
 
-        // Lê os valores dos novos campos do formulário
-        const frequency = parseInt(document.getElementById('plan-interval').value, 10);
-        const frequency_type = document.getElementById('plan-frequency-type').value;
+        // Adiciona o listener
+        createPlanForm.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const saveButton = createPlanForm.querySelector('button[type="submit"]');
+            saveButton.disabled = true;
+            saveButton.textContent = 'Creating...';
 
-        const planData = {
-            reason: document.getElementById('plan-reason').value,
-            auto_recurring: {
-                frequency: frequency,                 // Usando a variável do input 'plan-interval'
-                frequency_type: frequency_type,       // Usando a variável do select 'plan-frequency-type'
-                transaction_amount: parseFloat(document.getElementById('plan-amount').value),
-                currency_id: 'BRL' // É bom sempre enviar a moeda
-            },
-            description: document.getElementById('plan-description').value
-        }
+            // Lê os valores dos novos campos do formulário
+            const frequency = parseInt(document.getElementById('plan-interval').value, 10);
+            const frequency_type = document.getElementById('plan-frequency-type').value;
 
-        try {
-            // NOVO: Passa o token encontrado para a função da API
-            const result = await api.createPlan(planData);
+            const planData = {
+                reason: document.getElementById('plan-reason').value,
+                auto_recurring: {
+                    frequency: frequency,
+                    frequency_type: frequency_type,
+                    transaction_amount: parseFloat(document.getElementById('plan-amount').value),
+                    currency_id: 'BRL'
+                },
+                description: document.getElementById('plan-description').value
+            }
 
-            await Swal.fire({
-                title: 'Success!', text: `Plan created successfully! ID: ${result.id}`, icon: 'success'
-            });
+            try {
+                const result = await api.createPlan(planData);
+                await Swal.fire({
+                    title: 'Success!', text: `Plan created successfully! ID: ${result.id}`, icon: 'success'
+                });
+                createPlanForm.reset();
+                await loadPlans();
+            } catch (error) {
+                Swal.fire({
+                    title: 'Error!', text: error.message, icon: 'error'
+                });
+            } finally {
+                saveButton.disabled = false;
+                saveButton.textContent = 'Create Plan';
+            }
+        });
 
-            createPlanForm.reset();
-            await loadPlans();
+        // MARCA O ELEMENTO PARA INDICAR QUE O LISTENER FOI ANEXADO
+        createPlanForm.setAttribute('data-listener-attached', 'true');
+        console.log('Listener do formulário de criação de plano foi anexado.');
+    }
 
-        } catch (error) {
-            Swal.fire({
-                title: 'Error!', text: error.message, icon: 'error'
-            });
-        } finally {
-            saveButton.disabled = false;
-            saveButton.textContent = 'Create Plan';
-        }
-    });
+    if (editForm && !editForm.hasAttribute('data-listener-attached')) {
 
-    editForm?.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const planId = editPlanId.value;
-        const submitButton = editForm.querySelector('button[type="submit"]');
-        submitButton.disabled = true;
-        submitButton.textContent = 'Saving...';
+        editForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
 
-        const selectedFrequency = document.getElementById('edit-plan-frequency-type').value;
+            const planId = document.getElementById('edit-plan-id').value;
+            const submitButton = editForm.querySelector('button[type="submit"]');
+            submitButton.disabled = true;
+            submitButton.textContent = 'Saving...';
 
-        const updatedData = {
-            reason: document.getElementById('edit-plan-reason').value,
-            transaction_amount: parseFloat(document.getElementById('edit-plan-amount').value),
-            frequency: selectedFrequency === 'years' ? 12 : 1, 
-            frequency_type: 'months' 
-        };
+            const updatedData = {
+                reason: document.getElementById('edit-plan-reason').value,
+                auto_recurring: {
+                    transaction_amount: parseFloat(document.getElementById('edit-plan-amount').value),
+                    frequency: parseInt(document.getElementById('edit-plan-frequency').value, 10),
+                    frequency_type: 'months'
+                }
+            };
 
-        try {
-            const response = await api.updatePlan(planId, updatedData);
+            try {
+                const response = await api.updatePlan(planId, updatedData);
 
-            Swal.fire({
-                title: 'Success!',
-                text: `Plan updated successfully! Name: ${response.Name}`,
-                icon: 'success',
-                timer: 2000,
-                showConfirmButton: false
-            });
+                Swal.fire({
+                    title: 'Success!',
+                    text: `Plan updated successfully! Name: ${response.Name}`,
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
 
-            closeModal();
-            await loadPlans();
+                closeModal();
+                await loadPlans();
 
-        } catch (error) {
-            console.error('Error updating plan:', error);
-            Swal.fire({
-                title: 'Error!', text: error.message, icon: 'error'
-            });
-        } finally {
-            submitButton.disabled = false;
-            submitButton.textContent = 'Save Changes';
-        }
-    });
+            } catch (error) {
+                console.error('Error updating plan:', error);
+                Swal.fire({
+                    title: 'Error!', text: error.message, icon: 'error'
+                });
+            } finally {
+                submitButton.disabled = false;
+                submitButton.textContent = 'Save Changes';
+            }
+        });
+
+        editForm.setAttribute('data-listener-attached', 'true');
+        console.log('Listener do formulário de EDIÇÃO de plano foi anexado.');
+    }
 
     document.getElementById('close-edit-plan-modal')?.addEventListener('click', () => closeModal(editModal));
 }

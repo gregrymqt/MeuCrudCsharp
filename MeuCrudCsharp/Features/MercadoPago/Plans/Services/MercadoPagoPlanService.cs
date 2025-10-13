@@ -12,19 +12,18 @@ namespace MeuCrudCsharp.Features.MercadoPago.Plans.Services;
 
 public class MercadoPagoPlanService : MercadoPagoServiceBase, IMercadoPagoPlanService
 {
-
-
     /// <summary>
     /// Initializes a new instance of the <see cref="PlanService"/> class.
     /// </summary>
     /// <param name="httpClient">The HTTP client for making API requests, passed to the base class.</param>
     /// <param name="logger">The logger for recording events and errors, passed to the base class.</param>
-
     public MercadoPagoPlanService(
         IHttpClientFactory httpClient,
         ILogger<IMercadoPagoPlanService> logger
     )
-        : base(httpClient, logger) {}
+        : base(httpClient, logger)
+    {
+    }
 
     public async Task<PlanResponseDto> CreatePlanAsync(object payload)
     {

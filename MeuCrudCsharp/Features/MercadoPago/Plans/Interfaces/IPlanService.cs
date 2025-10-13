@@ -10,7 +10,7 @@ public interface IPlanService
     /// Busca todos os planos ativos do banco de dados, formatados para exibição.
     /// </summary>
     /// <returns>Uma lista de DTOs dos planos ativos.</returns>
-    Task<List<PlanDto>> GetActiveDbPlansAsync();
+    Task<PagedResultDto<PlanDto>> GetActiveDbPlansAsync(int page, int pageSize);
 
     /// <summary>
     /// Busca um plano específico pelo seu identificador público (GUID).
@@ -46,6 +46,6 @@ public interface IPlanService
     /// retorna todos os planos, buscando na api do Mercado Pago 
     /// </summary>
     /// <returns>Todos os planos</returns>
-    Task<List<PlanDto>> GetActiveApiPlansAsync();
+    Task<PagedResultDto<PlanDto>> GetActiveApiPlansAsync(int page, int pageSize);
 
 }

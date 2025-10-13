@@ -6,11 +6,12 @@
             <p>Visualize e busque por alunos cadastrados.</p>
         </div>
         <form id="search-students-form" class="search-form">
-            <input type="text" id="search-students-input" class="form-control" placeholder="Buscar por nome ou email...">
+            <input type="text" id="search-students-input" class="form-control"
+                   placeholder="Buscar por nome ou email...">
             <button type="submit" class="btn btn-secondary">Buscar</button>
         </form>
     </div>
-    
+
     <!-- Tabela responsiva -->
     <div class="table-wrapper">
         <table class="data-table">
@@ -37,5 +38,12 @@
             </tr>
             </tbody>
         </table>
+    </div>
+    <div id="students-pagination" class="pagination-container">
+        <button id="students-prev-page-btn" class="btn btn-secondary" disabled>Anterior</button>
+        <span class="pagination-info">
+            Página <span id="students-current-page">1</span> de <span id="students-total-pages">1</span>
+        </span>
+        <button id="students-next-page-btn" class="btn btn-secondary" disabled>Próximo</button>
     </div>
 </div>

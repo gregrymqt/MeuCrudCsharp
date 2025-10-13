@@ -30,7 +30,9 @@ function showResults(data, isSuccess = true) {
 
 
 async function handleFormSubmit(form, apiCall) {
-    if (!form) return;
+    if (!form || form.hasAttribute('data-submit-handler-attached')) {
+        return;
+    }
 
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -54,66 +56,43 @@ async function handleFormSubmit(form, apiCall) {
             submitButton.textContent = originalButtonText;
         }
     });
+
+    form.setAttribute('data-submit-handler-attached', 'true');
 }
 
 function initializeActionSelector() {
-    // 1. Pega os elementos principais da página
     const actionSelector = document.getElementById('subscription-action-selector');
     const allForms = document.querySelectorAll('.action-form');
     const resultsContainer = document.getElementById('action-results-container');
 
-    // Garante que o seletor existe antes de adicionar o evento
-    if (!actionSelector) {
+    // VERIFICAÇÃO: Se o seletor não existe ou se o listener já foi anexado, não faz nada.
+    if (!actionSelector || actionSelector.hasAttribute('data-change-handler-attached')) {
         return;
     }
 
-    // 2. Adiciona um evento que dispara toda vez que o usuário muda a opção
     actionSelector.addEventListener('change', function() {
-        // Pega o valor da opção selecionada (ex: "search", "update-value")
         const selectedValue = this.value;
-
-        // 3. Esconde TODOS os formulários para limpar o estado anterior
         allForms.forEach(form => {
             form.classList.remove('active');
         });
-
-        // Limpa também qualquer resultado de operação anterior
         if (resultsContainer) {
             resultsContainer.innerHTML = '';
         }
-
-        // 4. Se o usuário selecionou uma opção válida (não a primeira)...
         if (selectedValue) {
-            // Constrói o ID do formulário dinamicamente. Ex: "form-" + "search" = "form-search"
-            const targetFormId = `form-${selectedValue}`;
-            const targetForm = document.getElementById(targetFormId);
-
-            // 5. Se o formulário correspondente foi encontrado, mostra-o adicionando a classe 'active'
+            const targetForm = document.getElementById(`form-${selectedValue}`);
             if (targetForm) {
                 targetForm.classList.add('active');
             }
         }
     });
+
+    // FLAG: Marca o seletor para indicar que o listener foi anexado.
+    actionSelector.setAttribute('data-change-handler-attached', 'true');
 }
 
 export function initializeSubscriptionsPanel() {
 
     initializeActionSelector();
-    
-    if (!actionSelector) {
-        console.error("Elementos essenciais do painel de assinaturas não foram encontrados.");
-        return;
-    }
-
-    // Mostra/esconde o formulário correto quando o seletor muda
-    actionSelector.addEventListener('change', function () {
-        const selectedFormId = `form-${this.value}`;
-        actionForms.forEach(form => {
-            form.classList.toggle('active', form.id === selectedFormId);
-        });
-        actionResultsContainer.innerHTML = ''; // Limpa resultados ao trocar de ação
-    });
-
 
     handleFormSubmit(document.getElementById('form-search'), (e) => {
         const query = e.target.querySelector('#search-id').value;

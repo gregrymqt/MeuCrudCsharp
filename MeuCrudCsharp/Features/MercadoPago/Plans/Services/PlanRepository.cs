@@ -1,5 +1,6 @@
 using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Features.Exceptions;
+using MeuCrudCsharp.Features.MercadoPago.Plans.DTOs;
 using MeuCrudCsharp.Features.MercadoPago.Plans.Interfaces;
 using MeuCrudCsharp.Models;
 using Microsoft.EntityFrameworkCore;
@@ -53,12 +54,25 @@ public class PlanRepository : IPlanRepository
 
 
     // NOVO MÉTODO - Lógica movida do PlanService
-    public async Task<List<Plan>> GetActivePlansAsync() =>
-        await _context.Plans
+    public async Task<PagedResultDto<Plan>> GetActivePlansAsync(int page, int pageSize)
+    {
+        var query = _context.Plans
             .AsNoTracking()
-            .Where(p => p.IsActive)
+            .Where(p => p.IsActive == true);
+
+        // 1. Obtenha a contagem TOTAL antes de paginar
+        var totalCount = await query.CountAsync();
+
+        // 2. Aplique a ordenação e a paginação
+        var items = await query
             .OrderBy(p => p.TransactionAmount)
+            .Skip((page - 1) * pageSize) // Pula os itens das páginas anteriores
+            .Take(pageSize)              // Pega o número de itens para a página atual
             .ToListAsync();
+
+        // 3. Retorne o objeto de resultado paginado
+        return new PagedResultDto<Plan>(items, page, pageSize, totalCount);
+    }
 
 
     public async Task<List<Plan>> GetByExternalIdsAsync(IEnumerable<string> externalIds) =>

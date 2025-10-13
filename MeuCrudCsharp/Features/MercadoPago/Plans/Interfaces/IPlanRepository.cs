@@ -1,3 +1,4 @@
+using MeuCrudCsharp.Features.MercadoPago.Plans.DTOs;
 using MeuCrudCsharp.Models;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Plans.Interfaces;
@@ -31,5 +32,5 @@ public interface IPlanRepository
     /// Busca todos os planos que estão marcados como ativos no banco de dados.
     /// </summary>
     /// <returns>Uma lista de entidades Plan ativas.</returns>
-    Task<List<Plan>> GetActivePlansAsync(); // <-- NOVO MÉTODO
+    Task<PagedResultDto<Plan>> GetActivePlansAsync(int page, int pageSize);
 }
