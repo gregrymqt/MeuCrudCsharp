@@ -1,0 +1,31 @@
+/* /css/plan/modules/base.css */
+
+:root {
+    --primary-color: #6a11cb;
+    --secondary-color: #2575fc;
+    --background-color: #f4f7fc;
+    --card-bg: #ffffff;
+    --text-dark: #333;
+    --text-light: #777;
+    --accent-color: #ffc107;
+    --border-color: #e9ecef;
+    --gradient-primary: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+}
+
+/* Reset básico e configuração da fonte */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background-color: var(--background-color);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: var(--text-dark);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}

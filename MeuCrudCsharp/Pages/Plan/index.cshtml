@@ -1,11 +1,10 @@
 ﻿@page
-@model MeuCrudCsharp.Pages.Payment.Subscription.indexModel
+@model IndexModel
 @{
     ViewData["Title"] = "Nossos Planos";
 }
 
-<!-- Dependências -->
-<link rel="stylesheet" href="~/css/plan/index.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/plan/main.css" asp-append-version="true" />
 
 <div class="plans-container">
     <div class="plans-header">
@@ -13,14 +12,17 @@
         <p>Acesso ilimitado a todos os cursos, com novos vídeos toda semana.</p>
     </div>
 
-    <!-- MUDANÇA: O contêiner agora está vazio e tem um ID -->
     <div class="plans-grid" id="plans-grid-container">
-        <!-- O JavaScript irá inserir os cards dos planos aqui -->
         <div class="loader" id="plans-loader">
             <i class="fas fa-spinner fa-spin"></i> Carregando planos...
         </div>
     </div>
+
+    <div class="pagination-controls" id="plans-pagination-controls" style="display: none;">
+        <button id="prev-page-btn" class="btn-pagination" disabled>&laquo; Anterior</button>
+        <span class="page-info">Página <span id="current-page">1</span> de <span id="total-pages">1</span></span>
+        <button id="next-page-btn" class="btn-pagination" disabled>Próximo &raquo;</button>
+    </div>
 </div>
 
-<!-- MUDANÇA: Adicionando o script JS no final da página -->
 <script src="~/js/plan/plans-main.js" asp-append-version="true" defer type="module"></script>

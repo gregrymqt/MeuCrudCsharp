@@ -1,0 +1,46 @@
+/* /css/plan/modules/layout.css */
+
+/* Estrutura principal do container */
+.plans-container {
+    width: 100%;
+    padding: 2rem 1rem; /* Mais espaço vertical, menos nas laterais para mobile */
+    text-align: center;
+}
+
+/* Grid que segura os cards */
+.plans-grid {
+    display: grid;
+    grid-template-columns: 1fr; /* UMA coluna por padrão (mobile-first) */
+    gap: 2rem;
+    align-items: center;
+    justify-items: center;
+    width: 100%;
+    max-width: 380px; /* Evita que o card estique demais no mobile */
+    margin: 0 auto;
+}
+
+/* --- Media Queries para telas maiores --- */
+
+/* Telas de Tablet (e maiores) */
+@media (min-width: 768px) {
+    .plans-container {
+        max-width: 1200px;
+        margin: 3rem auto;
+        padding: 2rem;
+    }
+
+    .plans-grid {
+        /* DUAS colunas para tablets */
+        grid-template-columns: repeat(2, 1fr);
+        max-width: 800px;
+    }
+}
+
+/* Telas de Desktop (se houver mais planos, pode-se ajustar para 3 ou 4 colunas) */
+@media (min-width: 1024px) {
+    .plans-grid {
+        /* Mantemos 2 colunas para 4 planos, fica bem espaçado.
+           Se tivesse 3 ou 6 planos, usaríamos repeat(3, 1fr) */
+        max-width: 900px;
+    }
+}
