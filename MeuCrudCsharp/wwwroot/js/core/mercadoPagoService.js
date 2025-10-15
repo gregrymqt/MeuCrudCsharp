@@ -44,10 +44,10 @@ export async function initializeMercadoPago() {
     if (mpInstance) {
         return mpInstance;
     }
+    
+    const publicKey = await fetchPublicKey();
 
     try {
-        console.log("Buscando a Public Key...");
-        const publicKey = await fetchPublicKey();
 
         if (typeof publicKey !== 'string' || publicKey.trim() === '') {
             throw new Error("A Public Key retornada é inválida ou vazia.");

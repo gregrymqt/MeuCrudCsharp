@@ -28,7 +28,7 @@ export async function init() {
     Bricks.initializeRenderService(mpInstance);
 
     // O brick não é renderizado aqui! Apenas preparamos o terreno.
-    // UI.showPaymentForm(); // Mostra o formulário vazio, esconde o loading inicial
+    UI.showPaymentForm(); // Mostra o formulário vazio, esconde o loading inicial
 }
 
 /**

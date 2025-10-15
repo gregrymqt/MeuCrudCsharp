@@ -55,7 +55,7 @@ export const deleteCourse = (id) => apiService.fetch(`/api/admin/courses/${id}`,
 // API DE ALUNOS (Students)
 // ==========================================================================================
 
-export const getStudents = (forceRefresh = false) => fetchAndCache('allStudents', '/api/admin/students', forceRefresh);
+export const getStudents = (forceRefresh = false) => fetchAndCache('allStudents', '/api/admin/students?page=${page}&${pageSize}`', forceRefresh);
 export const getStudentsPublicId = (id) => apiService.fetch(`/api/admin/students/${id}`);
 
 // ==========================================================================================

@@ -4,15 +4,15 @@
 import { initializeSidebar, initializeMenuToggle } from './modules/ui/navigation.js';
 import { initializePlansPanel } from './modules/panels/plansPanel.js';
 import { loadCourses } from './modules/panels/coursesPanel.js';
-import { loadStudents } from './modules/panels/studentsPanel.js';
+import {initializeStudentsPanel} from './modules/panels/studentsPanel.js';
 import { loadSubscriptions } from './modules/panels/subscriptionsPanel.js';
 import { initializeTabs } from './modules/ui/tabs.js';
 
-function main() {
+async function main() {
     const panelLoaders = {
         'nav-plans': initializePlansPanel,
-        'nav-courses': loadCourses,
-        'nav-students': loadStudents,
+        'nav-courses': await loadCourses,
+        'nav-students': await initializeStudentsPanel,
         'nav-subscriptions': loadSubscriptions,
     };
 
@@ -23,4 +23,4 @@ function main() {
     document.querySelector('.sidebar-link.active')?.click();
 }
 
-document.addEventListener('DOMContentLoaded', main);
+document.addEventListener('DOMContentLoaded', await main);

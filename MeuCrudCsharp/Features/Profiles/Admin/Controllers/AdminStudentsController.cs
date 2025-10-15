@@ -1,11 +1,7 @@
-﻿using System;
-using System.Threading.Tasks;
-using MeuCrudCsharp.Features.Base;
+﻿using MeuCrudCsharp.Features.Base;
 using MeuCrudCsharp.Features.Profiles.Admin.Interfaces;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 
 namespace MeuCrudCsharp.Features.Profiles.Admin.Controllers
 {
@@ -42,13 +38,14 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Controllers
         /// <response code="401">If the user is not authenticated.</response>
         /// <response code="403">If the user is not in the 'Admin' role.</response>
         /// <response code="500">If an unexpected server error occurs.</response>
-        [HttpGet]
-        public async Task<IActionResult> GetAllStudents()
+       [HttpGet]
+        public async Task<IActionResult> GetAllStudents([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
         {
             try
             {
-                var students = await _studentService.GetAllStudentsAsync();
-                return Ok(students);
+                // ALTERADO: Repassa os parâmetros para o método do serviço.
+                var paginatedStudents = await _studentService.GetAllStudentsAsync(page, pageSize);
+                return Ok(paginatedStudents);
             }
             catch (Exception ex)
             {

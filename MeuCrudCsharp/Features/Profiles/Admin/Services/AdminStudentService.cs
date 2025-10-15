@@ -38,9 +38,10 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Services
         /// This method caches the list of students for 5 minutes to improve performance
         /// on repeated requests.
         /// </remarks>
-        public async Task<List<StudentDto>> GetAllStudentsAsync()
+        public async Task<PaginatedResult<StudentDto>> GetAllStudentsAsync(int page, int pageSize)
+
         {
-            const string cacheKey = "Admin_AllStudentsWithSubscription";
+            string cacheKey = $"Admin_AllStudents_Page{page}_Size{pageSize}";
 
             return await _cacheService.GetOrCreateAsync(
                 cacheKey,
@@ -51,11 +52,28 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Services
                         _logger.LogInformation(
                             "Buscando a lista de alunos do banco de dados (cache miss)."
                         );
-                        return await _context
+
+                        var totalCount = await _context.Users.AsNoTracking().CountAsync();
+
+                        if (totalCount == 0)
+                        {
+                            return new PaginatedResult<StudentDto>
+                            {
+                                Items = new List<StudentDto>(),
+                                TotalCount = 0,
+                                TotalPages = 0,
+                                CurrentPage = page
+                            };
+                        }
+
+                        var students = await _context
                             .Users.AsNoTracking()
                             .Include(u => u.Subscription)
                             .ThenInclude(s => s.Plan)
                             .OrderBy(u => u.Name)
+                            // ALTERADO: Aplica a paginação na consulta do banco de dados
+                            .Skip((page - 1) * pageSize)
+                            .Take(pageSize)
                             .Select(u => new StudentDto
                             (
                                 u.PublicId.ToString(),
@@ -69,6 +87,16 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Services
                                 u.Subscription != null ? u.Subscription.Id : "Sem Assinatura"
                             ))
                             .ToListAsync();
+
+                        // 3. Monta o objeto de resultado
+                        return new PaginatedResult<StudentDto>
+                        {
+                            Items = students,
+                            TotalCount = totalCount,
+                            CurrentPage = page,
+                            // Calcula o número total de páginas
+                            TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize)
+                        };
                     }
                     catch (Exception ex)
                     {
@@ -88,46 +116,46 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Services
 
         public async Task<StudentDto> GetStudentByIdAsync(Guid id)
         {
-                    try
-                    {
-                        _logger.LogInformation(
-                            "Buscando o alunos pelo id no banco de dados (cache miss)."
-                        );
+            try
+            {
+                _logger.LogInformation(
+                    "Buscando o alunos pelo id no banco de dados (cache miss)."
+                );
 
-                        var user = await _context.Users.AsNoTracking()
-                            .Include(users => users.Subscription)
-                            .ThenInclude(s => s.Plan)
-                            .SingleOrDefaultAsync(u => u.PublicId == id);
+                var user = await _context.Users.AsNoTracking()
+                    .Include(users => users.Subscription)
+                    .ThenInclude(s => s.Plan)
+                    .SingleOrDefaultAsync(u => u.PublicId == id);
 
-                        if (user == null)
-                        {
-                            _logger.LogWarning($"Tentativa de buscar aluno com ID {id} não encontrado.");
-                            throw new KeyNotFoundException($"Aluno com ID {id} não encontrado.");
-                        }
+                if (user == null)
+                {
+                    _logger.LogWarning($"Tentativa de buscar aluno com ID {id} não encontrado.");
+                    throw new KeyNotFoundException($"Aluno com ID {id} não encontrado.");
+                }
 
-                        var studentDto = new StudentDto(
-                            user.PublicId.ToString(),
-                            user.Name,
-                            user.Email,
-                            user.Subscription?.Status ??
-                            "Sem Assinatura", 
-                            user.Subscription?.Plan?.Name ?? "N/A", 
-                            user.CreatedAt,
-                            user.Subscription?.Id ?? "Sem Assinatura");
+                var studentDto = new StudentDto(
+                    user.PublicId.ToString(),
+                    user.Name,
+                    user.Email,
+                    user.Subscription?.Status ??
+                    "Sem Assinatura",
+                    user.Subscription?.Plan?.Name ?? "N/A",
+                    user.CreatedAt,
+                    user.Subscription?.Id ?? "Sem Assinatura");
 
-                        return studentDto;
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(
-                            ex,
-                            "Falha ao buscar o aluno no banco de dados."
-                        );
-                        throw new AppServiceException(
-                            "An error occurred while querying student data.",
-                            ex
-                        );
-                    }
+                return studentDto;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Falha ao buscar o aluno no banco de dados."
+                );
+                throw new AppServiceException(
+                    "An error occurred while querying student data.",
+                    ex
+                );
+            }
         }
     }
 }

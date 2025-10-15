@@ -1,11 +1,13 @@
 ﻿import * as api from '../api/adminAPI.js';
 import {openModal, closeModal} from '../ui/modals.js';
 import cacheService from '../../../../core/cacheService.js';
+import {initializePagination, updatePaginationState} from "../ui/pagination";
 
 
 const studentsTableBody = document.getElementById('students-table-body');
 const studentDetailsModal = document.getElementById('studentDetailsModal'); // O modal que você adicionou ao HTML
 let isStudentDocumentListenerAttached = false;
+const STUDENTS_PER_PAGE = 10;
 
 /**
  * Mapeia o status da API para uma classe CSS correspondente.
@@ -78,12 +80,25 @@ function renderStudentsTable(students) {
     });
 }
 
-export async function loadStudents() {
+/**
+ * ADICIONADO: Nova função para buscar e exibir os alunos de uma página específica.
+ * Esta função agora centraliza a lógica de carregamento, renderização e atualização da paginação.
+ * @param {number} page - O número da página a ser buscada.
+ */
+async function fetchAndDisplayStudents(page = 1) {
     try {
+        // Mostra o estado de carregamento na tabela
         studentsTableBody.innerHTML = `<tr><td colspan="4" class="text-center">Carregando...</td></tr>`;
-        const students = await api.getStudents();
-        renderStudentsTable(students);
-        initializeStudentsPanel();
+
+        // ALTERADO: A chamada de API agora envia a página e o limite de itens
+        const result = await api.getStudents(page, STUDENTS_PER_PAGE);
+
+        // Renderiza a tabela apenas com a lista de items da resposta da API
+        renderStudentsTable(result.items);
+
+        // Atualiza os controles de paginação (números e botões) com os metadados da resposta
+        updatePaginationState('students', result);
+
     } catch (error) {
         studentsTableBody.innerHTML = `<tr><td colspan="4" class="text-center text-danger">${error.message}</td></tr>`;
     }
@@ -153,10 +168,8 @@ async function openStudentModal(studentId) {
 }
 
 
-function initializeStudentsPanel() {
-
-    // 1. Adiciona o event listener para os botões de detalhes (delegação de evento)
-    // VERIFICA A FLAG GLOBAL ANTES DE ADICIONAR O LISTENER
+export async function initializeStudentsPanel() {
+    // 1. Mantém a lógica dos event listeners para os modais de detalhes
     if (!isStudentDocumentListenerAttached) {
         document.addEventListener('click', (event) => {
             const detailsButton = event.target.closest('.btn-view-details');
@@ -167,25 +180,25 @@ function initializeStudentsPanel() {
                 }
             }
         });
-
-        // ATUALIZA A FLAG PARA 'true' DEPOIS DE ADICIONAR O LISTENER
         isStudentDocumentListenerAttached = true;
         console.log('Listener de clique no DOCUMENTO para detalhes de estudantes foi anexado.');
     }
 
-    // 2. Adiciona o event listener para fechar o modal
-    // Busca o botão de fechar dentro do modal de detalhes
-    const studentDetailsModal = document.getElementById('studentDetailsModal'); // Garanta que você tem o modal
+    const studentDetailsModal = document.getElementById('studentDetailsModal');
     const closeModalButton = studentDetailsModal.querySelector('[data-bs-dismiss="modal"]');
-
-    // APLICA A TÉCNICA DA FLAG NO BOTÃO ESPECÍFICO
     if (closeModalButton && !closeModalButton.hasAttribute('data-click-listener-attached')) {
         closeModalButton.addEventListener('click', () => {
-            // Usando a função importada do seu módulo de modais
             closeModal(studentDetailsModal);
         });
-
-        // ADICIONA A FLAG AO BOTÃO PARA NÃO REPETIR
         closeModalButton.setAttribute('data-click-listener-attached', 'true');
     }
+
+    // 2. ADICIONADO: Inicializa a funcionalidade dos botões de paginação
+    // O segundo argumento é a função que será chamada quando o usuário clicar em "próximo" ou "anterior".
+    initializePagination('students', (newPage) => {
+        fetchAndDisplayStudents(newPage);
+    });
+
+    // 3. ADICIONADO: Faz a chamada inicial para carregar a primeira página de alunos
+    fetchAndDisplayStudents(1);
 }

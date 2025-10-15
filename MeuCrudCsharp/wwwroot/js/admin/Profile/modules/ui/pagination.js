@@ -1,89 +1,80 @@
-// js/admin/modules/ui/pagination.js
-
 /**
- * Estado para armazenar a página atual de cada painel.
- * Usamos um objeto para que cada painel (plans, courses, etc.)
- * possa ter sua própria contagem de página independentemente.
+ * O estado atual da paginação para diferentes seções (ex: 'students', 'plans', 'courses').
+ * Guarda a página atual e o total de páginas para cada um.
  */
 const paginationState = {};
 
 /**
- * Inicializa os controles de paginação para um painel específico.
- * Adiciona os event listeners aos botões "Anterior" e "Próximo".
- * Garante que os listeners sejam adicionados apenas uma vez.
- *
- * @param {string} prefix - O prefixo único para os IDs dos elementos de paginação (ex: 'plans', 'courses').
- * @param {function} onPageChange - A função a ser chamada quando o usuário clica para mudar de página. Ela receberá o novo número da página como argumento.
+ * Atualiza a UI da paginação (botões e texto) com base nos dados da API.
+ * Também controla a visibilidade do container de paginação.
+ * @param {string} prefix - O prefixo para os IDs dos elementos (ex: 'students', 'plans').
+ * @param {object} data - O objeto de resposta da API, contendo currentPage, totalPages, etc.
  */
-export function initializePagination(prefix, onPageChange) {
-    const paginationContainer = document.getElementById(`${prefix}-pagination`);
-    if (!paginationContainer || paginationContainer.hasAttribute('data-pagination-initialized')) {
-        return; // Sai se não encontrar o container ou se já foi inicializado
-    }
+export function updatePaginationState(prefix, data) {
+    const { currentPage, totalPages } = data;
 
+    // Guarda o estado atual
+    paginationState[prefix] = { currentPage, totalPages };
+
+    // Seleciona os elementos da UI usando o prefixo
     const prevButton = document.getElementById(`${prefix}-prev-page-btn`);
     const nextButton = document.getElementById(`${prefix}-next-page-btn`);
-
-    // Inicializa o estado da página para este prefixo se ainda não existir
-    if (!paginationState[prefix]) {
-        paginationState[prefix] = 1; // Começa na página 1
-    }
-
-    prevButton.addEventListener('click', () => {
-        if (paginationState[prefix] > 1) {
-            paginationState[prefix]--;
-            onPageChange(paginationState[prefix]);
-        }
-    });
-
-    nextButton.addEventListener('click', () => {
-        // A lógica para saber se existe uma próxima página será controlada pelo estado 'disabled' do botão
-        paginationState[prefix]++;
-        onPageChange(paginationState[prefix]);
-    });
-
-    // Adiciona a "flag" para garantir que esta inicialização não ocorra novamente
-    paginationContainer.setAttribute('data-pagination-initialized', 'true');
-    console.log(`Paginação para '${prefix}' foi inicializada.`);
-}
-
-/**
- * Atualiza a UI dos controles de paginação (números e estado dos botões).
- *
- * @param {string} prefix - O prefixo único para os IDs dos elementos (ex: 'plans', 'courses').
- * @param {object} data - Um objeto contendo as informações da paginação vindas da API.
- * @param {number} data.currentPage - O número da página atual.
- * @param {number} data.totalPages - O número total de páginas.
- * @param {boolean} data.hasNextPage - Se existe uma próxima página.
- * @param {boolean} data.hasPreviousPage - Se existe uma página anterior.
- */
-export function updatePaginationState(prefix, { currentPage, totalPages, hasNextPage, hasPreviousPage }) {
     const currentPageSpan = document.getElementById(`${prefix}-current-page`);
     const totalPagesSpan = document.getElementById(`${prefix}-total-pages`);
-    const prevButton = document.getElementById(`${prefix}-prev-page-btn`);
-    const nextButton = document.getElementById(`${prefix}-next-page-btn`);
-    const paginationContainer = document.getElementById(`${prefix}-pagination`);
+    const paginationContainer = document.getElementById(`${prefix}-pagination`); // Pega o container principal
 
-    // Se não encontrar os elementos, não faz nada.
-    if (!currentPageSpan || !totalPagesSpan || !prevButton || !nextButton || !paginationContainer) {
+    // Validação para garantir que os elementos existem na página antes de manipulá-los
+    if (!paginationContainer || !prevButton || !nextButton || !currentPageSpan || !totalPagesSpan) {
+        console.warn(`Elementos de paginação com prefixo "${prefix}" não foram encontrados.`);
         return;
     }
 
-    // Mostra ou esconde o container de paginação se houver mais de uma página
+    // --- NOVA LÓGICA ---
+    // Verifica se há mais de uma página. Se não houver, oculta todo o controle de paginação.
     if (totalPages > 1) {
+        // Usamos 'flex' porque é comum para esse tipo de container, mas 'block' também funcionaria.
         paginationContainer.style.display = 'flex';
     } else {
         paginationContainer.style.display = 'none';
     }
+    // --- FIM DA NOVA LÓGICA ---
 
-    // Atualiza os textos
+    // Atualiza os números da página
     currentPageSpan.textContent = currentPage;
     totalPagesSpan.textContent = totalPages;
 
-    // Atualiza o estado dos botões
-    prevButton.disabled = !hasPreviousPage;
-    nextButton.disabled = !hasNextPage;
+    // Habilita/desabilita o botão "Anterior"
+    prevButton.disabled = currentPage <= 1;
 
-    // Atualiza o estado global para garantir consistência
-    paginationState[prefix] = currentPage;
+    // Habilita/desabilita o botão "Próximo"
+    nextButton.disabled = currentPage >= totalPages;
+}
+
+
+/**
+ * Inicializa os event listeners para os botões de paginação.
+ * @param {string} prefix - O prefixo para os IDs dos elementos (ex: 'students').
+ * @param {function} onPageChange - A função a ser chamada quando uma nova página for solicitada.
+ */
+export function initializePagination(prefix, onPageChange) {
+    const prevButton = document.getElementById(`${prefix}-prev-page-btn`);
+    const nextButton = document.getElementById(`${prefix}-next-page-btn`);
+
+    if (!prevButton || !nextButton) {
+        return;
+    }
+
+    prevButton.addEventListener('click', () => {
+        const state = paginationState[prefix];
+        if (state && state.currentPage > 1) {
+            onPageChange(state.currentPage - 1);
+        }
+    });
+
+    nextButton.addEventListener('click', () => {
+        const state = paginationState[prefix];
+        if (state && state.currentPage < state.totalPages) {
+            onPageChange(state.currentPage + 1);
+        }
+    });
 }

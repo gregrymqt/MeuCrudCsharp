@@ -13,7 +13,7 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Interfaces
         /// Retrieves a list of all student profiles.
         /// </summary>
         /// <returns>A task that represents the asynchronous operation. The task result contains a list of <see cref="StudentDto"/> objects.</returns>
-        Task<List<StudentDto>> GetAllStudentsAsync();
+        Task<PaginatedResult<StudentDto>> GetAllStudentsAsync(int page, int pageSize);
 
 
         Task<StudentDto> GetStudentByIdAsync(Guid id);
