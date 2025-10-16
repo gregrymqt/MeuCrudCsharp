@@ -2,6 +2,7 @@
 
 import * as api from '../api/adminAPI.js';
 import {openModal, closeModal} from '../ui/modals.js';
+import {initializePagination, updatePaginationState} from "../ui/pagination.js";
 
 // --- Seletores de DOM ---
 const coursesTableBody = document.getElementById('courses-table-body');
@@ -16,9 +17,11 @@ const editCourseDescription = document.getElementById('edit-course-description')
 const searchCourseForm = document.getElementById('search-course-form');
 const searchCourseInput = document.getElementById('search-course-input');
 
+const COURSES_PER_PAGE = 10;
 // --- Funções de Renderização e Ações ---
 
 function renderCoursesTable(courses) {
+    const coursesTableBody = document.getElementById('courses-table-body'); // Garanta que essa variável esteja acessível
     coursesTableBody.innerHTML = ''; // Limpa a tabela
 
     if (!courses || courses.length === 0) {
@@ -27,20 +30,26 @@ function renderCoursesTable(courses) {
     }
 
     courses.forEach(course => {
-        // Verificação segura das propriedades
         const coursePublicId = course.publicId ?? 'ID_INVALIDO';
         const name = course.name ?? 'Curso sem nome';
-        const description = course.description || 'Sem descrição'; // '||' funciona bem para strings vazias
+        const description = course.description || 'Sem descrição';
 
         const row = document.createElement('tr');
         row.innerHTML = `
-    <td>${name}</td>
-    <td>${description}</td>
-    <td class="text-right">
-        <button type="button" class="btn btn-secondary btn-sm btn-edit-course" data-course-public-id="${coursePublicId}">Editar</button>
-        <button type="button" class="btn btn-danger btn-sm btn-delete-course" data-course-public-id="${coursePublicId}">Excluir</button>
-    </td>
-`;
+            <td>${name}</td>
+            <td>${description}</td>
+            <td class="text-right">
+                <div class="dropdown">
+                    <button class="btn btn-light btn-sm rounded-circle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        &#8942;
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item btn-edit-course" href="#" data-course-public-id="${coursePublicId}">Editar</a></li>
+                        <li><a class="dropdown-item btn-delete-course text-danger" href="#" data-course-public-id="${coursePublicId}">Excluir</a></li>
+                    </ul>
+                </div>
+            </td>
+        `;
         coursesTableBody.appendChild(row);
     });
 }
@@ -75,79 +84,85 @@ function openEditCourseModal(course) {
     openModal(editCourseModal);
 }
 
-// --- Funções Principais de Carregamento e Inicialização ---
+async function fetchAndDisplayCourses(page = 1) {
+    try {
+        coursesTableBody.innerHTML = `<tr><td colspan="3" class="text-center">Carregando...</td></tr>`;
 
-// Função que lida com a resposta da API e chama a renderização
-function handleApiResponse(response) {
-    let coursesList = []; // Inicia uma lista vazia
+        // ALTERADO: Chama a API com parâmetros de paginação
+        const response = await api.getCourses(page, COURSES_PER_PAGE);
 
-    // CASO 1: A resposta é um objeto de paginação (tem a propriedade 'items')
-    if (response && Array.isArray(response.items)) {
-        coursesList = response.items;
+        // Usa o manipulador inteligente para processar a resposta
+        handleApiResponse(response, true); // Passamos 'true' para indicar que é uma carga paginada
 
-        // BÔNUS: Aqui você pode atualizar os controles de paginação da sua tela
-        // usando response.pageNumber, response.totalPages, etc.
+    } catch (error) {
+        coursesTableBody.innerHTML = `<tr><td colspan="3" class="text-center text-danger">${error.message}</td></tr>`;
     }
-    // CASO 2: A resposta é um array simples (resultado da busca)
+}
+
+/**
+ * ALTERADO: Manipulador de resposta agora controla também a visibilidade da paginação.
+ * @param {object|Array} response - A resposta da API.
+ * @param {boolean} isPaginated - Indica se a resposta deve ter controles de paginação.
+ */
+function handleApiResponse(response, isPaginated = false) {
+    const paginationContainer = document.getElementById('courses-pagination');
+    let coursesList = [];
+
+    // CASO 1: Resposta paginada
+    if (isPaginated && response && Array.isArray(response.items)) {
+        coursesList = response.items;
+        // Atualiza os controles de paginação
+        updatePaginationState('courses', response);
+    }
+    // CASO 2: Resposta de busca (array simples)
     else if (Array.isArray(response)) {
         coursesList = response;
+        // Se for um resultado de busca, escondemos a paginação.
+        if (paginationContainer) {
+            paginationContainer.style.display = 'none';
+        }
     }
-    // Se não for nenhum dos casos, a lista permanece vazia.
 
-    // Agora sim, chamamos a função de renderização com a lista correta
     renderCoursesTable(coursesList);
 }
 
-// Agora, suas funções de carregar dados ficam mais simples:
-
 // Função para carregar os cursos paginados
-export async function loadCourses() {
-    try {
-        coursesTableBody.innerHTML = `<tr><td colspan="3" class="text-center">Carregando...</td></tr>`;
-        const response = await api.getCourses(); // Chama a rota paginada
-        handleApiResponse(response); // Usa o manipulador inteligente
-        initializeCoursesPanel();
-    } catch (error) {
-        coursesTableBody.innerHTML = `<tr><td colspan="3" class="text-center text-danger">${error.message}</td></tr>`;
-    }
+export function loadCourses() {
+    fetchAndDisplayCourses(1);
 }
 
 // Função para carregar os resultados da busca
-export async function searchCourses(name) {
-    const submitButton = searchCourseForm.querySelector('button');
-
+async function searchCourses(searchTerm) {
     try {
-        searchCourseInput.disabled = true; // Desativa o input
-        if (submitButton) submitButton.disabled = true; // Desativa o botão
-        coursesTableBody.innerHTML = `<tr><td colspan="3" class="text-center"><div class="loading-spinner"></div></td></tr>`; // Mostra um spinner
+        coursesTableBody.innerHTML = `<tr><td colspan="3" class="text-center">Buscando...</td></tr>`;
 
-        const response = await api.searchCoursesByName(name);
-        handleApiResponse(response);
+        // A API de busca pode retornar um array simples
+        const response = await api.searchCoursesByName(searchTerm); // Supondo que você tenha um endpoint de busca
+
+        // Usa o manipulador, indicando que NÃO é uma carga paginada
+        handleApiResponse(response, false);
+
     } catch (error) {
         coursesTableBody.innerHTML = `<tr><td colspan="3" class="text-center text-danger">${error.message}</td></tr>`;
-    } finally {
-        searchCourseInput.disabled = false;
-        if (submitButton) submitButton.disabled = false;
     }
 }
 
-function initializeCoursesPanel() {
+export function initializeCoursesPanel() {
     if (searchCourseForm && !searchCourseForm.hasAttribute('data-events-attached')) {
         let debounceTimer;
 
         searchCourseForm.addEventListener('submit', (e) => {
             e.preventDefault();
             const searchTerm = searchCourseInput.value.trim();
-            searchCourses(searchTerm);
+            if (searchTerm) searchCourses(searchTerm);
         });
 
-        const searchCourseInput = document.getElementById('search-course-input'); // Use o ID correto
         searchCourseInput.addEventListener('input', () => {
             clearTimeout(debounceTimer);
             debounceTimer = setTimeout(() => {
                 const searchTerm = searchCourseInput.value.trim();
                 if (searchTerm === '') {
-                    loadCourses();
+                    loadCourses(); // Recarrega a lista paginada
                 } else {
                     searchCourses(searchTerm);
                 }
@@ -155,8 +170,15 @@ function initializeCoursesPanel() {
         });
 
         searchCourseForm.setAttribute('data-events-attached', 'true');
-        console.log('Listeners do formulário de busca de cursos foram anexados.');
     }
+
+    // ADICIONADO: Inicializa a funcionalidade dos botões de paginação
+    initializePagination('courses', (newPage) => {
+        fetchAndDisplayCourses(newPage);
+    });
+
+    // ADICIONADO: Faz a chamada inicial para carregar a primeira página de cursos
+    fetchAndDisplayCourses(1);
 
     if (coursesTableBody && !coursesTableBody.hasAttribute('data-click-listener-attached')) {
         coursesTableBody.addEventListener('click', async (e) => {

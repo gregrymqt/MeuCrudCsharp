@@ -2,17 +2,18 @@
 using MeuCrudCsharp.Features.MercadoPago.Notification.Interfaces;
 using MeuCrudCsharp.Features.MercadoPago.Notification.Record;
 using Microsoft.AspNetCore.SignalR;
-using System.Linq; // Necessário para o .Any()
 
-namespace MeuCrudCsharp.Features.MercadoPago.Notification.Services
+// Necessário para o .Any()
+
+namespace MeuCrudCsharp.Features.MercadoPago.Notification.Hub
 {
-    public class PaymentNotificationService : IPaymentNotificationService
+    public class PaymentNotificationHub : IPaymentNotificationHub
     {
         private readonly IHubContext<PaymentProcessingHub> _hubContext;
         // 1. Injetar o ConnectionMapping que usa STRING como chave (para o userId)
         private readonly ConnectionMapping<string> _mapping;
         
-        public PaymentNotificationService(
+        public PaymentNotificationHub(
             IHubContext<PaymentProcessingHub> hubContext, 
             ConnectionMapping<string> mapping) // Adicionado aqui
         {

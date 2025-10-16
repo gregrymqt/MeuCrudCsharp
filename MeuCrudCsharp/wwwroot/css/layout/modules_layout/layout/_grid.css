@@ -1,0 +1,11 @@
+.container {
+    max-width: 1140px;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1rem;
+    padding-right: 1rem;
+}
+
+.main-container {
+    padding-top: var(--header-height);
+}

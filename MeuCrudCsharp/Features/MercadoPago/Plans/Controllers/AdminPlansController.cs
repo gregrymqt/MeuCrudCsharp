@@ -20,16 +20,16 @@ public class AdminPlansController : ApiControllerBase
     /// <summary>
     /// Cria um novo plano de assinatura.
     /// </summary>
+    // No seu arquivo PlansController.cs
+
     [HttpPost]
     public async Task<IActionResult> CreatePlan([FromBody] CreatePlanDto createDto)
     {
         try
         {
-            // CORREÇÃO: Chamando o _planService, que orquestra a criação no banco E na API.
-            var newPlan = await _planService.CreatePlanAsync(createDto);
+            var planResponseDto = await _planService.CreatePlanAsync(createDto);
 
-            // CORREÇÃO: Usando nameof para segurança de tipo e a propriedade correta (PublicId).
-            return CreatedAtAction(nameof(GetPlanById), new { id = newPlan.PublicId }, newPlan);
+            return CreatedAtAction(nameof(GetPlanById), new { id = planResponseDto.PublicId }, planResponseDto);
         }
         catch (AppServiceException ex)
         {

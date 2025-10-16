@@ -1,0 +1,46 @@
+.site-header {
+    background-color: var(--background-light);
+    height: var(--header-height);
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 1100;
+    box-shadow: 0 2px 4px var(--shadow-color);
+}
+
+.main-nav {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    position: relative;
+}
+
+.nav-logo {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-dark);
+}
+
+.nav-logo .fa-graduation-cap {
+    color: var(--primary-color);
+}
+
+/* --- ESTILOS DESKTOP PARA O HEADER --- */
+@media (min-width: 992px) {
+    .main-nav {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        align-items: center;
+        width: 100%;
+    }
+
+    .nav-logo {
+        grid-column: 1;
+        justify-self: start;
+    }
+}

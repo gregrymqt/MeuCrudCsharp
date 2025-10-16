@@ -4,7 +4,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Notification.Interfaces
 {
     
 
-    public interface IPaymentNotificationService
+    public interface IPaymentNotificationHub
     {
         Task SendStatusUpdateAsync(string userId, PaymentStatusUpdate update);
     }

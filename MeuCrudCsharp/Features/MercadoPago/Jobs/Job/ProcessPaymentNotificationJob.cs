@@ -1,17 +1,20 @@
 ﻿using Hangfire;
 using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Features.Caching.Interfaces;
-using MeuCrudCsharp.Features.Exceptions; // Nossas exceções
+using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.MercadoPago.Notification.Interfaces;
+using MeuCrudCsharp.Features.MercadoPago.Utils;
 using Microsoft.EntityFrameworkCore;
 
-namespace MeuCrudCsharp.Features.MercadoPago.Jobs
+// Nossas exceções
+
+namespace MeuCrudCsharp.Features.MercadoPago.Jobs.Job
 {
     /// <summary>
     /// Representa um job do Hangfire responsável por processar uma notificação de pagamento recebida.
     /// Este job garante a consistência transacional, a idempotência e a lógica de retentativas para o processamento de pagamentos.
     /// </summary>
-    public class ProcessPaymentNotificationJob
+    public class ProcessPaymentNotificationJob : IJob
     {
         private readonly ILogger<ProcessPaymentNotificationJob> _logger;
         private readonly ApiDbContext _context;
@@ -87,8 +90,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Jobs
                     );
                 }
 
-                // Garante a idempotência: se o pagamento já foi processado, encerra o job com sucesso.
-                var statusProcessaveis = new[] { "pendente", "iniciando" };
+                var statusProcessaveis = new[] { InternalPaymentStatus.Pendente, InternalPaymentStatus.Iniciando };
                 if (!statusProcessaveis.Contains(pagamentoLocal.Status))
                 {
                     _logger.LogInformation(

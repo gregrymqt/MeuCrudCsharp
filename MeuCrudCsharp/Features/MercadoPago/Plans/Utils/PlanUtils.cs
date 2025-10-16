@@ -1,4 +1,3 @@
-
 using MeuCrudCsharp.Features.MercadoPago.Plans.DTOs;
 using MeuCrudCsharp.Models;
 
@@ -19,10 +18,12 @@ namespace MeuCrudCsharp.Features.MercadoPago.Plans.Utils
                     default: return $"Pacote de {interval} meses";
                 }
             }
+
             if (frequencyType == PlanFrequencyType.Days)
             {
                 return interval == 1 ? "Diário" : $"Pacote de {interval} dias";
             }
+
             return "Plano Padrão";
         }
 
@@ -36,12 +37,21 @@ namespace MeuCrudCsharp.Features.MercadoPago.Plans.Utils
 
         public static string FormatPriceDisplay(decimal amount, int frequency)
         {
-            if (frequency == 12)
+            decimal monthlyPrice;
+            switch (frequency)
             {
-                var monthlyPrice = amount / 12;
-                return $"R$ {monthlyPrice:F2}".Replace('.', ',');
+                case 1: return $"R$ {amount:F2}".Replace('.', ',');
+                case 3:
+                    monthlyPrice = amount / 3;
+                    return $"R$ {monthlyPrice:F2}".Replace('.', ',');
+                case 6:
+                    monthlyPrice = amount / 6;
+                    return $"R$ {monthlyPrice:F2}".Replace('.', ',');
+                case 12:
+                    monthlyPrice = amount / 12;
+                    return $"R$ {monthlyPrice:F2}".Replace('.', ',');
+                default: return $"Pacote de {frequency} meses";
             }
-            return $"R$ {amount:F2}".Replace('.', ',');
         }
 
         public static string FormatBillingInfo(decimal amount, int frequency)
@@ -50,13 +60,16 @@ namespace MeuCrudCsharp.Features.MercadoPago.Plans.Utils
             {
                 return $"Cobrado R$ {amount:F2} anualmente".Replace('.', ',');
             }
+
             return "&nbsp;";
         }
+
         public static void ApplyUpdateDtoToPlan(Plan localPlan, UpdatePlanDto updateDto)
         {
             if (updateDto.Reason != null) localPlan.Name = updateDto.Reason;
-            if (updateDto.AutoRecurring.TransactionAmount != 0) localPlan.TransactionAmount = updateDto.AutoRecurring.TransactionAmount;
-            if (updateDto.AutoRecurring.Frequency != 0 )
+            if (updateDto.AutoRecurring.TransactionAmount != 0)
+                localPlan.TransactionAmount = updateDto.AutoRecurring.TransactionAmount;
+            if (updateDto.AutoRecurring.Frequency != 0)
                 localPlan.FrequencyInterval = updateDto.AutoRecurring.Frequency;
             if (updateDto.AutoRecurring.FrequencyType != null)
             {
@@ -69,7 +82,6 @@ namespace MeuCrudCsharp.Features.MercadoPago.Plans.Utils
 
                 localPlan.FrequencyType = frequencyTypeEnum;
             }
-          
         }
     }
 }

@@ -3,7 +3,7 @@
 // 1. Importe a nova função junto com as outras
 import { initializeSidebar, initializeMenuToggle } from './modules/ui/navigation.js';
 import { initializePlansPanel } from './modules/panels/plansPanel.js';
-import { loadCourses } from './modules/panels/coursesPanel.js';
+import {initializeCoursesPanel} from './modules/panels/coursesPanel.js';
 import {initializeStudentsPanel} from './modules/panels/studentsPanel.js';
 import { loadSubscriptions } from './modules/panels/subscriptionsPanel.js';
 import { initializeTabs } from './modules/ui/tabs.js';
@@ -11,7 +11,7 @@ import { initializeTabs } from './modules/ui/tabs.js';
 async function main() {
     const panelLoaders = {
         'nav-plans': initializePlansPanel,
-        'nav-courses': await loadCourses,
+        'nav-courses': await initializeCoursesPanel,
         'nav-students': await initializeStudentsPanel,
         'nav-subscriptions': loadSubscriptions,
     };

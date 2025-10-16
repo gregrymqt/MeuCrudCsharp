@@ -14,15 +14,15 @@ const editPlanId = document.getElementById('edit-plan-id');
 const editPlanReason = document.getElementById('edit-plan-reason');
 const fetchButtonsContainer = document.getElementById('fetch-buttons');
 const editPlanAmount = document.getElementById('edit-plan-amount');
-const editPlanFrequencyType = document.getElementById('edit-plan-frequency-type');
+const editPlanFrequencyType = document.getElementById('edit-plan-frequency');
 const PLANS_PER_PAGE = 10;
 let currentSource = 'db';
 
 
 // ✨ FUNÇÃO CORRIGIDA ✨
 function renderPlansTable(plans) {
-    const plansTableBody = document.getElementById('plans-table-body'); // Supondo que você tenha essa variável
-    plansTableBody.innerHTML = ''; // Limpa a tabela antes de popular
+    const plansTableBody = document.getElementById('plans-table-body');
+    plansTableBody.innerHTML = '';
 
     if (!plans || plans.length === 0) {
         plansTableBody.innerHTML = '<tr><td colspan="5" class="text-center py-10 text-gray-500">Nenhum plano encontrado.</td></tr>';
@@ -30,16 +30,10 @@ function renderPlansTable(plans) {
     }
 
     plans.forEach(plan => {
-        // Correção: Acessar as propriedades em camelCase, exatamente como no JSON
         const name = plan.name ?? 'Nome Indisponível';
-
-        // Correção: A propriedade que define o tipo no seu JSON é 'slug'
         const type = plan.slug ?? 'Tipo Indisponível';
-
         const price = plan.priceDisplay ?? 'R$ 0,00';
-
         const status = plan.isActive ? 'Active' : 'Inactive';
-
         const publicId = plan.publicId ?? 'ID_INDISPONIVEL';
 
         const row = document.createElement('tr');
@@ -51,8 +45,15 @@ function renderPlansTable(plans) {
                 <span class="status-badge status-${status.toLowerCase()}">${status}</span>
             </td>
             <td class="text-right">
-                <button class="btn btn-secondary btn-sm btn-edit" data-public-id="${publicId}">Editar</button>
-                <button class="btn btn-danger btn-sm btn-delete" data-public-id="${publicId}">Excluir</button>
+                <div class="dropdown">
+                    <button class="btn btn-light btn-sm rounded-circle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        &#8942;
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item btn-edit" href="#" data-public-id="${publicId}">Editar</a></li>
+                        <li><a class="dropdown-item btn-delete text-danger" href="#" data-public-id="${publicId}">Excluir</a></li>
+                    </ul>
+                </div>
             </td>
         `;
         plansTableBody.appendChild(row);
@@ -90,13 +91,17 @@ async function openEditPlanModal(planId) {
         editPlanId.value = plan.publicId;
         editPlanReason.value = plan.name;
         editPlanAmount.value = plan.transactionAmount;
-        editPlanFrequencyType.value = plan.frequencyType;
+        editPlanFrequencyType.value = plan.frequency;
 
         openModal(editModal);
 
     } catch (error) {
         console.error("Falha ao buscar ou preencher detalhes do plano:", error);
     }
+}
+
+async function loadPlans() {
+    await fetchAndDisplayPlans(1);
 }
 
 async function fetchAndDisplayPlans(source, page = 1) {
@@ -159,7 +164,7 @@ export function initializePlansPanel() {
     if (plansTableBody && !plansTableBody.hasAttribute('data-click-listener-attached')) {
 
         plansTableBody.addEventListener('click', (e) => {
-            const target = e.target.closest('button');
+            const target = e.target.closest('a');
 
             if (!target) return;
 
@@ -205,7 +210,7 @@ export function initializePlansPanel() {
             try {
                 const result = await api.createPlan(planData);
                 await Swal.fire({
-                    title: 'Success!', text: `Plan created successfully! ID: ${result.id}`, icon: 'success'
+                    title: 'Success!', text: `Plan created successfully! ID: ${result.publicId}`, icon: 'success'
                 });
                 createPlanForm.reset();
                 await loadPlans();
@@ -239,7 +244,8 @@ export function initializePlansPanel() {
                 auto_recurring: {
                     transaction_amount: parseFloat(document.getElementById('edit-plan-amount').value),
                     frequency: parseInt(document.getElementById('edit-plan-frequency').value, 10),
-                    frequency_type: 'months'
+                    frequency_type: 'months',
+                    currency_id: 'BRL'
                 }
             };
 

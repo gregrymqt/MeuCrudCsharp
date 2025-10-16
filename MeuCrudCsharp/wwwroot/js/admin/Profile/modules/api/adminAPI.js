@@ -35,7 +35,7 @@ async function fetchAndCache(cacheKey, url, forceRefresh = false) {
 // ==========================================================================================
 
 export const getPublicPlans = (page =1, pageSize = 10 ,forceRefresh = false) => fetchAndCache('allPublicPlans', `/api/public/plans?page=${page}&${pageSize}`, forceRefresh);
-export const getAdminPlans = (forceRefresh = false) => fetchAndCache('allAdminPlans', '/api/admin/plans', forceRefresh);
+export const getAdminPlans = (page =1, pageSize = 10 ,forceRefresh = false) => fetchAndCache('allAdminPlans', `/api/admin/plans?page=${page}&${pageSize}`, forceRefresh);
 export const getPlanById = (id) => apiService.fetch(`/api/admin/plans/${id}`);
 export const createPlan = (planData) => apiService.fetch('/api/admin/plans', { method: 'POST', body: JSON.stringify(planData) });
 export const updatePlan = (id, planData) => apiService.fetch(`/api/admin/plans/${id}`, { method: 'PUT', body: JSON.stringify(planData) });
@@ -55,7 +55,7 @@ export const deleteCourse = (id) => apiService.fetch(`/api/admin/courses/${id}`,
 // API DE ALUNOS (Students)
 // ==========================================================================================
 
-export const getStudents = (forceRefresh = false) => fetchAndCache('allStudents', '/api/admin/students?page=${page}&${pageSize}`', forceRefresh);
+export const getStudents = (page =1, pageSize = 10 ,forceRefresh = false) => fetchAndCache('allStudents', `/api/admin/students?page=${page}&${pageSize}`, forceRefresh);
 export const getStudentsPublicId = (id) => apiService.fetch(`/api/admin/students/${id}`);
 
 // ==========================================================================================

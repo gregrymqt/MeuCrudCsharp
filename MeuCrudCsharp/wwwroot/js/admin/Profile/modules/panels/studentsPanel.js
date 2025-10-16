@@ -1,7 +1,7 @@
 ﻿import * as api from '../api/adminAPI.js';
 import {openModal, closeModal} from '../ui/modals.js';
 import cacheService from '../../../../core/cacheService.js';
-import {initializePagination, updatePaginationState} from "../ui/pagination";
+import {initializePagination, updatePaginationState} from "../ui/pagination.js";
 
 
 const studentsTableBody = document.getElementById('students-table-body');
@@ -71,12 +71,12 @@ function renderStudentsTable(students) {
     <td data-label="Id da Assinatura">${subscriptionId}</td>
     <td data-label="Data de Cadastro">${registrationDate}</td>
     <td data-label="Ações" class="text-right">
-        <button class="btn btn-secondary btn-sm btn-view-details" data-student-id="${Id}">Detalhes</button>
+        <button class="btn btn-light btn-sm rounded-circle btn-view-details" data-student-id="${Id}" title="Ver Detalhes">
+            <i class="bi bi-eye"></i>
+        </button>
     </td>
 `;
-
         studentsTableBody.appendChild(row);
-
     });
 }
 

@@ -15,12 +15,12 @@ using MeuCrudCsharp.Features.MercadoPago.Notification.Interfaces;
 using MeuCrudCsharp.Features.MercadoPago.Notification.Record; // Nossas exceções
 using MeuCrudCsharp.Features.MercadoPago.Payments.Dtos;
 using MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces;
-using MeuCrudCsharp.Features.MercadoPago.Payments.Utils;
 using MeuCrudCsharp.Features.MercadoPago.Subscriptions.DTOs;
 using MeuCrudCsharp.Features.MercadoPago.Subscriptions.Interfaces;
 using MeuCrudCsharp.Models;
 using Microsoft.Extensions.Options;
 using MercadoPago.Resource.User;
+using MeuCrudCsharp.Features.MercadoPago.Utils;
 
 
 namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
@@ -34,7 +34,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
         private readonly ApiDbContext _context;
         private readonly ISubscriptionService _subscriptionService;
         private readonly ILogger<CreditCardPaymentService> _logger;
-        private readonly IPaymentNotificationService _notificationService;
+        private readonly IPaymentNotificationHub _notificationHub;
         private readonly GeneralSettings _generalSettings;
         private readonly ICacheService _cacheService;
         private readonly IUserContext _userContext;
@@ -45,7 +45,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
             ApiDbContext context,
             ISubscriptionService subscriptionService,
             ILogger<CreditCardPaymentService> logger,
-            IPaymentNotificationService notificationService,
+            IPaymentNotificationHub notificationHub,
             IOptions<GeneralSettings> generalSettings,
             ICacheService cacheService,
             IUserContext userContext,
@@ -57,7 +57,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
             _context = context;
             _logger = logger;
             _subscriptionService = subscriptionService;
-            _notificationService = notificationService;
+            _notificationHub = notificationHub;
             _generalSettings = generalSettings.Value;
             _cacheService = cacheService;
             _userContext = userContext;
@@ -143,7 +143,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
                     await _clientService.AddCardToCustomerAsync(user.MercadoPagoCustomerId,paymentData.Token);
                 }
 
-                await _notificationService.SendStatusUpdateAsync(
+                await _notificationHub.SendStatusUpdateAsync(
                     userId,
                     new PaymentStatusUpdate("A processar o seu pagamento...", "processing", false)
                 );
@@ -168,7 +168,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
                     novoPagamento.Id
                 );
 
-                await _notificationService.SendStatusUpdateAsync(
+                await _notificationHub.SendStatusUpdateAsync(
                     userId,
                     new PaymentStatusUpdate(
                         "Comunicando com o provedor de pagamento...",
@@ -208,7 +208,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
 
                 if (payment.Status == "approved" || payment.Status == "in_process")
                 {
-                    await _notificationService.SendStatusUpdateAsync(
+                    await _notificationHub.SendStatusUpdateAsync(
                         userId,
                         new PaymentStatusUpdate(
                             "Pagamento aprovado com sucesso!",
@@ -220,7 +220,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
                 }
                 else
                 {
-                    await _notificationService.SendStatusUpdateAsync(
+                    await _notificationHub.SendStatusUpdateAsync(
                         userId,
                         new PaymentStatusUpdate(
                             payment.StatusDetail ?? "O pagamento foi recusado.",
@@ -260,7 +260,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
                     ? mpex.ApiError?.Message ?? "Erro ao comunicar com o provedor."
                     : "Ocorreu um erro inesperado em nosso sistema.";
 
-                await _notificationService.SendStatusUpdateAsync(
+                await _notificationHub.SendStatusUpdateAsync(
                     userId, new PaymentStatusUpdate(errorMessage, "error", true)
                 );
 
@@ -281,7 +281,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
             var user = await _userRepository.GetByIdAsync(userId);
             if (user == null) throw new AppServiceException("Usuário não encontrado.");
 
-            await _notificationService.SendStatusUpdateAsync(userId,
+            await _notificationHub.SendStatusUpdateAsync(userId,
                 new PaymentStatusUpdate("Validando seus dados...", "processing", false));
 
             try
@@ -315,7 +315,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
                         );
                 }
 
-                await _notificationService.SendStatusUpdateAsync(
+                await _notificationHub.SendStatusUpdateAsync(
                     userId,
                     new PaymentStatusUpdate("Criando sua assinatura...", "processing", false)
                 );
@@ -336,7 +336,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
                     createdSubscription.Id
                 );
 
-                await _notificationService.SendStatusUpdateAsync(
+                await _notificationHub.SendStatusUpdateAsync(
                     userId,
                     new PaymentStatusUpdate(
                         "Assinatura criada com sucesso!",
@@ -353,7 +353,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
             {
                 _logger.LogError(ex, "Erro inesperado no fluxo de criação de assinatura para o usuário {UserId}.", userId);
 
-                await _notificationService.SendStatusUpdateAsync(
+                await _notificationHub.SendStatusUpdateAsync(
                     userId, new PaymentStatusUpdate(ex.Message, "error", true)
                 );
 

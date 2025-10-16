@@ -64,7 +64,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Plans.Services
             return PlanMapper.MapPlanToEditDto(plan);
         }
 
-        public async Task<Plan> CreatePlanAsync(CreatePlanDto createDto)
+        public async Task<PlanDto> CreatePlanAsync(CreatePlanDto createDto)
         {
             // 1. Validação de Lógica de Negócio
             if (!Enum.TryParse<PlanFrequencyType>(createDto.AutoRecurring.FrequencyType, true,
@@ -113,7 +113,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Plans.Services
                 await _cacheService.RemoveAsync(CacheKeys.ActiveApiPlans);
                 _logger.LogInformation("Plano '{PlanName}' criado com sucesso.", newPlan.Name);
 
-                return newPlan;
+                return PlanMapper.MapDbPlanToDto(newPlan);
             }
             catch (ExternalApiException ex)
             {
@@ -132,7 +132,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Plans.Services
             }
         }
 
-        public async Task<Plan> UpdatePlanAsync(Guid publicId, UpdatePlanDto updateDto)
+        public async Task<PlanDto> UpdatePlanAsync(Guid publicId, UpdatePlanDto updateDto)
         {
             // 1. Busca a entidade local (agora rastreada pelo EF Core)
             var localPlan = await _planRepository.GetByPublicIdAsync(publicId, asNoTracking: false)
@@ -165,7 +165,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Plans.Services
                 _logger.LogInformation("Plano {PlanId} atualizado com sucesso no DB e na API externa.",
                     localPlan.ExternalPlanId);
 
-                return localPlan;
+                return PlanMapper.MapDbPlanToDto(localPlan);
             }
             catch (ExternalApiException ex)
             {
@@ -230,56 +230,59 @@ namespace MeuCrudCsharp.Features.MercadoPago.Plans.Services
 
         public async Task<PagedResultDto<PlanDto>> GetActiveApiPlansAsync(int page, int pageSize)
         {
-            // 1. Busca a LISTA COMPLETA do cache (ou da API se o cache estiver vazio)
-            var allCachedPlans = await _cacheService.GetOrCreateAsync(
-                CacheKeys.ActiveApiPlans,
+            var limit = pageSize;
+            var offset = (page - 1) * pageSize;
+            var status = "active";
+            var sortBy = "transaction_amount"; 
+            var criteria = "asc"; 
+
+            _logger.LogInformation("Buscando página {Page} de planos da API do Mercado Pago.", page);
+            var activePlansFromApi =
+                await _mercadoPagoPlanService.SearchActivePlansAsync(limit, offset, status, sortBy, criteria);
+            
+            var totalCount = await GetTotalActiveApiPlansCountAsync();
+
+            // 3. O resto da lógica permanece, mas agora opera em uma lista pequena (apenas a página atual)
+            if (!activePlansFromApi.Any())
+            {
+                return new PagedResultDto<PlanDto>(new List<PlanDto>(), page, pageSize, totalCount);
+            }
+
+            var externalIds = activePlansFromApi.Select(p => p.Id).ToList();
+            var localPlans = await _planRepository.GetByExternalIdsAsync(externalIds);
+            var localPlansDict = localPlans.ToDictionary(p => p.ExternalPlanId, p => p);
+
+            var mappedPlans = new List<PlanDto>();
+            foreach (var apiPlan in activePlansFromApi)
+            {
+                if (localPlansDict.TryGetValue(apiPlan.Id, out var localPlan))
+                {
+                    mappedPlans.Add(PlanMapper.MapApiPlanToDto(apiPlan, localPlan));
+                }
+                else
+                {
+                    _logger.LogWarning("Plano '{ExternalId}' existe no MP mas não localmente.", apiPlan.Id);
+                }
+            }
+
+            return new PagedResultDto<PlanDto>(mappedPlans, page, pageSize, totalCount);
+        }
+
+// NOVO MÉTODO AUXILIAR: Para obter o total de planos e cachear o resultado.
+        private async Task<int> GetTotalActiveApiPlansCountAsync()
+        {
+            return await _cacheService.GetOrCreateAsync(
+                "TotalActiveApiPlansCount", // Chave de cache específica para a contagem
                 async () =>
                 {
-                    _logger.LogInformation("Cache de planos da API vazio. Buscando do Mercado Pago.");
-                    // A lógica interna para buscar todos os planos da API e mapeá-los permanece a mesma.
-                    var activePlansFromApi = await _mercadoPagoPlanService.SearchActivePlansAsync();
-                    if (!activePlansFromApi.Any())
-                    {
-                        return new List<PlanDto>();
-                    }
-
-                    var externalIds = activePlansFromApi.Select(p => p.Id).ToList();
-                    var localPlans = await _planRepository.GetByExternalIdsAsync(externalIds);
-                    var localPlansDict = localPlans.ToDictionary(p => p.ExternalPlanId, p => p);
-
-                    var mappedPlans = new List<PlanDto>();
-                    foreach (var apiPlan in activePlansFromApi)
-                    {
-                        if (localPlansDict.TryGetValue(apiPlan.Id, out var localPlan))
-                        {
-                            mappedPlans.Add(PlanMapper.MapApiPlanToDto(apiPlan, localPlan));
-                        }
-                        else
-                        {
-                            _logger.LogWarning("Plano '{ExternalId}' existe no MP mas não localmente.", apiPlan.Id);
-                        }
-                    }
-
-                    return mappedPlans;
+                    // Chamada leve para a API, apenas para contar. 
+                    // O ideal seria que o MP tivesse um endpoint só para contagem.
+                    // Na ausência disso, buscamos a lista e contamos.
+                    var allPlans =
+                        await _mercadoPagoPlanService.SearchActivePlansAsync(1000, 0, "active", "date_created", "desc");
+                    return allPlans.Count();
                 },
-                TimeSpan.FromMinutes(5) // Tempo de expiração do cache
-            );
-
-            var fullPlanList = allCachedPlans ?? new List<PlanDto>();
-
-            // 2. Aplica a paginação na lista completa que veio do cache
-            var totalCount = fullPlanList.Count;
-            var itemsForPage = fullPlanList
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .ToList();
-
-            // 3. Retorna o objeto de resultado paginado
-            return new PagedResultDto<PlanDto>(
-                itemsForPage,
-                page,
-                pageSize,
-                totalCount
+                TimeSpan.FromMinutes(15)
             );
         }
 

@@ -62,11 +62,12 @@ textarea.form-control { resize: vertical; }
 .btn-secondary:hover { opacity: 0.85; }
 
 /* --- Tabelas de Dados (Responsivas) --- */
-.table-wrapper { overflow-x: auto; }
+.table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .data-table {
     width: 100%;
     border-collapse: collapse;
     font-size: 0.9rem;
+    min-width: 700px;
 }
 .data-table th, .data-table td {
     padding: 12px 15px;

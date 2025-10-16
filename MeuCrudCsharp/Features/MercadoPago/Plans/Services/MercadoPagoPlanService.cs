@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Features.Caching.Interfaces;
@@ -46,13 +47,24 @@ public class MercadoPagoPlanService : MercadoPagoServiceBase, IMercadoPagoPlanSe
         await SendMercadoPagoRequestAsync(HttpMethod.Put, endpoint, payload);
     }
 
-    public async Task<IEnumerable<PlanResponseDto>> SearchActivePlansAsync()
+    public async Task<IEnumerable<PlanResponseDto>> SearchActivePlansAsync(int limit, int offset, string status,
+        string sortBy, string criteria)
     {
-        const string endpoint = "/preapproval_plan/search";
+        // Usamos um StringBuilder para construir a query string dinamicamente
+        var queryString = new StringBuilder();
+        queryString.Append($"/preapproval_plan/search?status={status}");
+        queryString.Append($"&limit={limit}");
+        queryString.Append($"&offset={offset}");
+        queryString.Append($"&sort={sortBy}");
+        queryString.Append($"&criteria={criteria}");
+
+        var endpoint = queryString.ToString();
+
         var responseBody = await SendMercadoPagoRequestAsync(HttpMethod.Get, endpoint, (object?)null);
         var apiResponse = JsonSerializer.Deserialize<PlanSearchResponseDto>(responseBody);
 
-        return apiResponse?.Results?.Where(plan => plan.Status == "active" && plan.AutoRecurring != null)
+        // A filtragem de status agora é feita pela API, então o .Where() foi removido.
+        return apiResponse?.Results?.Where(plan => plan.AutoRecurring != null)
                ?? Enumerable.Empty<PlanResponseDto>();
     }
 }

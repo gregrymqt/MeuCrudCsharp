@@ -1,5 +1,7 @@
 using MeuCrudCsharp.Features.Hubs;
 using MeuCrudCsharp.Features.MercadoPago.Jobs;
+using MeuCrudCsharp.Features.MercadoPago.Jobs.Job;
+using MeuCrudCsharp.Features.MercadoPago.Jobs.Services;
 
 namespace MeuCrudCsharp.Extensions;
 
@@ -35,7 +37,9 @@ public static class DependencyInjectionExtensions
                 "MeuCrudCsharp.Features.Shared.User",
                 "MeuCrudCsharp.AppSettings",
                 "MeuCrudCsharp.Users.Services",
-                "MeuCrudCsharp.Features.MercadoPago.Jobs"
+                "MeuCrudCsharp.Features.MercadoPago.Jobs.Services",
+                "MeuCrudCsharp.Features.MercadoPago.Jobs.Job",
+                "MeuCrudCsharp.Features.MercadoPago.WebHooks.Services"
             ))
             // Registra as classes como implementações de suas interfaces.
             .AsImplementedInterfaces()

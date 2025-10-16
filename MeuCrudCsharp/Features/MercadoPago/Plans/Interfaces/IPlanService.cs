@@ -24,7 +24,7 @@ public interface IPlanService
     /// </summary>
     /// <param name="createDto">O objeto de transferência de dados com as informações para a criação do plano.</param>
     /// <returns>A entidade do plano que foi criada.</returns>
-    Task<Plan> CreatePlanAsync(CreatePlanDto createDto);
+    Task<PlanDto> CreatePlanAsync(CreatePlanDto createDto);
 
     /// <summary>
     /// Atualiza as informações de um plano de assinatura existente.
@@ -32,7 +32,7 @@ public interface IPlanService
     /// <param name="publicId">O ID público do plano a ser atualizado.</param>
     /// <param name="updateDto">O objeto de transferência de dados com as informações a serem atualizadas.</param>
     /// <returns>A entidade do plano após a atualização.</returns>
-    Task<Plan> UpdatePlanAsync(Guid publicId, UpdatePlanDto updateDto);
+    Task<PlanDto> UpdatePlanAsync(Guid publicId, UpdatePlanDto updateDto);
 
     /// <summary>
     /// Desativa um plano de assinatura (soft delete), tornando-o inativo.

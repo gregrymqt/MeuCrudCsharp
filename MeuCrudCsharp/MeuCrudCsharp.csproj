@@ -38,7 +38,6 @@
   <ItemGroup>
     <Folder Include="Log\" />
     <Folder Include="Migrations\" />
-    <Folder Include="wwwroot\js\admin\Profile\modules\" />
     <Folder Include="wwwroot\videos\" />
   </ItemGroup>
   <ItemGroup>

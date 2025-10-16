@@ -12,7 +12,7 @@ using MeuCrudCsharp.Features.MercadoPago.Notification.Interfaces;
 using MeuCrudCsharp.Features.MercadoPago.Notification.Record;
 using MeuCrudCsharp.Features.MercadoPago.Payments.Dtos;
 using MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces;
-using MeuCrudCsharp.Features.MercadoPago.Payments.Utils;
+using MeuCrudCsharp.Features.MercadoPago.Utils;
 using Microsoft.Extensions.Options;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services;
@@ -21,7 +21,7 @@ public class PixPaymentService : IPixPaymentService
 {
     private readonly ILogger<PixPaymentService> _logger;
     private readonly ICacheService _cacheService;
-    private readonly IPaymentNotificationService _notificationService;
+    private readonly IPaymentNotificationHub _notificationHub;
     private readonly ApiDbContext _dbContext;
     private readonly GeneralSettings _generalsettings;
     private const string IDEMPOTENCY_PREFIX = "PixPayment";
@@ -30,14 +30,14 @@ public class PixPaymentService : IPixPaymentService
 
     public PixPaymentService(ILogger<PixPaymentService> logger,
         ICacheService cacheService,
-        IPaymentNotificationService notificationService,
+        IPaymentNotificationHub notificationHub,
         ApiDbContext dbContext,
         IOptions<GeneralSettings> settings,
         IUserContext userContext)
     {
         _logger = logger;
         _cacheService = cacheService;
-        _notificationService = notificationService;
+        _notificationHub = notificationHub;
         _dbContext = dbContext;
         _generalsettings = settings.Value;
         _userContext = userContext;
@@ -95,7 +95,7 @@ public class PixPaymentService : IPixPaymentService
 
         try
         {
-            await _notificationService.SendStatusUpdateAsync(
+            await _notificationHub.SendStatusUpdateAsync(
                 userId,
                 new PaymentStatusUpdate("A processar o seu pagamento...", "processing", false)
             );
@@ -117,7 +117,7 @@ public class PixPaymentService : IPixPaymentService
             _logger.LogInformation("Pix payment adicionado com sucesso, com o Id:"
                                    + novoPixPayment.Id);
 
-            await _notificationService.SendStatusUpdateAsync(
+            await _notificationHub.SendStatusUpdateAsync(
                 userId,
                 new PaymentStatusUpdate(
                     "Comunicando com o provedor de pagamento...",
@@ -165,14 +165,14 @@ public class PixPaymentService : IPixPaymentService
 
             if (payment.Status == "approved" || payment.Status == "pending" || payment.Status == "in_process")
             {
-                await _notificationService.SendStatusUpdateAsync(
+                await _notificationHub.SendStatusUpdateAsync(
                     userId,
                     new PaymentStatusUpdate("Pagamento processado com sucesso!", "approved", true,
                         payment.Id.ToString()));
             }
             else
             {
-                await _notificationService.SendStatusUpdateAsync(
+                await _notificationHub.SendStatusUpdateAsync(
                     userId,
                     new PaymentStatusUpdate(payment.StatusDetail ?? "O pagamento foi recusado.", "failed", true,
                         payment.Id.ToString()));
@@ -213,7 +213,7 @@ public class PixPaymentService : IPixPaymentService
                     userId);
             }
 
-            await _notificationService.SendStatusUpdateAsync(
+            await _notificationHub.SendStatusUpdateAsync(
                 userId, new PaymentStatusUpdate(mensagemErro, "error", true));
 
             throw new AppServiceException(mensagemErro, ex);
