@@ -55,9 +55,7 @@ namespace MeuCrudCsharp.Features.Courses.Interfaces
         /// <exception cref="AppServiceException">Lançada se o curso tiver vídeos associados e não puder ser excluído.</exception>
         Task DeleteCourseAsync(Guid id);
 
-
         Task<Course> FindCourseByPublicIdOrFailAsync(Guid publicId);
-
 
         Task<Course> GetOrCreateCourseByNameAsync(string courseName);
     }

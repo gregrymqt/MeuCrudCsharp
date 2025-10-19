@@ -1,0 +1,57 @@
+@model MeuCrudCsharp.Features.Emails.ViewModels.ClaimReceivedEmailViewModel
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Recebemos sua Solicitação</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            width: 90%;
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #ffffff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .header {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #0275d8; /* Tom de azul para informação */
+            border-bottom: 2px solid #eeeeee;
+            padding-bottom: 10px;
+        }
+        .footer {
+            margin-top: 20px;
+            font-size: 12px;
+            color: #777;
+            text-align: center;
+        }
+        a {
+            color: #0275d8;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">Recebemos sua Solicitação</div>
+        <p>Olá, @Model.UserName,</p>
+        <p>Confirmamos o recebimento da sua solicitação, registrada sob o número de notificação <strong>@Model.ClaimId</strong>. Nossa equipe já foi notificada e iniciará a análise em breve.</p>
+        <p>Você será informado sobre qualquer atualização no processo. Caso tenha alguma informação adicional ou queira tirar dúvidas, por favor, entre em contato com nosso suporte.</p>
+        <p><a href="@Model.SupportUrl">Falar com o Suporte</a></p>
+        <p>Agradecemos pela sua paciência.</p>
+        <p>Atenciosamente,<br>A Equipe</p>
+    </div>
+</body>
+</html>

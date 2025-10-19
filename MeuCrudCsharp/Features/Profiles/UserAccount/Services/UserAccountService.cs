@@ -10,8 +10,7 @@ using MeuCrudCsharp.Models;
 
 namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
 {
-  
-    public class UserAccountService : IUserAccountService 
+    public class UserAccountService : IUserAccountService
     {
         private readonly IUserAccountRepository _repository;
         private readonly ICacheService _cacheService;
@@ -26,7 +25,8 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
             IMercadoPagoSubscriptionService mpSubscriptionService,
             IClientService clientService,
             ILogger<UserAccountService> logger,
-            IUserContext userContext)
+            IUserContext userContext
+        )
         {
             _repository = repository;
             _cacheService = cacheService;
@@ -38,44 +38,64 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
 
         public async Task<UserProfileDto> GetUserProfileAsync(string userId)
         {
-            return await _cacheService.GetOrCreateAsync($"UserProfile_{userId}", async () =>
-            {
-                var user = await _repository.GetUserByIdAsync(userId)
-                           ?? throw new ResourceNotFoundException($"User with ID {userId} not found.");
+            return await _cacheService.GetOrCreateAsync(
+                $"UserProfile_{userId}",
+                async () =>
+                {
+                    var user =
+                        await _repository.GetUserByIdAsync(userId)
+                        ?? throw new ResourceNotFoundException($"User with ID {userId} not found.");
 
-                // Lógica de mapeamento pode ir para um Mapper ou ficar aqui se for simples
-                return new UserProfileDto { Name = user.Name, Email = user.Email, AvatarUrl = user.AvatarUrl };
-            }, TimeSpan.FromMinutes(15));
+                    // Lógica de mapeamento pode ir para um Mapper ou ficar aqui se for simples
+                    return new UserProfileDto
+                    {
+                        Name = user.Name,
+                        Email = user.Email,
+                        AvatarUrl = user.AvatarUrl,
+                    };
+                },
+                TimeSpan.FromMinutes(15)
+            );
         }
 
         public async Task<SubscriptionDetailsDto?> GetUserSubscriptionDetailsAsync(string userId)
         {
-            return await _cacheService.GetOrCreateAsync($"SubscriptionDetails_{userId}", async () =>
-            {
-                // Orquestração: 1. Busca dados locais
-                var subscription = await _repository.GetActiveSubscriptionByUserIdAsync(userId);
-                if (subscription?.Plan == null) return null;
-
-                // Orquestração: 2. Busca dados externos
-                var mpSubscription = await _mpSubscriptionService.GetSubscriptionByIdAsync(subscription.ExternalId);
-                if (mpSubscription == null) return null;
-
-                // Orquestração: 3. Combina os dados
-                return new SubscriptionDetailsDto
+            return await _cacheService.GetOrCreateAsync(
+                $"SubscriptionDetails_{userId}",
+                async () =>
                 {
-                    SubscriptionId = subscription.ExternalId,
-                    PlanName = subscription.Plan.Name,
-                    Status = mpSubscription.Status,
-                    Amount = subscription.Plan.TransactionAmount,
-                    NextBillingDate = mpSubscription.NextPaymentDate,
-                    LastFourCardDigits = subscription.LastFourCardDigits,
-                };
-            });
+                    // Orquestração: 1. Busca dados locais
+                    var subscription = await _repository.GetActiveSubscriptionByUserIdAsync(userId);
+                    if (subscription?.Plan == null)
+                        return null;
+
+                    // Orquestração: 2. Busca dados externos
+                    var mpSubscription = await _mpSubscriptionService.GetSubscriptionByIdAsync(
+                        subscription.ExternalId
+                    );
+                    if (mpSubscription == null)
+                        return null;
+
+                    // Orquestração: 3. Combina os dados
+                    return new SubscriptionDetailsDto
+                    {
+                        SubscriptionId = subscription.ExternalId,
+                        PlanName = subscription.Plan.Name,
+                        Status = mpSubscription.Status,
+                        Amount = subscription.Plan.TransactionAmount,
+                        NextBillingDate = mpSubscription.NextPaymentDate,
+                        LastFourCardDigits = subscription.LastFourCardDigits,
+                    };
+                }
+            );
         }
 
         /// <inheritdoc />
-        public async Task<IEnumerable<Payments>> GetUserPaymentHistoryAsync(string userId, int pageNumber = 1,
-            int pageSize = 10)
+        public async Task<IEnumerable<Payments>> GetUserPaymentHistoryAsync(
+            string userId,
+            int pageNumber = 1,
+            int pageSize = 10
+        )
         {
             try
             {
@@ -84,7 +104,11 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
                     $"PaymentHistory_{userId}_Page{pageNumber}_Size{pageSize}",
                     async () =>
                     {
-                        return await _repository.GetPaymentHistoryByUserIdAsync(userId, pageNumber, pageSize);
+                        return await _repository.GetPaymentHistoryByUserIdAsync(
+                            userId,
+                            pageNumber,
+                            pageSize
+                        );
                     },
                     TimeSpan.FromMinutes(10)
                 );
@@ -105,22 +129,45 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
             var userId = await _userContext.GetCurrentUserId();
             var user = await _repository.GetUserByIdAsync(userId);
 
-            var subscription = await _repository.GetActiveSubscriptionByUserIdAsync(userId)
-                               ?? throw new ResourceNotFoundException("Active subscription not found for card update.");
+            var subscription =
+                await _repository.GetActiveSubscriptionByUserIdAsync(userId)
+                ?? throw new ResourceNotFoundException(
+                    "Active subscription not found for card update."
+                );
 
-            await _mpSubscriptionService.UpdateSubscriptionCardAsync(subscription.ExternalId, newCardToken);
+            try
+            {
+                await _mpSubscriptionService.UpdateSubscriptionCardAsync(
+                    subscription.ExternalId,
+                    newCardToken
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Failed to update card for subscription {SubscriptionId}.",
+                    subscription.ExternalId
+                );
+            }
 
             await _cacheService.RemoveAsync($"SubscriptionDetails_{userId}");
-            _logger.LogInformation("Card for subscription {SubscriptionId} updated.", subscription.ExternalId);
+            _logger.LogInformation(
+                "Card for subscription {SubscriptionId} updated.",
+                subscription.ExternalId
+            );
 
             // A lógica secundária permanece como responsabilidade do serviço orquestrador
             try
             {
-                await _clientService.AddCardToCustomerAsync(user.MercadoPagoCustomerId,newCardToken);
+                await _clientService.AddCardToCustomerAsync(user.CustomerId, newCardToken);
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Card updated on subscription but failed to add to customer profile.");
+                _logger.LogWarning(
+                    ex,
+                    "Card updated on subscription but failed to add to customer profile."
+                );
             }
 
             return true;
@@ -133,12 +180,17 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
             if (!allowed.Contains(newStatus))
                 throw new AppServiceException("Invalid subscription status.");
 
-            var subscription = await _repository.GetActiveSubscriptionByUserIdAsync(userId)
-                               ?? throw new ResourceNotFoundException(
-                                   "Active subscription not found for status update.");
+            var subscription =
+                await _repository.GetActiveSubscriptionByUserIdAsync(userId)
+                ?? throw new ResourceNotFoundException(
+                    "Active subscription not found for status update."
+                );
 
             var dto = new UpdateSubscriptionStatusDto(newStatus);
-            var result = await _mpSubscriptionService.UpdateSubscriptionStatusAsync(subscription.ExternalId, dto);
+            var result = await _mpSubscriptionService.UpdateSubscriptionStatusAsync(
+                subscription.ExternalId,
+                dto
+            );
 
             if (result.Status == newStatus)
             {
@@ -146,8 +198,11 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
                 subscription.UpdatedAt = DateTime.UtcNow;
                 await _repository.SaveChangesAsync();
                 await _cacheService.RemoveAsync($"SubscriptionDetails_{userId}");
-                _logger.LogInformation("Subscription {Id} updated to {Status}.", subscription.ExternalId,
-                    subscription.Status);
+                _logger.LogInformation(
+                    "Subscription {Id} updated to {Status}.",
+                    subscription.ExternalId,
+                    subscription.Status
+                );
                 return true;
             }
 
@@ -155,11 +210,16 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services
         }
 
         /// <inheritdoc />
-        public async Task<PaymentReceiptDto> GetPaymentForReceiptAsync(string userId, string paymentId)
+        public async Task<PaymentReceiptDto> GetPaymentForReceiptAsync(
+            string userId,
+            string paymentId
+        )
         {
-            var payment = await _repository.GetPaymentByIdAndUserIdAsync(userId, paymentId)
-                          ?? throw new ResourceNotFoundException(
-                              $"Pagamento {paymentId} não encontrado para o usuário.");
+            var payment =
+                await _repository.GetPaymentByIdAndUserIdAsync(userId, paymentId)
+                ?? throw new ResourceNotFoundException(
+                    $"Pagamento {paymentId} não encontrado para o usuário."
+                );
 
             // Mapeamento da entidade para o DTO
             return new PaymentReceiptDto(

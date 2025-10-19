@@ -8,7 +8,7 @@ public static class WebServicesExtensions
 {
     // Define o nome da política de CORS como uma constante para evitar "magic strings".
     public const string CorsPolicyName = "_myAllowSpecificOrigins";
-    
+
     /// <summary>
     /// Configura os serviços web essenciais, incluindo HttpClient para APIs externas,
     /// políticas de CORS, tratamento de cookies e suporte para proxy reverso (Forwarded Headers).
@@ -16,49 +16,70 @@ public static class WebServicesExtensions
     public static WebApplicationBuilder AddWebServices(this WebApplicationBuilder builder)
     {
         // --- 1. Configuração do HttpClient para a API do Mercado Pago ---
-        builder.Services.AddHttpClient("MercadoPagoClient", client =>
-        {
-            var mercadoPagoSettings = builder.Configuration.GetSection("MercadoPago").Get<MercadoPagoSettings>();
-            if (mercadoPagoSettings is null || string.IsNullOrEmpty(mercadoPagoSettings.AccessToken))
+        builder.Services.AddHttpClient(
+            "MercadoPagoClient",
+            client =>
             {
-                throw new InvalidOperationException(
-                    "Configurações do Mercado Pago não encontradas ou o AccessToken está vazio.");
-            }
+                var mercadoPagoSettings = builder
+                    .Configuration.GetSection("MercadoPago")
+                    .Get<MercadoPagoSettings>();
+                if (
+                    mercadoPagoSettings is null
+                    || string.IsNullOrEmpty(mercadoPagoSettings.AccessToken)
+                )
+                {
+                    throw new InvalidOperationException(
+                        "Configurações do Mercado Pago não encontradas ou o AccessToken está vazio."
+                    );
+                }
 
-            client.BaseAddress = new Uri("https://api.mercadopago.com");
-            client.DefaultRequestHeaders.Authorization =
-                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", mercadoPagoSettings.AccessToken);
-        });
-        
-        var mercadoPagoSettings = builder.Configuration.GetSection("MercadoPago").Get<MercadoPagoSettings>();
+                client.BaseAddress = new Uri("https://api.mercadopago.com");
+                client.DefaultRequestHeaders.Authorization =
+                    new System.Net.Http.Headers.AuthenticationHeaderValue(
+                        "Bearer",
+                        mercadoPagoSettings.AccessToken
+                    );
+            }
+        );
+
+        var mercadoPagoSettings = builder
+            .Configuration.GetSection("MercadoPago")
+            .Get<MercadoPagoSettings>();
         if (mercadoPagoSettings is null || string.IsNullOrEmpty(mercadoPagoSettings.AccessToken))
         {
             throw new InvalidOperationException(
-                "Configurações do Mercado Pago não encontradas ou o AccessToken está vazio.");
+                "Configurações do Mercado Pago não encontradas ou o AccessToken está vazio."
+            );
         }
         MercadoPagoConfig.AccessToken = mercadoPagoSettings.AccessToken;
 
         // --- 2. Configuração da Política de CORS ---
         builder.Services.AddCors(options =>
         {
-            var generalSettings = builder.Configuration.GetSection("General").Get<GeneralSettings>();
-            
+            var generalSettings = builder
+                .Configuration.GetSection("General")
+                .Get<GeneralSettings>();
+
             if (generalSettings is null || string.IsNullOrEmpty(generalSettings.BaseUrl))
             {
                 throw new InvalidOperationException(
-                    "Configurações do Mercado Pago não encontradas ou o AccessToken está vazio.");
+                    "Configurações do Mercado Pago não encontradas ou o AccessToken está vazio."
+                );
             }
-            options.AddPolicy(name: CorsPolicyName,
+            options.AddPolicy(
+                name: CorsPolicyName,
                 policy =>
                 {
-                    policy.WithOrigins(
+                    policy
+                        .WithOrigins(
                             generalSettings.BaseUrl, // Exemplo para Ngrok
-                            "http://localhost:5045"             // Exemplo para desenvolvimento local
+                            "http://localhost:5045" // Exemplo para desenvolvimento local
                         )
                         .AllowAnyHeader()
                         .AllowAnyMethod()
                         .AllowCredentials();
-                });
+                }
+            );
         });
 
         // --- 3. Configuração para Confiança em Headers de Proxy (Essencial para Ngrok/IIS/Nginx) ---
@@ -85,7 +106,7 @@ public static class WebServicesExtensions
             options.LoginPath = "/Account/ExternalLogin";
             options.LogoutPath = "/Account/Logout";
             options.AccessDeniedPath = "/Account/AccessDenied";
-            
+
             // Lógica para APIs: em vez de redirecionar, retorna códigos de erro HTTP
             options.Events.OnRedirectToLogin = context =>
             {
@@ -117,8 +138,10 @@ public static class WebServicesExtensions
             options.OnAppendCookie = cookieContext =>
             {
                 // Aplica SameSite=None apenas para cookies específicos do processo de login externo
-                if (cookieContext.CookieName.StartsWith(".AspNetCore.Correlation.") || 
-                    cookieContext.CookieName.StartsWith(".AspNetCore.OpenIdConnect.Nonce."))
+                if (
+                    cookieContext.CookieName.StartsWith(".AspNetCore.Correlation.")
+                    || cookieContext.CookieName.StartsWith(".AspNetCore.OpenIdConnect.Nonce.")
+                )
                 {
                     cookieContext.CookieOptions.SameSite = SameSiteMode.None;
                 }

@@ -23,7 +23,7 @@ public static class PipelineExtensions
             app.UseSwagger();
             app.UseSwaggerUI();
         }
-        
+
         // --- 2. Tarefas de Inicialização (Seeding) ---
         // Cria as roles iniciais (Admin, User, etc.) se não existirem.
         await SeedInitialRoles(app);
@@ -33,25 +33,25 @@ public static class PipelineExtensions
         app.UseStaticFiles();
         app.UseCors(WebServicesExtensions.CorsPolicyName); // Usa a constante definida anteriormente
         app.UseRouting();
-        
+
         // A ordem é crucial: Autenticação primeiro, depois Autorização.
         app.UseAuthentication();
         app.UseAuthorization();
-        
+
         // Adiciona o dashboard do Hangfire.
         app.UseHangfireDashboard();
-        
+
         // --- 4. Mapeamento de Endpoints ---
         // Mapeia os hubs do SignalR.
         app.MapHub<VideoProcessingHub>("/videoProcessingHub");
         app.MapHub<RefundProcessingHub>("/RefundProcessingHub");
         app.MapHub<PaymentProcessingHub>("/PaymentProcessingHub");
-        
+
         // Mapeia Razor Pages e Controllers.
         app.MapRazorPages();
         app.MapControllers();
         app.MapControllerRoute(name: "default", pattern: "{controller=Home}/{action=Index}/{id?}");
-        
+
         return app;
     }
 
@@ -74,4 +74,3 @@ public static class PipelineExtensions
         }
     }
 }
-

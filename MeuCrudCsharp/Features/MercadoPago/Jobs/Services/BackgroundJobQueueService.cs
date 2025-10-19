@@ -1,7 +1,6 @@
 ﻿using Hangfire;
 using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.MercadoPago.Jobs.Interfaces;
-using MeuCrudCsharp.Features.MercadoPago.Notification.Interfaces;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Jobs.Services;
 
@@ -19,25 +18,34 @@ public class BackgroundJobQueueService : IQueueService
         _logger = logger;
     }
 
-    // MÉTODO GENÉRICO QUE SUBSTITUI O ANTIGO
-    public Task EnqueueJobAsync<TJob>(string resourceId) where TJob : IJob
+    /// <summary>
+    /// Enfileira um job genérico no Hangfire para execução em segundo plano.
+    /// </summary>
+    /// <typeparam name="TJob">O tipo do job a ser executado, que deve implementar IJob&lt;TResource&gt;.</typeparam>
+    /// <typeparam name="TResource">O tipo do payload (recurso) que o job processará.</typeparam>
+    /// <param name="resource">O payload a ser passado para o método ExecuteAsync do job.</param>
+    public Task EnqueueJobAsync<TJob, TResource>(TResource resource)
+        where TJob : IJob<TResource>
     {
-        if (string.IsNullOrEmpty(resourceId))
+        if (resource == null)
         {
-            throw new ArgumentException("O ID do recurso não pode ser nulo ou vazio.", nameof(resourceId));
+            throw new ArgumentNullException(
+                nameof(resource),
+                "O recurso (payload) não pode ser nulo."
+            );
         }
 
         try
         {
             var jobName = typeof(TJob).Name;
             _logger.LogInformation(
-                "Enfileirando job do tipo '{JobName}' para o ResourceId: {ResourceId}",
+                "Enfileirando job do tipo '{JobName}' com o payload: {Payload}",
                 jobName,
-                resourceId
+                resource
             );
 
-            // A mágica acontece aqui: TJob é o tipo genérico que representa a classe do job
-            _backgroundJobClient.Enqueue<TJob>(job => job.ExecuteAsync(resourceId));
+            // O Hangfire serializa a chamada para o método ExecuteAsync com o payload do tipo TResource.
+            _backgroundJobClient.Enqueue<TJob>(job => job.ExecuteAsync(resource));
 
             return Task.CompletedTask;
         }
@@ -45,10 +53,9 @@ public class BackgroundJobQueueService : IQueueService
         {
             _logger.LogError(
                 ex,
-                "Falha ao enfileirar o job para o ResourceId {ResourceId}. O job NÃO foi agendado.",
-                resourceId
+                "Falha ao enfileirar o job do tipo {JobName}. O job NÃO foi agendado.",
+                typeof(TJob).Name
             );
-
             throw new AppServiceException("Falha ao agendar a tarefa de processamento.", ex);
         }
     }

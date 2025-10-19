@@ -16,14 +16,17 @@ public class ActiveSubscriptionHandler : AuthorizationHandler<ActiveSubscription
         _dbContextFactory = dbContextFactory;
     }
 
-    protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, ActiveSubscriptionRequirement requirement)
+    protected override async Task HandleRequirementAsync(
+        AuthorizationHandlerContext context,
+        ActiveSubscriptionRequirement requirement
+    )
     {
         if (context.User.IsInRole("Admin"))
         {
             context.Succeed(requirement);
             return; // Sai do método, autorização concedida.
         }
-        
+
         // 1. Obter o ID do usuário a partir do token JWT
         var userId = context.User.FindFirstValue(ClaimTypes.NameIdentifier);
 
@@ -40,8 +43,9 @@ public class ActiveSubscriptionHandler : AuthorizationHandler<ActiveSubscription
             // A consulta verifica se existe ALGUMA assinatura para este usuário com o status "ativo".
             // IMPORTANTE: Ajuste o valor "active" para o status exato que você usa no seu sistema
             // para assinaturas ativas (ex: "approved", "authorized", etc.).
-            bool hasActiveSubscription = await dbContext.Set<Subscription>()
-                .AnyAsync(s => s.UserId == userId && s.Status == "active"); // <-- AJUSTE O STATUS AQUI
+            bool hasActiveSubscription = await dbContext
+                .Set<Subscription>()
+                .AnyAsync(s => s.UserId == userId && s.Status == "ativo"); // <-- AJUSTE O STATUS AQUI
 
             if (hasActiveSubscription)
             {

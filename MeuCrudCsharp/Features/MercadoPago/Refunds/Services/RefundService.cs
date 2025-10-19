@@ -30,7 +30,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Refunds.Services
             var userId = await _userContext.GetCurrentUserId();
 
             var subscription = await _context.Subscriptions.FirstOrDefaultAsync(s =>
-                s.UserId == userId && s.Status == "active"
+                s.UserId == userId && s.Status == "ativo"
             );
 
             if (subscription == null)
@@ -39,7 +39,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Refunds.Services
             }
 
             var payment = await _context
-                .Payments.Where(p => p.SubscriptionId == subscription.Id && p.Status == "approved")
+                .Payments.Where(p => p.SubscriptionId == subscription.Id && p.Status == "aprovada")
                 .OrderByDescending(p => p.CreatedAt)
                 .FirstOrDefaultAsync();
 
@@ -55,7 +55,6 @@ namespace MeuCrudCsharp.Features.MercadoPago.Refunds.Services
 
             try
             {
-                
                 await RefundPaymentOnMercadoPagoAsync(payment.ExternalId);
 
                 subscription.Status = "refund_pending";
@@ -67,16 +66,18 @@ namespace MeuCrudCsharp.Features.MercadoPago.Refunds.Services
                     userId
                 );
             }
-            catch (Exception ex) 
+            catch (Exception ex)
             {
                 _logger.LogError(
                     ex,
                     "Failed to process refund on Mercado Pago for payment {ExternalId}. Database changes were not saved.",
                     payment.ExternalId
                 );
-                
+
                 throw new AppServiceException(
-                    "An error occurred while communicating with the payment provider. Please try again later.", ex);
+                    "An error occurred while communicating with the payment provider. Please try again later.",
+                    ex
+                );
             }
         }
 

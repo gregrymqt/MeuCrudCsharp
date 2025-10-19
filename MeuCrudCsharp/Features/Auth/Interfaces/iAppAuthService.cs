@@ -1,7 +1,8 @@
-﻿using MeuCrudCsharp.Models; // Substitua pelo seu namespace
-using System.Security.Claims;
+﻿using System.Security.Claims;
+using MeuCrudCsharp.Models; // Substitua pelo seu namespace
 
 namespace MeuCrudCsharp.Features.Auth.Interfaces;
+
 public interface IAppAuthService
 {
     /// <summary>

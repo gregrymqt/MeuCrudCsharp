@@ -54,25 +54,26 @@ namespace MeuCrudCsharp.Features.Courses.Controllers
             {
                 throw new Exception("O ID não pode ser vazio.");
             }
-            
-            var course =  await _courseService.FindCourseByPublicIdOrFailAsync(id);
+
+            var course = await _courseService.FindCourseByPublicIdOrFailAsync(id);
 
             var courseDto = new CourseDto
             {
                 PublicId = course.PublicId,
                 Name = course.Name,
-                Description = course.Description
+                Description = course.Description,
             };
 
             return Ok(courseDto);
-
         }
 
         // ✅ Perfeito, nenhuma alteração necessária
         // Na sua classe de controle (ex: AdminCoursesController.cs)
 
         [HttpGet("search")]
-        public async Task<ActionResult<IEnumerable<CourseDto>>> SearchCoursesByNameAsync([FromQuery] string name)
+        public async Task<ActionResult<IEnumerable<CourseDto>>> SearchCoursesByNameAsync(
+            [FromQuery] string name
+        )
         {
             // A validação inicial continua sendo uma boa prática
             if (string.IsNullOrWhiteSpace(name))
@@ -95,7 +96,11 @@ namespace MeuCrudCsharp.Features.Courses.Controllers
             try
             {
                 var newCourse = await _courseService.CreateCourseAsync(createDto);
-                return CreatedAtAction(nameof(SearchCoursesByNameAsync), new { name = newCourse.Name }, newCourse);
+                return CreatedAtAction(
+                    nameof(SearchCoursesByNameAsync),
+                    new { name = newCourse.Name },
+                    newCourse
+                );
             }
             catch (AppServiceException ex)
             {

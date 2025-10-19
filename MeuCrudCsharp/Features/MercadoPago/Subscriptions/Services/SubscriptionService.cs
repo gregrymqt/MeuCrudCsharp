@@ -18,7 +18,6 @@ namespace MeuCrudCsharp.Features.MercadoPago.Subscriptions.Services
         private readonly IPlanRepository _planRepository;
         private readonly GeneralSettings _generalSettings;
 
-
         public SubscriptionService(
             ILogger<SubscriptionService> logger,
             ICacheService cacheService,
@@ -44,26 +43,30 @@ namespace MeuCrudCsharp.Features.MercadoPago.Subscriptions.Services
             string lastFourDigits
         )
         {
-            var localPlan = await _planRepository.GetActiveByExternalIdAsync(planExternalId)
-                            ?? throw new ResourceNotFoundException(
-                                $"Plano com ID externo '{planExternalId}' não encontrado.");
+            var localPlan =
+                await _planRepository.GetActiveByExternalIdAsync(planExternalId)
+                ?? throw new ResourceNotFoundException(
+                    $"Plano com ID externo '{planExternalId}' não encontrado."
+                );
 
             var newSubscription = new Subscription
             {
                 UserId = userId,
-                Status = "pending_external",
+                Status = "pendente",
                 ExternalId = planExternalId,
                 CardTokenId = savedCardId,
                 PayerEmail = payerEmail,
                 PlanId = localPlan.Id,
                 CreatedAt = DateTime.UtcNow,
-                LastFourCardDigits = lastFourDigits
+                LastFourCardDigits = lastFourDigits,
             };
 
             await _subscriptionRepository.AddAsync(newSubscription);
             await _subscriptionRepository.SaveChangesAsync();
-            _logger.LogInformation("Assinatura local {SubscriptionInternalId} criada com status 'pending'.",
-                newSubscription.Id);
+            _logger.LogInformation(
+                "Assinatura local {SubscriptionInternalId} criada com status 'pending'.",
+                newSubscription.Id
+            );
 
             var periodStartDate = DateTime.UtcNow;
             var periodEndDate = periodStartDate.AddMonths(localPlan.FrequencyInterval);
@@ -93,53 +96,72 @@ namespace MeuCrudCsharp.Features.MercadoPago.Subscriptions.Services
                     periodEndDate
                 ),
                 "authorized",
-                userId);
+                userId
+            );
 
             SubscriptionResponseDto? subscriptionResponse = null;
             try
             {
-                subscriptionResponse = await _mpSubscriptionService.CreateSubscriptionAsync(payloadForMp);
+                subscriptionResponse = await _mpSubscriptionService.CreateSubscriptionAsync(
+                    payloadForMp
+                );
 
-                _logger.LogInformation("Assinatura criada com sucesso no Mercado Pago com ID {ExternalId}",
-                    subscriptionResponse.Id);
+                _logger.LogInformation(
+                    "Assinatura criada com sucesso no Mercado Pago com ID {ExternalId}",
+                    subscriptionResponse.Id
+                );
             }
             catch (ExternalApiException ex)
             {
-                _logger.LogError(ex, "Falha na API do MP ao criar assinatura. Iniciando rollback local...");
+                _logger.LogError(
+                    ex,
+                    "Falha na API do MP ao criar assinatura. Iniciando rollback local..."
+                );
                 _subscriptionRepository.Remove(newSubscription);
                 await _subscriptionRepository.SaveChangesAsync();
-                _logger.LogInformation("Rollback concluído. Assinatura local {SubscriptionInternalId} removida.",
-                    newSubscription.Id);
+                _logger.LogInformation(
+                    "Rollback concluído. Assinatura local {SubscriptionInternalId} removida.",
+                    newSubscription.Id
+                );
                 throw;
             }
 
             try
             {
                 newSubscription.ExternalId = subscriptionResponse.Id;
-                newSubscription.Status = subscriptionResponse.Status;
                 newSubscription.UserId = subscriptionResponse.PayerId.ToString();
                 newSubscription.PaymentMethodId = subscriptionResponse.PaymentMethodId;
-                newSubscription.CurrentPeriodStartDate = subscriptionResponse.AutoRecurring.StartDate;
+                newSubscription.CurrentPeriodStartDate = subscriptionResponse
+                    .AutoRecurring
+                    .StartDate;
                 newSubscription.CurrentPeriodEndDate = subscriptionResponse.AutoRecurring.EndDate;
 
                 await _subscriptionRepository.SaveChangesAsync();
                 _logger.LogInformation(
                     "Assinatura local {SubscriptionInternalId} atualizada com ID externo {ExternalId}.",
-                    newSubscription.Id, newSubscription.ExternalId);
+                    newSubscription.Id,
+                    newSubscription.ExternalId
+                );
 
                 return newSubscription;
             }
             catch (DbUpdateException dbEx)
             {
-                _logger.LogError(dbEx,
-                    "Falha ao salvar o ID externo na assinatura local. Iniciando compensação externa...");
+                _logger.LogError(
+                    dbEx,
+                    "Falha ao salvar o ID externo na assinatura local. Iniciando compensação externa..."
+                );
 
                 await _mpSubscriptionService.CancelSubscriptionAsync(subscriptionResponse.Id);
-                _logger.LogInformation("Compensação concluída. Assinatura {ExternalId} cancelada no Mercado Pago.",
-                    subscriptionResponse.Id);
+                _logger.LogInformation(
+                    "Compensação concluída. Assinatura {ExternalId} cancelada no Mercado Pago.",
+                    subscriptionResponse.Id
+                );
 
-                throw new AppServiceException("Ocorreu um erro ao finalizar sua assinatura. A operação foi revertida.",
-                    dbEx);
+                throw new AppServiceException(
+                    "Ocorreu um erro ao finalizar sua assinatura. A operação foi revertida.",
+                    dbEx
+                );
             }
         }
 
@@ -155,9 +177,13 @@ namespace MeuCrudCsharp.Features.MercadoPago.Subscriptions.Services
 
             if (localPlan == null)
             {
-                _logger.LogError("Tentativa de ativar assinatura para um plano inexistente. PublicId: {PlanPublicId}",
-                    planPublicId);
-                throw new ResourceNotFoundException($"Plano com ID '{planPublicId}' não encontrado.");
+                _logger.LogError(
+                    "Tentativa de ativar assinatura para um plano inexistente. PublicId: {PlanPublicId}",
+                    planPublicId
+                );
+                throw new ResourceNotFoundException(
+                    $"Plano com ID '{planPublicId}' não encontrado."
+                );
             }
 
             var now = DateTime.UtcNow;
@@ -174,7 +200,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Subscriptions.Services
                 CreatedAt = now,
                 CurrentPeriodStartDate = now,
                 CurrentPeriodEndDate = expirationDate,
-                LastFourCardDigits = lastFourCardDigits
+                LastFourCardDigits = lastFourCardDigits,
             };
 
             await _subscriptionRepository.AddAsync(newSubscription);
@@ -182,7 +208,10 @@ namespace MeuCrudCsharp.Features.MercadoPago.Subscriptions.Services
 
             _logger.LogInformation(
                 "Assinatura {SubscriptionId} ativada para o usuário {UserId} via pagamento único {PaymentId}. Válida até {ExpirationDate}",
-                newSubscription.Id, userId, paymentId, expirationDate
+                newSubscription.Id,
+                userId,
+                paymentId,
+                expirationDate
             );
 
             return newSubscription;
@@ -198,18 +227,26 @@ namespace MeuCrudCsharp.Features.MercadoPago.Subscriptions.Services
             UpdateSubscriptionValueDto dto
         )
         {
-            _logger.LogInformation("Iniciando atualização de valor para assinatura: {SubscriptionId}", subscriptionId);
+            _logger.LogInformation(
+                "Iniciando atualização de valor para assinatura: {SubscriptionId}",
+                subscriptionId
+            );
 
-            var localSubscription = await _subscriptionRepository.GetByExternalIdAsync(
-                                        subscriptionId,
-                                        includePlan: true,
-                                        asNoTracking: false) // 'false' é crucial para permitir a atualização
-                                    ?? throw new ResourceNotFoundException(
-                                        $"Assinatura {subscriptionId} não encontrada.");
+            var localSubscription =
+                await _subscriptionRepository.GetByExternalIdAsync(
+                    subscriptionId,
+                    includePlan: true,
+                    asNoTracking: false
+                ) // 'false' é crucial para permitir a atualização
+                ?? throw new ResourceNotFoundException(
+                    $"Assinatura {subscriptionId} não encontrada."
+                );
 
             if (localSubscription.Plan == null)
             {
-                throw new AppServiceException($"Plano associado à assinatura {subscriptionId} não foi encontrado.");
+                throw new AppServiceException(
+                    $"Plano associado à assinatura {subscriptionId} não foi encontrado."
+                );
             }
 
             var originalAmount = localSubscription.Plan.TransactionAmount;
@@ -218,7 +255,8 @@ namespace MeuCrudCsharp.Features.MercadoPago.Subscriptions.Services
             {
                 _logger.LogWarning(
                     "Tentativa de atualizar o valor da assinatura {SubscriptionId} para o mesmo valor atual.",
-                    subscriptionId);
+                    subscriptionId
+                );
                 return await _mpSubscriptionService.GetSubscriptionByIdAsync(subscriptionId);
             }
 
@@ -226,7 +264,8 @@ namespace MeuCrudCsharp.Features.MercadoPago.Subscriptions.Services
             await _subscriptionRepository.SaveChangesAsync();
             _logger.LogInformation(
                 "Valor do plano para a assinatura {SubscriptionId} atualizado localmente (temporário).",
-                subscriptionId);
+                subscriptionId
+            );
 
             try
             {
@@ -234,33 +273,45 @@ namespace MeuCrudCsharp.Features.MercadoPago.Subscriptions.Services
                     await _mpSubscriptionService.UpdateSubscriptionValueAsync(subscriptionId, dto);
 
                 await _cacheService.RemoveAsync($"SubscriptionDetails_{localSubscription.UserId}");
-                _logger.LogInformation("Valor da assinatura {SubscriptionId} sincronizado com sucesso no Mercado Pago.",
-                    subscriptionId);
+                _logger.LogInformation(
+                    "Valor da assinatura {SubscriptionId} sincronizado com sucesso no Mercado Pago.",
+                    subscriptionId
+                );
 
                 return mpSubscriptionResponse;
             }
             catch (ExternalApiException ex)
             {
-                _logger.LogError(ex,
+                _logger.LogError(
+                    ex,
                     "Falha na API do MP ao atualizar valor. Iniciando rollback local para a assinatura {SubscriptionId}...",
-                    subscriptionId);
+                    subscriptionId
+                );
 
                 localSubscription.Plan.TransactionAmount = originalAmount;
                 await _subscriptionRepository.SaveChangesAsync();
                 _logger.LogInformation(
                     "Rollback concluído. Valor da assinatura {SubscriptionId} revertido para o valor original.",
-                    subscriptionId);
+                    subscriptionId
+                );
 
                 throw;
             }
         }
 
-        public async Task<SubscriptionResponseDto> UpdateSubscriptionStatusAsync(string subscriptionId,
-            UpdateSubscriptionStatusDto dto)
+        public async Task<SubscriptionResponseDto> UpdateSubscriptionStatusAsync(
+            string subscriptionId,
+            UpdateSubscriptionStatusDto dto
+        )
         {
             var localSubscription =
-                await _subscriptionRepository.GetByExternalIdAsync(subscriptionId, asNoTracking: false)
-                ?? throw new ResourceNotFoundException("Assinatura não encontrada para atualização de status.");
+                await _subscriptionRepository.GetByExternalIdAsync(
+                    subscriptionId,
+                    asNoTracking: false
+                )
+                ?? throw new ResourceNotFoundException(
+                    "Assinatura não encontrada para atualização de status."
+                );
 
             var originalStatus = localSubscription.Status;
 
@@ -269,7 +320,9 @@ namespace MeuCrudCsharp.Features.MercadoPago.Subscriptions.Services
             await _subscriptionRepository.SaveChangesAsync();
             _logger.LogInformation(
                 "Status da assinatura {SubscriptionId} atualizado para {Status} localmente (temporário).",
-                subscriptionId, dto.Status);
+                subscriptionId,
+                dto.Status
+            );
 
             try
             {
@@ -281,14 +334,19 @@ namespace MeuCrudCsharp.Features.MercadoPago.Subscriptions.Services
             }
             catch (ExternalApiException ex)
             {
-                _logger.LogError(ex, "Falha na API do MP ao atualizar status. Iniciando rollback local...");
+                _logger.LogError(
+                    ex,
+                    "Falha na API do MP ao atualizar status. Iniciando rollback local..."
+                );
 
                 localSubscription.Status = originalStatus;
                 localSubscription.UpdatedAt = DateTime.UtcNow;
                 await _subscriptionRepository.SaveChangesAsync();
                 _logger.LogInformation(
                     "Rollback concluído. Status da assinatura {SubscriptionId} revertido para {OriginalStatus}.",
-                    subscriptionId, originalStatus);
+                    subscriptionId,
+                    originalStatus
+                );
 
                 throw;
             }

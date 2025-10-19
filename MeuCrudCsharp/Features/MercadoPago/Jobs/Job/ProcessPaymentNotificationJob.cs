@@ -1,9 +1,11 @@
-﻿using Hangfire;
+﻿﻿using Hangfire;
 using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Features.Caching.Interfaces;
 using MeuCrudCsharp.Features.Exceptions;
+using MeuCrudCsharp.Features.MercadoPago.Jobs.Interfaces;
 using MeuCrudCsharp.Features.MercadoPago.Notification.Interfaces;
 using MeuCrudCsharp.Features.MercadoPago.Utils;
+using MeuCrudCsharp.Features.MercadoPago.Webhooks.DTOs;
 using Microsoft.EntityFrameworkCore;
 
 // Nossas exceções
@@ -14,7 +16,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Jobs.Job
     /// Representa um job do Hangfire responsável por processar uma notificação de pagamento recebida.
     /// Este job garante a consistência transacional, a idempotência e a lógica de retentativas para o processamento de pagamentos.
     /// </summary>
-    public class ProcessPaymentNotificationJob : IJob
+    public class ProcessPaymentNotificationJob : IJob<PaymentNotificationData>
     {
         private readonly ILogger<ProcessPaymentNotificationJob> _logger;
         private readonly ApiDbContext _context;
@@ -54,22 +56,22 @@ namespace MeuCrudCsharp.Features.MercadoPago.Jobs.Job
         /// <exception cref="ArgumentNullException">Lançada se o <paramref name="paymentId"/> for nulo ou vazio.</exception>
         /// <exception cref="ResourceNotFoundException">Lançada se o pagamento não for encontrado no banco de dados, acionando uma nova tentativa do Hangfire.</exception>
         [AutomaticRetry(Attempts = 3, DelaysInSeconds = new int[] { 60 })] // Aumentando o delay para 1 minuto
-        public async Task ExecuteAsync(string paymentId)
+        public async Task ExecuteAsync(PaymentNotificationData resource)
         {
-            if (string.IsNullOrEmpty(paymentId))
+            if (string.IsNullOrEmpty(resource?.Id))
             {
                 _logger.LogError(
                     "Job de notificação de pagamento recebido com um PaymentId nulo ou vazio. O job será descartado."
                 );
                 throw new ArgumentNullException(
-                    nameof(paymentId),
+                    nameof(resource.Id),
                     "O ID do pagamento não pode ser nulo."
                 );
             }
 
             _logger.LogInformation(
                 "Iniciando processamento do job para o Payment ID: {PaymentId}",
-                paymentId
+                resource.Id
             );
 
             await using var transaction = await _context.Database.BeginTransactionAsync();
@@ -79,14 +81,14 @@ namespace MeuCrudCsharp.Features.MercadoPago.Jobs.Job
                 var pagamentoLocal = await _context
                     .Payments.FromSqlRaw(
                         @"SELECT * FROM ""Payments"" WHERE ""ExternalId"" = {0} FOR UPDATE",
-                        paymentId
+                        resource.Id
                     )
                     .FirstOrDefaultAsync();
 
                 if (pagamentoLocal == null)
                 {
                     throw new ResourceNotFoundException(
-                        $"Pagamento com ID externo {paymentId} não encontrado no banco. Tentando novamente mais tarde."
+                        $"Pagamento com ID externo {resource.Id} não encontrado no banco. Tentando novamente mais tarde."
                     );
                 }
 
@@ -95,7 +97,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Jobs.Job
                 {
                     _logger.LogInformation(
                         "Pagamento {PaymentId} já foi processado (Status: {Status}). Finalizando job com sucesso.",
-                        paymentId,
+                        resource.Id,
                         pagamentoLocal.Status
                     );
                     await transaction.CommitAsync();
@@ -110,7 +112,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Jobs.Job
 
                 _logger.LogInformation(
                     "Processamento do Payment ID: {PaymentId} concluído com sucesso.",
-                    paymentId
+                    resource.Id
                 );
 
                 var cacheKey = $"payment:db:{pagamentoLocal.Id}";
@@ -122,7 +124,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Jobs.Job
                 _logger.LogError(
                     ex,
                     "Erro ao processar notificação para o Payment ID: {PaymentId}. A transação será revertida.",
-                    paymentId
+                    resource.Id
                 );
 
                 await transaction.RollbackAsync();

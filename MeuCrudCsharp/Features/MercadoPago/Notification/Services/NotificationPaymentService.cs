@@ -73,21 +73,30 @@ namespace MeuCrudCsharp.Features.MercadoPago.Notification.Services
 
             var localPayment = await SearchForPaymentAsync(internalPaymentId);
             if (localPayment == null)
-                throw new ResourceNotFoundException($"Pagamento com ID {internalPaymentId} não foi encontrado.");
+                throw new ResourceNotFoundException(
+                    $"Pagamento com ID {internalPaymentId} não foi encontrado."
+                );
 
             var user = localPayment.User;
             if (user == null)
                 throw new ResourceNotFoundException(
-                    $"Usuário associado ao pagamento {internalPaymentId} não foi encontrado.");
+                    $"Usuário associado ao pagamento {internalPaymentId} não foi encontrado."
+                );
 
             // 1. Busca o status mais recente do pagamento no Mercado Pago
-            var externPayment = await _mercadoPagoService.GetPaymentStatusAsync(localPayment.ExternalId);
+            var externPayment = await _mercadoPagoService.GetPaymentStatusAsync(
+                localPayment.ExternalId
+            );
             if (externPayment == null)
             {
-                _logger.LogWarning("Não foi possível obter detalhes do pagamento externo {ExternalId}",
-                    localPayment.ExternalId);
+                _logger.LogWarning(
+                    "Não foi possível obter detalhes do pagamento externo {ExternalId}",
+                    localPayment.ExternalId
+                );
                 // Você pode querer lançar uma exceção aqui para que o Hangfire tente novamente.
-                throw new Exception($"Falha ao obter detalhes do pagamento {localPayment.ExternalId} do Mercado Pago.");
+                throw new Exception(
+                    $"Falha ao obter detalhes do pagamento {localPayment.ExternalId} do Mercado Pago."
+                );
             }
 
             switch (externPayment.Status)
@@ -99,14 +108,18 @@ namespace MeuCrudCsharp.Features.MercadoPago.Notification.Services
                         // 3a. SE NÃO EXISTE, é um pagamento único (PIX ou Cartão)! VAMOS CRIAR A ASSINATURA.
                         _logger.LogInformation(
                             "Pagamento {PaymentId} aprovado. Nenhuma assinatura local encontrada, criando uma nova...",
-                            internalPaymentId);
+                            internalPaymentId
+                        );
 
                         // Extrai os metadados que você salvou na criação do pagamento
-                        var metadata = JsonSerializer.Deserialize<PaymentMetadata>(externPayment.ExternalReference);
+                        var metadata = JsonSerializer.Deserialize<PaymentMetadata>(
+                            externPayment.ExternalReference
+                        );
                         if (metadata == null || metadata.PlanPublicId == Guid.Empty)
                         {
                             throw new InvalidOperationException(
-                                $"Metadados (ExternalReference) inválidos ou ausentes no pagamento {externPayment.Id}. Não é possível criar a assinatura.");
+                                $"Metadados (ExternalReference) inválidos ou ausentes no pagamento {externPayment.Id}. Não é possível criar a assinatura."
+                            );
                         }
 
                         // CHAMA O SERVIÇO ESPECIALIZADO PARA CRIAR A ASSINATURA NO BANCO
@@ -120,14 +133,17 @@ namespace MeuCrudCsharp.Features.MercadoPago.Notification.Services
 
                         _logger.LogInformation(
                             "Assinatura de pagamento único criada com sucesso para o usuário {UserId}.",
-                            user.Id);
+                            user.Id
+                        );
                     }
                     else
                     {
                         // 3b. SE JÁ EXISTE, é um pagamento de uma assinatura recorrente. Apenas atualizamos o status.
                         _logger.LogInformation(
                             "Pagamento {PaymentId} aprovado. Atualizando status da assinatura existente {SubscriptionId}.",
-                            internalPaymentId, localPayment.Subscription.Id);
+                            internalPaymentId,
+                            localPayment.Subscription.Id
+                        );
                         localPayment.Subscription.Status = "active";
                     }
 
@@ -157,18 +173,22 @@ namespace MeuCrudCsharp.Features.MercadoPago.Notification.Services
                     }
 
                     await _context.SaveChangesAsync();
-                    await _refundNotification.SendRefundStatusUpdate(localPayment.UserId, "completed",
-                        "Seu reembolso foi processado com sucesso!");
+                    await _refundNotification.SendRefundStatusUpdate(
+                        localPayment.UserId,
+                        "completed",
+                        "Seu reembolso foi processado com sucesso!"
+                    );
                     await SendRefundConfirmationEmailAsync(user, internalPaymentId);
                     break;
 
                 default:
-                    _logger.LogWarning("Status de pagamento não tratado recebido do Mercado Pago: {Status}",
-                        externPayment.Status);
+                    _logger.LogWarning(
+                        "Status de pagamento não tratado recebido do Mercado Pago: {Status}",
+                        externPayment.Status
+                    );
                     break;
             }
         }
-
 
         /// <summary>
         /// Busca o status de um pagamento no banco de dados local.
@@ -181,9 +201,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Notification.Services
         {
             try
             {
-                var payment = await _context
-                    .Payments
-                    .FirstOrDefaultAsync(p => p.Id == paymentId);
+                var payment = await _context.Payments.FirstOrDefaultAsync(p => p.Id == paymentId);
 
                 return payment;
             }
@@ -198,8 +216,14 @@ namespace MeuCrudCsharp.Features.MercadoPago.Notification.Services
             }
         }
 
-        private async Task SendPaymentEmailNotificationAsync(Users user, string paymentId, string subject,
-            string viewPath, object viewModel, string logContext)
+        private async Task SendPaymentEmailNotificationAsync(
+            Users user,
+            string paymentId,
+            string subject,
+            string viewPath,
+            object viewModel,
+            string logContext
+        )
         {
             try
             {
@@ -210,7 +234,9 @@ namespace MeuCrudCsharp.Features.MercadoPago.Notification.Services
                 await _emailSender.SendEmailAsync(user.Email, subject, htmlBody, plainTextBody);
                 _logger.LogInformation(
                     "E-mail de {LogContext} enviado com sucesso para {UserEmail} referente ao pagamento {PaymentId}.",
-                    logContext, user.Email, paymentId
+                    logContext,
+                    user.Email,
+                    paymentId
                 );
             }
             catch (Exception ex)
@@ -218,34 +244,66 @@ namespace MeuCrudCsharp.Features.MercadoPago.Notification.Services
                 _logger.LogError(
                     ex,
                     "Falha ao enviar e-mail de {LogContext} para {UserEmail} (PaymentId: {PaymentId}).",
-                    logContext, user.Email, paymentId
+                    logContext,
+                    user.Email,
+                    paymentId
                 );
-                throw new ExternalApiException($"Falha ao renderizar ou enviar o e-mail de {logContext}.", ex);
+                throw new ExternalApiException(
+                    $"Falha ao renderizar ou enviar o e-mail de {logContext}.",
+                    ex
+                );
             }
         }
 
         private async Task SendConfirmationEmailAsync(Users user, string paymentId)
         {
-            var viewModel = new ConfirmationEmailViewModel { UserName = user.Name, PaymentId = paymentId };
-            await SendPaymentEmailNotificationAsync(user, paymentId, "Seu pagamento foi aprovado! 🎉",
-                "~/Pages/EmailTemplates/Confirmation/Email.cshtml", viewModel, "Confirmação");
+            var viewModel = new ConfirmationEmailViewModel
+            {
+                UserName = user.Name,
+                PaymentId = paymentId,
+            };
+            await SendPaymentEmailNotificationAsync(
+                user,
+                paymentId,
+                "Seu pagamento foi aprovado! 🎉",
+                "~/Pages/EmailTemplates/Confirmation/Email.cshtml",
+                viewModel,
+                "Confirmação"
+            );
         }
 
         private async Task SendRejectionEmailAsync(Users user, string paymentId)
         {
             var viewModel = new RejectionEmailViewModel()
             {
-                UserName = user.Name, PaymentId = paymentId
+                UserName = user.Name,
+                PaymentId = paymentId,
             };
-            await SendPaymentEmailNotificationAsync(user, paymentId, "Atenção: Ocorreu um problema com seu pagamento",
-                "~/Pages/EmailTemplates/Rejection/Email.cshtml", viewModel, "Rejeição");
+            await SendPaymentEmailNotificationAsync(
+                user,
+                paymentId,
+                "Atenção: Ocorreu um problema com seu pagamento",
+                "~/Pages/EmailTemplates/Rejection/Email.cshtml",
+                viewModel,
+                "Rejeição"
+            );
         }
 
         private async Task SendRefundConfirmationEmailAsync(Users user, string paymentId)
         {
-            var viewModel = new ConfirmationEmailViewModel { UserName = user.Name, PaymentId = paymentId };
-            await SendPaymentEmailNotificationAsync(user, paymentId, "Seu Reembolso foi aprovado! 🎉",
-                "~/Pages/EmailTemplates/Refund/Email.cshtml", viewModel, "Confirmação de Reembolso");
+            var viewModel = new ConfirmationEmailViewModel
+            {
+                UserName = user.Name,
+                PaymentId = paymentId,
+            };
+            await SendPaymentEmailNotificationAsync(
+                user,
+                paymentId,
+                "Seu Reembolso foi aprovado! 🎉",
+                "~/Pages/EmailTemplates/Refund/Email.cshtml",
+                viewModel,
+                "Confirmação de Reembolso"
+            );
         }
     }
 }

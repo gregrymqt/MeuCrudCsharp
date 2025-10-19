@@ -1,16 +1,16 @@
 namespace MeuCrudCsharp.Features.Auth.Services;
 
-using Models; // Substitua pelo seu namespace
-using Interfaces;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Tokens;
 using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
+using Interfaces;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
+using Models; // Substitua pelo seu namespace
 
 public class JwtService : IJwtService
 {
@@ -21,7 +21,8 @@ public class JwtService : IJwtService
     public JwtService(
         UserManager<Users> userManager,
         IOptions<JwtSettings> jwtSettings,
-        ILogger<JwtService> logger)
+        ILogger<JwtService> logger
+    )
     {
         _userManager = userManager;
         _jwtSettings = jwtSettings.Value;
@@ -50,13 +51,15 @@ public class JwtService : IJwtService
         }
 
         if (string.IsNullOrEmpty(_jwtSettings.Key))
-            throw new InvalidOperationException("A chave JWT (JwtSettings.Key) não foi configurada.");
+            throw new InvalidOperationException(
+                "A chave JWT (JwtSettings.Key) não foi configurada."
+            );
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.Key));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
         var expires = DateTime.UtcNow.AddHours(8);
 
-        var token = new JwtSecurityToken(null, null, claims, null,expires, creds);
+        var token = new JwtSecurityToken(null, null, claims, null, expires, creds);
 
         _logger.LogInformation("Token JWT gerado para o usuário {UserId}", user.Id);
         return new JwtSecurityTokenHandler().WriteToken(token);

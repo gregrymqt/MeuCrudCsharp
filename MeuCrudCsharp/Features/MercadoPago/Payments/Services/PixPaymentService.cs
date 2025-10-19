@@ -8,7 +8,7 @@ using MeuCrudCsharp.Features.Auth.Interfaces;
 using MeuCrudCsharp.Features.Caching.Interfaces;
 using MeuCrudCsharp.Features.Caching.Record;
 using MeuCrudCsharp.Features.Exceptions;
-using MeuCrudCsharp.Features.MercadoPago.Notification.Interfaces;
+using MeuCrudCsharp.Features.MercadoPago.Hub;
 using MeuCrudCsharp.Features.MercadoPago.Notification.Record;
 using MeuCrudCsharp.Features.MercadoPago.Payments.Dtos;
 using MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces;
@@ -27,13 +27,14 @@ public class PixPaymentService : IPixPaymentService
     private const string IDEMPOTENCY_PREFIX = "PixPayment";
     private readonly IUserContext _userContext;
 
-
-    public PixPaymentService(ILogger<PixPaymentService> logger,
+    public PixPaymentService(
+        ILogger<PixPaymentService> logger,
         ICacheService cacheService,
         IPaymentNotificationHub notificationHub,
         ApiDbContext dbContext,
         IOptions<GeneralSettings> settings,
-        IUserContext userContext)
+        IUserContext userContext
+    )
     {
         _logger = logger;
         _cacheService = cacheService;
@@ -43,8 +44,10 @@ public class PixPaymentService : IPixPaymentService
         _userContext = userContext;
     }
 
-    public async Task<CachedResponse> CreateIdempotentPixPaymentAsync(CreatePixPaymentRequest request,
-        string idempotencyKey)
+    public async Task<CachedResponse> CreateIdempotentPixPaymentAsync(
+        CreatePixPaymentRequest request,
+        string idempotencyKey
+    )
     {
         var cacheKey = $"{IDEMPOTENCY_PREFIX}_idempotency_pix_{idempotencyKey}";
 
@@ -54,8 +57,11 @@ public class PixPaymentService : IPixPaymentService
             {
                 try
                 {
-                    var result = await CreatePixPaymentAsync(await _userContext.GetCurrentUserId(), request,
-                        idempotencyKey);
+                    var result = await CreatePixPaymentAsync(
+                        await _userContext.GetCurrentUserId(),
+                        request,
+                        idempotencyKey
+                    );
 
                     return new CachedResponse(result, 200);
                 }
@@ -64,16 +70,28 @@ public class PixPaymentService : IPixPaymentService
                     var errorBody = new
                     {
                         error = "MercadoPago Error",
-                        message = mpex.ApiError?.Message ?? "Erro ao comunicar com o provedor."
+                        message = mpex.ApiError?.Message ?? "Erro ao comunicar com o provedor.",
                     };
-                    _logger.LogError(mpex, "Erro da API do Mercado Pago (IdempotencyKey: {Key}): {ApiError}",
-                        idempotencyKey, mpex.ApiError?.Message);
+                    _logger.LogError(
+                        mpex,
+                        "Erro da API do Mercado Pago (IdempotencyKey: {Key}): {ApiError}",
+                        idempotencyKey,
+                        mpex.ApiError?.Message
+                    );
                     return new CachedResponse(errorBody, 400); // Bad Request
                 }
                 catch (Exception ex)
                 {
-                    var errorBody = new { message = "Ocorreu um erro inesperado.", error = ex.Message };
-                    _logger.LogError(ex, "Erro inesperado ao processar PIX (IdempotencyKey: {Key})", idempotencyKey);
+                    var errorBody = new
+                    {
+                        message = "Ocorreu um erro inesperado.",
+                        error = ex.Message,
+                    };
+                    _logger.LogError(
+                        ex,
+                        "Erro inesperado ao processar PIX (IdempotencyKey: {Key})",
+                        idempotencyKey
+                    );
                     return new CachedResponse(errorBody, 500); // Internal Server Error
                 }
             },
@@ -83,8 +101,11 @@ public class PixPaymentService : IPixPaymentService
         return response;
     }
 
-    private async Task<PaymentResponseDto> CreatePixPaymentAsync(string userId, CreatePixPaymentRequest request,
-        string externalReference)
+    private async Task<PaymentResponseDto> CreatePixPaymentAsync(
+        string userId,
+        CreatePixPaymentRequest request,
+        string externalReference
+    )
     {
         if (String.IsNullOrEmpty(userId))
         {
@@ -114,8 +135,9 @@ public class PixPaymentService : IPixPaymentService
             };
 
             await _dbContext.Payments.AddAsync(novoPixPayment);
-            _logger.LogInformation("Pix payment adicionado com sucesso, com o Id:"
-                                   + novoPixPayment.Id);
+            _logger.LogInformation(
+                "Pix payment adicionado com sucesso, com o Id:" + novoPixPayment.Id
+            );
 
             await _notificationHub.SendStatusUpdateAsync(
                 userId,
@@ -128,7 +150,7 @@ public class PixPaymentService : IPixPaymentService
 
             var requestOptions = new RequestOptions
             {
-                CustomHeaders = { { "X-Idempotency-Key", externalReference } }
+                CustomHeaders = { { "X-Idempotency-Key", externalReference } },
             };
 
             var paymentClient = new PaymentClient();
@@ -146,7 +168,7 @@ public class PixPaymentService : IPixPaymentService
                     {
                         Type = request.Payer.Identification.Type,
                         Number = request.Payer.Identification.Number,
-                    }
+                    },
                 },
                 ExternalReference = externalReference,
                 NotificationUrl = $"{_generalsettings.BaseUrl}/webhook/mercadpago",
@@ -160,26 +182,42 @@ public class PixPaymentService : IPixPaymentService
             novoPixPayment.UpdatedAt = DateTime.UtcNow;
 
             await _dbContext.SaveChangesAsync();
-            _logger.LogInformation("Pagamento PIX {PaymentId} para o usuário {UserId} salvo com sucesso.",
-                novoPixPayment.PaymentId, userId);
+            _logger.LogInformation(
+                "Pagamento PIX {PaymentId} para o usuário {UserId} salvo com sucesso.",
+                novoPixPayment.PaymentId,
+                userId
+            );
 
-            if (payment.Status == "approved" || payment.Status == "pending" || payment.Status == "in_process")
+            if (
+                payment.Status == "approved"
+                || payment.Status == "pending"
+                || payment.Status == "in_process"
+            )
             {
                 await _notificationHub.SendStatusUpdateAsync(
                     userId,
-                    new PaymentStatusUpdate("Pagamento processado com sucesso!", "approved", true,
-                        payment.Id.ToString()));
+                    new PaymentStatusUpdate(
+                        "Pagamento processado com sucesso!",
+                        "approved",
+                        true,
+                        payment.Id.ToString()
+                    )
+                );
             }
             else
             {
                 await _notificationHub.SendStatusUpdateAsync(
                     userId,
-                    new PaymentStatusUpdate(payment.StatusDetail ?? "O pagamento foi recusado.", "failed", true,
-                        payment.Id.ToString()));
+                    new PaymentStatusUpdate(
+                        payment.StatusDetail ?? "O pagamento foi recusado.",
+                        "failed",
+                        true,
+                        payment.Id.ToString()
+                    )
+                );
             }
 
-            return new PaymentResponseDto
-            (
+            return new PaymentResponseDto(
                 payment.Status,
                 payment.Id.Value,
                 null,
@@ -195,11 +233,19 @@ public class PixPaymentService : IPixPaymentService
             if (ex is MercadoPagoApiException mpex)
             {
                 mensagemErro = mpex.ApiError?.Message ?? "Erro ao comunicar com o provedor.";
-                _logger.LogError(mpex, "Erro da API do Mercado Pago: {ApiError}", mpex.ApiError?.Message);
+                _logger.LogError(
+                    mpex,
+                    "Erro da API do Mercado Pago: {ApiError}",
+                    mpex.ApiError?.Message
+                );
             }
             else
             {
-                _logger.LogError(ex, "Erro inesperado ao processar pagamento para {UserId}.", userId);
+                _logger.LogError(
+                    ex,
+                    "Erro inesperado ao processar pagamento para {UserId}.",
+                    userId
+                );
             }
 
             if (novoPixPayment != null)
@@ -210,11 +256,14 @@ public class PixPaymentService : IPixPaymentService
 
                 _logger.LogWarning(
                     "Registro de pagamento para o usuário {UserId} foi removido do contexto devido a uma falha.",
-                    userId);
+                    userId
+                );
             }
 
             await _notificationHub.SendStatusUpdateAsync(
-                userId, new PaymentStatusUpdate(mensagemErro, "error", true));
+                userId,
+                new PaymentStatusUpdate(mensagemErro, "error", true)
+            );
 
             throw new AppServiceException(mensagemErro, ex);
         }

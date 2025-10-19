@@ -23,9 +23,14 @@ namespace MeuCrudCsharp.Features.MercadoPago.Webhooks.Controllers
         }
 
         [HttpPost("mercadopago")]
-        public async Task<IActionResult> MercadoPagoWebhook([FromBody] MercadoPagoNotification notification)
+        public async Task<IActionResult> MercadoPagoWebhook(
+            [FromBody] MercadoPagoNotification notification
+        )
         {
-            _logger.LogInformation("Webhook do Mercado Pago recebido: {Payload}", JsonSerializer.Serialize(notification));
+            _logger.LogInformation(
+                "Webhook do Mercado Pago recebido: {Payload}",
+                JsonSerializer.Serialize(notification)
+            );
 
             try
             {
@@ -49,6 +54,5 @@ namespace MeuCrudCsharp.Features.MercadoPago.Webhooks.Controllers
                 return StatusCode(500, new { error = "Erro interno no processamento do webhook." });
             }
         }
-
     }
 }

@@ -1,0 +1,62 @@
+@model MeuCrudCsharp.Features.Emails.ViewModels.SubscriptionCreateEmailViewModel
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Assinatura Criada com Sucesso</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            width: 90%;
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #ffffff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .header {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #28a745; /* Tom de verde para sucesso */
+            border-bottom: 2px solid #eeeeee;
+            padding-bottom: 10px;
+        }
+        .footer {
+            margin-top: 20px;
+            font-size: 12px;
+            color: #777;
+            text-align: center;
+        }
+        a {
+            color: #0275d8;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">Sua assinatura foi ativada! 🎉</div>
+        <p>Olá, @Model.UserName,</p>
+        <p>É com grande prazer que confirmamos a criação da sua assinatura do plano <strong>@Model.PlanName</strong>. Seja muito bem-vindo(a)!</p>
+        <p>Detalhes da sua assinatura:</p>
+        <ul>
+            <li><strong>Plano:</strong> @Model.PlanName</li>
+            <li><strong>Válida até:</strong> @Model.CurrentPeriodEndDate.ToString("dd/MM/yyyy")</li>
+        </ul>
+        <p>Você pode gerenciar sua assinatura e acessar todos os benefícios a qualquer momento visitando sua área de conta:</p>
+        <p><a href="@Model.AccountUrl">Acessar minha conta</a></p>
+        <p>Agradecemos por se juntar a nós!</p>
+        <p>Atenciosamente,<br>A Equipe</p>
+    </div>
+</body>
+</html>

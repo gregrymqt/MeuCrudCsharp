@@ -75,33 +75,33 @@ namespace MeuCrudCsharp.Features.Courses.Services
             var cacheKey = $"Courses_v{cacheVersion}_Page{pageNumber}_Size{pageSize}";
 
             return await _cacheService.GetOrCreateAsync(
-                cacheKey,
-                async () =>
-                {
-                    _logger.LogInformation(
-                        "Buscando cursos do banco (cache miss) para a chave: {CacheKey}",
-                        cacheKey
-                    );
+                    cacheKey,
+                    async () =>
+                    {
+                        _logger.LogInformation(
+                            "Buscando cursos do banco (cache miss) para a chave: {CacheKey}",
+                            cacheKey
+                        );
 
-                    var totalCount = await _context.Courses.CountAsync();
-                    var courses = await _context
-                        .Courses.AsNoTracking()
-                        .Include(c => c.Videos)
-                        .OrderBy(c => c.Name)
-                        .Skip((pageNumber - 1) * pageSize)
-                        .Take(pageSize)
-                        .Select(c => CourseMapper.ToDtoWithVideos(c)) // Usa o Mapper
-                        .ToListAsync();
+                        var totalCount = await _context.Courses.CountAsync();
+                        var courses = await _context
+                            .Courses.AsNoTracking()
+                            .Include(c => c.Videos)
+                            .OrderBy(c => c.Name)
+                            .Skip((pageNumber - 1) * pageSize)
+                            .Take(pageSize)
+                            .Select(c => CourseMapper.ToDtoWithVideos(c)) // Usa o Mapper
+                            .ToListAsync();
 
-                    return new PaginatedResultDto<CourseDto>(
-                        courses,
-                        totalCount,
-                        pageNumber,
-                        pageSize
-                    );
-                },
-                TimeSpan.FromMinutes(10)
-            );
+                        return new PaginatedResultDto<CourseDto>(
+                            courses,
+                            totalCount,
+                            pageNumber,
+                            pageSize
+                        );
+                    },
+                    TimeSpan.FromMinutes(10)
+                ) ?? throw new AppServiceException("Erro ao obter cursos paginados.");
         }
 
         /// <summary>
@@ -119,7 +119,7 @@ namespace MeuCrudCsharp.Features.Courses.Services
 
             var newCourse = new Models.Course
             {
-                Name = createDto.Name,
+                Name = createDto.Name!,
                 Description = createDto.Description ?? string.Empty,
             };
 
@@ -142,7 +142,7 @@ namespace MeuCrudCsharp.Features.Courses.Services
         {
             var course = await FindCourseByPublicIdOrFailAsync(publicId);
 
-            course.Name = updateDto.Name;
+            course.Name = updateDto.Name!;
             course.Description = updateDto.Description ?? string.Empty;
 
             await _context.SaveChangesAsync();
@@ -163,8 +163,8 @@ namespace MeuCrudCsharp.Features.Courses.Services
         public async Task DeleteCourseAsync(Guid publicId)
         {
             // ✅ CORREÇÃO: Busque o curso E inclua os vídeos para a validação.
-            var course = await _context.Courses
-                .Include(c => c.Videos) // Carrega a lista de vídeos associados
+            var course = await _context
+                .Courses.Include(c => c.Videos) // Carrega a lista de vídeos associados
                 .FirstOrDefaultAsync(c => c.PublicId == publicId);
 
             if (course == null)
@@ -198,21 +198,28 @@ namespace MeuCrudCsharp.Features.Courses.Services
 
             return course;
         }
-        
+
         public async Task<Course> GetOrCreateCourseByNameAsync(string courseName)
         {
             if (string.IsNullOrWhiteSpace(courseName))
             {
-                throw new ArgumentException("O nome do curso não pode ser vazio.", nameof(courseName));
+                throw new ArgumentException(
+                    "O nome do curso não pode ser vazio.",
+                    nameof(courseName)
+                );
             }
 
             // Busca o curso pelo nome, ignorando case
-            var course = await _context.Courses
-                .FirstOrDefaultAsync(c => c.Name.Equals(courseName, StringComparison.OrdinalIgnoreCase));
+            var course = await _context.Courses.FirstOrDefaultAsync(c =>
+                c.Name.Equals(courseName, StringComparison.OrdinalIgnoreCase)
+            );
 
             if (course == null)
             {
-                _logger.LogInformation("Curso '{CourseName}' não encontrado. Criando um novo.", courseName);
+                _logger.LogInformation(
+                    "Curso '{CourseName}' não encontrado. Criando um novo.",
+                    courseName
+                );
                 course = new Course { Name = courseName };
                 _context.Courses.Add(course);
                 // IMPORTANTE: O SaveChangesAsync será chamado pelo método que chamou este,
@@ -222,8 +229,7 @@ namespace MeuCrudCsharp.Features.Courses.Services
             return course;
         }
 
-
-        private Task<string> GetCacheVersionAsync()
+        private Task<string?> GetCacheVersionAsync()
         {
             return _cacheService.GetOrCreateAsync(
                 CoursesCacheVersionKey,

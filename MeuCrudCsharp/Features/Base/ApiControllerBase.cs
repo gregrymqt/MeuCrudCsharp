@@ -6,6 +6,4 @@ namespace MeuCrudCsharp.Features.Base;
 
 [ApiController] // Atributo padrão para APIs
 [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-public abstract class ApiControllerBase : ControllerBase
-{
-}
+public abstract class ApiControllerBase : ControllerBase { }

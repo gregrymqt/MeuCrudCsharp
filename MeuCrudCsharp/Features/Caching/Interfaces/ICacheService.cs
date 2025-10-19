@@ -14,15 +14,17 @@ public interface ICacheService
     /// <param name="factory">A função que será executada para criar o valor se ele não estiver no cache.</param>
     /// <param name="absoluteExpireTime">O tempo de expiração para o novo item no cache.</param>
     /// <returns>O valor do cache ou o valor recém-criado.</returns>
-    Task<T?> GetOrCreateAsync<T>(string key, Func<Task<T>> factory, TimeSpan? absoluteExpireTime = null);
+    Task<T?> GetOrCreateAsync<T>(
+        string key,
+        Func<Task<T>> factory,
+        TimeSpan? absoluteExpireTime = null
+    );
 
     /// <summary>
     /// Remove um valor do cache de forma assíncrona.
     /// </summary>
     /// <param name="key">A chave a ser removida.</param>
     Task RemoveAsync(string key);
-    
-    
-    Task InvalidateCacheByKeyAsync(string cacheVersionKey);
 
+    Task InvalidateCacheByKeyAsync(string cacheVersionKey);
 }

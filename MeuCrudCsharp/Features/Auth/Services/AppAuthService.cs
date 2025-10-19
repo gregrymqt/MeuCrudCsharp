@@ -17,7 +17,8 @@ namespace MeuCrudCsharp.Features.Auth.Services
             UserManager<Users> userManager,
             IUserRepository userRepository,
             IJwtService jwtService,
-            ILogger<AuthService> logger)
+            ILogger<AuthService> logger
+        )
         {
             _userManager = userManager;
             _userRepository = userRepository;
@@ -27,14 +28,17 @@ namespace MeuCrudCsharp.Features.Auth.Services
 
         public async Task<Users> SignInWithGoogleAsync(
             ClaimsPrincipal googleUserPrincipal,
-            HttpContext httpContext)
+            HttpContext httpContext
+        )
         {
             string? googleId = googleUserPrincipal.FindFirstValue(ClaimTypes.NameIdentifier);
             string? email = googleUserPrincipal.FindFirstValue(ClaimTypes.Email);
 
             if (string.IsNullOrEmpty(googleId) || string.IsNullOrEmpty(email))
             {
-                throw new InvalidOperationException("Não foi possível obter os dados do provedor externo.");
+                throw new InvalidOperationException(
+                    "Não foi possível obter os dados do provedor externo."
+                );
             }
 
             // CORREÇÃO: Acesso ao banco via repositório.
@@ -48,7 +52,10 @@ namespace MeuCrudCsharp.Features.Auth.Services
                     // ... Lógica para criar o novo usuário ...
                     // (O código aqui dentro permanece o mesmo, pois já usa o _userManager)
                     // --- INÍCIO DO CÓDIGO INALTERADO ---
-                    _logger.LogInformation("Nenhum usuário encontrado para {Email}. Criando uma nova conta.", email);
+                    _logger.LogInformation(
+                        "Nenhum usuário encontrado para {Email}. Criando uma nova conta.",
+                        email
+                    );
                     string? name = googleUserPrincipal.FindFirstValue(ClaimTypes.Name);
                     string? avatar = googleUserPrincipal.FindFirstValue("urn:google:picture");
                     user = new Users
@@ -64,10 +71,16 @@ namespace MeuCrudCsharp.Features.Auth.Services
                     if (!result.Succeeded)
                     {
                         throw new InvalidOperationException(
-                            $"Não foi possível criar o usuário: {string.Join(", ", result.Errors.Select(e => e.Description))}");
+                            $"Não foi possível criar o usuário: {string.Join(", ", result.Errors.Select(e => e.Description))}"
+                        );
                     }
 
-                    if (user.Email.Equals("lucasvicentedesouza021@gmail.com", StringComparison.OrdinalIgnoreCase))
+                    if (
+                        user.Email.Equals(
+                            "lucasvicentedesouza021@gmail.com",
+                            StringComparison.OrdinalIgnoreCase
+                        )
+                    )
                     {
                         await _userManager.AddToRoleAsync(user, "Admin");
                     }
@@ -78,7 +91,10 @@ namespace MeuCrudCsharp.Features.Auth.Services
                     // --- FIM DO CÓDIGO INALTERADO ---
                 }
 
-                await _userManager.AddLoginAsync(user, new UserLoginInfo("Google", googleId, "Google"));
+                await _userManager.AddLoginAsync(
+                    user,
+                    new UserLoginInfo("Google", googleId, "Google")
+                );
             }
 
             // CORREÇÃO: Geração de token delegada para o JwtService.

@@ -1,21 +1,20 @@
 ﻿using MeuCrudCsharp.Features.Hubs;
-using MeuCrudCsharp.Features.MercadoPago.Notification.Interfaces;
 using MeuCrudCsharp.Features.MercadoPago.Notification.Record;
 using Microsoft.AspNetCore.SignalR;
 
-// Necessário para o .Any()
-
-namespace MeuCrudCsharp.Features.MercadoPago.Notification.Hub
+namespace MeuCrudCsharp.Features.MercadoPago.Hub
 {
     public class PaymentNotificationHub : IPaymentNotificationHub
     {
         private readonly IHubContext<PaymentProcessingHub> _hubContext;
+
         // 1. Injetar o ConnectionMapping que usa STRING como chave (para o userId)
         private readonly ConnectionMapping<string> _mapping;
-        
+
         public PaymentNotificationHub(
-            IHubContext<PaymentProcessingHub> hubContext, 
-            ConnectionMapping<string> mapping) // Adicionado aqui
+            IHubContext<PaymentProcessingHub> hubContext,
+            ConnectionMapping<string> mapping
+        ) // Adicionado aqui
         {
             _hubContext = hubContext;
             _mapping = mapping;
@@ -29,7 +28,8 @@ namespace MeuCrudCsharp.Features.MercadoPago.Notification.Hub
             // 3. Enviar a mensagem apenas para as conexões daquele usuário específico
             if (connectionIds.Any())
             {
-                await _hubContext.Clients.Clients(connectionIds)
+                await _hubContext
+                    .Clients.Clients(connectionIds)
                     .SendAsync("UpdatePaymentStatus", update);
             }
         }

@@ -1,13 +1,14 @@
-using Microsoft.Extensions.Caching.Distributed;
-using Microsoft.Extensions.Logging;
-using StackExchange.Redis;
 using System;
 using System.Text.Json;
 using System.Threading.Tasks;
 using MeuCrudCsharp.Features.Caching;
 using MeuCrudCsharp.Features.Caching.Interfaces;
+using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Logging;
+using StackExchange.Redis;
 
-namespace  MeuCrudCsharp.Features.Caching.Services;
+namespace MeuCrudCsharp.Features.Caching.Services;
+
 public class CacheService : ICacheService
 {
     private readonly IDistributedCache _cache;
@@ -25,7 +26,11 @@ public class CacheService : ICacheService
     /// Obtém um item do cache. Se não existir, executa a função 'factory' para criar o item,
     /// armazena o resultado no cache e o retorna.
     /// </summary>
-    public async Task<T?> GetOrCreateAsync<T>(string key, Func<Task<T>> factory, TimeSpan? absoluteExpireTime = null)
+    public async Task<T?> GetOrCreateAsync<T>(
+        string key,
+        Func<Task<T>> factory,
+        TimeSpan? absoluteExpireTime = null
+    )
     {
         // 1. Tenta buscar do cache primeiro.
         var cachedValue = await GetAsync<T>(key);
@@ -58,11 +63,15 @@ public class CacheService : ICacheService
         }
         catch (RedisConnectionException ex)
         {
-            _logger.LogError(ex, "Não foi possível conectar ao Redis para remover a chave {CacheKey}.", key);
+            _logger.LogError(
+                ex,
+                "Não foi possível conectar ao Redis para remover a chave {CacheKey}.",
+                key
+            );
             // Em cenários de remoção, podemos optar por não lançar a exceção para não quebrar a aplicação.
         }
     }
-    
+
     public async Task InvalidateCacheByKeyAsync(string cacheVersionKey)
     {
         try
@@ -79,10 +88,14 @@ public class CacheService : ICacheService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Falha ao invalidar o cache para a chave de versão {CacheKey}", cacheVersionKey);
+            _logger.LogError(
+                ex,
+                "Falha ao invalidar o cache para a chave de versão {CacheKey}",
+                cacheVersionKey
+            );
         }
     }
-    
+
     // Métodos privados para manter a lógica de Get/Set encapsulada.
     private async Task<T?> GetAsync<T>(string key)
     {
@@ -97,12 +110,16 @@ public class CacheService : ICacheService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Falha ao ler ou desserializar o cache para a chave {CacheKey}.", key);
+            _logger.LogError(
+                ex,
+                "Falha ao ler ou desserializar o cache para a chave {CacheKey}.",
+                key
+            );
             return default; // Trata o erro como um cache miss.
         }
     }
 
-    private  async Task SetAsync<T>(string key, T value, TimeSpan? absoluteExpireTime = null)
+    private async Task SetAsync<T>(string key, T value, TimeSpan? absoluteExpireTime = null)
     {
         try
         {
@@ -115,7 +132,11 @@ public class CacheService : ICacheService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Não foi possível conectar ao Redis ou serializar para definir a chave {CacheKey}.", key);
+            _logger.LogError(
+                ex,
+                "Não foi possível conectar ao Redis ou serializar para definir a chave {CacheKey}.",
+                key
+            );
             // Não relançamos a exceção para que a aplicação continue funcionando mesmo se o cache falhar.
         }
     }

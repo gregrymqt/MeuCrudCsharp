@@ -17,6 +17,6 @@ namespace MeuCrudCsharp.Models
         // Um usuário pode ter vários pagamentos avulsos
         public virtual ICollection<Payments> Payments { get; set; } = new List<Payments>();
         public string? GoogleId { get; set; } // Adiciona o campo GoogleId para autenticação via Google
-        public string? MercadoPagoCustomerId { get; set; } // Adiciona o campo RefreshToken para autenticação via Google
+        public string? CustomerId { get; set; } // Adiciona o campo CustomerId para autenticação via Google
     }
 }

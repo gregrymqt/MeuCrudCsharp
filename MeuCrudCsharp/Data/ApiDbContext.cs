@@ -16,9 +16,7 @@ namespace MeuCrudCsharp.Data
         /// </summary>
         /// <param name="options">Opções de configuração do Entity Framework Core.</param>
         public ApiDbContext(DbContextOptions<ApiDbContext> options)
-            : base(options)
-        {
-        }
+            : base(options) { }
 
         /// <summary>
         /// Conjunto de entidades de pagamentos avulsos.
@@ -45,6 +43,17 @@ namespace MeuCrudCsharp.Data
         /// </summary>
         public DbSet<Plan> Plans { get; set; }
 
+        /// <summary>
+        /// Conjunto de entidades referentes a notificação de claims.
+        /// </summary>
+        public DbSet<Claims> Claims { get; set; }
+
+        /// <summary>
+        /// Conjunto de entidades referentes a notificação de Chargeback.
+        /// </summary>
+        public DbSet<Chargeback> Chargebacks { get; set; }
+
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             // É muito importante chamar o método base primeiro!
@@ -70,11 +79,8 @@ namespace MeuCrudCsharp.Data
                 .HasForeignKey(p => p.SubscriptionId)
                 .OnDelete(DeleteBehavior.Restrict); // <-- AQUI ESTÁ A SOLUÇÃO!
 
-
             // Configura a propriedade FrequencyType da entidade Plan
-            modelBuilder.Entity<Plan>()
-                .Property(p => p.FrequencyType)
-                .HasConversion<string>(); // <-- Mágica acontece aqui!
+            modelBuilder.Entity<Plan>().Property(p => p.FrequencyType).HasConversion<string>(); // <-- Mágica acontece aqui!
         }
     }
 }

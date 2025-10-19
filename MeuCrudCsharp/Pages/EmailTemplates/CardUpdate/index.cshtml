@@ -1,0 +1,67 @@
+@model MeuCrudCsharp.Features.Emails.ViewModels.CardUpdateEmailViewModel
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Método de Pagamento Atualizado</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #ffffff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+
+        .header {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #0275d8;
+            /* Tom de azul para informação */
+            border-bottom: 2px solid #eeeeee;
+            padding-bottom: 10px;
+        }
+
+        .footer {
+            margin-top: 20px;
+            font-size: 12px;
+            color: #777;
+            text-align: center;
+        }
+
+        a {
+            color: #0275d8;
+            text-decoration: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">Seu método de pagamento foi atualizado</div>
+        <p>Olá, @Model.UserName,</p>
+        <p>Confirmamos que seu método de pagamento foi atualizado com sucesso para o cartão com final
+            <strong>@Model.LastFourDigits</strong>.</p>
+        <p>Nenhuma ação adicional é necessária de sua parte. Suas futuras cobranças serão realizadas neste novo cartão.
+        </p>
+        <p>Você pode visualizar e gerenciar seus métodos de pagamento a qualquer momento em sua área de conta:</p>
+        <p><a href="@Model.AccountUrl">Acessar minha conta</a></p>
+        <p>Atenciosamente,<br>A Equipe</p>
+    </div>
+</body>
+
+</html>

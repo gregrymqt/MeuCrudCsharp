@@ -1,5 +1,6 @@
 ﻿// Crie um novo arquivo, ex: Models/MercadoPagoNotification.cs
 
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace MeuCrudCsharp.Models
@@ -14,7 +15,7 @@ namespace MeuCrudCsharp.Models
         public string? ApiVersion { get; set; }
 
         [JsonPropertyName("data")]
-        public NotificationData? Data { get; set; }
+        public JsonElement? Data { get; set; }
 
         [JsonPropertyName("date_created")]
         public DateTime DateCreated { get; set; }
@@ -30,11 +31,5 @@ namespace MeuCrudCsharp.Models
 
         [JsonPropertyName("user_id")]
         public Guid UserId { get; set; }
-    }
-
-    public class NotificationData
-    {
-        [JsonPropertyName("id")]
-        public string? Id { get; set; }
     }
 }
