@@ -1,4 +1,4 @@
-namespace MeuCrudCsharp.Features.Auth.Interfaces;
+namespace MeuCrudCsharp.Features.User.Interfaces;
 
 public interface IUserContext
 {

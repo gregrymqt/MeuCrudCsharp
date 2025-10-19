@@ -6,6 +6,7 @@ using MeuCrudCsharp.Features.MercadoPago.Subscriptions.DTOs;
 using MeuCrudCsharp.Features.MercadoPago.Subscriptions.Interfaces;
 using MeuCrudCsharp.Features.Profiles.UserAccount.DTOs;
 using MeuCrudCsharp.Features.Profiles.UserAccount.Interfaces;
+using MeuCrudCsharp.Features.User.Interfaces;
 using MeuCrudCsharp.Models;
 
 namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services

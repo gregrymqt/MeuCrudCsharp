@@ -7,7 +7,7 @@ using MeuCrudCsharp.Features.MercadoPago.Claims.Interfaces;
 using MeuCrudCsharp.Models;
 using Microsoft.EntityFrameworkCore;
 
-namespace MeuCrudCsharp.Features.MercadoPago.Claims.Repositories;
+namespace MeuCrudCsharp.Features.MercadoPago.Claims.Services;
 
 public class ClaimRepository : IClaimRepository
 {

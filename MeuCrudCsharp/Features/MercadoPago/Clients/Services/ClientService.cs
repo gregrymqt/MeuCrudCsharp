@@ -5,12 +5,12 @@ using MercadoPago.Client.Customer;
 using MercadoPago.Resource;
 using MercadoPago.Resource.Customer;
 using MeuCrudCsharp.Data;
-using MeuCrudCsharp.Features.Auth.Interfaces;
 using MeuCrudCsharp.Features.Caching.Interfaces;
 using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.MercadoPago.Base;
 using MeuCrudCsharp.Features.MercadoPago.Clients.DTOs;
 using MeuCrudCsharp.Features.MercadoPago.Clients.Interfaces;
+using MeuCrudCsharp.Features.User.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Clients.Services;
@@ -219,7 +219,11 @@ public class ClientService : MercadoPagoServiceBase, IClientService
         string cardId
     )
     {
-        _logger.LogInformation("Buscando cartão {CardId} para o cliente MP: {CustomerId}", cardId, customerId);
+        _logger.LogInformation(
+            "Buscando cartão {CardId} para o cliente MP: {CustomerId}",
+            cardId,
+            customerId
+        );
         var cacheKey = $"customer-cards:{customerId}:{cardId}";
         var expirationTime = TimeSpan.FromMinutes(15);
 
@@ -234,7 +238,7 @@ public class ClientService : MercadoPagoServiceBase, IClientService
 
                 var customerClient = new CustomerClient();
                 var customerCardsResponse = await customerClient.GetCardAsync(customerId, cardId);
-                
+
                 var jsonContent = customerCardsResponse.ApiResponse.Content;
 
                 if (string.IsNullOrEmpty(jsonContent))

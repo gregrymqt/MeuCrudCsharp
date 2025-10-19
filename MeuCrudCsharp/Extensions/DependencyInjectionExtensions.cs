@@ -36,12 +36,14 @@ public static class DependencyInjectionExtensions
                         "MeuCrudCsharp.Features.Caching.Services",
                         "MeuCrudCsharp.Features.Authorization",
                         "MeuCrudCsharp.Features.Auth.Services",
-                        "MeuCrudCsharp.Features.Shared.User",
                         "MeuCrudCsharp.AppSettings",
-                        "MeuCrudCsharp.Users.Services",
+                        "MeuCrudCsharp.Features.User.Services",
                         "MeuCrudCsharp.Features.MercadoPago.Jobs.Services",
                         "MeuCrudCsharp.Features.MercadoPago.Jobs.Job",
-                        "MeuCrudCsharp.Features.MercadoPago.WebHooks.Services"
+                        "MeuCrudCsharp.Features.MercadoPago.WebHooks.Services",
+                        "MeuCrudCsharp.Features.MercadoPago.Chargebacks.Services",
+                        "MeuCrudCsharp.Features.MercadoPago.Claims.Services",
+                        "MeuCrudCsharp.Features.MercadoPago.Hub"
                     )
                 )
                 // Registra as classes como implementações de suas interfaces.

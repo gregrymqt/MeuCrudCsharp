@@ -1,19 +1,21 @@
-﻿using MeuCrudCsharp.Features.Hubs;
+﻿using System.Linq;
+using MeuCrudCsharp.Features.Hubs;
 using MeuCrudCsharp.Features.MercadoPago.Refunds.Interfaces;
 using Microsoft.AspNetCore.SignalR;
-using System.Linq;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Refunds.Notifications
 {
     public class RefundNotification : IRefundNotification
     {
         private readonly IHubContext<RefundProcessingHub> _hubContext;
+
         // 1. Injetar o ConnectionMapping
         private readonly ConnectionMapping<string> _mapping;
 
         public RefundNotification(
-            IHubContext<RefundProcessingHub> hubContext, 
-            ConnectionMapping<string> mapping) // Adicionado aqui
+            IHubContext<RefundProcessingHub> hubContext,
+            ConnectionMapping<string> mapping
+        ) // Adicionado aqui
         {
             _hubContext = hubContext;
             _mapping = mapping;
@@ -29,10 +31,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Refunds.Notifications
                 // 3. Enviar para a lista de conexões específicas
                 await _hubContext
                     .Clients.Clients(connectionIds)
-                    .SendAsync(
-                        "ReceiveRefundStatus",
-                        new { Status = status, Message = message }
-                    );
+                    .SendAsync("ReceiveRefundStatus", new { Status = status, Message = message });
             }
         }
     }

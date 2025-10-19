@@ -1,13 +1,12 @@
 using System;
 using Hangfire;
 using MeuCrudCsharp.Data;
-using MeuCrudCsharp.Features.Caching.Services;
+using MeuCrudCsharp.Features.Caching.Interfaces;
 using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.MercadoPago.Jobs.Interfaces;
 using MeuCrudCsharp.Features.MercadoPago.Notification.Interfaces;
 using MeuCrudCsharp.Features.MercadoPago.Utils;
 using MeuCrudCsharp.Features.MercadoPago.Webhooks.DTOs;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Jobs.Job;
@@ -16,13 +15,13 @@ public class ProcessCreateSubscriptionJob : IJob<PaymentNotificationData>
 {
     private readonly ILogger<ProcessCreateSubscriptionJob> _logger;
     private readonly ApiDbContext _context;
-    private readonly CacheService _cache;
+    private readonly ICacheService _cache;
     private readonly ISubscriptionCreateNotificationService _notificationSubscriptionCreate;
 
     public ProcessCreateSubscriptionJob(
         ILogger<ProcessCreateSubscriptionJob> logger,
         ApiDbContext context,
-        CacheService cache,
+        ICacheService cache,
         ISubscriptionCreateNotificationService notificationSubscriptionCreate
     )
     {

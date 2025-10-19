@@ -1,9 +1,9 @@
-using MeuCrudCsharp.Features.Auth.Interfaces;
 
-namespace MeuCrudCsharp.Features.Auth.Services;
+namespace MeuCrudCsharp.Features.User.Services;
 
 using System.Threading.Tasks;
 using Data; // Substitua pelo seu namespace do DbContext
+using MeuCrudCsharp.Features.Auth.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Models; // Substitua pelo seu namespace de Models
 

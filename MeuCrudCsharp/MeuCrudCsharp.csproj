@@ -36,10 +36,8 @@
     <PackageReference Include="Swashbuckle.AspNetCore" Version="9.0.3" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="Features\MercadoPago\Chargebacks\" />
     <Folder Include="Features\MercadoPago\Chargebacks\Controllers\" />
     <Folder Include="Features\MercadoPago\Chargebacks\Interfaces\" />
-    <Folder Include="Features\MercadoPago\Chargebacks\Services\" />
     <Folder Include="Features\MercadoPago\Chargebacks\ViewModels\" />
     <Folder Include="Log\" />
     <Folder Include="Migrations\" />

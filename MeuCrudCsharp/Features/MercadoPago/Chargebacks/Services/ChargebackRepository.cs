@@ -6,7 +6,7 @@ using MeuCrudCsharp.Features.MercadoPago.Chargebacks.Interfaces;
 using MeuCrudCsharp.Models;
 using Microsoft.EntityFrameworkCore;
 
-namespace MeuCrudCsharp.Features.MercadoPago.Chargebacks.Repositories;
+namespace MeuCrudCsharp.Features.MercadoPago.Chargebacks.Services;
 
 public class ChargebackRepository : IChargebackRepository
 {

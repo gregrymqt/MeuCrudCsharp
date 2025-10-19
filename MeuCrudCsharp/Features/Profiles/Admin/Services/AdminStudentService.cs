@@ -39,7 +39,6 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Services
         /// on repeated requests.
         /// </remarks>
         public async Task<PaginatedResult<StudentDto>> GetAllStudentsAsync(int page, int pageSize)
-
         {
             string cacheKey = $"Admin_AllStudents_Page{page}_Size{pageSize}";
 
@@ -62,7 +61,7 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Services
                                 Items = new List<StudentDto>(),
                                 TotalCount = 0,
                                 TotalPages = 0,
-                                CurrentPage = page
+                                CurrentPage = page,
                             };
                         }
 
@@ -74,14 +73,11 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Services
                             // ALTERADO: Aplica a paginação na consulta do banco de dados
                             .Skip((page - 1) * pageSize)
                             .Take(pageSize)
-                            .Select(u => new StudentDto
-                            (
+                            .Select(u => new StudentDto(
                                 u.PublicId.ToString(),
                                 u.Name,
                                 u.Email,
-                                u.Subscription != null
-                                    ? u.Subscription.Status
-                                    : "Sem Assinatura",
+                                u.Subscription != null ? u.Subscription.Status : "Sem Assinatura",
                                 u.Subscription != null ? u.Subscription.Plan.Name : "N/A",
                                 u.CreatedAt,
                                 u.Subscription != null ? u.Subscription.Id : "Sem Assinatura"
@@ -95,15 +91,12 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Services
                             TotalCount = totalCount,
                             CurrentPage = page,
                             // Calcula o número total de páginas
-                            TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize)
+                            TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize),
                         };
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError(
-                            ex,
-                            "Falha ao buscar o aluno no banco de dados."
-                        );
+                        _logger.LogError(ex, "Falha ao buscar o aluno no banco de dados.");
                         throw new AppServiceException(
                             "An error occurred while querying student data.",
                             ex
@@ -118,11 +111,10 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Services
         {
             try
             {
-                _logger.LogInformation(
-                    "Buscando o alunos pelo id no banco de dados (cache miss)."
-                );
+                _logger.LogInformation("Buscando o alunos pelo id no banco de dados (cache miss).");
 
-                var user = await _context.Users.AsNoTracking()
+                var user = await _context
+                    .Users.AsNoTracking()
                     .Include(users => users.Subscription)
                     .ThenInclude(s => s.Plan)
                     .SingleOrDefaultAsync(u => u.PublicId == id);
@@ -137,24 +129,18 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Services
                     user.PublicId.ToString(),
                     user.Name,
                     user.Email,
-                    user.Subscription?.Status ??
-                    "Sem Assinatura",
+                    user.Subscription?.Status ?? "Sem Assinatura",
                     user.Subscription?.Plan?.Name ?? "N/A",
                     user.CreatedAt,
-                    user.Subscription?.Id ?? "Sem Assinatura");
+                    user.Subscription?.Id ?? "Sem Assinatura"
+                );
 
                 return studentDto;
             }
             catch (Exception ex)
             {
-                _logger.LogError(
-                    ex,
-                    "Falha ao buscar o aluno no banco de dados."
-                );
-                throw new AppServiceException(
-                    "An error occurred while querying student data.",
-                    ex
-                );
+                _logger.LogError(ex, "Falha ao buscar o aluno no banco de dados.");
+                throw new AppServiceException("An error occurred while querying student data.", ex);
             }
         }
     }
