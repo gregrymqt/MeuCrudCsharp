@@ -8,14 +8,14 @@ using Microsoft.EntityFrameworkCore;
 namespace MeuCrudCsharp.Features.MercadoPago.Jobs.Job
 {
     [AutomaticRetry(Attempts = 3, DelaysInSeconds = new int[] { 60 })]
-    public class ProcessSubscriptionPaymentJob : IJob<PaymentNotificationData>
+    public class ProcessRenewalSubscriptionJob : IJob<PaymentNotificationData>
     {
-        private readonly ILogger<ProcessSubscriptionPaymentJob> _logger;
+        private readonly ILogger<ProcessRenewalSubscriptionJob> _logger;
         private readonly ApiDbContext _context;
         private readonly ISubscriptionNotificationService _subscriptionNotificationService;
 
-        public ProcessSubscriptionPaymentJob(
-            ILogger<ProcessSubscriptionPaymentJob> logger,
+        public ProcessRenewalSubscriptionJob(
+            ILogger<ProcessRenewalSubscriptionJob> logger,
             ApiDbContext context,
             ISubscriptionNotificationService subscriptionNotificationService
         )
@@ -51,10 +51,10 @@ namespace MeuCrudCsharp.Features.MercadoPago.Jobs.Job
                 //    O 'resourceId' é o ID do pagamento, então buscamos a assinatura por esse ID.
                 var subscription = await _context
                     .Subscriptions.FromSqlRaw(
-                        "SELECT * FROM \"Subscriptions\" WHERE \"PaymentId\" = {0} FOR UPDATE",
+                        "SELECT * FROM Subscriptions WITH (UPDLOCK, ROWLOCK) WHERE PaymentId = {0}",
                         resourceId
                     )
-                    .Include(s => s.Plan) // Inclui o Plano para pegar os detalhes de frequência
+                    .Include(s => s.Plan)
                     .FirstOrDefaultAsync();
 
                 if (subscription == null)

@@ -1,0 +1,101 @@
+﻿<h2>Gestão de Reclamações</h2>
+<p>Visualize e gerencie as disputas abertas pelos clientes.</p>
+
+<div class="tabs-container">
+    <!-- Navegação das Abas -->
+    <nav class="tabs-nav" aria-label="Abas de Reclamações">
+        <button class="tab-link active" data-tab="manage-claims" role="tab" aria-selected="true">Gerenciar Reclamações</button>
+        <button class="tab-link" data-tab="find-claim" role="tab" aria-selected="false">Buscar Reclamação Única</button>
+    </nav>
+
+    <!-- Conteúdo das Abas -->
+    <div class="tab-content">
+        <!-- Aba 1: Gerenciamento de todas as reclamações -->
+        <div id="manage-claims" class="tab-pane active" role="tabpanel">
+            <div class="filters-container mb-3">
+                <div class="row">
+                    <div class="col-md-4">
+                        <input type="text" id="claims-search-term" class="form-control" placeholder="Buscar por ID ou cliente...">
+                    </div>
+                    <div class="col-md-3">
+                        <select id="claims-status-filter" class="form-select">
+                            <option value="">Todos os Status</option>
+                            <option value="Nova">Nova</option>
+                            <option value="Em Análise">Em Análise</option>
+                            <option value="Resolvida">Resolvida</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div id="claims-table-container">
+                <div id="claims-loading-spinner" class="text-center p-5" style="display: none;">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Carregando...</span>
+                    </div>
+                </div>
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>ID (MP)</th>
+                            <th>Cliente</th>
+                            <th>Motivo</th>
+                            <th>Data</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="claims-table-body">
+                    </tbody>
+                </table>
+            </div>
+
+            <nav>
+                <ul class="pagination justify-content-center" id="claims-pagination">
+                </ul>
+            </nav>
+        </div>
+
+        <!-- Aba 2: Busca por uma reclamação específica -->
+        <div id="find-claim" class="tab-pane" role="tabpanel">
+            <div class="panel-section">
+                <form id="find-single-claim-form" class="form-container">
+                    <div class="panel-header">
+                        <h2>Buscar Reclamação Específica</h2>
+                        <p>Encontre uma reclamação pelo seu ID do Mercado Pago.</p>
+                    </div>
+                    <div class="form-group">
+                        <label for="single-claim-id">ID da Reclamação no Mercado Pago</label>
+                        <input type="text" id="single-claim-id" class="form-control" placeholder="Digite o ID da reclamação..." required>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Buscar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<template id="claim-row-template">
+    <tr>
+        <td data-label="id"></td>
+        <td data-label="customer"></td>
+        <td data-label="reason"></td>
+        <td data-label="date"></td>
+        <td data-label="status">
+            <span class="badge"></span>
+        </td>
+        <td data-label="Ações">
+            <button class="btn btn-sm btn-light btn-change-status" title="Alterar Status">
+                <i class="bi bi-pencil-square"></i>
+            </button>
+            <button class="btn btn-sm btn-light view-details" title="Ver Detalhes">
+                <i class="bi bi-eye"></i>
+            </button>
+            <a href="#" class="btn btn-sm btn-secondary view-on-mp" target="_blank" title="Ver no Mercado Pago">
+                <i class="bi bi-box-arrow-up-right"></i>
+            </a>
+        </td>
+    </tr>
+</template>

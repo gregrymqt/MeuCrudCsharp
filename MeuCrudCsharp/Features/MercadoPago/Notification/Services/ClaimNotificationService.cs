@@ -98,12 +98,13 @@ public class ClaimNotificationService : IClaimNotificationService
             }
 
             // Passo 3: Salvar o registro da notificação da claim no banco de dados.
-            var newClaimRecord = new Claims
+            var newClaimRecord = new Models.Claims
             {
                 NotificationId = claimPayload.Id,
                 ClaimId = resourceId,
                 Type = "claim_received",
                 TypePayment = typePayment,
+                UserId = user?.Id.ToString(),
             };
 
             _context.Claims.Add(newClaimRecord);
@@ -137,7 +138,6 @@ public class ClaimNotificationService : IClaimNotificationService
             throw; // Relança a exceção para que o Hangfire possa tentar novamente.
         }
     }
-
 
     private async Task SendClaimReceivedEmailAsync(Users user, long claimId)
     {

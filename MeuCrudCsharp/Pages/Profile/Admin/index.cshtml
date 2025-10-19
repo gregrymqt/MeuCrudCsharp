@@ -39,6 +39,10 @@
                     <partial name="partials/_AdminSubscriptions"/>
                 </div>
 
+                <div id="content-claims" class="content-panel">
+                    <partial name="partials/_AdminClaims"/>
+                </div>
+
             </div>
         </main>
     </div>
@@ -111,6 +115,34 @@
             <p><strong>Status da Assinatura:</strong> <span id="modalStudentStatus"></span></p>
             <p><strong>Plano Contratado:</strong> <span id="modalStudentPlan"></span></p>
             <p><strong>Data de Cadastro:</strong> <span id="modalStudentRegistrationDate"></span></p>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="changeClaimStatusModal" style="display: none;">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Alterar Status da Reclamação</h5>
+                <button type="button" class="btn-close" id="close-status-modal-btn"></button>
+            </div>
+            <div class="modal-body">
+                <form id="change-status-form">
+                    <input type="hidden" id="modal-claim-id">
+                    <div class="mb-3">
+                        <label for="modal-claim-status" class="form-label">Novo Status</label>
+                        <select id="modal-claim-status" class="form-select">
+                            <option value="Nova">Nova</option>
+                            <option value="Em Análise">Em Análise</option>
+                            <option value="Resolvida">Resolvida</option>
+                        </select>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" id="cancel-status-modal-btn">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 </div>

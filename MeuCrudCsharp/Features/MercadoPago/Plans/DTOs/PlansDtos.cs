@@ -10,14 +10,10 @@ namespace MeuCrudCsharp.Features.MercadoPago.Plans.DTOs;
 /// <param name="FrequencyType">The type of frequency (e.g., "months").</param>
 /// <param name="TransactionAmount">The cost of each recurrence.</param>
 public record AutoRecurringDto(
-    [property: JsonPropertyName("frequency")]
-    int Frequency,
-    [property: JsonPropertyName("frequency_type")]
-    string FrequencyType,
-    [property: JsonPropertyName("transaction_amount")]
-    decimal TransactionAmount,
-    [property: JsonPropertyName("currency_id")]
-    string CurrencyId
+    [property: JsonPropertyName("frequency")] int Frequency,
+    [property: JsonPropertyName("frequency_type")] string FrequencyType,
+    [property: JsonPropertyName("transaction_amount")] decimal TransactionAmount,
+    [property: JsonPropertyName("currency_id")] string CurrencyId
 );
 
 /// <summary>
@@ -27,13 +23,13 @@ public record CreatePlanDto(
     [property: JsonPropertyName("reason")]
     [Required(ErrorMessage = "The plan reason/name is required.")]
     [StringLength(256, ErrorMessage = "The reason must be up to 256 characters long.")]
-    string? Reason,
+        string? Reason,
     [property: JsonPropertyName("auto_recurring")]
     [Required(ErrorMessage = "Auto-recurring details are required.")]
-    AutoRecurringDto? AutoRecurring,
+        AutoRecurringDto? AutoRecurring,
     [property: JsonPropertyName("description")]
     [Required(ErrorMessage = "The description is required.")]
-    string? Description
+        string? Description
 );
 
 /// <summary>
@@ -53,7 +49,6 @@ public record PlanDto(
 /// <summary>
 /// Data for editModal in front-end
 /// </summary>
-
 public record PlanEditDto(
     string PublicId,
     string Name,
@@ -69,20 +64,16 @@ public record PlanResponseDto(
     [property: JsonPropertyName("id")] string? Id,
     [property: JsonPropertyName("reason")] string? Reason,
     [property: JsonPropertyName("status")] string? Status,
-    [property: JsonPropertyName("date_created")]
-    DateTime DateCreated,
-    [property: JsonPropertyName("external_reference")]
-    string? ExternalPlanId,
-    [property: JsonPropertyName("auto_recurring")]
-    AutoRecurringDto? AutoRecurring
+    [property: JsonPropertyName("date_created")] DateTime DateCreated,
+    [property: JsonPropertyName("external_reference")] string? ExternalPlanId,
+    [property: JsonPropertyName("auto_recurring")] AutoRecurringDto? AutoRecurring
 );
 
 /// <summary>
 /// Paginated response from the payment provider's plan search endpoint.
 /// </summary>
 public record PlanSearchResponseDto(
-    [property: JsonPropertyName("results")]
-    List<PlanResponseDto> Results
+    [property: JsonPropertyName("results")] List<PlanResponseDto> Results
 );
 
 /// <summary>
@@ -90,8 +81,7 @@ public record PlanSearchResponseDto(
 /// </summary>
 public record UpdatePlanDto(
     [property: JsonPropertyName("reason")] string? Reason,
-    [property: JsonPropertyName("auto_recurring")]
-    AutoRecurringDto? AutoRecurring
+    [property: JsonPropertyName("auto_recurring")] AutoRecurringDto? AutoRecurring
 );
 
 public class PagedResultDto<T>

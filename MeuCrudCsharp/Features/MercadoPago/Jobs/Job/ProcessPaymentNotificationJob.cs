@@ -80,7 +80,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Jobs.Job
             {
                 var pagamentoLocal = await _context
                     .Payments.FromSqlRaw(
-                        @"SELECT * FROM ""Payments"" WHERE ""ExternalId"" = {0} FOR UPDATE",
+                        "SELECT * FROM Payments WITH (UPDLOCK, ROWLOCK) WHERE ExternalId = {0}",
                         resource.Id
                     )
                     .FirstOrDefaultAsync();
@@ -92,7 +92,11 @@ namespace MeuCrudCsharp.Features.MercadoPago.Jobs.Job
                     );
                 }
 
-                var statusProcessaveis = new[] { InternalPaymentStatus.Pendente, InternalPaymentStatus.Iniciando };
+                var statusProcessaveis = new[]
+                {
+                    InternalPaymentStatus.Pendente,
+                    InternalPaymentStatus.Iniciando,
+                };
                 if (!statusProcessaveis.Contains(pagamentoLocal.Status))
                 {
                     _logger.LogInformation(

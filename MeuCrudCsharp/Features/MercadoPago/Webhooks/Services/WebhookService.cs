@@ -130,12 +130,23 @@ namespace MeuCrudCsharp.Features.MercadoPago.Webhooks.Services
                         subPaymentData.Id
                     );
                     await _queueService.EnqueueJobAsync<
-                        ProcessSubscriptionPaymentJob,
+                        ProcessRenewalSubscriptionJob,
                         PaymentNotificationData
                     >(subPaymentData);
                     break;
 
                 case "subscription_preapproval_plan":
+                    var subPreapprovalPlanData = data.Deserialize<PaymentNotificationData>();
+                    _logger.LogInformation(
+                        "Enfileirando atualização de plano de assinatura: {SubscriptionId}",
+                        subPreapprovalPlanData.Id
+                    );
+                    await _queueService.EnqueueJobAsync<
+                        ProcessPlanSubscriptionJob,
+                        PaymentNotificationData
+                    >(subPreapprovalPlanData);
+                    break;
+
                 case "subscription_preapproval": // Adicionando o tipo de notificação de criação/atualização de assinatura
                     var subPreapprovalData = data.Deserialize<PaymentNotificationData>();
                     _logger.LogInformation(
@@ -148,7 +159,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Webhooks.Services
                     >(subPreapprovalData);
                     break;
 
-                case "topic_claims_integration_wh":
+                case "claim":
                     var claimData = data.Deserialize<ClaimNotificationPayload>();
                     _logger.LogInformation(
                         "Enfileirando notificação de Claim ID: {ClaimId}",
@@ -159,7 +170,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Webhooks.Services
                     );
                     break;
 
-                case "topic_card_id_wh":
+                case "automatic-payments":
                     var cardUpdateData = data.Deserialize<CardUpdateNotificationPayload>();
                     _logger.LogInformation(
                         "Enfileirando notificação de atualização de cartão para o cliente: {CustomerId}",
@@ -171,7 +182,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Webhooks.Services
                     >(cardUpdateData);
                     break;
 
-                case "chargebacks":
+                case "topic_chargebacks_wh":
                     var chargebackData = data.Deserialize<ChargebackNotificationPayload>();
                     _logger.LogInformation(
                         "Enfileirando notificação de Chargeback ID: {ChargebackId}",

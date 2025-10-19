@@ -7,20 +7,26 @@ import {initializeCoursesPanel} from './modules/panels/coursesPanel.js';
 import {initializeStudentsPanel} from './modules/panels/studentsPanel.js';
 import { loadSubscriptions } from './modules/panels/subscriptionsPanel.js';
 import { initializeTabs } from './modules/ui/tabs.js';
+import { initializeClaimsPanel } from './modules/panels/claimsPanel.js';
+import { initializeChargebacksPanel } from './modules/panels/ChargebacksPanels.js';
+
 
 async function main() {
     const panelLoaders = {
         'nav-plans': initializePlansPanel,
-        'nav-courses': await initializeCoursesPanel,
-        'nav-students': await initializeStudentsPanel,
+        'nav-courses': initializeCoursesPanel,
+        'nav-students': initializeStudentsPanel,
         'nav-subscriptions': loadSubscriptions,
+        'nav-claims': initializeClaimsPanel,
+        'nav-chargebacks': initializeChargebacksPanel,
     };
 
     initializeMenuToggle();
     initializeSidebar(panelLoaders);
     initializeTabs();
 
-    document.querySelector('.sidebar-link.active')?.click();
+    // Clica no item de menu ativo para carregar o painel inicial
+    document.querySelector('.sidebar-nav .active')?.click();
 }
 
-document.addEventListener('DOMContentLoaded', await main);
+document.addEventListener('DOMContentLoaded', main);

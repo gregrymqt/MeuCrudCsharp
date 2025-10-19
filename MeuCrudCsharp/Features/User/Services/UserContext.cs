@@ -16,8 +16,13 @@ public class UserContext : IUserContext
 
     public async Task<string> GetCurrentUserId()
     {
-        return _httpContextAccessor.HttpContext?.User.FindFirstValue(
-            ClaimTypes.NameIdentifier
-        )?? throw new ArgumentException("No user id claim found");
+        return _httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier)
+            ?? throw new ArgumentException("No user id claim found");
+    }
+
+    public async Task<string> GetCurrentEmail()
+    {
+        return _httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.Email)
+            ?? throw new ArgumentException("No email claim found");
     }
 }

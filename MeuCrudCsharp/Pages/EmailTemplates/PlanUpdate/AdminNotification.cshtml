@@ -1,0 +1,88 @@
+@using System.Globalization
+
+@model MeuCrudCsharp.Features.Emails.ViewModels.PlanUpdateAdminNotificationViewModel
+
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alerta de Atualização de Plano</title>
+    <style>
+        /* CSS Reset & Email Client Fixes */
+        body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+        table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; border-collapse: collapse; }
+        img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
+        body { height: 100% !important; margin: 0 !important; padding: 0 !important; width: 100% !important; font-family: Helvetica, Arial, sans-serif; }
+
+        /* Estilos Globais */
+        .email-background { background-color: #f4f4f4; }
+        .email-container { background-color: #ffffff; max-width: 600px; margin: 0 auto; border-radius: 8px; overflow: hidden; border: 1px solid #dee2e6; }
+        .header { background-color: #ffc107; padding: 30px 20px; text-align: center; color: #212529; }
+        .header h1 { margin: 0; font-size: 28px; font-weight: bold; }
+        .content { padding: 30px 25px; color: #333333; font-size: 16px; line-height: 1.6; }
+        .content p { margin: 0 0 15px 0; }
+        .details-box { background-color: #f9f9f9; border-left: 4px solid #ffc107; padding: 20px; margin: 20px 0; }
+        .details-box p { margin: 5px 0; }
+        .details-box ul { margin: 10px 0; padding-left: 20px; }
+        .details-box li { margin-bottom: 5px; }
+        .cta-button { display: inline-block; background-color: #007bff; color: #ffffff; padding: 12px 25px; text-align: center; text-decoration: none; border-radius: 5px; font-weight: bold; margin-top: 15px; }
+        .footer { padding: 20px; text-align: center; font-size: 12px; color: #888888; }
+        .footer a { color: #007bff; text-decoration: none; }
+    </style>
+</head>
+<body class="email-background">
+    <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+        <tr>
+            <td align="center" style="padding: 20px 0;">
+                <table role="presentation" class="email-container" border="0" cellpadding="0" cellspacing="0" width="100%">
+                    <!-- Header -->
+                    <tr>
+                        <td class="header">
+                            <h1>Atualização Automática de Plano</h1>
+                        </td>
+                    </tr>
+                    <!-- Content -->
+                    <tr>
+                        <td class="content">
+                            <p>Olá, Administrador,</p>
+                            <p>Este é um aviso automático para informar que o plano <strong>@Model.PlanName</strong> foi sincronizado e atualizado com base nos dados mais recentes da API do Mercado Pago.</p>
+
+                            <div class="details-box">
+                                <p><strong>Plano Afetado:</strong> @Model.PlanName</p>
+                                <p><strong>ID Externo (MP):</strong> @Model.ExternalId</p>
+                                <p><strong>Alterações Detectadas:</strong></p>
+                                <ul>
+                                    @foreach (var change in Model.Changes)
+                                    {
+                                        <li>@change</li>
+                                    }
+                                </ul>
+                            </div>
+
+                            <p>Nenhuma ação é necessária, a menos que essas alterações sejam inesperadas. O sistema já aplicou as atualizações no banco de dados.</p>
+                            
+                            <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+                                <tr>
+                                    <td align="center" style="padding-top: 10px;">
+                                        <a href="@Model.DashboardUrl" target="_blank" class="cta-button">Acessar Painel Admin</a>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <p style="margin-top: 30px;">Atenciosamente,<br>Sistema de Notificações</p>
+                        </td>
+                    </tr>
+                    <!-- Footer -->
+                    <tr>
+                        <td class="footer">
+                            <p>Este é um e-mail automático. Por favor, não responda.</p>
+                            <p>SuaEmpresa &copy; @DateTime.Now.Year. Todos os direitos reservados.</p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

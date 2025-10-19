@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace MeuCrudCsharp.Models;
 
@@ -74,4 +75,12 @@ public class Claims
     /// Tipo de pagamento se foi por pagamento ou assinatura.
     /// </summary>
     public string? TypePayment { get; set; }
+
+    /// <summary>
+    /// Id referente ao user que realizou a claim.
+    /// </summary>
+    [ForeignKey("user_id")]
+    public string? UserId { get; set; }
+
+    public virtual Users? User { get; set; }
 }

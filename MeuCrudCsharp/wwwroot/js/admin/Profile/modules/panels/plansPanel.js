@@ -141,7 +141,7 @@ async function fetchAndDisplayPlans(source, page = 1) {
     }
 }
 
-export function initializePlansPanel() {
+export async function initializePlansPanel() {
 
     if (fetchButtonsContainer && !fetchButtonsContainer.hasAttribute('data-click-handler-attached')) {
         fetchButtonsContainer.addEventListener('click', (e) => {

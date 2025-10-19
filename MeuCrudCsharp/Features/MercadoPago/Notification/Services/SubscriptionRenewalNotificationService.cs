@@ -6,15 +6,15 @@ using Microsoft.Extensions.Options;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Notification.Services
 {
-    public class SubscriptionNotificationService : ISubscriptionNotificationService
+    public class SubscriptionRenewalNotificationService : ISubscriptionNotificationService
     {
-        private readonly ILogger<SubscriptionNotificationService> _logger;
+        private readonly ILogger<SubscriptionRenewalNotificationService> _logger;
         private readonly IEmailSenderService _emailSenderService;
         private readonly IRazorViewToStringRenderer _razorViewToStringRenderer;
         private readonly GeneralSettings _generalSettings;
 
-        public SubscriptionNotificationService(
-            ILogger<SubscriptionNotificationService> logger,
+        public SubscriptionRenewalNotificationService(
+            ILogger<SubscriptionRenewalNotificationService> logger,
             IEmailSenderService emailSenderService,
             IRazorViewToStringRenderer razorViewToStringRenderer,
             IOptions<GeneralSettings> generalSettings

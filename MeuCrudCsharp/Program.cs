@@ -1,12 +1,11 @@
-using Serilog;
 using DotNetEnv;
 using MeuCrudCsharp.Extensions;
+using Serilog;
 
 // Isso garante que até mesmo os erros de inicialização do host possam ser logados.
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Debug() // Define o nível mínimo de log a ser capturado (Debug, Info, Warning, Error, etc.)
-    .MinimumLevel
-    .Override("Microsoft", Serilog.Events.LogEventLevel.Warning) // Reduz o ruído dos logs internos do ASP.NET Core
+    .MinimumLevel.Override("Microsoft", Serilog.Events.LogEventLevel.Warning) // Reduz o ruído dos logs internos do ASP.NET Core
     .Enrich.FromLogContext()
     .WriteTo.Console() // Continua escrevendo no console, como já faz hoje
     .WriteTo.File(

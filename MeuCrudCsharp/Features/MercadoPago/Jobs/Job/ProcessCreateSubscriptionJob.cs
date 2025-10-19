@@ -57,7 +57,7 @@ public class ProcessCreateSubscriptionJob : IJob<PaymentNotificationData>
         {
             var assinaturaExistente = await _context
                 .Subscriptions.FromSqlRaw(
-                    @"SELECT * FROM ""Subscriptions"" WHERE ""ExternalId"" = {0} FOR UPDATE",
+                    "SELECT * FROM Subscriptions WITH (UPDLOCK, ROWLOCK) WHERE ExternalId = {0}",
                     resource.Id
                 )
                 .FirstOrDefaultAsync();

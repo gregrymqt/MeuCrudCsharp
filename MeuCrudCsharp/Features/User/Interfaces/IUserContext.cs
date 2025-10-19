@@ -8,4 +8,6 @@ public interface IUserContext
     /// <returns>A string representando o ID do usuário.</returns>
     /// <exception cref="AppServiceException">Lançada se o ID do usuário não for encontrado.</exception>
     Task<string> GetCurrentUserId();
+
+    Task<string> GetCurrentEmail();
 }

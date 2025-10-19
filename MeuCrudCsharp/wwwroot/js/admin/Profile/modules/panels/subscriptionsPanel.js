@@ -117,7 +117,7 @@ export function initializeSubscriptionsPanel() {
     });
 }
 
-export function loadSubscriptions() {
+export async function loadSubscriptions() {
     const panel = document.getElementById('content-subscriptions');
     if (!panel) {
         console.error('Painel de conteúdo de assinaturas #content-subscriptions não encontrado.');

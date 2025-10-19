@@ -1,0 +1,42 @@
+﻿<h2>Gestão de Contestações (Chargebacks)</h2>
+<p>Aja rapidamente para contestar estas transações e evitar perdas financeiras.</p>
+
+<div class="alert alert-danger" role="alert">
+    <strong>Atenção!</strong> Cada chargeback tem um prazo para envio de evidências. A falta de ação resultará em perda financeira permanente.
+</div>
+
+<div class="filters-container mb-3">
+    </div>
+
+<div id="chargebacks-table-container">
+    <div id="chargebacks-loading-spinner" ...></div>
+    <table class="table table-hover">
+        <thead>
+            <tr>
+                <th>ID (MP)</th>
+                <th>Cliente</th>
+                <th>Valor (R$)</th> <th>Data</th>
+                <th>Status</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody id="chargebacks-table-body"></tbody>
+    </table>
+</div>
+
+<nav>
+    <ul class="pagination justify-content-center" id="chargebacks-pagination"></ul>
+</nav>
+
+<template id="chargeback-row-template">
+    <tr>
+        <td data-label="id"></td>
+        <td data-label="customer"></td>
+        <td data-label="amount" class="fw-bold"></td> <td data-label="date"></td>
+        <td data-label="status"><span class="badge"></span></td>
+        <td data-label="actions">
+            <a href="#" class="btn btn-sm btn-danger view-details">Analisar</a>
+            <a href="#" class="btn btn-sm btn-secondary view-on-mp" target="_blank">Contestar no MP</a>
+        </td>
+    </tr>
+</template>

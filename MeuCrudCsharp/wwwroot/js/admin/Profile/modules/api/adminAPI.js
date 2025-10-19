@@ -1,4 +1,4 @@
-﻿// js/modules/api/adminAPI.js (ou o caminho correto)
+﻿﻿// js/modules/api/adminAPI.js (ou o caminho correto)
 
 // 1. IMPORTA os serviços centrais. Toda a lógica de fetch e cache virá daqui.
 import apiService from '../../../../core/apiService.js';
@@ -34,8 +34,8 @@ async function fetchAndCache(cacheKey, url, forceRefresh = false) {
 // API DE PLANOS (Plans)
 // ==========================================================================================
 
-export const getPublicPlans = (page =1, pageSize = 10 ,forceRefresh = false) => fetchAndCache('allPublicPlans', `/api/public/plans?page=${page}&${pageSize}`, forceRefresh);
-export const getAdminPlans = (page =1, pageSize = 10 ,forceRefresh = false) => fetchAndCache('allAdminPlans', `/api/admin/plans?page=${page}&${pageSize}`, forceRefresh);
+export const getPublicPlans = (page = 1, pageSize = 10, forceRefresh = false) => fetchAndCache('allPublicPlans', `/api/public/plans?page=${page}&${pageSize}`, forceRefresh);
+export const getAdminPlans = (page = 1, pageSize = 10, forceRefresh = false) => fetchAndCache('allAdminPlans', `/api/admin/plans?page=${page}&${pageSize}`, forceRefresh);
 export const getPlanById = (id) => apiService.fetch(`/api/admin/plans/${id}`);
 export const createPlan = (planData) => apiService.fetch('/api/admin/plans', { method: 'POST', body: JSON.stringify(planData) });
 export const updatePlan = (id, planData) => apiService.fetch(`/api/admin/plans/${id}`, { method: 'PUT', body: JSON.stringify(planData) });
@@ -55,7 +55,7 @@ export const deleteCourse = (id) => apiService.fetch(`/api/admin/courses/${id}`,
 // API DE ALUNOS (Students)
 // ==========================================================================================
 
-export const getStudents = (page =1, pageSize = 10 ,forceRefresh = false) => fetchAndCache('allStudents', `/api/admin/students?page=${page}&${pageSize}`, forceRefresh);
+export const getStudents = (page = 1, pageSize = 10, forceRefresh = false) => fetchAndCache('allStudents', `/api/admin/students?page=${page}&${pageSize}`, forceRefresh);
 export const getStudentsPublicId = (id) => apiService.fetch(`/api/admin/students/${id}`);
 
 // ==========================================================================================
@@ -65,6 +65,26 @@ export const getStudentsPublicId = (id) => apiService.fetch(`/api/admin/students
 export const searchSubscription = (query) => apiService.fetch(`/api/admin/subscriptions/search?query=${encodeURIComponent(query)}`);
 export const updateSubscriptionValue = (id, amount) => apiService.fetch(`/api/admin/subscriptions/${id}/value`, { method: 'PUT', body: JSON.stringify({ transactionAmount: amount }) });
 export const updateSubscriptionStatus = (id, status) => apiService.fetch(`/api/admin/subscriptions/${id}/status`, { method: 'PUT', body: JSON.stringify({ status: status }) });
+
+// ==========================================================================================
+// API DE Claims (Claims)
+// ==========================================================================================
+export const getClaims = (searchTerm = '', statusFilter = '', page = 1, forceRefresh = false) => {
+    const cacheKey = `claims_p${page}_s:${searchTerm}_f:${statusFilter}`;
+    const url = `/api/admin/claims?searchTerm=${encodeURIComponent(searchTerm)}&statusFilter=${encodeURIComponent(statusFilter)}&page=${page}`;
+    return fetchAndCache(cacheKey, url, forceRefresh);
+};
+export const updateClaimStatus = (claimId, newStatus) => apiService.fetch(`/api/admin/claims/${claimId}/status`, { method: 'PUT', body: JSON.stringify({ status: newStatus }) });
+
+// ==========================================================================================
+// API DE Chargebacks (Chargebacks)
+// ==========================================================================================
+
+export const getChargebacks = (searchTerm = '', statusFilter = '', page = 1, forceRefresh = false) => {
+    const cacheKey = `chargebacks_p${page}_s:${searchTerm}_f:${statusFilter}`;
+    const url = `/api/admin/chargebacks?searchTerm=${encodeURIComponent(searchTerm)}&statusFilter=${encodeURIComponent(statusFilter)}&page=${page}`;
+    return fetchAndCache(cacheKey, url, forceRefresh);
+};
 
 /**
  * Invalida (remove) um item específico do cache.

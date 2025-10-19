@@ -22,9 +22,7 @@ public class MercadoPagoPlanService : MercadoPagoServiceBase, IMercadoPagoPlanSe
         IHttpClientFactory httpClient,
         ILogger<IMercadoPagoPlanService> logger
     )
-        : base(httpClient, logger)
-    {
-    }
+        : base(httpClient, logger) { }
 
     public async Task<PlanResponseDto> CreatePlanAsync(object payload)
     {
@@ -47,8 +45,24 @@ public class MercadoPagoPlanService : MercadoPagoServiceBase, IMercadoPagoPlanSe
         await SendMercadoPagoRequestAsync(HttpMethod.Put, endpoint, payload);
     }
 
-    public async Task<IEnumerable<PlanResponseDto>> SearchActivePlansAsync(int limit, int offset, string status,
-        string sortBy, string criteria)
+    public async Task<PlanResponseDto> GetPlanByExternalIdAsync(string externalPlanId)
+    {
+        var endpoint = $"/preapproval_plan/{externalPlanId}";
+        var responseBody = await SendMercadoPagoRequestAsync(
+            HttpMethod.Get,
+            endpoint,
+            (object?)null
+        );
+        return JsonSerializer.Deserialize<PlanResponseDto>(responseBody);
+    }
+
+    public async Task<IEnumerable<PlanResponseDto>> SearchActivePlansAsync(
+        int limit,
+        int offset,
+        string status,
+        string sortBy,
+        string criteria
+    )
     {
         // Usamos um StringBuilder para construir a query string dinamicamente
         var queryString = new StringBuilder();
@@ -60,11 +74,15 @@ public class MercadoPagoPlanService : MercadoPagoServiceBase, IMercadoPagoPlanSe
 
         var endpoint = queryString.ToString();
 
-        var responseBody = await SendMercadoPagoRequestAsync(HttpMethod.Get, endpoint, (object?)null);
+        var responseBody = await SendMercadoPagoRequestAsync(
+            HttpMethod.Get,
+            endpoint,
+            (object?)null
+        );
         var apiResponse = JsonSerializer.Deserialize<PlanSearchResponseDto>(responseBody);
 
         // A filtragem de status agora é feita pela API, então o .Where() foi removido.
         return apiResponse?.Results?.Where(plan => plan.AutoRecurring != null)
-               ?? Enumerable.Empty<PlanResponseDto>();
+            ?? Enumerable.Empty<PlanResponseDto>();
     }
 }
