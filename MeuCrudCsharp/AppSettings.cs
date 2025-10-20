@@ -12,19 +12,6 @@ public class MercadoPagoSettings
     public string? AccessToken { get; set; }
     public string? WebhookSecret { get; set; }
     public string? Defaultdescription { get; set; }
-    public Dictionary<string, PlanDetail>? Plans { get; set; }
-}
-
-public class PlanConfiguration
-{
-    public PlanDetail? Mensal { get; set; }
-    public PlanDetail? Anual { get; set; }
-}
-
-public class PlanDetail
-{
-    public string? Id { get; set; }
-    public decimal Price { get; set; }
 }
 
 public class SendGridSettings
@@ -43,7 +30,7 @@ public class JwtSettings
 public class GoogleSettings
 {
     public const string SectionName = "Google";
-    
+
     public string? ClientId { get; set; }
     public string? ClientSecret { get; set; }
 }

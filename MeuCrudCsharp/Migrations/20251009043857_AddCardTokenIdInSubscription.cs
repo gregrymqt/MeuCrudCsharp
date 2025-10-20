@@ -18,7 +18,8 @@ namespace MeuCrudCsharp.Migrations
                 defaultValue: "",
                 oldClrType: typeof(string),
                 oldType: "nvarchar(max)",
-                oldNullable: true);
+                oldNullable: true
+            );
 
             migrationBuilder.AlterColumn<string>(
                 name: "LastFourCardDigits",
@@ -28,21 +29,21 @@ namespace MeuCrudCsharp.Migrations
                 defaultValue: "",
                 oldClrType: typeof(string),
                 oldType: "nvarchar(max)",
-                oldNullable: true);
+                oldNullable: true
+            );
 
             migrationBuilder.AddColumn<string>(
                 name: "CardTokenId",
                 table: "Subscriptions",
                 type: "nvarchar(max)",
-                nullable: true);
+                nullable: true
+            );
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(
-                name: "CardTokenId",
-                table: "Subscriptions");
+            migrationBuilder.DropColumn(name: "CardTokenId", table: "Subscriptions");
 
             migrationBuilder.AlterColumn<string>(
                 name: "PaymentMethodId",
@@ -50,7 +51,8 @@ namespace MeuCrudCsharp.Migrations
                 type: "nvarchar(max)",
                 nullable: true,
                 oldClrType: typeof(string),
-                oldType: "nvarchar(max)");
+                oldType: "nvarchar(max)"
+            );
 
             migrationBuilder.AlterColumn<string>(
                 name: "LastFourCardDigits",
@@ -58,7 +60,8 @@ namespace MeuCrudCsharp.Migrations
                 type: "nvarchar(max)",
                 nullable: true,
                 oldClrType: typeof(string),
-                oldType: "nvarchar(max)");
+                oldType: "nvarchar(max)"
+            );
         }
     }
 }

@@ -14,21 +14,24 @@ namespace MeuCrudCsharp.Migrations
             migrationBuilder.RenameColumn(
                 name: "Frequency",
                 table: "Plans",
-                newName: "FrequencyInterval");
+                newName: "FrequencyInterval"
+            );
 
             migrationBuilder.AddColumn<DateTime>(
                 name: "CurrentPeriodEndDate",
                 table: "Subscriptions",
                 type: "datetime2",
                 nullable: false,
-                defaultValue: new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified));
+                defaultValue: new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
+            );
 
             migrationBuilder.AddColumn<DateTime>(
                 name: "CurrentPeriodStartDate",
                 table: "Subscriptions",
                 type: "datetime2",
                 nullable: false,
-                defaultValue: new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified));
+                defaultValue: new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
+            );
 
             migrationBuilder.AlterColumn<string>(
                 name: "FrequencyType",
@@ -38,7 +41,8 @@ namespace MeuCrudCsharp.Migrations
                 nullable: false,
                 oldClrType: typeof(string),
                 oldType: "nvarchar(20)",
-                oldMaxLength: 20);
+                oldMaxLength: 20
+            );
 
             migrationBuilder.AlterColumn<string>(
                 name: "LastFourDigits",
@@ -46,12 +50,14 @@ namespace MeuCrudCsharp.Migrations
                 type: "nvarchar(max)",
                 nullable: false,
                 oldClrType: typeof(int),
-                oldType: "int");
+                oldType: "int"
+            );
 
             migrationBuilder.CreateIndex(
                 name: "IX_Subscriptions_CurrentPeriodEndDate",
                 table: "Subscriptions",
-                column: "CurrentPeriodEndDate");
+                column: "CurrentPeriodEndDate"
+            );
         }
 
         /// <inheritdoc />
@@ -59,20 +65,18 @@ namespace MeuCrudCsharp.Migrations
         {
             migrationBuilder.DropIndex(
                 name: "IX_Subscriptions_CurrentPeriodEndDate",
-                table: "Subscriptions");
+                table: "Subscriptions"
+            );
 
-            migrationBuilder.DropColumn(
-                name: "CurrentPeriodEndDate",
-                table: "Subscriptions");
+            migrationBuilder.DropColumn(name: "CurrentPeriodEndDate", table: "Subscriptions");
 
-            migrationBuilder.DropColumn(
-                name: "CurrentPeriodStartDate",
-                table: "Subscriptions");
+            migrationBuilder.DropColumn(name: "CurrentPeriodStartDate", table: "Subscriptions");
 
             migrationBuilder.RenameColumn(
                 name: "FrequencyInterval",
                 table: "Plans",
-                newName: "Frequency");
+                newName: "Frequency"
+            );
 
             migrationBuilder.AlterColumn<string>(
                 name: "FrequencyType",
@@ -81,7 +85,8 @@ namespace MeuCrudCsharp.Migrations
                 maxLength: 20,
                 nullable: false,
                 oldClrType: typeof(int),
-                oldType: "int");
+                oldType: "int"
+            );
 
             migrationBuilder.AlterColumn<int>(
                 name: "LastFourDigits",
@@ -89,7 +94,8 @@ namespace MeuCrudCsharp.Migrations
                 type: "int",
                 nullable: false,
                 oldClrType: typeof(string),
-                oldType: "nvarchar(max)");
+                oldType: "nvarchar(max)"
+            );
         }
     }
 }

@@ -162,10 +162,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
                         "Usuário {UserId} já possui CustomerId. Adicionando novo cartão.",
                         userId
                     );
-                    await _clientService.AddCardToCustomerAsync(
-                        user.CustomerId,
-                        paymentData.Token
-                    );
+                    await _clientService.AddCardToCustomerAsync(user.CustomerId, paymentData.Token);
                 }
 
                 await _notificationHub.SendStatusUpdateAsync(

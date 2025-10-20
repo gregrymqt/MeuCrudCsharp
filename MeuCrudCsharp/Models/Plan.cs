@@ -3,13 +3,12 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 
-
 // Enums/PlanFrequencyType.cs
 // Este enum representa os valores que a API do Mercado Pago aceita para a frequência.
 public enum PlanFrequencyType
 {
-    Days,   // Corresponde a "days" na API
-    Months  // Corresponde a "months" na API
+    Days, // Corresponde a "days" na API
+    Months, // Corresponde a "months" na API
 }
 
 namespace MeuCrudCsharp.Models
@@ -73,4 +72,3 @@ namespace MeuCrudCsharp.Models
         public bool IsActive { get; set; } = true;
     }
 }
-

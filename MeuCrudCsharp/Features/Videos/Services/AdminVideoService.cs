@@ -1,5 +1,4 @@
-﻿
-using Hangfire;
+﻿using Hangfire;
 using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Features.Caching.Interfaces;
 using MeuCrudCsharp.Features.Courses.Interfaces;
@@ -26,7 +25,7 @@ namespace MeuCrudCsharp.Features.Videos.Services
         private readonly ILogger<AdminVideoService> _logger;
         private const string VideosCacheVersionKey = "videos_cache_version";
         private readonly IBackgroundJobClient _jobs;
-        private readonly ICourseService  _courseService;
+        private readonly ICourseService _courseService;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AdminVideoService"/> class.
@@ -50,8 +49,8 @@ namespace MeuCrudCsharp.Features.Videos.Services
             _cacheService = cacheService;
             _fileStorageService = fileStorageService;
             _logger = logger;
-            _env = env; 
-            _jobs = jobs; 
+            _env = env;
+            _jobs = jobs;
             _courseService = courseService;
         }
 
@@ -102,7 +101,9 @@ namespace MeuCrudCsharp.Features.Videos.Services
         {
             var course = await _courseService.GetOrCreateCourseByNameAsync(createDto.CourseName);
 
-            var thumbnailUrl = await _fileStorageService.SaveThumbnailAsync(createDto.ThumbnailFile);
+            var thumbnailUrl = await _fileStorageService.SaveThumbnailAsync(
+                createDto.ThumbnailFile
+            );
 
             var video = new Video
             {
@@ -111,22 +112,25 @@ namespace MeuCrudCsharp.Features.Videos.Services
                 StorageIdentifier = createDto.StorageIdentifier,
                 CourseId = course.Id, // AGORA FUNCIONA!
                 ThumbnailUrl = thumbnailUrl,
-                Status = VideoStatus.Processing
+                Status = VideoStatus.Processing,
             };
 
             _context.Videos.Add(video);
             await _context.SaveChangesAsync();
             await _cacheService.InvalidateCacheByKeyAsync(VideosCacheVersionKey);
 
-            _logger.LogInformation("Enfileirando job de processamento para o vídeo {StorageIdentifier}", video.StorageIdentifier);
+            _logger.LogInformation(
+                "Enfileirando job de processamento para o vídeo {StorageIdentifier}",
+                video.StorageIdentifier
+            );
 
             _jobs.Enqueue<IVideoProcessingService>(svc =>
                 svc.ProcessVideoToHlsAsync(
-                    video.StorageIdentifier,      // Identificador do vídeo/pasta
-                    createDto.OriginalFileName    // Nome do arquivo original
+                    video.StorageIdentifier, // Identificador do vídeo/pasta
+                    createDto.OriginalFileName // Nome do arquivo original
                 )
             );
-    
+
             video.Course = course;
             return VideoMapper.ToDto(video);
         }
@@ -175,7 +179,6 @@ namespace MeuCrudCsharp.Features.Videos.Services
             await _context.SaveChangesAsync();
             await _cacheService.InvalidateCacheByKeyAsync(VideosCacheVersionKey);
 
-
             _logger.LogInformation(
                 "Vídeo {VideoId} deletado com sucesso do banco de dados.",
                 video.Id
@@ -210,6 +213,5 @@ namespace MeuCrudCsharp.Features.Videos.Services
 
             return video;
         }
-        
     }
 }

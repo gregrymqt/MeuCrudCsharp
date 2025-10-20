@@ -14,7 +14,8 @@ namespace MeuCrudCsharp.Migrations
                 name: "PaymentMethodId",
                 table: "Subscriptions",
                 type: "nvarchar(max)",
-                nullable: true);
+                nullable: true
+            );
 
             migrationBuilder.AlterColumn<string>(
                 name: "FrequencyType",
@@ -22,15 +23,14 @@ namespace MeuCrudCsharp.Migrations
                 type: "nvarchar(max)",
                 nullable: false,
                 oldClrType: typeof(int),
-                oldType: "int");
+                oldType: "int"
+            );
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(
-                name: "PaymentMethodId",
-                table: "Subscriptions");
+            migrationBuilder.DropColumn(name: "PaymentMethodId", table: "Subscriptions");
 
             migrationBuilder.AlterColumn<int>(
                 name: "FrequencyType",
@@ -38,7 +38,8 @@ namespace MeuCrudCsharp.Migrations
                 type: "int",
                 nullable: false,
                 oldClrType: typeof(string),
-                oldType: "nvarchar(max)");
+                oldType: "nvarchar(max)"
+            );
         }
     }
 }

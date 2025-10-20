@@ -10,7 +10,6 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
-
 namespace MeuCrudCsharp.Features.Videos.Services
 {
     /// <summary>
@@ -38,7 +37,8 @@ namespace MeuCrudCsharp.Features.Videos.Services
             IVideoNotificationService videoNotificationService,
             IProcessRunnerService processRunnerService,
             IOptions<FFmpegSettings> ffmpegSettings,
-            IWebHostEnvironment env) // <-- INJETAR AQUI
+            IWebHostEnvironment env
+        ) // <-- INJETAR AQUI
         {
             _logger = logger;
             _serviceProvider = serviceProvider;
@@ -54,10 +54,12 @@ namespace MeuCrudCsharp.Features.Videos.Services
             var basePath = Path.Combine(_env.WebRootPath, "uploads"); // Define o diretório base de uploads
             var outputDirectory = Path.Combine(basePath, storageIdentifier);
             var inputFilePath = Path.Combine(outputDirectory, originalFileName);
-            
+
             await using var scope = _serviceProvider.CreateAsyncScope();
             var context = scope.ServiceProvider.GetRequiredService<ApiDbContext>();
-            Video? video = await context.Videos.FirstOrDefaultAsync(v => v.StorageIdentifier == storageIdentifier);
+            Video? video = await context.Videos.FirstOrDefaultAsync(v =>
+                v.StorageIdentifier == storageIdentifier
+            );
 
             if (video == null)
                 throw new ResourceNotFoundException($"Vídeo {storageIdentifier} não encontrado.");
@@ -69,9 +71,15 @@ namespace MeuCrudCsharp.Features.Videos.Services
                 await _videoNotificationService.SendProgressUpdate(groupName, "Iniciando...", 0);
 
                 if (!File.Exists(inputFilePath))
-                    throw new FileNotFoundException($"Arquivo de entrada não encontrado: {inputFilePath}");
-                
-                await _videoNotificationService.SendProgressUpdate(groupName, "Obtendo duração do vídeo...", 5);
+                    throw new FileNotFoundException(
+                        $"Arquivo de entrada não encontrado: {inputFilePath}"
+                    );
+
+                await _videoNotificationService.SendProgressUpdate(
+                    groupName,
+                    "Obtendo duração do vídeo...",
+                    5
+                );
                 var duration = await GetVideoDurationAsync(inputFilePath);
                 video.Duration = duration;
 
@@ -84,14 +92,21 @@ namespace MeuCrudCsharp.Features.Videos.Services
                     var progress = ParseFfmpegProgress(rawFfmpegOutput, duration.TotalSeconds);
                     if (progress.HasValue)
                     {
-                        return _videoNotificationService.SendProgressUpdate(groupName, "Convertendo...",
-                            progress.Value);
+                        return _videoNotificationService.SendProgressUpdate(
+                            groupName,
+                            "Convertendo...",
+                            progress.Value
+                        );
                     }
 
                     return Task.CompletedTask;
                 };
 
-                await _processRunnerService.RunProcessWithProgressAsync(_ffmpegSettings.FfmpegPath, arguments, onProgress);
+                await _processRunnerService.RunProcessWithProgressAsync(
+                    _ffmpegSettings.FfmpegPath,
+                    arguments,
+                    onProgress
+                );
 
                 video.Status = VideoStatus.Available;
                 await _videoNotificationService.SendProgressUpdate(
@@ -100,14 +115,26 @@ namespace MeuCrudCsharp.Features.Videos.Services
                     100,
                     isComplete: true
                 );
-                _logger.LogInformation("Vídeo {StorageIdentifier} processado com sucesso.", storageIdentifier);
+                _logger.LogInformation(
+                    "Vídeo {StorageIdentifier} processado com sucesso.",
+                    storageIdentifier
+                );
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Falha crítica ao processar o vídeo {StorageIdentifier}.", storageIdentifier);
-                if (video != null) video.Status = VideoStatus.Error;
-                await _videoNotificationService.SendProgressUpdate(groupName, $"Erro: {ex.Message}", 100,
-                    isError: true);
+                _logger.LogError(
+                    ex,
+                    "Falha crítica ao processar o vídeo {StorageIdentifier}.",
+                    storageIdentifier
+                );
+                if (video != null)
+                    video.Status = VideoStatus.Error;
+                await _videoNotificationService.SendProgressUpdate(
+                    groupName,
+                    $"Erro: {ex.Message}",
+                    100,
+                    isError: true
+                );
                 throw;
             }
             finally
@@ -144,7 +171,6 @@ namespace MeuCrudCsharp.Features.Videos.Services
             return null;
         }
 
-
         /// <summary>
         /// Gets the duration of a video file using ffprobe.
         /// </summary>
@@ -156,8 +182,10 @@ namespace MeuCrudCsharp.Features.Videos.Services
                 $"-v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 \"{inputFilePath}\"";
 
             // A chamada agora é explícita e sem ambiguidades, corrigindo o erro
-            var result =
-                await _processRunnerService.RunProcessAndGetOutputAsync(_ffmpegSettings.FfprobePath, arguments);
+            var result = await _processRunnerService.RunProcessAndGetOutputAsync(
+                _ffmpegSettings.FfprobePath,
+                arguments
+            );
             var output = result.StandardOutput;
             var error = result.StandardError;
 

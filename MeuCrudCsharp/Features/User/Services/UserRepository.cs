@@ -1,4 +1,3 @@
-
 namespace MeuCrudCsharp.Features.User.Services;
 
 using System.Threading.Tasks;

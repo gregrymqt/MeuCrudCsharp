@@ -10,5 +10,6 @@ public interface IChargebackRepository
         string? searchTerm,
         string? statusFilter,
         int page,
-        int pageSize);
+        int pageSize
+    );
 }
