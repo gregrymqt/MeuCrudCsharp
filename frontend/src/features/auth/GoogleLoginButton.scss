@@ -1,0 +1,49 @@
+@use '../../../styles/variables' as *;
+
+.google-btn {
+  width: 100%; // Mobile First: ocupa largura total
+  height: 50px;
+  background-color: #ffffff;
+  border-radius: 8px; // Bordas modernas
+  box-shadow: 0 2px 4px 0 rgba(0,0,0,.25);
+  border: 1px solid #dadce0;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  transition: box-shadow .3s ease, background-color .2s;
+  position: relative;
+  overflow: hidden;
+
+  &:hover {
+    box-shadow: 0 4px 8px 0 rgba(0,0,0,.20);
+    background-color: #f8fcfd;
+  }
+
+  &:active {
+    background-color: #eee;
+    box-shadow: 0 1px 2px 0 rgba(0,0,0,.20);
+  }
+
+  .google-icon-wrapper {
+    width: 48px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-right: 1px solid #f1f1f1; // Separação sutil
+  }
+
+  .google-icon {
+    width: 24px;
+    height: 24px;
+  }
+
+  .btn-text {
+    flex-grow: 1;
+    color: #3c4043; // Cor oficial do texto Google
+    font-size: 16px; // Tamanho legível no mobile
+    font-weight: 500;
+    font-family: 'Roboto', sans-serif; // Fonte padrão Google (ou a sua do sistema)
+    text-align: center;
+  }
+}

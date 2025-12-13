@@ -1,0 +1,80 @@
+@use 'variables' as *; // Importando suas variáveis globais
+
+.access-denied-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 80vh; // Mobile first: Ocupa boa parte da tela
+  padding: 1rem;
+  text-align: center;
+
+  .denied-content {
+    max-width: 480px;
+    background: $bg-light;
+    padding: 2rem;
+    border-radius: 16px;
+    // Sutil sombra para destacar
+    box-shadow: 0 10px 25px rgba(0,0,0,0.05); 
+  }
+
+  .icon-wrapper {
+    font-size: 4rem;
+    color: #dc3545; // Vermelho alerta
+    margin-bottom: 1.5rem;
+    animation: pulse 2s infinite;
+  }
+
+  h1 {
+    font-size: 1.8rem;
+    color: $text-dark;
+    margin-bottom: 1rem;
+  }
+
+  p {
+    color: $secondary-color;
+    margin-bottom: 2rem;
+    line-height: 1.6;
+  }
+
+  .actions {
+    display: flex;
+    flex-direction: column; // Mobile: Botões empilhados
+    gap: 1rem;
+
+    @include desktop {
+      flex-direction: row; // Desktop: Botões lado a lado
+      justify-content: center;
+    }
+  }
+
+  button {
+    padding: 0.8rem 1.5rem;
+    border-radius: 8px;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: transform 0.2s;
+
+    &:active { transform: scale(0.98); }
+  }
+
+  .btn-primary {
+    background-color: $primary-color;
+    color: white;
+  }
+
+  .btn-secondary {
+    background-color: $bg-grey;
+    color: $text-dark;
+  }
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.1); opacity: 0.8; }
+  100% { transform: scale(1); opacity: 1; }
+}

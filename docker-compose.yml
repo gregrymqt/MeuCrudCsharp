@@ -1,0 +1,83 @@
+services:
+  # --- Serviço do Redis ---
+  redis:
+    image: "redis:alpine"
+    container_name: redis-cache
+    # Comando vital: Ativa o Append Only File (Persistência segura)
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      # Mapeia a pasta do Redis para o seu host, garantindo que o AOF seja salvo
+      - ./redis-data:/data
+    restart: always
+
+  # --- Serviço do SQL Server ---
+  sql-server-db:
+    image: "mcr.microsoft.com/mssql/server:2022-latest"
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_USERNAME=sa
+      - SA_PASSWORD=Opala@1704.Test!
+    ports:
+      - "1433:1433"
+    volumes:
+      - sql-server-data:/var/opt/mssql
+    healthcheck:
+      # Usando o script de healthcheck oficial da Microsoft
+      test: ["CMD", "/opt/mssql-tools18/bin/sqlcmd", "-S", "127.0.0.1,1433", "-U", "sa", "-P", "Opala@1704.Test!", "-Q", "SELECT 1", "-C"]   
+      interval: 20s
+      timeout: 15s
+      retries: 10
+      start_period: 120s # Tempo de inicialização longo para seu notebook
+
+  # --- Serviço da sua Aplicação Web ---
+  webapp:
+    container_name: backend-api
+    # Aponta para a pasta backend onde está o Dockerfile do C#
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "5045:5045"
+    env_file:
+      - .env
+    environment:
+      - ASPNETCORE_URLS=http://+:8080
+      # Lendo todas as variáveis do .env para dentro do container
+      - ConnectionStrings__DefaultConnection=\${ConnectionStrings__DefaultConnection}
+      - ConnectionStrings__Redis=\${ConnectionStrings__Redis}
+      - MercadoPago__AccessToken=\${MercadoPago__AccessToken}
+      - MercadoPago__WebhookSecret=\${MercadoPago__WebhookSecret}
+      - MercadoPago__PublicKey=\${MercadoPago__PublicKey}
+      - Jwt__Key=\${Jwt__Key}
+      - Google__ClientId=\${Google__ClientId}
+      - Google__ClientSecret=\${Google__ClientSecret}
+      - SendGrid__ApiKey=\${SendGrid__ApiKey}
+      - SendGrid__FromEmail=\${SendGrid__FromEmail}
+      - SendGrid__FromName=\${SendGrid__FromName}
+      - General__BaseUrl=\${GENERAL_BASEURL}
+      - USE_REDIS=\${USE_REDIS}
+    depends_on:
+      redis:
+        condition: service_started
+      sql-server-db:
+        condition: service_healthy
+
+  # --- Frontend (React + Vite) ---
+  frontend:
+    container_name: frontend-react
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      # Passamos a variavel de build para o Vite "assar" ela no HTML/JS
+      args:
+        - VITE_GENERAL_BASEURL=${GENERAL_BASEURL} 
+    ports:
+      - "5173:80"  # <--- AQUI: Acesso externo 5173 -> Interno 80
+    depends_on:
+      - webapp      
+
+# --- Definição do Volume (para persistir os dados do SQL) ---
+volumes:
+  sql-server-data:
