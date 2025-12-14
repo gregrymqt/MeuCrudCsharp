@@ -29,3 +29,24 @@ i {
   align-items: center;
   justify-content: center;
 }
+
+.swal2-popup {
+  font-family: 'Inter', sans-serif !important;
+  border-radius: 16px !important;
+}
+
+.swal2-title {
+  font-size: 1.5rem !important;
+}
+
+.swal2-content {
+  font-size: 1rem !important;
+}
+
+// Botões mais largos para Mobile
+.swal2-confirm, .swal2-cancel {
+  padding: 12px 24px !important;
+  font-size: 1rem !important;
+  border-radius: 8px !important;
+  box-shadow: none !important; // Remove o glow padrão feio
+}

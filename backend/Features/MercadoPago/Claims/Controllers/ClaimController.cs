@@ -9,7 +9,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Claims.Controllers
     [Route("api/admin/claims")]
     [ApiController]
     [Authorize(Roles = "Admin")]
-    public class ClaimController : ApiControllerBase
+    public class ClaimController : MercadoPagoApiControllerBase
     {
         private readonly IClaimService _claimService;
 

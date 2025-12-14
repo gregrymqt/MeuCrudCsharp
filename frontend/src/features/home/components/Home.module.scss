@@ -1,0 +1,110 @@
+// styles/Home.scss
+@use '../../styles/variables' as *; // Assumindo que você tem o _variables.scss configurado
+
+.heroSection {
+  width: 100%;
+  height: 80vh;
+  position: relative;
+  transition: opacity 0.5s ease-out;
+
+  // Ajuste para o Swiper funcionar full-height
+  :global(.swiper), :global(.swiper-wrapper) {
+    height: 100%;
+  }
+
+  .slideContent {
+    background-color: rgba(0, 0, 0, 0.5);
+    padding: 2rem;
+    border-radius: 8px;
+    max-width: 90%;
+    text-align: center;
+    color: $text-light;
+    
+    // Centralização manual caso o flex do pai não pegue
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+
+    h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      @include desktop { font-size: 3.5rem; }
+    }
+
+    p {
+      font-size: 1.2rem;
+      margin-bottom: 2rem;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+  }
+}
+
+.servicesSection {
+  padding: 4rem 0;
+  
+  .grid {
+    display: grid;
+    gap: 2rem;
+    @include desktop { grid-template-columns: repeat(3, 1fr); }
+  }
+
+  .serviceCard {
+    background-color: white;
+    padding: 2.5rem 2rem;
+    text-align: center;
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+
+    &:hover {
+      transform: translateY(-10px);
+      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    }
+
+    i {
+      font-size: 3rem;
+      color: $primary-color;
+      margin-bottom: 1.5rem;
+    }
+    
+    h3 { margin-bottom: 1rem; }
+    p { color: $secondary-color; margin-bottom: 1.5rem; }
+  }
+}
+
+.aboutSection {
+  padding: 4rem 0;
+  background-color: white;
+
+  .grid {
+    display: grid;
+    gap: 3rem;
+    align-items: center;
+    @include desktop { grid-template-columns: 1fr 1fr; }
+  }
+
+  img {
+    width: 100%;
+    border-radius: 8px;
+  }
+
+  ul {
+    list-style: none;
+    padding: 0;
+    
+    li {
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      
+      i {
+        color: #28a745;
+        margin-right: 0.75rem;
+      }
+    }
+  }
+}

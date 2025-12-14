@@ -13,7 +13,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Subscriptions.Controllers
     /// </summary>
     [Authorize(Roles = "Admin")]
     [Route("api/admin/subscriptions")]
-    public class AdminSubscriptionsController : ApiControllerBase
+    public class AdminSubscriptionsController : MercadoPagoApiControllerBase
     {
         private readonly ISubscriptionService _subscriptionService;
         private readonly ILogger<AdminSubscriptionsController> _logger;

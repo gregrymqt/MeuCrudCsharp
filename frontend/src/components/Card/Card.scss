@@ -1,0 +1,77 @@
+@use '../../styles/variables' as *;
+
+.generic-card {
+  background-color: $bg-light;
+  border-radius: 16px; // Bordas mais arredondadas (tendência moderna)
+  box-shadow: 0 4px 6px $shadow; // [cite: 2]
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  height: 100%; // Ocupa a altura total do pai (bom para grids)
+  transition: transform $transition-speed ease, box-shadow $transition-speed ease; // [cite: 2]
+  border: 1px solid transparent;
+
+  // Efeito de Hover (Desktop principalmente)
+  &:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.12);
+    border-color: rgba($primary-color, 0.2); // Sutil borda azul
+  }
+
+  // --- SUB-COMPONENTES ---
+
+  // Imagem
+  &__image-wrapper {
+    width: 100%;
+    height: 200px; // Altura fixa para imagem não quebrar layout
+    position: relative;
+    overflow: hidden;
+    background-color: #e9ecef; // Placeholder color
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover; // Garante que a imagem preencha sem distorcer
+      transition: transform 0.5s ease;
+    }
+
+    // Zoom sutil na imagem ao passar o mouse no card
+    .generic-card:hover & img {
+      transform: scale(1.05);
+    }
+  }
+
+  // Corpo (Texto)
+  &__body {
+    padding: 1.5rem;
+    flex-grow: 1; // Empurra o footer para baixo
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+
+    h3 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: $text-dark;
+      margin-bottom: 0.5rem;
+      line-height: 1.4;
+    }
+
+    p {
+      font-size: 0.95rem;
+      color: $secondary-color;
+      line-height: 1.6;
+    }
+  }
+
+  // Ações (Botões)
+  &__actions {
+    padding: 1rem 1.5rem;
+    background-color: rgba($bg-grey, 0.5); // Fundo sutilmente diferente
+    border-top: 1px solid $border-color;
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    justify-content: space-between; // Espalha os botões
+  }
+}

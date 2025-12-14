@@ -1,0 +1,140 @@
+@use '../../styles/variables' as *; // Importa suas vars ($primary-color, etc)
+@use 'sass:color';
+// --- Mobile Header (Aparece só no mobile) ---
+.mobileHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  background-color: $bg-light;
+  border-bottom: 1px solid $border-color;
+  position: sticky;
+  top: 0;
+  z-index: 99; // Fica acima do conteúdo
+
+  @include desktop {
+    display: none; // Some no Desktop
+  }
+
+  button {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: $text-dark;
+    cursor: pointer;
+  }
+}
+
+// --- Overlay (Fundo escuro no mobile quando aberto) ---
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 100;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease;
+
+  &.open {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  @include desktop {
+    display: none; // Nunca aparece no desktop
+  }
+}
+
+// --- Sidebar Container ---
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  width: 280px;
+  background-color: $bg-light;
+  box-shadow: 2px 0 10px $shadow;
+  z-index: 101;
+  display: flex;
+  flex-direction: column;
+  
+  // Animação de entrada (Slide in)
+  transform: translateX(-100%);
+  transition: transform $transition-speed ease-in-out;
+
+  &.open {
+    transform: translateX(0);
+  }
+
+  // --- Regra Desktop ---
+  @include desktop {
+    position: sticky; // Muda para sticky ou relative dentro do grid
+    transform: translateX(0) !important; // Sempre visível
+    box-shadow: 1px 0 0 $border-color; // Borda sutil em vez de sombra forte
+    height: 100vh;
+  }
+}
+
+// --- Conteúdo da Sidebar ---
+.header {
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid $border-color;
+
+  .closeBtn {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    color: $secondary-color;
+    cursor: pointer;
+
+    @include desktop {
+      display: none; // Botão fechar some no desktop
+    }
+  }
+}
+
+.nav {
+  flex: 1;
+  padding: 1rem 0;
+  overflow-y: auto; // Scroll se tiver muitos itens
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 1.5rem;
+  color: $secondary-color;
+  text-decoration: none;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-left: 4px solid transparent; // UI Trick para item ativo
+
+  i {
+    width: 24px;
+    margin-right: 12px;
+    text-align: center;
+  }
+
+  &:hover {
+    background-color: $bg-grey;
+    color: $primary-color;
+  }
+
+  &.active {
+    background-color: color.adjust($primary-color, $lightness: 45%); // Bem clarinho
+    color: $primary-color;
+    border-left-color: $primary-color;
+  }
+}
+
+.footer {
+  padding: 1rem;
+  border-top: 1px solid $border-color;
+}

@@ -119,6 +119,36 @@ public class CacheService : ICacheService
         }
     }
 
+    public async Task<long> IncrementAsync(string key, int expirationSeconds)
+    {
+        long count = 0;
+
+        // 1. Tenta pegar o valor atual (como string)
+        var valueStr = await _cache.GetStringAsync(key);
+
+        // 2. Se existir, converte para número
+        if (!string.IsNullOrEmpty(valueStr) && long.TryParse(valueStr, out var current))
+        {
+            count = current;
+        }
+
+        // 3. Incrementa
+        count++;
+
+        // 4. Salva de volta no Redis
+        var options = new DistributedCacheEntryOptions
+        {
+            // Define o tempo de vida (Janela de tempo do Rate Limit)
+            // Obs: Nesta implementação simples, a janela "renova" a cada request (Sliding Window).
+            // Isso é bom para segurança: se o usuário continuar floodando, ele nunca sai do castigo.
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(expirationSeconds)
+        };
+
+        await _cache.SetStringAsync(key, count.ToString(), options);
+
+        return count;
+    }
+
     private async Task SetAsync<T>(string key, T value, TimeSpan? absoluteExpireTime = null)
     {
         try

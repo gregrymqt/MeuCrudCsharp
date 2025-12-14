@@ -3,6 +3,10 @@ import { ProtectedRoute } from './ProtectedRoute';
 import { AppRoles } from '../types/models';
 import { MainLayout } from '../components/layout/MainLayout';
 import { AccessDenied } from '../pages/AccessDenied/AccessDenied';
+import { GoogleLoginButton } from '../features/auth/GoogleLoginButton';
+import { GoogleCallbackPage } from '../features/auth/components/GoogleCallbackPage';
+import { Home } from '../pages/Home/Home';
+import { ProfileDashboard } from '../features/profile/ProfileMain';
 
 // Importe suas páginas aqui (Exemplos)
 // import { Dashboard } from '../pages/Dashboard';
@@ -14,9 +18,7 @@ export const AppRoutes = () => {
       
       {/* === ROTAS PÚBLICAS (Qualquer um acessa) === */}
       <Route path="/login" element={
-        <div style={{ padding: '2rem', textAlign: 'center' }}>
-           <h1>Login Page</h1> 
-        </div>
+        <GoogleLoginButton/>
       } />
       
       {/* Rota de Acesso Negado (Pública para poder ser exibida) */}
@@ -29,16 +31,18 @@ export const AppRoutes = () => {
 
       {/* === ROTAS PROTEGIDAS (Precisa estar logado) === */}
       <Route element={<MainLayout />}> {/* Layout envolve tudo visualmente */}
+
+      <Route path="/" element={
+          <Home/>
+      } /> 
         
         {/* Nível 1: Apenas Autenticado (Qualquer Role) */}
         <Route element={<ProtectedRoute />}>
-          
-          <Route path="/" element={
-             <div><h1>Dashboard (Home)</h1><p>Visível para qualquer logado</p></div> 
-          } /> {/* [cite: 3] */}
 
-          <Route path="/perfil" element={<h1>Meu Perfil</h1>} />
+
+          <Route path="/perfil" element={<ProfileDashboard/>} />
           <Route path="/cursos" element={<h1>Meus Cursos</h1>} /> {/* [cite: 4] */}
+          <Route path='/login/callback' element={<GoogleCallbackPage/>}/>
         
         </Route>
 

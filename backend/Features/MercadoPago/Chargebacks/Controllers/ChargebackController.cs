@@ -9,7 +9,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Chargebacks.Controllers;
 [Route("api/admin/chargebacks")]
 [ApiController]
 [Authorize(Roles = "Admin")]
-public class ChargebackController : ApiControllerBase
+public class ChargebackController : MercadoPagoApiControllerBase
 {
     private readonly IChargebackService _chargebackService;
 

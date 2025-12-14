@@ -1,0 +1,229 @@
+@import '../../styles/variables';
+
+// --- NAVBAR (DESKTOP & MOBILE HEADER) ---
+.navbar {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background-color: $bg-light;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  height: 70px;
+  display: flex;
+  align-items: center;
+}
+
+.container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.logo {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: $text-dark;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  i { color: $primary-color; }
+}
+
+// Links Desktop (Escondidos no Mobile)
+.desktopNav {
+  display: none; // Mobile first: escondido
+
+  @include desktop {
+    display: flex;
+    gap: 2rem;
+    align-items: center;
+
+    a {
+      color: $text-dark;
+      font-weight: 500;
+      transition: color 0.2s;
+
+      &:hover, &.active {
+        color: $primary-color;
+      }
+
+      &.active {
+        font-weight: 700;
+      }
+    }
+  }
+}
+
+// Botão Hambúrguer (Escondido no Desktop)
+.mobileToggle {
+  display: block;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: $text-dark;
+
+  @include desktop {
+    display: none;
+  }
+}
+
+// --- USER ACTIONS (DESKTOP) ---
+.desktopUserArea {
+  display: none;
+  @include desktop {
+    display: block;
+  }
+}
+
+// --- MOBILE SIDEBAR (DRAWER) ---
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1001;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s;
+
+  &.open {
+    opacity: 1;
+    visibility: visible;
+  }
+}
+
+.sidebar {
+  position: fixed;
+  top: 0;
+  right: 0; // Abre da direita (padrão mobile moderno) ou left se preferir
+  width: 280px;
+  height: 100vh;
+  background: $bg-light;
+  z-index: 1002;
+  transform: translateX(100%);
+  transition: transform 0.3s ease-in-out;
+  display: flex;
+  flex-direction: column;
+  box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+
+  &.open {
+    transform: translateX(0);
+  }
+}
+
+.sidebarHeader {
+  padding: 1rem;
+  display: flex;
+  justify-content: flex-end;
+  border-bottom: 1px solid $border-color;
+}
+
+.sidebarNav {
+  flex: 1;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+
+  a {
+    font-size: 1.1rem;
+    color: $text-dark;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+}
+
+.sidebarFooter {
+  padding: 1.5rem;
+  border-top: 1px solid $border-color;
+  background-color: $bg-grey;
+}
+
+// --- DROPDOWN / COLLAPSE STYLES ---
+.userDropdown {
+  position: relative;
+  
+  .trigger {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+
+    img {
+      width: 35px;
+      height: 35px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+  }
+
+  // Dropdown Desktop
+  .menuDesktop {
+    position: absolute;
+    top: 120%;
+    right: 0;
+    background: white;
+    border: 1px solid $border-color;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    border-radius: 8px;
+    width: 200px;
+    padding: 0.5rem;
+    display: none;
+
+    &.show { display: block; }
+    
+    button, a {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: 0.5rem 1rem;
+      background: none;
+      border: none;
+      color: $text-dark;
+      &:hover { background: $bg-grey; color: $primary-color; }
+    }
+  }
+}
+
+// Accordion do Usuário Mobile
+.mobileUserMenu {
+  .userInfo {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    cursor: pointer;
+    
+    img { width: 40px; height: 40px; border-radius: 50%; }
+  }
+
+  .userOptions {
+    display: none;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding-left: 1rem;
+    
+    &.show { display: flex; }
+
+    button {
+      text-align: left;
+      background: none;
+      border: none;
+      color: $secondary-color;
+      padding: 0.5rem 0;
+    }
+  }
+}

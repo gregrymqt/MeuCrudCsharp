@@ -17,7 +17,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Controllers
     /// Controladora responsável por criar preferências de pagamento no Mercado Pago.
     /// </summary>
     [Route("api/preferences")]
-    public class PreferenceController : ApiControllerBase
+    public class PreferenceController : MercadoPagoApiControllerBase
     {
         private readonly IPreferencePaymentService _preferencePaymentServiceService;
 

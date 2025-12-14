@@ -1,0 +1,33 @@
+// features/profile/components/PaymentHistory.module.scss
+@import '../../../styles/variables';
+
+.tableContainer {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  overflow-x: auto; // Garante scroll no mobile
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 600px; // Força largura mínima para não quebrar layout
+
+  th, td {
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid $border-color;
+  }
+
+  th {
+    font-weight: 600;
+    color: $secondary-color;
+    background-color: $bg-light;
+  }
+
+  // Status colors
+  .statusPAID { color: #28a745; font-weight: 500; }
+  .statusPENDING { color: #ffc107; font-weight: 500; }
+  .statusFAILED { color: #dc3545; font-weight: 500; }
+}

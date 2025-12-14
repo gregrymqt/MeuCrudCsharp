@@ -8,7 +8,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Plans.Controllers
     /// Provides public, unauthenticated access to view subscription plans.
     /// </summary>
    [Route("api/public/plans")]
-    public class PublicPlansController : ApiControllerBase
+    public class PublicPlansController : MercadoPagoApiControllerBase
     {
         private readonly IPlanService _planService;
         private readonly ILogger<PublicPlansController> _logger;

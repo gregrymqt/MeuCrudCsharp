@@ -7,7 +7,7 @@ using MeuCrudCsharp.Features.MercadoPago.Plans.Interfaces;
 namespace MeuCrudCsharp.Features.MercadoPago.Plans.Controllers;
 
 [Route("api/admin/plans")]
-public class AdminPlansController : ApiControllerBase
+public class AdminPlansController : MercadoPagoApiControllerBase
 {
     // A única dependência da Controller agora é a IPlanService
     private readonly IPlanService _planService;

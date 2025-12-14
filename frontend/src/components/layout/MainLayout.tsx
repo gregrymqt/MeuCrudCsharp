@@ -1,23 +1,19 @@
 import { Outlet } from 'react-router-dom';
-
-
-// Importa o css global aqui para garantir que carregue
-import '../styles/global.scss'; 
-import { Header } from './header/Header';
-import { Footer } from './footer/Footer';
+import styles from './MainLayout.module.scss'; // Apenas o layout wrapper
+import { Navbar } from './components/header/Navbar';
+import { Footer } from './components/footer/Footer';
 
 export const MainLayout = () => {
   return (
-    <div className="app-wrapper">
-      <Header />
+    <div className={styles.layoutWrapper}>
       
-      {/* Container principal com padding-top para compensar o Header fixo */}
-      <div className="container main-container" style={{ paddingTop: '80px', minHeight: '80vh' }}>
-        <main role="main" className="pb-3">
-            {/* O Outlet é onde as rotas filhas (Home, Sobre) serão renderizadas */}
-            <Outlet />
-        </main>
-      </div>
+      {/* Navbar cuida de: Top Menu (Desktop) e Sidebar Toggle (Mobile) */}
+      <Navbar />
+
+      <main className={styles.mainContent}>
+        {/* Aqui renderiza as páginas (Home, Cursos, Features com suas próprias sidebars) */}
+        <Outlet />
+      </main>
 
       <Footer />
     </div>

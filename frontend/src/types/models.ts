@@ -46,7 +46,6 @@ export type VideoStatus = typeof VideoStatus[keyof typeof VideoStatus];
 // ==========================================
 
 export interface IdentityUser {
-  id: string;
   userName?: string;
   normalizedUserName?: string;
   email?: string;
@@ -58,7 +57,6 @@ export interface IdentityUser {
 }
 
 export interface User extends IdentityUser {
-  publicId: string;
   name?: string;
   avatarUrl?: string;
   createdAt: string; // Vem como ISO String ("2025-12-12T...")
@@ -79,6 +77,7 @@ export interface TransactionBase {
   createdAt: string;
   updatedAt?: string;
   paymentId?: string;
+  amount: number;
 }
 
 export interface Plan {
@@ -95,7 +94,6 @@ export interface Plan {
 }
 
 export interface Subscription extends TransactionBase {
-  planId: number;
   plan?: Plan;
   planPublicId: string;
   lastFourCardDigits?: string;
@@ -103,6 +101,7 @@ export interface Subscription extends TransactionBase {
   currentPeriodEndDate: string;
   paymentMethodId?: string;
   cardTokenId?: string;
+  nextBillingDate?: string;
 }
 
 export interface Payment extends TransactionBase {
@@ -111,7 +110,6 @@ export interface Payment extends TransactionBase {
   dateApproved?: string;
   lastFourDigits?: string;
   customerCpf?: string;
-  amount: number;
   subscriptionId: string;
   subscription?: Subscription;
 }

@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using MeuCrudCsharp.Features.Base;
 using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.MercadoPago.Payments.Dtos;
 using MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces;
@@ -9,7 +10,7 @@ using Microsoft.Extensions.Options;
 namespace MeuCrudCsharp.Features.MercadoPago.Payments.Controllers;
 
     [Route("api/[controller]")]
-    public class PixController : ControllerBase
+    public class PixController : MercadoPagoApiControllerBase
     {
         private readonly ILogger<PixController> _logger;
         private readonly IPixPaymentService _paymentService;

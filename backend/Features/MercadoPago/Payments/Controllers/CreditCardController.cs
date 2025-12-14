@@ -12,9 +12,8 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Controllers
     /// de pagamento não seja processada múltiplas vezes.
     /// </summary>
     [Route("/api/credit/card")]
-    public class CreditCardController : ApiControllerBase
+    public class CreditCardController : MercadoPagoApiControllerBase
     {
-        private readonly ICacheService _cacheService;
         private readonly ICreditCardPaymentService _creditCardPaymentService;
 
         /// <summary>
@@ -23,12 +22,9 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Controllers
         /// <param name="cacheService">O serviço de cache para lidar com a idempotência.</param>
         /// <param name="creditCardPaymentService">O serviço que processa a lógica de pagamento com cartão de crédito.</param>
         public CreditCardController(
-            ICacheService cacheService,
             ICreditCardPaymentService creditCardPaymentService
         )
-        {
-            _cacheService = cacheService;
-            _creditCardPaymentService = creditCardPaymentService;
+        {            _creditCardPaymentService = creditCardPaymentService;
         }
 
         /// <summary>

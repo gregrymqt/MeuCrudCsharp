@@ -1,0 +1,131 @@
+@use '../../styles/variables' as *;
+
+.generic-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+
+  // Grid Container para Inputs
+  &__grid {
+    display: grid;
+    grid-template-columns: 1fr; // Mobile: 1 Coluna
+    gap: 1.25rem;
+
+    @include desktop {
+      // Desktop: 12 Colunas para layout flexível (ex: col-span-6 = 50%)
+      grid-template-columns: repeat(12, 1fr);
+    }
+  }
+
+  // --- ESTILO DOS CAMPOS (Field Wrapper) ---
+  .form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    grid-column: span 1; // Padrão mobile
+
+    @include desktop {
+      // Classes utilitárias geradas dinamicamente pelo React (span-1 a span-12)
+      &.col-span-12 { grid-column: span 12; }
+      &.col-span-6  { grid-column: span 6; }
+      &.col-span-4  { grid-column: span 4; }
+      &.col-span-3  { grid-column: span 3; }
+    }
+
+    label {
+      font-weight: 600;
+      color: $text-dark;
+      font-size: 0.9rem;
+
+      span.required {
+        color: #dc3545;
+        margin-left: 4px;
+      }
+    }
+
+    // --- INPUTS & TEXTAREAS ---
+    input:not([type="checkbox"]),
+    select,
+    textarea {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid $border-color;
+      border-radius: 8px;
+      font-size: 1rem;
+      background-color: $bg-light;
+      transition: border-color $transition-speed, box-shadow $transition-speed;
+
+      &:focus {
+        outline: none;
+        border-color: $primary-color;
+        box-shadow: 0 0 0 3px rgba($primary-color, 0.1);
+      }
+
+      &.error {
+        border-color: #dc3545;
+        background-color: #fff8f8;
+      }
+      
+      &:disabled {
+        background-color: #e9ecef;
+        cursor: not-allowed;
+      }
+    }
+
+    textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+
+    // --- CHECKBOX (Layout diferente) ---
+    &.checkbox-field {
+      flex-direction: row;
+      align-items: center;
+      gap: 0.75rem;
+
+      input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+        accent-color: $primary-color;
+      }
+      
+      label { margin: 0; cursor: pointer; }
+    }
+
+    // Mensagem de Erro
+    .error-msg {
+      color: #dc3545;
+      font-size: 0.85rem;
+      animation: fadeIn 0.3s ease;
+    }
+  }
+
+  // Botão de Submit
+  .submit-btn {
+    padding: 1rem;
+    background-color: $primary-color;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color $transition-speed;
+    margin-top: 1rem;
+
+    &:hover {
+      background-color: $primary-hover;
+    }
+
+    &:disabled {
+      background-color: $secondary-color;
+      cursor: not-allowed;
+    }
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}

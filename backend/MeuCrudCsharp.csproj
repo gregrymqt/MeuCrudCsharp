@@ -50,6 +50,7 @@
     <!-- Suas pastas permanecem iguais -->
     <Folder Include="Features/Auth/Controllers/" />
     <Folder Include="Features/Auth/Middlewares/" />
+    <Folder Include="Features/Security/" />
     <Folder Include="Features\MercadoPago\Chargebacks\Controllers\" />
     <Folder Include="Features\MercadoPago\Chargebacks\Interfaces\" />
     <Folder Include="Features\MercadoPago\Chargebacks\ViewModels\" />

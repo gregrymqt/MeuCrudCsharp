@@ -1,0 +1,11 @@
+@use '../../../../styles/variables' as *;
+
+.container {
+  width: 100%;
+}
+
+.helperText {
+  color: $secondary-color;
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+}
