@@ -1,0 +1,74 @@
+@use '../../../../styles/variables' as *; // Ajuste o caminho conforme suas variáveis
+
+.skeletonContainer {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+  width: 100%;
+  overflow: hidden; // Garante que não quebre o layout no mobile
+}
+
+.skeletonRow {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+
+  // Título da categoria falso
+  .skeletonTitle {
+    width: 180px;
+    height: 28px;
+    background-color: #2a2a2a;
+    border-radius: 4px;
+    @include shimmer; // Chama a animação
+  }
+
+  // Área dos cards (carrossel)
+  .skeletonCarousel {
+    display: flex;
+    gap: 16px;
+    overflow-x: auto; // Permite scroll horizontal igual ao real
+    padding-bottom: 10px;
+    
+    // Esconde a barra de rolagem para ficar clean
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
+
+  // O Card falso
+  .skeletonCard {
+    flex: 0 0 auto; // Não encolhe
+    width: 280px;   // Largura base similar ao VideoCard
+    height: 158px;  // Altura proporcional (16:9)
+    background-color: #222;
+    border-radius: 8px;
+    @include shimmer;
+    
+    // Ajuste Mobile First
+    @media (max-width: 768px) {
+      width: 220px;
+      height: 124px;
+    }
+  }
+}
+
+// Mixin de Animação (Pode colocar no global se preferir)
+@mixin shimmer {
+  animation: pulse 1.5s infinite ease-in-out;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+    background-color: #222;
+  }
+  50% {
+    opacity: 0.5;
+    background-color: #333; // Levemente mais claro
+  }
+  100% {
+    opacity: 1;
+    background-color: #222;
+  }
+}

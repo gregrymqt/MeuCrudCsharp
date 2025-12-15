@@ -1,0 +1,55 @@
+@use '../../styles/variables' as *;
+
+.screenContainer {
+  min-height: 100vh;
+  background-color: $bg-light; // [cite: 12]
+  display: flex;
+  flex-direction: column;
+}
+
+.topNav {
+  height: $header-height; // [cite: 13]
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  background-color: white;
+  border-bottom: 1px solid $border-color;
+  position: sticky;
+  top: 0;
+  z-index: 10; // Fica acima do player ao scrollar
+}
+
+.backButton {
+  background: none;
+  border: none;
+  font-size: 1rem;
+  color: $secondary-color;
+  cursor: pointer;
+  padding-right: 15px;
+
+  &:hover {
+    color: $primary-color;
+  }
+}
+
+.navTitle {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: $text-dark;
+}
+
+.videoSection {
+  width: 100%;
+  background-color: black;
+  // Em Desktop, podemos limitar a largura máxima para não ficar gigante
+  @include desktop { // [cite: 14] Mixin do seu arquivo
+    padding-bottom: 20px;
+  }
+}
+
+.infoSection {
+  flex: 1;
+  padding-bottom: 40px;
+}

@@ -53,6 +53,12 @@ namespace MeuCrudCsharp.Data
         /// </summary>
         public DbSet<Chargeback> Chargebacks { get; set; }
 
+        /// <summary>
+        /// conjunto de entidades referente a arquivos
+        /// </summary>
+        public DbSet<EntityFile> Files { get; set; }
+
+
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

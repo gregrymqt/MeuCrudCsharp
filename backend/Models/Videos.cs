@@ -1,15 +1,17 @@
+using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
+// Certifique-se de que o namespace da EntityFile esteja acessível aqui
+// using MeuCrudCsharp.Domain.Models; 
 
 namespace MeuCrudCsharp.Models
 {
-    // Enum para controlar o estado do vídeo de forma segura e legível.
     public enum VideoStatus
     {
-        Processing, // 0 - Em processamento (logo após o upload)
-        Available, // 1 - Disponível para assistir
-        Error, // 2 - Ocorreu um erro no processamento
+        Processing, // 0
+        Available,  // 1
+        Error,      // 2
     }
 
     [Index(nameof(CourseId))]
@@ -18,24 +20,46 @@ namespace MeuCrudCsharp.Models
     {
         [Key]
         public int Id { get; set; }
+        
         public Guid PublicId { get; set; } = Guid.NewGuid();
+
+        [Required] // É bom marcar como obrigatório
         public string Title { get; set; }
+        
         public string Description { get; set; }
+        
+        // Identificador usado para a pasta de streaming (HLS)
         public string StorageIdentifier { get; set; }
+        
         public DateTime UploadDate { get; set; }
+        
         public TimeSpan Duration { get; set; }
+        
         public VideoStatus Status { get; set; }
+
+        // --- RELACIONAMENTOS ---
+
+        // 1. Relacionamento com Curso (Existente)
         public int CourseId { get; set; }
+        
+        [ForeignKey("CourseId")]
         public virtual Course Course { get; set; }
 
-        // NOVO: Adicione este campo
-        [MaxLength(2048)] // Um bom tamanho para URLs
+        // Isso vincula o vídeo ao arquivo salvo em "uploads/Videos/..."
+        public int FileId { get; set; }
+
+        [ForeignKey("FileId")]
+        public virtual EntityFile File { get; set; } // Propriedade de navegação
+
+        // -----------------------
+
+        [MaxLength(2048)]
         public string? ThumbnailUrl { get; set; }
 
         public Video()
         {
             UploadDate = DateTime.UtcNow;
-            Status = VideoStatus.Processing; // O vídeo sempre começa como "Processando"
+            Status = VideoStatus.Processing;
         }
     }
 }

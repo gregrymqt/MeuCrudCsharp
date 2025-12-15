@@ -67,22 +67,17 @@ namespace MeuCrudCsharp.Features.Videos.Controller
 
             var manifestPath = Path.Combine(
                 _env.WebRootPath,
+                "uploads",   // <--- Adicionado
                 "Videos",
-                storageIdentifier,
+                storageIdentifier, // Assume-se que o Job criou uma subpasta com o ID ou GUID
                 "hls",
                 "manifest.m3u8"
             );
 
             if (!System.IO.File.Exists(manifestPath))
             {
-                _logger.LogError(
-                    "Manifest file not found for video {StorageIdentifier}, but it exists in the database. This indicates a processing error.",
-                    storageIdentifier
-                );
-                return StatusCode(
-                    500,
-                    "Manifest file not found on the server, indicating a processing error."
-                );
+                _logger.LogError($"Manifest não encontrado em: {manifestPath}");
+                return StatusCode(500, "Erro de processamento: Manifest não encontrado.");
             }
 
             return PhysicalFile(manifestPath, "application/vnd.apple.mpegurl");
@@ -103,12 +98,12 @@ namespace MeuCrudCsharp.Features.Videos.Controller
         /// <response code="401">If the user is not authenticated.</response>
         /// <response code="404">If the requested segment file does not exist.</response>
         [HttpGet("{storageIdentifier}/hls/{segmentName}")]
-        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(FileResult))]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public IActionResult GetVideoSegment(string storageIdentifier, string segmentName)
         {
+            // NOVO CAMINHO TAMBÉM AQUI:
             var segmentPath = Path.Combine(
                 _env.WebRootPath,
+                "uploads",   // <--- Adicionado
                 "Videos",
                 storageIdentifier,
                 "hls",

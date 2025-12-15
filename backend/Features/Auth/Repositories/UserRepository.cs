@@ -1,4 +1,4 @@
-namespace MeuCrudCsharp.Features.User.Services;
+namespace MeuCrudCsharp.Features.Auth.Repositories;
 
 using System.Threading.Tasks;
 using Data; // Substitua pelo seu namespace do DbContext

@@ -13,76 +13,43 @@ namespace MeuCrudCsharp.Features.Videos.Controller
     public class AdminVideosController : ApiControllerBase
     {
         private readonly IAdminVideoService _videoService;
-        private readonly IBackgroundJobClient _jobs;
-        private readonly IWebHostEnvironment _env;
-        private readonly ILogger<AdminVideosController> _logger;
-
-        public AdminVideosController(
-            IAdminVideoService videoService,
-            IBackgroundJobClient jobs,
-            IWebHostEnvironment env,
-            ILogger<AdminVideosController> logger
-        )
+        
+        // Removemos IWebHostEnvironment e IBackgroundJobClient daqui.
+        // Quem usa eles agora é o Service (internamente).
+        public AdminVideosController(IAdminVideoService videoService)
         {
             _videoService = videoService;
-            _jobs = jobs;
-            _env = env;
-            _logger = logger;
         }
 
         /// <summary>
-        /// Recebe o arquivo de v�deo, salva em disco e dispara o processamento em background.
+        /// Endpoint unificado: Recebe o arquivo e os dados, salva tudo e dispara o processamento.
         /// </summary>
-        [HttpPost("upload")]
-        public async Task<IActionResult> UploadVideoFile(IFormFile videoFile)
+        [HttpPost] // Agora é um POST na raiz /api/admin/videos
+        public async Task<IActionResult> CreateVideo(
+            [FromForm] IFormFile videoFile, 
+            [FromForm] string title, 
+            [FromForm] string description,
+            [FromForm] IFormFile? thumbnailFile)
         {
             if (videoFile == null || videoFile.Length == 0)
-                return BadRequest("Nenhum arquivo foi enviado.");
+                return BadRequest("O arquivo de vídeo é obrigatório.");
 
-            var storageId = Guid.NewGuid().ToString();
-            var folder = Path.Combine(_env.WebRootPath, "videos", storageId);
-            Directory.CreateDirectory(folder);
+            if (string.IsNullOrEmpty(title))
+                return BadRequest("O título do vídeo é obrigatório.");
 
-            var inputPath = Path.Combine(folder, videoFile.FileName);
-            await using var fs = new FileStream(inputPath, FileMode.Create);
-            await videoFile.CopyToAsync(fs);
-            
-            return Ok(new 
-            { 
-                StorageIdentifier = storageId,
-                OriginalFileName = videoFile.FileName 
-            });
+            // O Service cuida de salvar o arquivo (UploadService) e salvar no Banco (Repository)
+            var videoCriado = await _videoService.HandleVideoUploadAsync(videoFile, title, description, thumbnailFile);
+
+            return CreatedAtAction(nameof(GetAllVideos), new { id = videoCriado.Id }, videoCriado);
         }
 
-        // <summary>
-        /// Lista v�deos paginados.
-        /// </summary>
         [HttpGet]
-        public async Task<IActionResult> GetAllVideos(
-            [FromQuery] int page = 1,
-            [FromQuery] int pageSize = 10
-        )
+        public async Task<IActionResult> GetAllVideos([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
         {
             var result = await _videoService.GetAllVideosAsync(page, pageSize);
             return Ok(result);
         }
 
-        /// <summary>
-        /// Cria apenas a metadata do v�deo (depois do upload e processamento).
-        /// </summary>
-        [HttpPost]
-        public async Task<IActionResult> CreateVideoMetadata([FromForm] CreateVideoDto dto)
-        {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-
-            var created = await _videoService.CreateVideoAsync(dto);
-            return CreatedAtAction(nameof(GetAllVideos), new { id = created.Id }, created);
-        }
-
-        /// <summary>
-        /// Atualiza t�tulo, descri��o e thumbnail de um v�deo j� existente.
-        /// </summary>
         [HttpPut("{id:guid}")]
         public async Task<IActionResult> UpdateVideo(Guid id, [FromForm] UpdateVideoDto dto)
         {
@@ -97,16 +64,13 @@ namespace MeuCrudCsharp.Features.Videos.Controller
             }
         }
 
-        /// <summary>
-        /// Remove um v�deo, seus ativos (HLS, arquivos) e invalida cache.
-        /// </summary>
         [HttpDelete("{id:guid}")]
         public async Task<IActionResult> DeleteVideo(Guid id)
         {
             try
             {
                 await _videoService.DeleteVideoAsync(id);
-                return Ok(new { Message = "V�deo deletado com sucesso." });
+                return Ok(new { Message = "Vídeo e arquivos deletados com sucesso." });
             }
             catch (ResourceNotFoundException ex)
             {

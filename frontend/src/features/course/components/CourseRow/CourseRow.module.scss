@@ -1,0 +1,61 @@
+@use '../../../../styles/variables' as *; // [cite: 1]
+
+.rowContainer {
+  margin-bottom: 2.5rem;
+  padding-left: 20px; // Alinhamento visual à esquerda
+  
+  // Animação de entrada suave
+  opacity: 0;
+  animation: fadeIn 0.5s forwards;
+}
+
+.rowTitle {
+  color: $text-light; // [cite: 1]
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  padding-left: 4px; // Alinha com o início do primeiro card
+  border-left: 3px solid transparent;
+  transition: border-color 0.3s;
+
+  &:hover {
+    border-left-color: $primary-color; // [cite: 1] Detalhe de UX
+    cursor: default;
+  }
+
+  @include desktop { // [cite: 3]
+    font-size: 1.5rem;
+  }
+}
+
+.carouselWrapper {
+  // Garante que o carousel ocupe a largura mas respeite a margem direita
+  width: 100%;
+  
+  // Ajuste para permitir que o card cresça (zoom) sem ser cortado pelo overflow do swiper
+  // Nota: Isso pode exigir padding extra no container do swiper se o zoom for muito grande
+  padding: 10px 0; 
+}
+
+// Sobrescrevendo estilos do Swiper localmente se necessário
+.customCarousel {
+  // Exemplo: Ajustar cor das setas de navegação do Swiper para a cor do tema
+  :global(.swiper-button-next),
+  :global(.swiper-button-prev) {
+    color: $text-light; // [cite: 1]
+    
+    // UX: Só mostrar setas no Desktop
+    display: none;
+    @include desktop {
+      display: flex;
+    }
+  }
+  
+  :global(.swiper-pagination-bullet-active) {
+    background-color: $primary-color; // [cite: 1]
+  }
+}
+
+@keyframes fadeIn {
+  to { opacity: 1; }
+}

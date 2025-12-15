@@ -63,6 +63,9 @@ services:
         condition: service_started
       sql-server-db:
         condition: service_healthy
+    volumes:
+      - ./uploads:/app/wwwroot/uploads
+      - ./logs:/app/logs    
 
   # --- Frontend (React + Vite) ---
   frontend:

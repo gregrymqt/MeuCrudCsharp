@@ -8,13 +8,14 @@ using MeuCrudCsharp.Features.MercadoPago.Clients.Interfaces;
 using MeuCrudCsharp.Features.MercadoPago.Refunds.Interfaces;
 using MeuCrudCsharp.Features.MercadoPago.Subscriptions.DTOs;
 using MeuCrudCsharp.Features.Profiles.UserAccount.Interfaces;
+using MeuCrudCsharp.Features.User.Interfaces;
 using MeuCrudCsharp.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MeuCrudCsharp.Features.Profiles.UserAccount.Controllers
-{
+{   
     [Route("api/user-account")]
     public class UserAccountController : ApiControllerBase
     {
@@ -23,6 +24,8 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Controllers
         private readonly IRefundService _refundService;
         private readonly UserManager<Users> _userManager;
         private readonly ILogger<UserAccountController> _logger;
+        private readonly IUserContext _userContext;
+        
 
         public UserAccountController(
             IUserAccountService userAccountService,
@@ -37,13 +40,11 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Controllers
             _userManager = userManager;
             _logger = logger;
         }
-
-        private string GetUserId() => User.FindFirstValue(ClaimTypes.NameIdentifier);
         
         [HttpGet("profile-summary")]
         public async Task<IActionResult> GetProfileSummary()
         {
-            var userId = GetUserId();
+            var userId = _userContext.GetCurrentUserId().ToString() ?? throw new ArgumentException("No user id claim found");
             var user = await _userManager.FindByIdAsync(userId);
             if (user == null) return NotFound("User not found.");
 
@@ -58,7 +59,8 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Controllers
         [HttpGet("subscription-details")]
         public async Task<IActionResult> GetSubscriptionDetails()
         {
-            var subscription = await _userAccountService.GetUserSubscriptionDetailsAsync(GetUserId());
+            var userId = _userContext.GetCurrentUserId().ToString() ?? throw new ArgumentException("No user id claim found");
+            var subscription = await _userAccountService.GetUserSubscriptionDetailsAsync(userId);
             return Ok(subscription);
         }
         
@@ -142,7 +144,8 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Controllers
         [HttpGet("payment-history")]
         public async Task<IActionResult> GetPaymentHistory()
         {
-            var history = await _userAccountService.GetUserPaymentHistoryAsync(GetUserId());
+            var userId = _userContext.GetCurrentUserId().ToString() ?? throw new ArgumentException("No user id claim found");
+            var history = await _userAccountService.GetUserPaymentHistoryAsync(userId);
             return Ok(history);
         }
 

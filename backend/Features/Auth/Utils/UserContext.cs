@@ -1,8 +1,8 @@
 // Infrastructure/Services/UserContext.cs
 using System.Security.Claims;
-using MeuCrudCsharp.Features.User.Interfaces;
+using MeuCrudCsharp.Features.Auth.Interfaces;
 
-namespace MeuCrudCsharp.Features.User.Services;
+namespace MeuCrudCsharp.Features.User.Utils;
 
 public class UserContext : IUserContext
 {

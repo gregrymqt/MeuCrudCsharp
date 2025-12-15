@@ -1,4 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
+
+
 import { ProtectedRoute } from './ProtectedRoute';
 import { AppRoles } from '../types/models';
 import { MainLayout } from '../components/layout/MainLayout';
@@ -7,10 +9,9 @@ import { GoogleLoginButton } from '../features/auth/GoogleLoginButton';
 import { GoogleCallbackPage } from '../features/auth/components/GoogleCallbackPage';
 import { Home } from '../pages/Home/Home';
 import { ProfileDashboard } from '../features/profile/ProfileMain';
+import { CourseFeed } from '../features/course/CourseFeed';
+import { PlayerScreen } from '../features/player/PlayerScreen';
 
-// Importe suas páginas aqui (Exemplos)
-// import { Dashboard } from '../pages/Dashboard';
-// import { AdminPanel } from '../pages/AdminPanel';
 
 export const AppRoutes = () => {
   return (
@@ -41,9 +42,9 @@ export const AppRoutes = () => {
 
 
           <Route path="/perfil" element={<ProfileDashboard/>} />
-          <Route path="/cursos" element={<h1>Meus Cursos</h1>} /> {/* [cite: 4] */}
+          <Route path="/cursos" element={<CourseFeed/>} /> {/* [cite: 4] */}
           <Route path='/login/callback' element={<GoogleCallbackPage/>}/>
-        
+          <Route path='/player/:videoId' element={<PlayerScreen/>}/>
         </Route>
 
 
