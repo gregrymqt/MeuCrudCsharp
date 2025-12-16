@@ -1,0 +1,110 @@
+@use '../../../../styles/variables' as *;
+
+.planCardWrapper {
+  // Sobrescreve/Estende o generic-card para ficar mais alto e centralizado
+  height: 100%; 
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: transform 0.3s ease;
+  position: relative; // Para o badge absoluto
+
+  // Estado Recomendado
+  &.recommended {
+    border: 2px solid $primary-color;
+    transform: scale(1.02); // Leve destaque
+    z-index: 2; // Fica acima dos outros
+    
+    @media (max-width: 768px) {
+      transform: none; // No mobile removemos scale para não quebrar lateral
+    }
+  }
+}
+
+.floatingBadge {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: $primary-color;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.priceBlock {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  margin: 1.5rem 0;
+  color: $text-dark;
+}
+
+.currency {
+  font-size: 1rem;
+  margin-top: 8px;
+  font-weight: 500;
+}
+
+.mainValue {
+  font-size: 3.5rem; // Valor bem grande
+  line-height: 1;
+  font-weight: 700;
+}
+
+.columnMeta {
+  display: flex;
+  flex-direction: column;
+  margin-left: 4px;
+  margin-top: 4px;
+}
+
+.cents {
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.frequency {
+  font-size: 0.8rem;
+  color: $text-muted;
+}
+
+.featuresList {
+  list-style: none;
+  padding: 0;
+  margin-bottom: 2rem;
+  text-align: left;
+  
+  li {
+    margin-bottom: 0.8rem;
+    display: flex;
+    align-items: center;
+    color: $text-grey;
+    font-size: 0.95rem;
+  }
+
+  .checkIcon {
+    color: $success-color;
+    margin-right: 8px;
+    font-weight: bold;
+  }
+}
+
+.ctaButton {
+  width: 100%;
+  padding: 12px;
+  border-radius: 8px;
+  border: none;
+  background-color: $primary-color;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+
+  &:hover {
+    background-color: darken($primary-color, 10%);
+  }
+}

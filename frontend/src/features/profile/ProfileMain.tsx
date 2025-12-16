@@ -9,6 +9,7 @@ import { PROFILE_SIDEBAR_ITEMS } from './config/sidebarConfig';
 import { useAuth } from '../../features/auth/hooks/useAuth'; // Ajuste o caminho
 import type { SubscriptionDetails } from './types/profile.types';
 import { Sidebar } from '../../components/SideBar/components/Sidebar';
+import './ProfileDashboard.scss';
 
 export const ProfileDashboard: React.FC = () => {
   // ESTADO: Define qual aba está ativa.
@@ -73,7 +74,7 @@ export const ProfileDashboard: React.FC = () => {
 
   // LAYOUT
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f4f6f8' }}>
+    <div className="profile-dashboard">
       
       {/* SIDEBAR */}
       <Sidebar 
@@ -84,8 +85,8 @@ export const ProfileDashboard: React.FC = () => {
       />
 
       {/* ÁREA DE CONTEÚDO */}
-      <main style={{ flex: 1, padding: '2rem', overflowY: 'auto' }}>
-        <div className="container" style={{ maxWidth: '900px' }}>
+      <main className="profile-main">
+        <div className="container profile-container">
           <h2 className="mb-4">
             {PROFILE_SIDEBAR_ITEMS.find(i => i.id === activeTab)?.label}
           </h2>

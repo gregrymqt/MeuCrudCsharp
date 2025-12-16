@@ -15,47 +15,51 @@ public static class PipelineExtensions
     /// </summary>
     public static async Task<WebApplication> UseAppPipeline(this WebApplication app)
     {
-        // --- 1. Middlewares de Ambiente e Segurança ---
-        app.UseForwardedHeaders(); // Para confiança em proxies reversos (Ngrok, IIS, etc.)
-        app.UseCookiePolicy();
-
-        // Middlewares de desenvolvimento (Swagger)
+        // --- 1. Configuração de Erros e Segurança Básica ---
         if (app.Environment.IsDevelopment())
         {
             app.UseSwagger();
             app.UseSwaggerUI();
+            app.UseDeveloperExceptionPage();
+        }
+        else
+        {
+            app.UseExceptionHandler("/Error");
+            app.UseHsts();
         }
 
-        // --- 2. Tarefas de Inicialização (Seeding) ---
-        // Cria as roles iniciais (Admin, User, etc.) se não existirem.
-        await ApplyMigrations(app);
-
-        // Cria as roles iniciais (Admin, User, etc.) se não existirem.
-        await SeedInitialRoles(app);
-
-        // --- 3. Middlewares de Requisição ---
+        app.UseForwardedHeaders();
         app.UseHttpsRedirection();
         app.UseStaticFiles();
-        app.UseCors(WebServicesExtensions.CorsPolicyName); // Usa a constante definida anteriormente
+        app.UseCookiePolicy();
+
+        // --- 2. Inicialização do Banco de Dados ---
+        await ApplyMigrations(app);
+        await SeedInitialRoles(app);
+
+        // --- 3. Roteamento e CORS ---
         app.UseRouting();
+        app.UseCors(WebServicesExtensions.CorsPolicyName);
 
-        // A ordem é crucial: Autenticação primeiro, depois Autorização.
-        app.UseAuthentication();
-        app.UseAuthorization();
+        // --- 4. Autenticação e Autorização ---
+        // AQUI ESTAVA A REDUNDÂNCIA:
+        // Substituímos a configuração manual pela chamada ao método do AuthExtensions
+        app.UseAuthFeatures(); 
 
-        // Adiciona o dashboard do Hangfire.
+        // --- 5. Middlewares Específicos ---
         app.UseHangfireDashboard();
 
-        // --- 4. Mapeamento de Endpoints ---
-        // Mapeia os hubs do SignalR.
+        // --- 6. Endpoints ---
         app.MapHub<VideoProcessingHub>("/videoProcessingHub");
         app.MapHub<RefundProcessingHub>("/RefundProcessingHub");
         app.MapHub<PaymentProcessingHub>("/PaymentProcessingHub");
 
-        // Mapeia Razor Pages e Controllers.
         app.MapRazorPages();
         app.MapControllers();
-        app.MapControllerRoute(name: "default", pattern: "{controller=Home}/{action=Index}/{id?}");
+        
+        app.MapControllerRoute(
+            name: "default", 
+            pattern: "{controller=Home}/{action=Index}/{id?}");
 
         return app;
     }
@@ -79,22 +83,20 @@ public static class PipelineExtensions
         }
     }
 
-    /// <summary>
-    /// Aplica automaticamente as migrations pendentes do Entity Framework Core na inicialização.
-    /// </summary>
     private static async Task ApplyMigrations(IApplicationBuilder app)
     {
         using var scope = app.ApplicationServices.CreateScope();
         try
         {
             var dbContext = scope.ServiceProvider.GetRequiredService<ApiDbContext>();
-            Console.WriteLine("--> Aplicando migrations do banco de dados...");
-            await dbContext.Database.MigrateAsync();
+            if ((await dbContext.Database.GetPendingMigrationsAsync()).Any())
+            {
+                await dbContext.Database.MigrateAsync();
+            }
         }
         catch (Exception ex)
         {
             Console.WriteLine($"--> Erro ao aplicar migrations: {ex.Message}");
-            // Opcional: Lançar a exceção pode ser útil para interromper a inicialização em caso de falha crítica no DB.
         }
     }
 }

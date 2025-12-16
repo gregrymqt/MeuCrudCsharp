@@ -1,0 +1,18 @@
+@import '../../styles/variables';
+
+.profile-dashboard {
+  display: flex;
+  min-height: 100vh;
+  // Substituindo #f4f6f8 pela variável padrão mais próxima
+  background-color: $bg-grey;
+}
+
+.profile-main {
+  flex: 1;
+  padding: 2rem;
+  overflow-y: auto;
+}
+
+.profile-container {
+  max-width: 900px;
+}

@@ -3,6 +3,7 @@ using System.Security.Policy;
 using MeuCrudCsharp.Features.Auth.Interfaces;
 using MeuCrudCsharp.Features.Base;
 using MeuCrudCsharp.Features.Caching.Interfaces;
+using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Models;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
@@ -50,9 +51,9 @@ namespace MeuCrudCsharp.Features.Auth.Controllers
         {
             // Define que, após o Google logar, ele deve chamar a nossa action 'GoogleCallback' abaixo
             var redirectUrl = Url.Action(nameof(GoogleCallback), "Auth");
-            
+
             var properties = _signInManager.ConfigureExternalAuthenticationProperties("Google", redirectUrl);
-            
+
             // Isso lança o desafio (302 Redirect) para a URL do Google Accounts
             return new ChallengeResult("Google", properties);
         }
@@ -66,7 +67,7 @@ namespace MeuCrudCsharp.Features.Auth.Controllers
         {
             // URL do seu Frontend (React)
             // Idealmente, coloque isso no appsettings.json como "FrontendUrl"
-            var frontendUrl = _configuration["General:BaseUrl"] ?? "http://localhost:5173"; 
+            var frontendUrl = _configuration["General:BaseUrl"] ?? "http://localhost:5173";
             var frontendCallbackUrl = $"{frontendUrl}/google-callback";
 
             if (remoteError != null)
@@ -105,25 +106,51 @@ namespace MeuCrudCsharp.Features.Auth.Controllers
             }
         }
 
+        [HttpGet("me")]
+        public async Task<IActionResult> GetMe()
+        {
+            try
+            {
+                // 1. Pega o ID do usuário de dentro do Token (Claim "sub" ou ClaimTypes.NameIdentifier)
+                var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+                if (string.IsNullOrEmpty(userId))
+                    return Unauthorized("Token inválido: ID do usuário não encontrado.");
+
+                // 2. Chama o serviço para buscar os dados completos
+                var userSession = await _authService.GetAuthenticatedUserDataAsync(userId);
+
+                return Ok(userSession);
+            }
+            catch (ResourceNotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao recuperar dados do usuário.");
+                return StatusCode(500, "Erro interno ao obter dados do usuário.");
+            }
+        }
+
         /// <summary>
         /// Realiza o Logout e invalida o token JWT atual adicionando-o à Blacklist do Redis.
         /// </summary>
         [HttpPost("logout")]
-        [Authorize] // Só quem tem token válido pode pedir logout
         public async Task<IActionResult> Logout()
         {
             try
             {
                 // 1. Pega o Token do Header Authorization
                 var token = HttpContext.Request.Headers["Authorization"].ToString().Replace("Bearer ", "");
-                
+
                 if (string.IsNullOrEmpty(token))
                     return BadRequest("Token não encontrado.");
 
                 // 2. Lê o tempo de expiração do Token (exp)
                 var handler = new JwtSecurityTokenHandler();
                 var jwtToken = handler.ReadJwtToken(token);
-                
+
                 // Calcula quanto tempo falta para o token morrer naturalmente
                 var expiration = jwtToken.ValidTo;
                 var now = DateTime.UtcNow;
@@ -135,11 +162,11 @@ namespace MeuCrudCsharp.Features.Auth.Controllers
                 {
                     // A chave será "blacklist:eyJhbGci..."
                     await _cacheService.GetOrCreateAsync<string>(
-                        $"blacklist:{token}", 
+                        $"blacklist:{token}",
                         () => Task.FromResult("revoked"), // Valor dummy
                         ttl // Tempo de vida exato
                     );
-                    
+
                     _logger.LogInformation($"Token invalidado e adicionado à blacklist por {ttl.TotalMinutes} minutos.");
                 }
 

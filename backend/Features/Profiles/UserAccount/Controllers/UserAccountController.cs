@@ -1,6 +1,7 @@
 // Usings combinados de todos os arquivos
 
 using System.Security.Claims;
+using MeuCrudCsharp.Features.Auth.Interfaces;
 using MeuCrudCsharp.Features.Base;
 using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.MercadoPago.Clients.DTOs;
@@ -8,7 +9,6 @@ using MeuCrudCsharp.Features.MercadoPago.Clients.Interfaces;
 using MeuCrudCsharp.Features.MercadoPago.Refunds.Interfaces;
 using MeuCrudCsharp.Features.MercadoPago.Subscriptions.DTOs;
 using MeuCrudCsharp.Features.Profiles.UserAccount.Interfaces;
-using MeuCrudCsharp.Features.User.Interfaces;
 using MeuCrudCsharp.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -32,13 +32,16 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Controllers
             IClientService clientService,
             IRefundService refundService,
             UserManager<Users> userManager,
-            ILogger<UserAccountController> logger)
+            ILogger<UserAccountController> logger,
+            IUserContext userContext
+        )
         {
             _userAccountService = userAccountService;
             _clientService = clientService;
             _refundService = refundService;
             _userManager = userManager;
             _logger = logger;
+            _userContext = userContext;
         }
         
         [HttpGet("profile-summary")]

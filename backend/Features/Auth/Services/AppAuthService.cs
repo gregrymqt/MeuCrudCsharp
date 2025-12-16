@@ -1,5 +1,7 @@
 ﻿using System.Security.Claims;
+using MeuCrudCsharp.Features.Auth.Dtos;
 using MeuCrudCsharp.Features.Auth.Interfaces;
+using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Models;
 using Microsoft.AspNetCore.Identity;
 
@@ -115,6 +117,52 @@ namespace MeuCrudCsharp.Features.Auth.Services
 
             _logger.LogInformation("Usuário {UserId} logado com sucesso via Google.", user.Id);
             return user;
+        }
+
+        public async Task<UserSessionDto> GetAuthenticatedUserDataAsync(string userId)
+        {
+            // 1. Busca os dados completos no banco
+            var user = await _userRepository.GetUserWithDetailsAsync(userId);
+
+            if (user == null)
+                throw new ResourceNotFoundException("Usuário não encontrado."); // [cite: 68]
+
+            // 2. Mapeia para o DTO (UserSessionDto)
+            var sessionDto = new UserSessionDto
+            {
+                PublicId = user.PublicId, // [cite: 42]
+                Name = user.Name ?? "Usuário",
+                Email = user.Email, // Herdado de IdentityUser
+                AvatarUrl = user.AvatarUrl, // [cite: 43]
+                LastPayments = user.Payments.Select(p => new PaymentHistoryDto
+                {
+                    Amount = p.Amount, // [cite: 55]
+                    DateApproved = p.DateApproved, // [cite: 52]
+                    Status = p.Status.ToString(), // Do TransactionBase
+                    Method = p.Method, // [cite: 50]
+                    LastFourDigits = p.LastFourDigits // [cite: 53]
+                }).ToList()
+            };
+
+            // 3. Mapeia a Assinatura se existir
+            if (user.Subscription != null)
+            {
+                // Lógica simples para determinar se está ativo (data futura e status paid/active)
+                bool isActive = user.Subscription.CurrentPeriodEndDate > DateTime.UtcNow
+                                && user.Subscription.Status == "paid"; // Ajuste conforme seu Enum de Status
+
+                sessionDto.Subscription = new SubscriptionDto
+                {
+                    Status = user.Subscription.Status,
+                    PlanName = user.Subscription.Plan?.Name ?? "Plano Desconhecido", // [cite: 61]
+                    Price = user.Subscription.Plan.TransactionAmount, // Herdado de TransactionBase
+                    StartDate = user.Subscription.CurrentPeriodStartDate, // [cite: 64]
+                    EndDate = user.Subscription.CurrentPeriodEndDate, // [cite: 65]
+                    IsActive = isActive
+                };
+            }
+
+            return sessionDto;
         }
     }
 }

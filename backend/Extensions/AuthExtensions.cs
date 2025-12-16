@@ -102,19 +102,19 @@ public static class AuthExtensions
     }
 
     /// <summary>
-    /// NOVO MÉTODO: Configura o PIPELINE (Ordem de execução).
-    /// Deve ser chamado no Program.cs no lugar de app.UseAuthentication() e app.UseAuthorization()
+    /// Configura o PIPELINE de Autenticação e Autorização.
+    /// Centraliza a ordem correta dos middlewares de segurança.
     /// </summary>
     public static WebApplication UseAuthFeatures(this WebApplication app)
     {
-        // 1. O Guardião (Middleware de Blacklist) roda PRIMEIRO
-        // Ele verifica no Redis se o token foi revogado antes mesmo do .NET tentar validar a assinatura
-        app.UseMiddleware<JwtBlacklistMiddleware>();
-
-        // 2. Se o token não estiver na blacklist, o .NET valida a assinatura e cria o User Principal
+        // 1. Identifica QUEM é o usuário (valida assinatura do token e popula HttpContext.User)
         app.UseAuthentication();
 
-        // 3. Por fim, verifica se o User Principal tem permissão de acesso
+        // 2. Verifica se esse token válido foi revogado (Logout)
+        // Precisa vir DEPOIS do UseAuthentication para ter acesso aos Claims
+        app.UseMiddleware<JwtBlacklistMiddleware>();
+
+        // 3. Verifica o que o usuário PODE fazer (Roles, Policies)
         app.UseAuthorization();
 
         return app;
