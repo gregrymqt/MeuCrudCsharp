@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Card } from '../../../../components/Card/Card'; // [cite: 1]
-import { MercadoPagoBrick } from '../../../../components/Payment/MercadoPagoBrick'; // [cite: 3]
+import { MercadoPagoBrick } from '../../../../components/Payment/components/Credit-Card/components/MercadoPagoBrick'; // [cite: 3]
 import styles from './SubscriptionManager.module.scss'; // [cite: 2]
 
 // Types e Hooks

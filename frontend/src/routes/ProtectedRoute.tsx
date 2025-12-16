@@ -1,5 +1,6 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { AppRoles } from '../types/models'; // Seus Enums
+import { useAuth } from '../features/auth/hooks/useAuth';
 
 interface ProtectedRouteProps {
   allowedRoles?: AppRoles[]; // Array de roles permitidas (Opcional)

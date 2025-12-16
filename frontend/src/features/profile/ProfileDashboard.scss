@@ -1,4 +1,4 @@
-@import '../../styles/variables';
+@use '../../styles/variables' as *;
 
 .profile-dashboard {
   display: flex;
@@ -15,4 +15,23 @@
 
 .profile-container {
   max-width: 900px;
+  margin: 0 auto; // Centraliza o conteúdo (substitui a classe .container)
+
+  .page-title {
+    margin-bottom: 1.5rem; // Substitui .mb-4
+  }
+}
+
+.loading-message {
+  padding: 3rem; // Substitui .p-5
+  text-align: center; // Substitui .text-center
+}
+
+.no-subscription-alert {
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border-radius: 0.25rem;
+  background-color: #cff4fc; // Cor padrão de info (substitui .alert-info)
+  color: #055160;
+  border: 1px solid #b6effb;
 }

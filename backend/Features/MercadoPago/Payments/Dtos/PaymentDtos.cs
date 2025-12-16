@@ -17,31 +17,29 @@ public record CreatePixPaymentRequest(
 /// Representa os dados de uma requisição de pagamento com cartão de crédito enviada pelo frontend.
 /// </summary>
 public record CreditCardPaymentRequestDto(
-    [Required(ErrorMessage = "O token do cartão é obrigatório.")]
-    string? Token,
+    [Required(ErrorMessage = "O token do cartão é obrigatório.")] string? Token,
     [Required(ErrorMessage = "O número de parcelas é obrigatório.")]
     [Range(1, int.MaxValue, ErrorMessage = "O número de parcelas deve ser no mínimo 1.")]
-    int Installments,
-    [Required(ErrorMessage = "O método de pagamento é obrigatório.")]
-    string? PaymentMethodId,
+        int Installments,
+    [Required(ErrorMessage = "O método de pagamento é obrigatório.")] string? PaymentMethodId,
     string? IssuerId,
-    [Required(ErrorMessage = "Os dados do pagador são obrigatórios.")]
-    PayerRequestDto? Payer,
+    [Required(ErrorMessage = "Os dados do pagador são obrigatórios.")] PayerRequestDto? Payer,
     [Required(ErrorMessage = "O valor do pagamento é obrigatório.")]
-    [Range(typeof(decimal), "0.01", "1000000.00", ErrorMessage = "O valor do pagamento deve ser positivo.")]
-    decimal Amount,
+    [Range(
+        typeof(decimal),
+        "0.01",
+        "1000000.00",
+        ErrorMessage = "O valor do pagamento deve ser positivo."
+    )]
+        decimal Amount,
     string? Plano,
-    [Required(ErrorMessage = "O ID do plano é obrigatório.")]
-    Guid PlanExternalId
+    [Required(ErrorMessage = "O ID do plano é obrigatório.")] Guid PlanExternalId
 );
 
 /// <summary>
 /// Representa os dados de identificação de um pagador (Payer).
 /// </summary>
-public record IdentificationDto(
-    string? Type,
-    string? Number
-);
+public record IdentificationDto(string? Type, string? Number);
 
 /// <summary>
 /// Detalhes do pagamento retornados pela API do Mercado Pago.
@@ -49,10 +47,8 @@ public record IdentificationDto(
 public record MercadoPagoPaymentDetails(
     [property: JsonPropertyName("id")] long Id,
     [property: JsonPropertyName("status")] string Status,
-    [property: JsonPropertyName("external_reference")]
-    string ExternalReference,
-    [property: JsonPropertyName("payer")]
-    PayerRequestDto Payer
+    [property: JsonPropertyName("external_reference")] string ExternalReference,
+    [property: JsonPropertyName("payer")] PayerRequestDto Payer
 );
 
 /// <summary>

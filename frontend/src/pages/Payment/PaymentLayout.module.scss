@@ -1,0 +1,60 @@
+// src/pages/Payment/PaymentLayout.module.scss
+@use '../../styles/variables' as *; // Ajuste o caminho conforme sua estrutura
+
+.layoutContainer {
+  display: flex;
+  flex-direction: column; // Mobile: tudo empilhado
+  min-height: 100vh;
+  background-color: $bg-grey;
+  
+  // Mixin que você forneceu no _variables.scss
+  @include desktop {
+    flex-direction: row; // Desktop: Sidebar ao lado do conteúdo
+  }
+}
+
+// Área Principal de Conteúdo (Direita)
+.mainContent {
+  flex: 1; // Ocupa todo o espaço restante
+  padding: 20px;
+  transition: $transition-speed;
+  width: 100%;
+
+  @include desktop {
+    padding: 40px;
+    // Opcional: limitar a largura máxima para leitura confortável em telas ultrawide
+    max-width: 1200px; 
+    margin: 0 auto;
+  }
+}
+
+// O Card Branco onde ficará o formulário (Feedback visual de "Papel")
+.contentCard {
+  background-color: $bg-light;
+  border-radius: 8px;
+  box-shadow: $shadow;
+  padding: 24px;
+  min-height: 400px; // Altura mínima para não ficar "espremido" se o conteúdo for pouco
+  border: 1px solid $border-color;
+  
+  h2 {
+    color: $text-dark;
+    margin-bottom: 1.5rem;
+    font-size: 1.5rem;
+    border-bottom: 1px solid $border-color;
+    padding-bottom: 10px;
+  }
+}
+
+// Resumo do pedido (opcional, para mostrar qual plano está sendo pago)
+.orderSummary {
+  margin-bottom: 20px;
+  padding: 15px;
+  background-color: rgba($primary-color, 0.1); // Leve tint de azul
+  border-radius: 6px;
+  color: $primary-hover;
+  font-weight: 600;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}

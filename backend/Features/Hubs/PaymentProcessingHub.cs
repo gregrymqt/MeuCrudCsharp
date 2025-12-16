@@ -29,7 +29,7 @@ namespace MeuCrudCsharp.Features.Hubs
 
             await base.OnConnectedAsync();
         }
-        
+
         public override async Task OnDisconnectedAsync(Exception? exception)
         {
             // 3. Removemos a conexão usando o mapper

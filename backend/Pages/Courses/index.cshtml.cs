@@ -6,8 +6,6 @@ namespace MeuCrudCsharp.Pages.Courses
     [Authorize(Policy = "ActiveSubscription")]
     public class IndexModel : PageModel
     {
-        public void OnGet()
-        {
-        }
+        public void OnGet() { }
     }
 }

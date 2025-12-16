@@ -21,10 +21,9 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Controllers
         /// </summary>
         /// <param name="cacheService">O serviço de cache para lidar com a idempotência.</param>
         /// <param name="creditCardPaymentService">O serviço que processa a lógica de pagamento com cartão de crédito.</param>
-        public CreditCardController(
-            ICreditCardPaymentService creditCardPaymentService
-        )
-        {            _creditCardPaymentService = creditCardPaymentService;
+        public CreditCardController(ICreditCardPaymentService creditCardPaymentService)
+        {
+            _creditCardPaymentService = creditCardPaymentService;
         }
 
         /// <summary>
@@ -45,7 +44,9 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Controllers
         /// <response code="401">O usuário não está autenticado.</response>
         /// <response code="500">Ocorreu um erro interno inesperado no servidor.</response>
         [HttpPost("process-payment")]
-        public async Task<IActionResult> ProcessPaymentAsync([FromBody] CreditCardPaymentRequestDto request)
+        public async Task<IActionResult> ProcessPaymentAsync(
+            [FromBody] CreditCardPaymentRequestDto request
+        )
         {
             if (!ModelState.IsValid)
             {

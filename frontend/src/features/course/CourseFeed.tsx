@@ -27,7 +27,7 @@ export const CourseFeed: React.FC = () => {
   // 2. A única responsabilidade sobre o vídeo aqui é o redirecionamento
   const handleVideoClick = useCallback((video: VideoCardUI) => {
     // Apenas muda a rota. A feature 'Player' assumirá a partir daqui.
-    navigate(`/watch/${video.id}`);
+    navigate(`/player/${video.id}`);
   }, [navigate]);
 
   // Tratamento de Erro de Carga

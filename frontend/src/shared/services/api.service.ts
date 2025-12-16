@@ -117,59 +117,72 @@ const handleResponse = async <T>(response: Response): Promise<T> => {
 export const ApiService = {
   
   // GET Genérico
-  get: async <T>(endpoint: string): Promise<T> => {
-    // [Corrigido]: Removido try/catch inútil [cite: 4]
+  get: async <T>(endpoint: string, options?: RequestInit): Promise<T> => {
+    const headers = { ...(getHeaders() as Record<string, string>), ...(options?.headers || {}) };
+
     const response = await fetch(`${BASE_URL}${endpoint}`, {
       method: 'GET',
-      headers: getHeaders(),
+      headers: headers as HeadersInit,
     });
     return await handleResponse<T>(response);
   },
 
   // POST JSON Genérico
-  post: async <T>(endpoint: string, body: unknown): Promise<T> => { // [Corrigido]: body: any -> unknown
+  // [Atualizado]: Aceita options para passar headers extras (ex: Idempotency-Key)
+  post: async <T>(endpoint: string, body: unknown, options?: RequestInit): Promise<T> => {
+    // Mescla os headers padrão com os headers passados no options
+    const headers = { ...(getHeaders() as Record<string, string>), ...(options?.headers || {}) };
+
     const response = await fetch(`${BASE_URL}${endpoint}`, {
       method: 'POST',
-      headers: getHeaders(),
+      headers: headers as HeadersInit,
       body: JSON.stringify(body),
     });
     return await handleResponse<T>(response);
   },
 
   // PUT JSON Genérico
-  put: async <T>(endpoint: string, body: unknown): Promise<T> => { // [Corrigido]: body: any -> unknown
+  put: async <T>(endpoint: string, body: unknown, options?: RequestInit): Promise<T> => {
+    const headers = { ...(getHeaders() as Record<string, string>), ...(options?.headers || {}) };
+
     const response = await fetch(`${BASE_URL}${endpoint}`, {
       method: 'PUT',
-      headers: getHeaders(),
+      headers: headers as HeadersInit,
       body: JSON.stringify(body),
     });
     return await handleResponse<T>(response);
   },
 
   // DELETE Genérico
-  delete: async <T>(endpoint: string): Promise<T> => {
+  delete: async <T>(endpoint: string, options?: RequestInit): Promise<T> => {
+    const headers = { ...(getHeaders() as Record<string, string>), ...(options?.headers || {}) };
+
     const response = await fetch(`${BASE_URL}${endpoint}`, {
       method: 'DELETE',
-      headers: getHeaders(),
+      headers: headers as HeadersInit,
     });
     return await handleResponse<T>(response);
   },
 
   // --- MÉTODOS ESPECIAIS PARA FORM-DATA ---
   
-  postFormData: async <T>(endpoint: string, formData: FormData): Promise<T> => {
+  postFormData: async <T>(endpoint: string, formData: FormData, options?: RequestInit): Promise<T> => {
+    const headers = { ...(getHeaders(true) as Record<string, string>), ...(options?.headers || {}) };
+
     const response = await fetch(`${BASE_URL}${endpoint}`, {
       method: 'POST',
-      headers: getHeaders(true),
+      headers: headers as HeadersInit,
       body: formData,
     });
     return await handleResponse<T>(response);
   },
 
-  putFormData: async <T>(endpoint: string, formData: FormData): Promise<T> => {
+  putFormData: async <T>(endpoint: string, formData: FormData, options?: RequestInit): Promise<T> => {
+    const headers = { ...(getHeaders(true) as Record<string, string>), ...(options?.headers || {}) };
+
     const response = await fetch(`${BASE_URL}${endpoint}`, {
       method: 'PUT',
-      headers: getHeaders(true),
+      headers: headers as HeadersInit,
       body: formData,
     });
     return await handleResponse<T>(response);

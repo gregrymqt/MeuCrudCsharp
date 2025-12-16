@@ -1,0 +1,80 @@
+// src/pages/Payment/components/CreditCard/CreditCardPayment.module.scss
+@use '../../../../styles/variables' as *;
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+}
+
+.header {
+  margin-bottom: 1rem;
+  
+  h3 {
+    font-size: 1.1rem;
+    color: $text-dark;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    
+    i { color: $primary-color; }
+  }
+
+  p {
+    font-size: 0.9rem;
+    color: $text-muted;
+  }
+}
+
+// Wrapper para o componente do MercadoPago
+// Importante para controlar a altura e largura em mobile
+.brickWrapper {
+  background: #fff;
+  border-radius: 8px;
+  min-height: 300px;
+  
+  // Ajustes finos para overrides do CSS do MercadoPago se necessário
+  :global(.mercadopago-brick) {
+    max-width: 100% !important;
+  }
+}
+
+.secureBadge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 20px;
+  font-size: 0.8rem;
+  color: #6c757d;
+  background: #f8f9fa;
+  padding: 10px;
+  border-radius: 4px;
+  
+  i { color: #28a745; }
+}
+
+.loadingState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  gap: 15px;
+  color: $primary-color;
+  
+  .spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid rgba($primary-color, 0.1);
+    border-top: 4px solid $primary-color;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}

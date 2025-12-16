@@ -17,7 +17,9 @@ namespace MeuCrudCsharp.Pages.Payment
         public void OnGet()
         {
             // Verificamos se o plano é "mensal" de forma segura (ignorando maiúsculas/minúsculas)
-            IsPlanoMensal = !string.IsNullOrEmpty(Plano) && Plano.Equals("mensal", StringComparison.OrdinalIgnoreCase);
+            IsPlanoMensal =
+                !string.IsNullOrEmpty(Plano)
+                && Plano.Equals("mensal", StringComparison.OrdinalIgnoreCase);
 
             // Se nenhum plano for passado ou for inválido, podemos definir um padrão
             // ou redirecionar. Por enquanto, vamos assumir que o plano anual é o padrão

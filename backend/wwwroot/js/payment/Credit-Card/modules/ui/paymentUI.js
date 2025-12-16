@@ -23,11 +23,8 @@ export function showStatusScreen() {
     DOMElements.statusContainer.style.display = 'block';
 }
 
-/**
- * Controla a exibição do indicador de carregamento.
- * @param {boolean} show - True para mostrar, false para esconder.
- * @param {string} [message] - Mensagem opcional para exibir.
- */
+
+ // Controla a exibição do indicador de carregamento.
 export function showLoading(show, message = 'Processando...') {
     if (show) {
         DOMElements.loadingContainer.querySelector('p').textContent = message;
