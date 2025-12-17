@@ -1,0 +1,64 @@
+@use '../../../../styles/variables' as *; // Importe suas variáveis globais
+
+.terminalCard {
+  background-color: #fff;
+  border: 1px solid $border-color;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); // Sombra suave para profundidade
+  transition: transform 0.2s ease;
+
+  // Header do Card (onde fica o título "Terminal de Comando")
+  :global(.card-header) {
+    background-color: $bg-light;
+    border-bottom: 1px solid $border-color;
+    padding: 1.5rem;
+
+    h2 {
+      font-size: 1.25rem;
+      color: $primary-color; // Azul Greg Company
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+
+      &::before {
+        content: '>'; // Um detalhe visual de "Terminal"
+        font-family: monospace;
+        font-weight: 900;
+        color: $text-dark;
+      }
+    }
+  }
+}
+
+.description {
+  color: $secondary-color; // Cinza escuro para texto secundário
+  font-size: 0.95rem;
+  margin-bottom: 1.5rem;
+  line-height: 1.5;
+  padding: 0 0.5rem;
+}
+
+// Ajustes finos no formulário interno
+// (Assumindo que o GenericForm renderiza inputs padrões)
+.terminalCard form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+
+  button[type='submit'] {
+    width: 100%; // Mobile-first: botão largura total
+    margin-top: 1rem;
+    padding: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    
+    // Mixin para Desktop
+    @include desktop {
+      width: auto; // No PC o botão fica do tamanho do texto
+      align-self: flex-end; // Alinha na direita
+      min-width: 200px;
+    }
+  }
+}

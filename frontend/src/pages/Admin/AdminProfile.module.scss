@@ -1,0 +1,68 @@
+@use '../../styles/variables' as *;
+
+// Container principal que abraça a Sidebar e o Conteúdo
+.dashboardLayout {
+  display: flex;
+  min-height: 100vh; // Garante altura total da tela
+  background-color: $bg-light; // Fundo geral
+  position: relative;
+}
+
+// Área do conteúdo (Direita)
+.mainContent {
+  flex: 1; // Ocupa todo o espaço restante
+  padding: 1.5rem;
+  width: 100%; // Garante largura no mobile
+  
+  // Ajuste para não ficar colado no topo no mobile (por causa do header da sidebar)
+  margin-top: 60px; 
+
+  @include desktop {
+    margin-top: 0; // No desktop a sidebar é lateral, não precisa de margem topo
+    padding: 3rem; // Mais espaçamento
+  }
+
+  .pageHeader {
+    margin-bottom: 2.5rem;
+    
+    h1 {
+      color: $primary-color; // Azul Greg Company
+      font-size: 1.8rem;
+      margin-bottom: 0.5rem;
+      font-weight: 700;
+    }
+
+    p {
+      color: $secondary-color;
+      font-size: 1rem;
+    }
+  }
+}
+
+// Estilo extra para o Logo dentro da Sidebar
+.logoText {
+  color: #fff;
+  font-size: 1.5rem;
+  font-weight: bold;
+  padding: 0 1rem;
+  margin: 0;
+}
+
+// Rodapé da sidebar
+.sidebarFooter {
+  padding: 1rem;
+  color: rgba(255,255,255,0.5);
+  font-size: 0.8rem;
+  text-align: center;
+  border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+// Animação suave ao trocar de aba
+.fadeEntry {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
