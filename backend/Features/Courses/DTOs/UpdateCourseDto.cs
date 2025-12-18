@@ -5,8 +5,8 @@ namespace MeuCrudCsharp.Features.Courses.DTOs
     /// <summary>
     /// DTO (Data Transfer Object) para a atualização de um curso existente.
     /// </summary>
-    public class UpdateCourseDto
-    {
+        public class UpdateCourseDto
+        {
         /// <summary>
         /// O novo nome do curso. Deve ter entre 3 e 100 caracteres.
         /// </summary>

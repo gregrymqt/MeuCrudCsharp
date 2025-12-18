@@ -20,7 +20,7 @@ export const useRefundNotification = (onSuccess?: () => void) => {
     connectToHub();
 
     // Opcional: Desconectar ao desmontar se quiser economizar recursos
-    // return () => socketService.disconnect(AppHubs.Refund);
+     return () => socketService.disconnect(AppHubs.Refund);
   }, []);
 
   // 2. Ouve o evento "ReceiveRefundStatus" (mesmo nome do legado )

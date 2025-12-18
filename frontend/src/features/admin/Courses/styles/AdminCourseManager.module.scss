@@ -1,0 +1,50 @@
+@use '../../../../styles/variables' as *; // Importando variáveis globais 
+
+.adminContainer {
+  display: flex;
+  width: 100%;
+  min-height: 100vh;
+  background-color: $bg-grey; // Fundo cinza suave 
+  position: relative;
+  overflow-x: hidden;
+}
+
+// Área de conteúdo principal (ao lado da sidebar)
+.contentArea {
+  flex: 1;
+  padding: 20px;
+  width: 100%;
+  transition: margin-left $transition-speed ease; // 
+
+  // Mobile First: Ocupa tudo, header cuida do menu
+  margin-left: 0; 
+  padding-top: $header-height + 20px; // Espaço para o header mobile não cobrir o topo
+
+  @include desktop { // [cite: 75]
+    padding-top: 40px;
+    // No desktop, a sidebar geralmente é fixa ou empurra o conteúdo.
+    // O componente Sidebar.tsx fornecido já tem comportamento de overlay/fixed.
+    // Se a sidebar for 'sticky' no desktop, ajuste aqui.
+    display: flex;
+    justify-content: center;
+  }
+}
+
+// Wrapper para centralizar o conteúdo e limitar largura em telas ultra-wide
+.contentWrapper {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  background-color: $bg-light; // 
+  border-radius: 8px;
+  box-shadow: 0 4px 12px $shadow; // 
+  padding: 24px;
+  
+  // Animação suave ao trocar de abas
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}

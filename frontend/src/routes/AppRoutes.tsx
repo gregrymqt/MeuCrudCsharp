@@ -11,6 +11,8 @@ import { ProfileDashboard } from "../features/profile/ProfileDashboard";
 import { CourseFeed } from "../features/course/CourseFeed";
 import { PlayerScreen } from "../features/player/PlayerScreen";
 import { PlansFeed } from "../features/plan/PlansFeed";
+import { AdminCourseManager } from "../features/admin/Courses/components/AdminCourseManager";
+import { AdminProfile } from "../pages/Admin/AdminProfile";
 
 export const AppRoutes = () => {
   return (
@@ -41,8 +43,8 @@ export const AppRoutes = () => {
 
         {/* Nível 2: Apenas ADMIN */}
         <Route element={<ProtectedRoute allowedRoles={[AppRoles.Admin]} />}>
-          <Route path="/admin" element={<h1>Painel Administrativo</h1>} />
-          <Route path="/admin/usuarios" element={<h1>Gerenciar Usuários</h1>} />
+          <Route path="/admin" element={<AdminProfile/>} />
+          <Route path="/admin/cursos" element={<AdminCourseManager/>} />
         </Route>
 
         {/* Nível 3: Manager OU Admin */}

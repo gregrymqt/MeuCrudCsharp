@@ -1,6 +1,6 @@
 ﻿using MeuCrudCsharp.Features.Courses.DTOs;
 using MeuCrudCsharp.Features.Videos.DTOs;
-using MeuCrudCsharp.Features.Videos.Mappers;
+using MeuCrudCsharp.Features.Videos.Utils;
 
 namespace MeuCrudCsharp.Features.Courses.Mappers
 {

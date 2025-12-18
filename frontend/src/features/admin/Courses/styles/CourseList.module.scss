@@ -1,0 +1,57 @@
+@use '../../../../styles/variables' as *;
+
+.listContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  
+  @include desktop {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  h2 {
+    font-size: 1.5rem;
+    color: $text-dark; // 
+    margin: 0;
+    font-weight: 600;
+    border-left: 4px solid $primary-color; // Detalhe visual
+    padding-left: 12px;
+  }
+}
+
+.createBtn {
+  background-color: $primary-color; // 
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background-color $transition-speed;
+  
+  &:hover {
+    background-color: $primary-hover; // 
+  }
+
+  i {
+    font-size: 0.9rem;
+  }
+}
+
+// Ajuste fino para a Tabela genérica dentro deste contexto
+.tableWrapper {
+  // Garante que o dropdown do ActionMenu não seja cortado 
+  min-height: 300px; 
+  overflow-x: auto; // Scroll horizontal em mobile se a tabela for larga
+}

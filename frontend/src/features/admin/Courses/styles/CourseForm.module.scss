@@ -1,0 +1,49 @@
+@use '../../../../styles/variables' as *;
+
+.formContainer {
+  display: flex;
+  flex-direction: column;
+}
+
+.formHeader {
+  margin-bottom: 24px;
+  border-bottom: 1px solid $border-color; // 
+  padding-bottom: 16px;
+  
+  h2 {
+    font-size: 1.5rem;
+    color: $text-dark;
+    
+    // Texto menor indicando se é Edição ou Criação
+    span {
+      font-size: 1rem;
+      color: $secondary-color; // 
+      font-weight: normal;
+      margin-left: 8px;
+    }
+  }
+}
+
+// Estilização específica para os botões do formulário
+// O GenericForm já tem botões, mas se precisarmos de botões extras (ex: Cancelar)
+.actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+  justify-content: flex-end;
+
+  .cancelBtn {
+    background-color: transparent;
+    border: 1px solid $secondary-color;
+    color: $secondary-color;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all $transition-speed;
+
+    &:hover {
+      background-color: rgba($secondary-color, 0.1);
+      color: $text-dark;
+    }
+  }
+}

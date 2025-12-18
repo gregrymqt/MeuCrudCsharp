@@ -3,8 +3,9 @@ import React, { useState } from 'react';
 import styles from './AdminProfile.module.scss';
 import { Sidebar } from '../../components/SideBar/components/Sidebar';
 import type { SidebarItem } from '../../components/SideBar/types/sidebar.types';
-import { AdminTerminal } from '../../features/admin/components/AdminTerminal/AdminTerminal';
-import { ProfileInfo } from '../../features/admin/components/ProfileInfo/ProfileInfo';
+import { AdminTerminal } from '../../features/admin/Profile/components/AdminTerminal/AdminTerminal';
+import { ProfileInfo } from '../../features/profile/components/info/ProfileInfo';
+
 
 export const AdminProfile: React.FC = () => {
     // 1. Estado para controlar qual aba está ativa (padrão: 'profile')

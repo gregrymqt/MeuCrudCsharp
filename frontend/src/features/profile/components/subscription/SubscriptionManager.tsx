@@ -7,6 +7,7 @@ import styles from './SubscriptionManager.module.scss'; // [cite: 2]
 import { type SubscriptionDetails } from '../../types/profile.types'; // [cite: 2]
 import { useSubscriptionActions } from '../../hooks/useSubscriptionActions'; // [cite: 3]
 import { useRefundNotification } from '../../hooks/useRefundNotification'; // <--- NOVO: Hook do Socket
+import type { BrickPaymentData } from '../../../../components/Payment/components/Credit-Card/types/credit-card.types';
 
 interface SubscriptionProps {
   data: SubscriptionDetails;
@@ -35,9 +36,10 @@ export const SubscriptionManager: React.FC<SubscriptionProps> = ({ data, onRefre
   }).format(data.amount); // [cite: 8]
 
   // Handler intermediário para o Mercado Pago
-  const handleCardUpdate = async (token: string) => { // [cite: 9]
-    await changeCard(token);
-    setShowCardForm(false); // Fecha o form se der sucesso [cite: 10]
+  const handleCardUpdate = async (paymentData: BrickPaymentData) => { 
+    // Extraímos apenas o token para enviar ao hook de atualização
+    await changeCard(paymentData.token); 
+    setShowCardForm(false);
   };
 
   return (
@@ -126,7 +128,10 @@ export const SubscriptionManager: React.FC<SubscriptionProps> = ({ data, onRefre
                  <p className={styles.instructionText}>Insira os dados do novo cartão:</p>
                  {/* Componente Global do Mercado Pago */}
                  <MercadoPagoBrick 
-                   amount={1} 
+                   config={{
+                     mode: 'subscription', // Define maxInstallments como 1 
+                     amount: 1, // Valor simbólico para validação/tokenização
+                   }}
                    onSubmit={handleCardUpdate} 
                  />
               </div>
