@@ -18,8 +18,10 @@ public class MercadoPagoClaimsDTOs
     {
         [JsonPropertyName("total")]
         public int Total { get; set; }
+
         [JsonPropertyName("limit")]
         public int Limit { get; set; }
+
         [JsonPropertyName("offset")]
         public int Offset { get; set; }
     }
@@ -102,18 +104,17 @@ public class MercadoPagoClaimsDTOs
     public class MpPostMessageRequest
     {
         [JsonPropertyName("receiver_role")]
-        public string ReceiverRole { get; set; } // "complainant" ou "respondent" 
+        public string ReceiverRole { get; set; } // "complainant" ou "respondent"
 
         [JsonPropertyName("message")]
         public string Message { get; set; }
 
         [JsonPropertyName("attachments")]
-        public List<string>? Attachments { get; set; } // Lista de nomes de arquivos 
+        public List<string>? Attachments { get; set; } // Lista de nomes de arquivos
     }
 
     public class ReplyRequestDto
     {
         public string Message { get; set; }
     }
-
 }

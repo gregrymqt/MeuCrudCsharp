@@ -50,7 +50,8 @@ public class Claims
     public ClaimStatus Status { get; set; } = ClaimStatus.Novo;
 
     // Link para o painel do MP (útil para o Admin clicar e ir direto)
-    public string? MercadoPagoPanelUrl => $"https://www.mercadopago.com.br/developers/panel/notifications/claims/{MpClaimId}";
+    public string? MercadoPagoPanelUrl =>
+        $"https://www.mercadopago.com.br/developers/panel/notifications/claims/{MpClaimId}";
 
     [ForeignKey("user_id")]
     public string? UserId { get; set; }

@@ -1,0 +1,29 @@
+@use '../../../../styles/variables' as *; // Ajuste o caminho para seu _variables.scss
+
+.chargeback-filter {
+  background-color: $bg-light;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid $border-color;
+  margin-bottom: 1.5rem;
+  box-shadow: $shadow;
+
+  // Ajuste fino no GenericForm para parecer uma barra de ferramentas
+  :global {
+    .generic-form {
+      padding: 0;
+      box-shadow: none;
+      
+      // No mobile, botão ocupa largura total. No desktop, alinha à direita ou ao lado.
+      .submit-btn {
+        margin-top: 1.8rem; // Alinha visualmente com os inputs
+        width: 100%;
+        
+        @include desktop {
+          width: auto;
+          min-width: 120px;
+        }
+      }
+    }
+  }
+}

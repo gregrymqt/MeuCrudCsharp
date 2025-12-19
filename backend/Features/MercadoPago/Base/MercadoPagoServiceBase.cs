@@ -29,7 +29,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Base
         protected MercadoPagoServiceBase(IHttpClientFactory httpClientFactory, ILogger logger)
         {
             // A fábrica cria um cliente com a configuração "MercadoPagoClient" que definimos no Program.cs
-            _httpClient = httpClientFactory.CreateClient("MercadoPagoClient"); 
+            _httpClient = httpClientFactory.CreateClient("MercadoPagoClient");
             _logger = logger;
         }
 
@@ -53,11 +53,8 @@ namespace MeuCrudCsharp.Features.MercadoPago.Base
         )
         {
             var requestUri = new Uri(_httpClient.BaseAddress, endpoint);
-            
-            var request = new HttpRequestMessage(
-                method,
-                requestUri
-            );
+
+            var request = new HttpRequestMessage(method, requestUri);
 
             if (method == HttpMethod.Post || method == HttpMethod.Put || method == HttpMethod.Patch)
             {
@@ -69,9 +66,13 @@ namespace MeuCrudCsharp.Features.MercadoPago.Base
             {
                 var jsonPayload = JsonSerializer.Serialize(payload);
                 request.Content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
-                _logger.LogInformation("Enviando para MP. Endpoint: {Endpoint}. Payload: {Payload}", endpoint, jsonPayload);
+                _logger.LogInformation(
+                    "Enviando para MP. Endpoint: {Endpoint}. Payload: {Payload}",
+                    endpoint,
+                    jsonPayload
+                );
             }
-            
+
             try
             {
                 var response = await _httpClient.SendAsync(request);
@@ -79,16 +80,23 @@ namespace MeuCrudCsharp.Features.MercadoPago.Base
                 if (!response.IsSuccessStatusCode)
                 {
                     var errorContent = await response.Content.ReadAsStringAsync();
-                    _logger.LogError("Erro na API do Mercado Pago. Status: {StatusCode}. Resposta: {ErrorContent}", response.StatusCode, errorContent);
-                    response.EnsureSuccessStatusCode(); 
+                    _logger.LogError(
+                        "Erro na API do Mercado Pago. Status: {StatusCode}. Resposta: {ErrorContent}",
+                        response.StatusCode,
+                        errorContent
+                    );
+                    response.EnsureSuccessStatusCode();
                 }
 
                 return await response.Content.ReadAsStringAsync();
             }
             catch (HttpRequestException ex)
             {
-                _logger.LogError(ex, "Erro de comunicação com o provedor de pagamentos. Status: {StatusCode}",
-                    ex.StatusCode);
+                _logger.LogError(
+                    ex,
+                    "Erro de comunicação com o provedor de pagamentos. Status: {StatusCode}",
+                    ex.StatusCode
+                );
                 throw new ExternalApiException(
                     "Erro de comunicação com o provedor de pagamentos.",
                     ex

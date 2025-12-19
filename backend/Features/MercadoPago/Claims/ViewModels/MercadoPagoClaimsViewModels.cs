@@ -5,7 +5,6 @@ namespace MeuCrudCsharp.Features.MercadoPago.Claims.ViewModels;
 
 public class MercadoPagoClaimsViewModels
 {
-
     // ==========================================
     // 1. AREA DE LISTAGEM (O "Inbox" do Admin)
     // ==========================================
@@ -44,7 +43,6 @@ public class MercadoPagoClaimsViewModels
         // Ajuda o frontend a saber se pinta de vermelho (urgente) ou verde
         public bool IsUrgent { get; set; }
     }
-
 
     // ==========================================
     // 2. AREA DE DETALHES (A "Sala de Guerra")
@@ -86,7 +84,6 @@ public class MercadoPagoClaimsViewModels
         public bool IsMediator => SenderRole == "mediator";
     }
 
-
     // ==========================================
     // 3. AREA DE AÇÃO (O Input de Resposta)
     // ==========================================
@@ -103,5 +100,4 @@ public class MercadoPagoClaimsViewModels
         // Opcional: Lista de nomes de arquivos se fizer upload
         public List<string>? Attachments { get; set; }
     }
-
 }

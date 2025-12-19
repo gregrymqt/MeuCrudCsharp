@@ -12,12 +12,12 @@ namespace MeuCrudCsharp.Features.MercadoPago.Webhooks.Interfaces
         /// <param name="request">O objeto HttpRequest da requisição recebida.</param>
         /// <param name="notification">O corpo (body) da notificação deserializado.</param>
         /// <returns>True se a assinatura for válida, senão False.</returns>
-        bool IsSignatureValid(HttpRequest request, MercadoPagoNotification notification);
+        bool IsSignatureValid(HttpRequest request, MercadoPagoWebhookNotification notification);
 
         /// <summary>
         /// Processa a notificação do webhook, identificando o tipo e enfileirando para processamento.
         /// </summary>
         /// <param name="notification">O corpo (body) da notificação deserializado.</param>
-        Task ProcessWebhookNotificationAsync(MercadoPagoNotification notification);
+        Task ProcessWebhookNotificationAsync(MercadoPagoWebhookNotification notification);
     }
 }

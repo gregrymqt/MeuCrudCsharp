@@ -1,0 +1,37 @@
+@use '../../../../styles/variables' as *;
+
+.badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-align: center;
+  min-width: 80px;
+}
+
+// Variações de cores (Pode ajustar os hexadecimais conforme seu gosto)
+.info {
+  background-color: #e7f5ff;
+  color: #007bff;
+}
+
+.warning {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.success {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.danger {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.default {
+  background-color: $bg-grey; // 
+  color: $secondary-color;
+}

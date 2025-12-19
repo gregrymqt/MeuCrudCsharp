@@ -74,8 +74,8 @@ public class ClaimRepository : IClaimRepository
 
     public async Task<List<Models.Claims>> GetClaimsByUserIdAsync(string userId)
     {
-        return await _context.Claims
-            .Where(c => c.UserId == userId)
+        return await _context
+            .Claims.Where(c => c.UserId == userId)
             .OrderByDescending(c => c.DataCreated)
             .ToListAsync();
     }

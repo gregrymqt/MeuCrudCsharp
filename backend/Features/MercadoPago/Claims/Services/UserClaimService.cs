@@ -16,7 +16,8 @@ public class UserClaimService : IUserClaimService
     public UserClaimService(
         IClaimRepository claimRepository,
         IMercadoPagoIntegrationService mpService,
-        IUserContext userContext)
+        IUserContext userContext
+    )
     {
         _claimRepository = claimRepository;
         _mpService = mpService;
@@ -26,20 +27,23 @@ public class UserClaimService : IUserClaimService
     // 1. Minhas Reclamações
     public async Task<List<ClaimSummaryViewModel>> GetMyClaimsAsync()
     {
-        var userId = _userContext.GetCurrentUserId();
+        var userId =
+            _userContext.GetCurrentUserId().ToString() ?? throw new UnauthorizedAccessException();
 
         // Busca no banco local apenas as claims deste usuário
         var myClaims = await _claimRepository.GetClaimsByUserIdAsync(userId);
 
-        return myClaims.Select(c => new ClaimSummaryViewModel
-        {
-            InternalId = c.Id,
-            MpClaimId = c.MpClaimId,
-            Status = c.Status.ToString(),
-            Type = c.Type,
-            DateCreated = c.DataCreated,
-            IsUrgent = c.Status == ClaimStatus.RespondidoPeloVendedor
-        }).ToList();
+        return myClaims
+            .Select(c => new ClaimSummaryViewModel
+            {
+                InternalId = c.Id,
+                MpClaimId = c.MpClaimId,
+                Status = c.Status.ToString(),
+                Type = c.Type,
+                DateCreated = c.DataCreated,
+                IsUrgent = c.Status == ClaimStatus.RespondidoPeloVendedor,
+            })
+            .ToList();
     }
 
     // 2. Detalhes (O Aluno vendo o chat)
@@ -52,7 +56,7 @@ public class UserClaimService : IUserClaimService
         if (claim == null || claim.UserId != userId)
             throw new UnauthorizedAccessException("Essa reclamação não é sua.");
 
-        // Busca mensagens no MP 
+        // Busca mensagens no MP
         var messages = await _mpService.GetClaimMessagesAsync(claim.MpClaimId);
 
         return new ClaimDetailViewModel
@@ -60,15 +64,17 @@ public class UserClaimService : IUserClaimService
             InternalId = claim.Id,
             MpClaimId = claim.MpClaimId,
             Status = claim.Status.ToString(),
-            Messages = messages.Select(m => new ClaimMessageViewModel
-            {
-                MessageId = m.Id,
-                SenderRole = m.SenderRole,
-                Content = m.Message, // [cite: 8]
-                DateCreated = m.DateCreated,
-                Attachments = m.Attachments?.Select(a => a.Filename).ToList() ?? new(),
-                IsMe = m.SenderRole == "complainant"
-            }).ToList()
+            Messages = messages
+                .Select(m => new ClaimMessageViewModel
+                {
+                    MessageId = m.Id,
+                    SenderRole = m.SenderRole,
+                    Content = m.Message, // [cite: 8]
+                    DateCreated = m.DateCreated,
+                    Attachments = m.Attachments?.Select(a => a.Filename).ToList() ?? new(),
+                    IsMe = m.SenderRole == "complainant",
+                })
+                .ToList(),
         };
     }
 
@@ -81,7 +87,7 @@ public class UserClaimService : IUserClaimService
         if (claim == null || claim.UserId != userId)
             throw new UnauthorizedAccessException("Ação não permitida.");
 
-        // Envia mensagem 
+        // Envia mensagem
         await _mpService.SendMessageAsync(claim.MpClaimId, message);
     }
 
@@ -91,9 +97,10 @@ public class UserClaimService : IUserClaimService
         var userId = _userContext.GetCurrentUserId().ToString();
         var claim = await _claimRepository.GetByIdAsync(internalId);
 
-        if (claim == null || claim.UserId != userId) throw new UnauthorizedAccessException();
+        if (claim == null || claim.UserId != userId)
+            throw new UnauthorizedAccessException();
 
-        // Chama endpoint de disputa 
+        // Chama endpoint de disputa
         await _mpService.EscalateToMediationAsync(claim.MpClaimId);
     }
 }

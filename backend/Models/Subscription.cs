@@ -21,19 +21,19 @@ namespace MeuCrudCsharp.Models
 
         [NotMapped]
         public Guid PlanPublicId { get; set; }
-        
+
         [Required]
         public string? LastFourCardDigits { get; set; }
-        
+
         [Required]
         public DateTime CurrentPeriodStartDate { get; set; }
 
         [Required]
         public DateTime CurrentPeriodEndDate { get; set; }
-        
+
         [Required]
-        public string? PaymentMethodId  { get; set; }
-        
-        public string? CardTokenId  { get; set; }
+        public string? PaymentMethodId { get; set; }
+
+        public string? CardTokenId { get; set; }
     }
 }

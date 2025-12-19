@@ -6,30 +6,27 @@ using System.Text.Json.Serialization;
 namespace MeuCrudCsharp.Models
 {
     // Modelo para deserializar o corpo (body) da notificação do webhook
-    public class MercadoPagoNotification
+    public class MercadoPagoWebhookNotification
     {
-        [JsonPropertyName("action")]
-        public string? Action { get; set; }
+        [JsonPropertyName("id")]
+        public string Id { get; set; } // ID da notificação ou do recurso
 
-        [JsonPropertyName("api_version")]
-        public string? ApiVersion { get; set; }
-
-        [JsonPropertyName("data")]
-        public JsonElement? Data { get; set; }
+        [JsonPropertyName("type")]
+        public string Type { get; set; } // ex: "chargeback"
 
         [JsonPropertyName("date_created")]
         public DateTime DateCreated { get; set; }
 
+        [JsonPropertyName("action")]
+        public string Action { get; set; } // ex: "chargeback.created" ou "chargeback.updated"
+
+        [JsonPropertyName("data")]
+        public MercadoPagoWebhookData Data { get; set; }
+    }
+
+    public class MercadoPagoWebhookData
+    {
         [JsonPropertyName("id")]
-        public long Id { get; set; }
-
-        [JsonPropertyName("live_mode")]
-        public bool LiveMode { get; set; }
-
-        [JsonPropertyName("type")]
-        public string? Type { get; set; }
-
-        [JsonPropertyName("user_id")]
-        public Guid UserId { get; set; }
+        public string Id { get; set; } // AQUI ESTÁ O ID DO CHARGEBACK
     }
 }

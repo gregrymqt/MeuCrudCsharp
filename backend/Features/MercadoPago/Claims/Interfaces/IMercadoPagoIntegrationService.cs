@@ -10,9 +10,14 @@ public interface IMercadoPagoIntegrationService
 
     // O resto continua igual, pois ID é único
     Task<List<MpMessageResponse>> GetClaimMessagesAsync(long claimId);
-    
-    Task SendMessageAsync(long claimId, string message, List<string>? attachments = null, string receiverRole = "complainant");
 
-    // Novo: Permite escalar para mediação 
+    Task SendMessageAsync(
+        long claimId,
+        string message,
+        List<string>? attachments = null,
+        string receiverRole = "complainant"
+    );
+
+    // Novo: Permite escalar para mediação
     Task EscalateToMediationAsync(long claimId);
 }

@@ -2,14 +2,14 @@ using Hangfire;
 using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Features.MercadoPago.Jobs.Interfaces;
 using MeuCrudCsharp.Features.MercadoPago.Notification.Interfaces;
-using MeuCrudCsharp.Features.MercadoPago.Webhooks.DTOs;
+using MeuCrudCsharp.Features.MercadoPago.Notification.Services;
+using MeuCrudCsharp.Features.MercadoPago.Webhooks.DTOs; // Namespace onde está o ChargebackNotificationPayload
 using Microsoft.EntityFrameworkCore;
+
+// Adicione outros usings necessários (Data, Models, etc)
 
 namespace MeuCrudCsharp.Features.MercadoPago.Jobs.Job;
 
-/// <summary>
-/// Job do Hangfire para processar notificações de chargebacks.
-/// </summary>
 [AutomaticRetry(Attempts = 3, DelaysInSeconds = new int[] { 60 })]
 public class ProcessChargebackJob : IJob<ChargebackNotificationPayload>
 {
@@ -28,18 +28,12 @@ public class ProcessChargebackJob : IJob<ChargebackNotificationPayload>
         _chargeBackNotificationService = chargeBackNotificationService;
     }
 
-    /// <summary>
-    /// Executa o processamento da notificação de chargeback.
-    /// </summary>
-    /// <param name="chargebackData">O payload da notificação recebida do webhook.</param>
     public async Task ExecuteAsync(ChargebackNotificationPayload chargebackData)
     {
-        if (chargebackData == null || chargebackData.Id == 0)
+        // CORREÇÃO: Verificação de string nula ou vazia
+        if (chargebackData == null || string.IsNullOrEmpty(chargebackData.Id))
         {
-            _logger.LogError(
-                "Job de Chargeback recebido com payload nulo ou ID inválido. O job será descartado."
-            );
-            // Não relança a exceção para evitar retentativas desnecessárias.
+            _logger.LogError("Job de Chargeback recebido com payload inválido.");
             return;
         }
 
@@ -50,36 +44,41 @@ public class ProcessChargebackJob : IJob<ChargebackNotificationPayload>
 
         try
         {
-            // 1. Verifica a idempotência: checa se o chargeback já foi registrado.
+            // CORREÇÃO: Conversão de string para long para consultar no banco
+            if (!long.TryParse(chargebackData.Id, out long chargebackIdLong))
+            {
+                _logger.LogError(
+                    "ID do Chargeback não é um número válido: {Id}",
+                    chargebackData.Id
+                );
+                return;
+            }
+
+            // 1. Verifica idempotência
             var existingChargeback = await _context
                 .Chargebacks.AsNoTracking()
-                .AnyAsync(c => c.ChargebackId == chargebackData.Id);
+                .AnyAsync(c => c.ChargebackId == chargebackIdLong);
 
             if (existingChargeback)
             {
+                // Aqui decidimos se paramos ou se atualizamos.
+                // Se for só "criação", paramos. Se quiser atualizar status, deixe passar.
                 _logger.LogInformation(
-                    "O Chargeback ID {ChargebackId} já foi processado anteriormente. Finalizando job.",
+                    "Chargeback {Id} já existe no banco. Verificando atualizações...",
                     chargebackData.Id
                 );
-                return; // Operação já concluída, encerra o job.
+                // Vamos deixar passar para o Service decidir se atualiza algo
             }
 
-            // 2. Delega para o serviço especializado realizar a lógica de negócio.
+            // 2. Delega para o serviço
             await _chargeBackNotificationService.VerifyAndProcessChargeBackAsync(chargebackData);
 
-            _logger.LogInformation(
-                "Processamento do Chargeback ID: {ChargebackId} concluído com sucesso.",
-                chargebackData.Id
-            );
+            _logger.LogInformation("Job Chargeback {Id} concluído.", chargebackData.Id);
         }
         catch (Exception ex)
         {
-            _logger.LogError(
-                ex,
-                "Erro ao processar a notificação para o Chargeback ID: {ChargebackId}. O Hangfire irá tentar novamente.",
-                chargebackData.Id
-            );
-            throw; // Relança a exceção para que o Hangfire aplique a política de retentativas.
+            _logger.LogError(ex, "Erro no Job Chargeback {Id}.", chargebackData.Id);
+            throw; // Hangfire tenta de novo
         }
     }
 }

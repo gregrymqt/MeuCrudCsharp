@@ -30,41 +30,57 @@ public class AdminClaimService : IAdminClaimService
     }
 
     // 1. Listagem (Vem do Banco Local - Rápido e com Cache) [cite: 17, 18]
-    public async Task<ClaimsIndexViewModel> GetClaimsAsync(string? searchTerm, string? statusFilter, int page)
+    public async Task<ClaimsIndexViewModel> GetClaimsAsync(
+        string? searchTerm,
+        string? statusFilter,
+        int page
+    )
     {
         var cacheVersion = await GetCacheVersionAsync();
         string cacheKey = $"Claims_v{cacheVersion}_s:{searchTerm}_f:{statusFilter}_p:{page}";
 
-        return await _cacheService.GetOrCreateAsync(cacheKey, async () =>
-        {
-            var (claims, totalCount) = await _claimRepository.GetPaginatedClaimsAsync(searchTerm, statusFilter, page, PageSize);
+        return await _cacheService.GetOrCreateAsync(
+                cacheKey,
+                async () =>
+                {
+                    var (claims, totalCount) = await _claimRepository.GetPaginatedClaimsAsync(
+                        searchTerm,
+                        statusFilter,
+                        page,
+                        PageSize
+                    );
 
-            var claimSummaries = claims.Select(c => new ClaimSummaryViewModel
-            {
-                InternalId = c.Id,
-                MpClaimId = c.MpClaimId, // Importante para o frontend clicar
-                CustomerName = c.User?.Name ?? "Desconhecido",
-                Status = c.Status.ToString(),
-                DateCreated = c.DataCreated,
-                Type = c.Type
-            }).ToList();
+                    var claimSummaries = claims
+                        .Select(c => new ClaimSummaryViewModel
+                        {
+                            InternalId = c.Id,
+                            MpClaimId = c.MpClaimId, // Importante para o frontend clicar
+                            CustomerName = c.User?.Name ?? "Desconhecido",
+                            Status = c.Status.ToString(),
+                            DateCreated = c.DataCreated,
+                            Type = c.Type,
+                        })
+                        .ToList();
 
-            return new ClaimsIndexViewModel
-            {
-                Claims = claimSummaries,
-                CurrentPage = page,
-                TotalPages = (int)Math.Ceiling(totalCount / (double)PageSize),
-                SearchTerm = searchTerm,
-                StatusFilter = statusFilter
-            };
-        }, TimeSpan.FromMinutes(5)) ?? new ClaimsIndexViewModel();
+                    return new ClaimsIndexViewModel
+                    {
+                        Claims = claimSummaries,
+                        CurrentPage = page,
+                        TotalPages = (int)Math.Ceiling(totalCount / (double)PageSize),
+                        SearchTerm = searchTerm,
+                        StatusFilter = statusFilter,
+                    };
+                },
+                TimeSpan.FromMinutes(5)
+            ) ?? new ClaimsIndexViewModel();
     }
 
     // 2. Detalhes com Chat (Vem do MP AO VIVO - Sem Cache longo)
     public async Task<ClaimDetailViewModel> GetClaimDetailsAsync(long localId)
     {
         var localClaim = await _claimRepository.GetByIdAsync(localId);
-        if (localClaim == null) throw new ResourceNotFoundException("Reclamação não encontrada.");
+        if (localClaim == null)
+            throw new ResourceNotFoundException("Reclamação não encontrada.");
 
         List<MpMessageResponse> messages;
         try
@@ -73,7 +89,11 @@ public class AdminClaimService : IAdminClaimService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Falha ao buscar mensagens no MP para a claim {ClaimId}", localClaim.MpClaimId);
+            _logger.LogError(
+                ex,
+                "Falha ao buscar mensagens no MP para a claim {ClaimId}",
+                localClaim.MpClaimId
+            );
             messages = new List<MpMessageResponse>();
         }
 
@@ -82,14 +102,17 @@ public class AdminClaimService : IAdminClaimService
             InternalId = localClaim.Id,
             MpClaimId = localClaim.MpClaimId,
             Status = localClaim.Status.ToString(),
-            Messages = messages.Select(m => new ClaimMessageViewModel
-            {
-                MessageId = m.Id,
-                SenderRole = m.SenderRole, // Já é string, não precisa de ToString()
-                Content = m.Message,       // Corrigido de .Content para .Message
-                DateCreated = m.DateCreated,
-                Attachments = m.Attachments?.Select(a => a.Filename).ToList() ?? new List<string>()
-            }).ToList(),
+            Messages = messages
+                .Select(m => new ClaimMessageViewModel
+                {
+                    MessageId = m.Id,
+                    SenderRole = m.SenderRole, // Já é string, não precisa de ToString()
+                    Content = m.Message, // Corrigido de .Content para .Message
+                    DateCreated = m.DateCreated,
+                    Attachments =
+                        m.Attachments?.Select(a => a.Filename).ToList() ?? new List<string>(),
+                })
+                .ToList(),
         };
     }
 
@@ -97,7 +120,8 @@ public class AdminClaimService : IAdminClaimService
     public async Task ReplyToClaimAsync(long localId, string messageText)
     {
         var localClaim = await _claimRepository.GetByIdAsync(localId);
-        if (localClaim == null) throw new ResourceNotFoundException("Reclamação não encontrada.");
+        if (localClaim == null)
+            throw new ResourceNotFoundException("Reclamação não encontrada.");
 
         // Envia para o Mercado Pago
         await _mpService.SendMessageAsync(localClaim.MpClaimId, messageText);

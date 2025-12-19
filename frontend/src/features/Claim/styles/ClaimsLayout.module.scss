@@ -1,0 +1,39 @@
+@use '../../../styles/variables' as *;
+// O Container que envolve a Sidebar e o Conteúdo
+.layoutContainer {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: $bg-grey; //
+
+  // Configuração Desktop: Sidebar fixa à esquerda, conteúdo à direita
+  @include desktop { //
+    flex-direction: row;
+  }
+}
+
+// A área onde a Tabela/Chat vai renderizar
+.mainContent {
+  flex: 1;
+  padding: 1.5rem;
+  margin-top: $header-height; // Para não ficar embaixo do header mobile
+
+  // No desktop, removemos a margem do topo pois a sidebar é lateral
+  @include desktop { //
+    margin-top: 0;
+    margin-left: 0; // A sidebar empurra naturalmente se for position relative, ou ajustamos aqui
+    padding: 2rem;
+    overflow-y: auto;
+    height: 100vh;
+  }
+}
+
+// Ajuste fino para o título da página
+.pageTitle {
+  font-size: 1.5rem;
+  color: $text-dark; //
+  margin-bottom: 1.5rem;
+  font-weight: 600;
+  border-bottom: 2px solid $border-color; //
+  padding-bottom: 0.5rem;
+}

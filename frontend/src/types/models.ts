@@ -23,8 +23,9 @@ export type ChargebackStatus = typeof ChargebackStatus[keyof typeof ChargebackSt
 export const ClaimStatus = {
   Novo: 0,
   EmAnalise: 1,
-  ResolvidoGanhamos: 2,
-  ResolvidoPerdemos: 3
+  RespondidoPeloVendedor:2,
+  ResolvidoGanhamos: 3,
+  ResolvidoPerdemos: 4
 } as const;
 export type ClaimStatus = typeof ClaimStatus[keyof typeof ClaimStatus];
 

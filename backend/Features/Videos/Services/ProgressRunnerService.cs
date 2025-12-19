@@ -6,7 +6,11 @@ namespace MeuCrudCsharp.Features.Videos.Services;
 
 public class ProgressRunnerService : IProcessRunnerService
 {
-    public async Task RunProcessWithProgressAsync(string filePath, string arguments, Func<string, Task> onProgress)
+    public async Task RunProcessWithProgressAsync(
+        string filePath,
+        string arguments,
+        Func<string, Task> onProgress
+    )
     {
         var processStartInfo = new ProcessStartInfo
         {
@@ -37,11 +41,16 @@ public class ProgressRunnerService : IProcessRunnerService
 
         if (process.ExitCode != 0)
         {
-            throw new AppServiceException($"Processo '{filePath}' falhou (Code {process.ExitCode}). Detalhes: {error}");
+            throw new AppServiceException(
+                $"Processo '{filePath}' falhou (Code {process.ExitCode}). Detalhes: {error}"
+            );
         }
     }
 
-    public async Task<(string StandardOutput, string StandardError)> RunProcessAndGetOutputAsync(string filePath, string arguments)
+    public async Task<(string StandardOutput, string StandardError)> RunProcessAndGetOutputAsync(
+        string filePath,
+        string arguments
+    )
     {
         var processStartInfo = new ProcessStartInfo
         {
@@ -65,7 +74,9 @@ public class ProgressRunnerService : IProcessRunnerService
         if (process.ExitCode != 0)
         {
             string error = await errorTask;
-            throw new AppServiceException($"Erro ao executar '{filePath}' (Code {process.ExitCode}): {error}");
+            throw new AppServiceException(
+                $"Erro ao executar '{filePath}' (Code {process.ExitCode}): {error}"
+            );
         }
 
         return (await outputTask, await errorTask);

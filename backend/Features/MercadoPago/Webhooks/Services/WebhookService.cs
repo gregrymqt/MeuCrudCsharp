@@ -4,12 +4,18 @@ using System.Text.Json;
 using MeuCrudCsharp.Features.MercadoPago.Jobs.Interfaces;
 using MeuCrudCsharp.Features.MercadoPago.Jobs.Job;
 using MeuCrudCsharp.Features.MercadoPago.Webhooks.DTOs;
-using MeuCrudCsharp.Features.MercadoPago.Webhooks.Interfaces;
-using MeuCrudCsharp.Models;
 using Microsoft.Extensions.Options;
+
+// Adicione os usings dos seus Jobs e QueueService aqui
 
 namespace MeuCrudCsharp.Features.MercadoPago.Webhooks.Services
 {
+    public interface IWebhookService
+    {
+        bool IsSignatureValid(HttpRequest request, MercadoPagoWebhookNotification notification);
+        Task ProcessWebhookNotificationAsync(MercadoPagoWebhookNotification notification);
+    }
+
     public class WebhookService : IWebhookService
     {
         private readonly ILogger<WebhookService> _logger;
@@ -27,17 +33,15 @@ namespace MeuCrudCsharp.Features.MercadoPago.Webhooks.Services
             _mercadoPagoSettings = mercadoPagoSettings.Value;
         }
 
-        // --- MÉTODO DE VALIDAÇÃO MOVIDO DA CONTROLLER ---
-        public bool IsSignatureValid(HttpRequest request, MercadoPagoNotification notification)
+        public bool IsSignatureValid(
+            HttpRequest request,
+            MercadoPagoWebhookNotification notification
+        )
         {
-            // A implementação exata do seu método IsSignatureValid entra aqui...
-            // (Copiei e colei seu método original)
             if (string.IsNullOrEmpty(_mercadoPagoSettings.WebhookSecret))
             {
-                _logger.LogWarning(
-                    "A chave secreta do webhook (MercadoPago:WebhookSecret) não está configurada. Validação da assinatura ignorada."
-                );
-                return false;
+                _logger.LogWarning("WebhookSecret não configurado. Validação ignorada.");
+                return false; // Ou true, dependendo da sua política de dev
             }
 
             try
@@ -47,9 +51,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Webhooks.Services
                     || !request.Headers.TryGetValue("x-signature", out var xSignature)
                 )
                 {
-                    _logger.LogWarning(
-                        "Headers de assinatura (x-request-id, x-signature) ausentes."
-                    );
+                    _logger.LogWarning("Headers de assinatura ausentes.");
                     return false;
                 }
 
@@ -63,13 +65,20 @@ namespace MeuCrudCsharp.Features.MercadoPago.Webhooks.Services
 
                 if (string.IsNullOrEmpty(ts) || string.IsNullOrEmpty(hash))
                 {
-                    _logger.LogWarning("Partes da assinatura (ts, v1) ou data.id estão ausentes.");
+                    _logger.LogWarning("Falha ao extrair ts ou v1 da assinatura.");
                     return false;
                 }
 
-                var dataId = notification.Data?.GetProperty("id").GetString();
+                // CORREÇÃO: Com JsonElement, o GetProperty funciona corretamente agora
+                if (!notification.Data.TryGetProperty("id", out var idElement))
+                {
+                    _logger.LogWarning("Payload sem Data.Id para validação.");
+                    return false;
+                }
 
+                var dataId = idElement.ToString();
                 var manifest = $"id:{dataId};request-id:{xRequestId};ts:{ts};";
+
                 using var hmac = new HMACSHA256(
                     Encoding.UTF8.GetBytes(_mercadoPagoSettings.WebhookSecret)
                 );
@@ -81,7 +90,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Webhooks.Services
                 if (!calculatedHash.Equals(hash))
                 {
                     _logger.LogWarning(
-                        "Assinatura HMAC inválida. Hash Recebido: {ReceivedHash}, Hash Calculado: {CalculatedHash}",
+                        "Assinatura inválida. Recebido: {Hash}, Calculado: {Calc}",
                         hash,
                         calculatedHash
                     );
@@ -92,114 +101,162 @@ namespace MeuCrudCsharp.Features.MercadoPago.Webhooks.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erro durante a validação da assinatura do webhook.");
+                _logger.LogError(ex, "Erro na validação da assinatura.");
                 return false;
             }
         }
 
-        // --- MÉTODO PARA PROCESSAR E ENFILEIRAR OS TÓPICOS ---
-        public async Task ProcessWebhookNotificationAsync(MercadoPagoNotification notification)
+        public async Task ProcessWebhookNotificationAsync(
+            MercadoPagoWebhookNotification notification
+        )
         {
-            if (!notification.Data.HasValue)
+            // CORREÇÃO: Verificação correta de JsonElement nulo/indefinido
+            if (
+                notification.Data.ValueKind == JsonValueKind.Null
+                || notification.Data.ValueKind == JsonValueKind.Undefined
+            )
             {
-                _logger.LogWarning("Notificação recebida sem o campo 'data'. Ignorando.");
+                _logger.LogWarning("Notificação recebida sem dados válidos (Data null/undefined).");
                 return;
             }
 
-            var data = notification.Data.Value;
+            // CORREÇÃO: Removemos o ponto extra que causava erro CS1001
+            var dataElement = notification.Data;
 
-            // Usamos um switch para tratar cada tipo de notificação
-            switch (notification.Type)
+            // Opções para garantir case-insensitive (snake_case -> PascalCase se precisar)
+            var jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+
+            try
             {
-                case "payment":
-                    var paymentData = data.Deserialize<PaymentNotificationData>();
-                    _logger.LogInformation(
-                        "Enfileirando notificação para o pagamento ID: {PaymentId}",
-                        paymentData.Id
-                    );
-                    await _queueService.EnqueueJobAsync<
-                        ProcessPaymentNotificationJob,
-                        PaymentNotificationData
-                    >(paymentData);
-                    break;
+                switch (notification.Type)
+                {
+                    case "payment":
+                        // Deserialize direto do JsonElement
+                        var paymentData = JsonSerializer.Deserialize<PaymentNotificationData>(
+                            dataElement.GetRawText(),
+                            jsonOptions
+                        );
+                        if (paymentData != null)
+                        {
+                            _logger.LogInformation("Job Pagamento ID: {Id}", paymentData.Id);
+                            await _queueService.EnqueueJobAsync<
+                                ProcessPaymentNotificationJob,
+                                PaymentNotificationData
+                            >(paymentData);
+                        }
+                        break;
 
-                case "subscription_authorized_payment":
-                    var subPaymentData = data.Deserialize<PaymentNotificationData>();
-                    _logger.LogInformation(
-                        "Enfileirando pagamento autorizado de assinatura: {SubscriptionPaymentId}",
-                        subPaymentData.Id
-                    );
-                    await _queueService.EnqueueJobAsync<
-                        ProcessRenewalSubscriptionJob,
-                        PaymentNotificationData
-                    >(subPaymentData);
-                    break;
+                    case "subscription_authorized_payment":
+                        var subPaymentData = JsonSerializer.Deserialize<PaymentNotificationData>(
+                            dataElement.GetRawText(),
+                            jsonOptions
+                        );
+                        if (subPaymentData != null)
+                        {
+                            _logger.LogInformation(
+                                "Job Assinatura Pagamento ID: {Id}",
+                                subPaymentData.Id
+                            );
+                            await _queueService.EnqueueJobAsync<
+                                ProcessRenewalSubscriptionJob,
+                                PaymentNotificationData
+                            >(subPaymentData);
+                        }
+                        break;
 
-                case "subscription_preapproval_plan":
-                    var subPreapprovalPlanData = data.Deserialize<PaymentNotificationData>();
-                    _logger.LogInformation(
-                        "Enfileirando atualização de plano de assinatura: {SubscriptionId}",
-                        subPreapprovalPlanData.Id
-                    );
-                    await _queueService.EnqueueJobAsync<
-                        ProcessPlanSubscriptionJob,
-                        PaymentNotificationData
-                    >(subPreapprovalPlanData);
-                    break;
+                    case "subscription_preapproval_plan":
+                        var planData = JsonSerializer.Deserialize<PaymentNotificationData>(
+                            dataElement.GetRawText(),
+                            jsonOptions
+                        );
+                        if (planData != null)
+                        {
+                            _logger.LogInformation("Job Plano ID: {Id}", planData.Id);
+                            await _queueService.EnqueueJobAsync<
+                                ProcessPlanSubscriptionJob,
+                                PaymentNotificationData
+                            >(planData);
+                        }
+                        break;
 
-                case "subscription_preapproval": // Adicionando o tipo de notificação de criação/atualização de assinatura
-                    var subPreapprovalData = data.Deserialize<PaymentNotificationData>();
-                    _logger.LogInformation(
-                        "Enfileirando atualização de assinatura: {SubscriptionId}",
-                        subPreapprovalData.Id
-                    );
-                    await _queueService.EnqueueJobAsync<
-                        ProcessCreateSubscriptionJob,
-                        PaymentNotificationData
-                    >(subPreapprovalData);
-                    break;
+                    case "subscription_preapproval":
+                        var subData = JsonSerializer.Deserialize<PaymentNotificationData>(
+                            dataElement.GetRawText(),
+                            jsonOptions
+                        );
+                        if (subData != null)
+                        {
+                            _logger.LogInformation("Job Assinatura ID: {Id}", subData.Id);
+                            await _queueService.EnqueueJobAsync<
+                                ProcessCreateSubscriptionJob,
+                                PaymentNotificationData
+                            >(subData);
+                        }
+                        break;
 
-                case "claim":
-                    var claimData = data.Deserialize<ClaimNotificationPayload>();
-                    _logger.LogInformation(
-                        "Enfileirando notificação de Claim ID: {ClaimId}",
-                        claimData.Id
-                    );
-                    await _queueService.EnqueueJobAsync<ProcessClaimJob, ClaimNotificationPayload>(
-                        claimData
-                    );
-                    break;
+                    case "claim":
+                        var claimData = JsonSerializer.Deserialize<ClaimNotificationPayload>(
+                            dataElement.GetRawText(),
+                            jsonOptions
+                        );
+                        if (claimData != null)
+                        {
+                            _logger.LogInformation("Job Claim ID: {Id}", claimData.Id);
+                            await _queueService.EnqueueJobAsync<
+                                ProcessClaimJob,
+                                ClaimNotificationPayload
+                            >(claimData);
+                        }
+                        break;
 
-                case "automatic-payments":
-                    var cardUpdateData = data.Deserialize<CardUpdateNotificationPayload>();
-                    _logger.LogInformation(
-                        "Enfileirando notificação de atualização de cartão para o cliente: {CustomerId}",
-                        cardUpdateData.CustomerId
-                    );
-                    await _queueService.EnqueueJobAsync<
-                        ProcessCardUpdateJob,
-                        CardUpdateNotificationPayload
-                    >(cardUpdateData);
-                    break;
+                    case "automatic-payments":
+                        var cardData = JsonSerializer.Deserialize<CardUpdateNotificationPayload>(
+                            dataElement.GetRawText(),
+                            jsonOptions
+                        );
+                        if (cardData != null)
+                        {
+                            _logger.LogInformation("Job Cartão Cliente: {Id}", cardData.CustomerId);
+                            await _queueService.EnqueueJobAsync<
+                                ProcessCardUpdateJob,
+                                CardUpdateNotificationPayload
+                            >(cardData);
+                        }
+                        break;
 
-                case "topic_chargebacks_wh":
-                    var chargebackData = data.Deserialize<ChargebackNotificationPayload>();
-                    _logger.LogInformation(
-                        "Enfileirando notificação de Chargeback ID: {ChargebackId}",
-                        chargebackData.Id
-                    );
-                    await _queueService.EnqueueJobAsync<
-                        ProcessChargebackJob,
-                        ChargebackNotificationPayload
-                    >(chargebackData);
-                    break;
+                    // O SEU FOCO: CHARGEBACKS
+                    case "chargeback": // As vezes o MP manda type "chargeback"
+                    case "topic_chargebacks_wh": // Documentação antiga as vezes cita esse topic
+                        var chargebackData =
+                            JsonSerializer.Deserialize<ChargebackNotificationPayload>(
+                                dataElement.GetRawText(),
+                                jsonOptions
+                            );
+                        if (chargebackData != null)
+                        {
+                            _logger.LogInformation(
+                                "Enfileirando notificação de Chargeback ID: {ChargebackId}",
+                                chargebackData.Id
+                            );
+                            await _queueService.EnqueueJobAsync<
+                                ProcessChargebackJob,
+                                ChargebackNotificationPayload
+                            >(chargebackData);
+                        }
+                        break;
 
-                default:
-                    _logger.LogWarning(
-                        "Notificação ignorada: tipo '{NotificationType}' não é tratado.",
-                        notification.Type
-                    );
-                    break;
+                    default:
+                        _logger.LogWarning("Tipo '{Type}' não tratado.", notification.Type);
+                        break;
+                }
+            }
+            catch (JsonException jsonEx)
+            {
+                _logger.LogError(
+                    jsonEx,
+                    "Erro ao deserializar payload do webhook tipo {Type}",
+                    notification.Type
+                );
             }
         }
     }

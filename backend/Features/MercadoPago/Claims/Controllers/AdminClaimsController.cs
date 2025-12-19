@@ -23,7 +23,8 @@ public class AdminClaimsController : MercadoPagoApiControllerBase
     public async Task<ActionResult<MercadoPagoClaimsViewModels.ClaimsIndexViewModel>> GetClaims(
         [FromQuery] string? searchTerm,
         [FromQuery] string? statusFilter,
-        [FromQuery] int page = 1)
+        [FromQuery] int page = 1
+    )
     {
         var result = await _adminClaimService.GetClaimsAsync(searchTerm, statusFilter, page);
         return Ok(result);
@@ -32,7 +33,9 @@ public class AdminClaimsController : MercadoPagoApiControllerBase
     // GET: api/admin/claims/{id}
     // Entra na "Sala de Guerra" (Detalhes + Chat) [cite: 2]
     [HttpGet("{id}")]
-    public async Task<ActionResult<MercadoPagoClaimsViewModels.ClaimDetailViewModel>> GetClaimDetails(long id)
+    public async Task<
+        ActionResult<MercadoPagoClaimsViewModels.ClaimDetailViewModel>
+    > GetClaimDetails(long id)
     {
         try
         {
@@ -49,14 +52,16 @@ public class AdminClaimsController : MercadoPagoApiControllerBase
     // POST: api/admin/claims/reply
     // Admin responde o aluno [cite: 3]
     [HttpPost("reply")]
-    public async Task<IActionResult> ReplyToClaim([FromBody] MercadoPagoClaimsViewModels.ReplyClaimViewModel model)
+    public async Task<IActionResult> ReplyToClaim(
+        [FromBody] MercadoPagoClaimsViewModels.ReplyClaimViewModel model
+    )
     {
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
 
         try
         {
-            // O Service busca pelo ID do banco (15), descobre o ID do MP (50...) 
+            // O Service busca pelo ID do banco (15), descobre o ID do MP (50...)
             // e manda a mensagem.
             await _adminClaimService.ReplyToClaimAsync(model.InternalId, model.Message);
 

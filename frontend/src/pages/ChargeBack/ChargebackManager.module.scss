@@ -1,0 +1,82 @@
+@use '../../styles/variables' as *;
+
+// --- Mobile First ---
+
+.layoutContainer {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: $bg-color-light; // Cor de fundo da página (ex: #f4f6f8)
+}
+
+.logoText {
+  font-weight: 800;
+  font-size: 1.2rem;
+  color: $primary-color;
+  letter-spacing: -0.5px;
+}
+
+.sidebarFooter {
+    padding: 1rem;
+    color: $text-muted;
+    text-align: center;
+}
+
+.mainContent {
+  flex: 1;
+  padding: 1rem;
+  width: 100%;
+  
+  // Importante: No mobile, seu Sidebar tem um Header fixo (provavelmente height: 60px).
+  // Precisamos empurrar o conteúdo para baixo para não ficar atrás dele.
+  padding-top: 80px; 
+  
+  // Animação suave na troca de abas
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+// Estilo para as abas de "Em construção" (Dashboard/Settings)
+.placeholderState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 60vh;
+  color: $secondary-color;
+  text-align: center;
+  
+  i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+  }
+  
+  h2 {
+    font-size: 1.5rem;
+    color: $text-dark;
+    margin-bottom: 0.5rem;
+  }
+}
+
+// --- Desktop (Tablet e acima) ---
+@media (min-width: 768px) {
+  .layoutContainer {
+    flex-direction: row; // Sidebar ao lado do Conteúdo
+  }
+
+  .mainContent {
+    // No desktop, a sidebar não tem header fixo sobrepondo, 
+    // então removemos o padding-top excessivo.
+    padding: 2rem; 
+    
+    // O conteúdo ocupa o espaço restante, já que a Sidebar tem largura fixa
+    flex: 1; 
+    overflow-y: auto; // Scroll apenas no conteúdo se necessário
+    height: 100vh;
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}

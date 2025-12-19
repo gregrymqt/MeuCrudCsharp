@@ -1,0 +1,121 @@
+@use '../../../../styles/variables' as *;
+
+// Estilos de loading e erro
+.loadingContainer, .textMuted {
+  text-align: center;
+  color: $secondary-color;
+  padding: 1rem;
+}
+
+.contentWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+// Grid de informações
+.detailGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+
+  .infoItem {
+    display: flex;
+    flex-direction: column;
+    
+    label {
+      font-size: 0.8rem;
+      color: $secondary-color;
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+    }
+    
+    span {
+      font-size: 1rem;
+      color: $text-dark;
+    }
+
+    // Cores de status
+    .statusGreen { color: green; font-weight: 500; }
+    .statusRed { color: red; font-weight: 500; }
+    
+    // Badge genérica (se não tiver global)
+    .badge {
+      display: inline-block;
+      background-color: #e0e0e0;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      width: fit-content;
+    }
+  }
+  
+  // Item que ocupa a linha toda
+  .fullWidth {
+    grid-column: span 2;
+  }
+}
+
+// Lista de Arquivos
+.fileList {
+  border-top: 1px solid $border-color;
+  padding-top: 1rem;
+
+  h3 { 
+    font-size: 1rem; 
+    margin-bottom: 0.75rem;
+    color: $text-dark;
+  }
+  
+  ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    
+    li {
+      background: #fff;
+      border: 1px solid $border-color;
+      padding: 0.75rem;
+      margin-bottom: 0.5rem;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      transition: background-color 0.2s;
+
+      &:hover {
+        background-color: #f9f9f9;
+      }
+      
+      i {
+        color: $secondary-color;
+      }
+
+      a {
+        color: $primary-color;
+        text-decoration: none;
+        font-weight: 500;
+        font-size: 0.9rem;
+        
+        &:hover { text-decoration: underline; }
+      }
+    }
+  }
+}
+
+// Botão do Footer
+.submitBtn {
+  width: 100%;
+  padding: 0.75rem;
+  border: none;
+  border-radius: 6px;
+  background-color: $primary-color; // Ou a cor padrão de botões do seu sistema
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+
+  &:hover {
+    opacity: 0.9;
+  }
+}

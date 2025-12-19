@@ -1,71 +1,65 @@
 using System;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Webhooks.DTOs
 {
-    /// <summary>
-    /// Contém as classes que representam os diferentes objetos 'data'
-    /// que podem vir nos webhooks do Mercado Pago.
-    /// </summary>
-    /// <summary>
-    /// Payload para notificações de atualização de cartão.
-    /// Corresponde ao tópico 'topic_card_id_wh'.
-    /// </summary>
-    public class CardUpdateNotificationPayload
-    {
-        [JsonPropertyName("customer_id")]
-        public string? CustomerId { get; set; }
-
-        [JsonPropertyName("new_card_id")]
-        public long NewCardId { get; set; }
-
-        [JsonPropertyName("old_card_id")]
-        public long OldCardId { get; set; }
-    }
-
-    /// <summary>
-    /// Payload para notificações de 'claims' (disputas, reclamações).
-    /// Corresponde ao tópico 'topic_claims_integration_wh'.
-    /// </summary>
-    public class ClaimNotificationPayload
+    public class MercadoPagoWebhookNotification
     {
         [JsonPropertyName("id")]
-        public long Id { get; set; }
+        public string Id { get; set; }
 
-        [JsonPropertyName("resource")]
-        public string? Resource { get; set; }
+        [JsonPropertyName("type")]
+        public string Type { get; set; }
+
+        [JsonPropertyName("date_created")]
+        public DateTime DateCreated { get; set; }
+
+        [JsonPropertyName("action")]
+        public string Action { get; set; }
+
+        [JsonPropertyName("api_version")]
+        public string ApiVersion { get; set; }
+
+        [JsonPropertyName("application_id")]
+        public string ApplicationId { get; set; }
+
+        [JsonPropertyName("user_id")]
+        public string UserId { get; set; }
+
+        // ALTERAÇÃO IMPORTANTE: Usamos JsonElement para manipular o JSON cru
+        [JsonPropertyName("data")]
+        public JsonElement Data { get; set; }
     }
 
-    /// <summary>
-    /// Payload para notificações de 'chargebacks'.
-    /// </summary>
+    // DTO para o Payload do Chargeback
     public class ChargebackNotificationPayload
     {
-        [JsonPropertyName("checkout")]
-        public string? Checkout { get; set; }
-
-        [JsonPropertyName("date_updated")]
-        public DateTime DateUpdated { get; set; }
-
         [JsonPropertyName("id")]
-        public long Id { get; set; }
-
-        [JsonPropertyName("payment_id")]
-        public long PaymentId { get; set; }
-
-        [JsonPropertyName("product_id")]
-        public string? ProductId { get; set; }
-
-        [JsonPropertyName("site_id")]
-        public string? SiteId { get; set; }
-
-        [JsonPropertyName("transaction_intent_id")]
-        public string? TransactionIntentId { get; set; }
+        public string Id { get; set; }
     }
 
+    // DTO genérico para Pagamentos/Assinaturas (se forem iguais)
     public class PaymentNotificationData
     {
         [JsonPropertyName("id")]
-        public string? Id { get; set; }
+        public string Id { get; set; }
+    }
+
+    // DTO para Claims, caso use
+    public class ClaimNotificationPayload
+    {
+        [JsonPropertyName("id")]
+        public string Id { get; set; }
+    }
+
+    // DTO para Updates de Cartão
+    public class CardUpdateNotificationPayload
+    {
+        [JsonPropertyName("id")]
+        public string Id { get; set; }
+
+        [JsonPropertyName("customer_id")]
+        public string CustomerId { get; set; }
     }
 }

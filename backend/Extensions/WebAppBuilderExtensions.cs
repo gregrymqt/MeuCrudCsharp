@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 namespace MeuCrudCsharp.Extensions;
 
 public static class WebAppBuilderExtensions
@@ -10,10 +12,10 @@ public static class WebAppBuilderExtensions
     {
         // 1. Adiciona suporte para Controllers com Views e configura a serialização JSON.
         builder
-            .Services.AddControllersWithViews()
+            .Services.AddControllers()
             .AddJsonOptions(options =>
             {
-                options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+                options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
             });
 
         // 2. Adiciona suporte para Razor Pages e define as regras de autorização.
