@@ -1,0 +1,111 @@
+@use '../../styles/variables' as *; // Ajuste o caminho
+
+// Z-Index alto para garantir que fique sobre tudo
+$z-modal-backdrop: 9998;
+$z-modal-content: 9999;
+
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5); // Backdrop escuro semitransparente
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: $z-modal-backdrop;
+  padding: 16px; // Espaço seguro nas bordas em mobile
+  backdrop-filter: blur(2px); // Efeito moderno de desfoque no fundo
+  animation: fadeIn 0.2s ease-out;
+}
+
+.modal {
+  background-color: $bg-light;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  width: 100%;
+  max-height: 90vh; // Nunca ultrapassa a altura da tela
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: $z-modal-content;
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); // Animação "bouncy" suave
+  overflow: hidden;
+
+  // Tamanhos controlados via prop
+  &.small { max-width: 400px; }
+  &.medium { max-width: 600px; }
+  &.large { max-width: 900px; }
+  &.full { max-width: 98%; height: 95vh; } // Bom para vídeos
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  border-bottom: 1px solid $border-color;
+  background-color: $bg-light;
+
+  h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: $text-dark;
+    font-weight: 600;
+  }
+
+  .closeBtn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: $secondary-color;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    border-radius: 50%;
+    transition: all 0.2s;
+
+    &:hover {
+      background-color: rgba(0, 0, 0, 0.05);
+      color: $text-dark;
+    }
+  }
+}
+
+.body {
+  padding: 24px;
+  overflow-y: auto; // Scroll apenas no corpo se o conteúdo for grande
+  flex: 1;
+  color: $text-dark;
+}
+
+.footer {
+  padding: 16px 24px;
+  border-top: 1px solid $border-color;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  background-color: $bg-grey; // Leve destaque para o rodapé
+}
+
+// Animações
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+// Mobile Adjustments
+@media (max-width: 768px) {
+  .modal {
+    // No mobile, modais grandes viram "bottom sheets" ou ocupam quase tudo
+    &.large, &.medium {
+      max-width: 100%;
+    }
+  }
+}

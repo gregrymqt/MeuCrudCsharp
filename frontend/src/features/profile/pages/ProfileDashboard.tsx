@@ -1,16 +1,16 @@
 import React, { useState, useMemo } from "react";
-import { Sidebar } from "../../components/SideBar/components/Sidebar";
-import { useAuth } from "../../features/auth/hooks/useAuth"; // [cite: 3]
-import { ProfileMapper } from "./utils/profile.mapper"; // O Helper criado acima
-import { PROFILE_SIDEBAR_ITEMS } from "./config/sidebarConfig";
-import type { SidebarItem } from "../../components/SideBar/types/sidebar.types";
+import { Sidebar } from "../../../components/SideBar/components/Sidebar";
+import { useAuth } from "../../auth/hooks/useAuth"; // [cite: 3]
+import { ProfileMapper } from "../utils/profile.mapper"; // O Helper criado acima
+import { PROFILE_SIDEBAR_ITEMS } from "../config/sidebarConfig";
+import type { SidebarItem } from "../../../components/SideBar/types/sidebar.types";
 
 // Sub-componentes
-import { ProfileInfo } from "./components/info/ProfileInfo"; // [cite: 2]
-import { PaymentHistory } from "./components/history/PaymentHistory"; // [cite: 1]
-import { SubscriptionManager } from "./components/subscription/SubscriptionManager"; // [cite: 2]
+import { ProfileInfo } from "../components/info/ProfileInfo"; // [cite: 2]
+import { PaymentHistory } from "../components/history/PaymentHistory"; // [cite: 1]
+import { SubscriptionManager } from "../components/subscription/SubscriptionManager"; // [cite: 2]
 
-import "./ProfileDashboard.scss";
+import styles from "../styles/ProfileDashboard.module.scss";
 
 export const ProfileDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("info"); // [cite: 6]
@@ -29,7 +29,7 @@ export const ProfileDashboard: React.FC = () => {
   const renderContent = () => {
     // Loading state simples se o user ainda não carregou do storage
     if (!user)
-      return <div className="loading-message">Carregando dados...</div>; // [cite: 12]
+      return <div className={styles['loading-message']}>Carregando dados...</div>; // [cite: 12]
 
     switch (activeTab) {
       case "info":
@@ -53,7 +53,7 @@ export const ProfileDashboard: React.FC = () => {
             onRefresh={refreshSession} // [cite: 16, 64]
           />
         ) : (
-          <div className="no-subscription-alert">
+          <div className={styles['no-subscription-alert']}>
             Você não possui uma assinatura ativa no momento. Veja nossos planos!{" "}
             {/* [cite: 17] */}
           </div>
@@ -65,7 +65,7 @@ export const ProfileDashboard: React.FC = () => {
   };
 
   return (
-    <div className="profile-dashboard">
+    <div className={styles['profile-dashboard']}>
       <Sidebar
         items={PROFILE_SIDEBAR_ITEMS}
         activeItemId={activeTab}
@@ -73,9 +73,9 @@ export const ProfileDashboard: React.FC = () => {
         logo={<h4>Minha Conta</h4>}
       />
 
-      <main className="profile-main">
-        <div className="profile-container">
-          <h2 className="page-title">
+      <main className={styles['profile-main']}>
+        <div className={styles['profile-container']}>
+          <h2 className={styles['page-title']}>
             {PROFILE_SIDEBAR_ITEMS.find((i) => i.id === activeTab)?.label}
           </h2>
           {renderContent()}

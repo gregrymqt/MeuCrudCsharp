@@ -1,19 +1,21 @@
+using System.Linq;
 using MeuCrudCsharp.Features.Hubs;
 using MeuCrudCsharp.Features.Videos.Interfaces;
 using Microsoft.AspNetCore.SignalR;
-using System.Linq;
 
 namespace MeuCrudCsharp.Features.Videos.Notification
 {
     public class VideoNotificationService : IVideoNotificationService
     {
         private readonly IHubContext<VideoProcessingHub> _hubContext;
+
         // 1. Injetar o ConnectionMapping
         private readonly ConnectionMapping<string> _mapping;
 
         public VideoNotificationService(
-            IHubContext<VideoProcessingHub> hubContext, 
-            ConnectionMapping<string> mapping) // Adicionado aqui
+            IHubContext<VideoProcessingHub> hubContext,
+            ConnectionMapping<string> mapping
+        ) // Adicionado aqui
         {
             _hubContext = hubContext;
             _mapping = mapping;
@@ -25,7 +27,8 @@ namespace MeuCrudCsharp.Features.Videos.Notification
             string message,
             int progress,
             bool isComplete = false,
-            bool isError = false)
+            bool isError = false
+        )
         {
             // 2. Obter as conexões inscritas neste vídeo específico
             var connectionIds = _mapping.GetConnections(storageIdentifier).ToList();

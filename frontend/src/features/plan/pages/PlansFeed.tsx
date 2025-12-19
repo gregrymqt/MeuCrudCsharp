@@ -1,13 +1,11 @@
 import React, { useCallback } from 'react';
-import styles from './PlansFeed.module.scss';
+import styles from '../styles/PlansFeed.module.scss';
+import { PlanCard } from '../components/Card/PlanCard';
+import { PaginationControls } from '../components/PaginationControl/PaginationControls';
+import { usePlans } from '../hooks/usePlans';
+import type { PlanUI } from '../types/plan.type';
 
-// Sub-components
-import { PlanCard } from './components/Card/PlanCard';
-import { PaginationControls } from './components/PaginationControl/PaginationControls';
 
-// Hook e Types
-import { usePlans } from './hooks/usePlans';
-import type { PlanUI } from './types/plan.type';
 
 export const PlansFeed: React.FC = () => {
   // 1. Consumindo o Hook

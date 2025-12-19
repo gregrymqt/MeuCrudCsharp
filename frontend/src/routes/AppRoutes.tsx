@@ -7,7 +7,7 @@ import { AccessDenied } from "../pages/AccessDenied/AccessDenied";
 import { GoogleLoginButton } from "../features/auth/GoogleLoginButton";
 import { GoogleCallbackPage } from "../features/auth/components/GoogleCallbackPage";
 import { Home } from "../pages/Home/Home";
-import { ProfileDashboard } from "../features/profile/ProfileDashboard";
+import { ProfileDashboard } from "../features/profile/pages/ProfileDashboard";
 import { CourseFeed } from "../features/course/CourseFeed";
 import { PlayerScreen } from "../features/player/PlayerScreen";
 import { PlansFeed } from "../features/plan/PlansFeed";

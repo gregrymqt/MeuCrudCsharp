@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAuth } from '../../../auth/hooks/useAuth'; // Ajuste o import conforme sua estrutura
-import styles from './ProfileInfo.module.scss'; // Estilo local
+import styles from '../styles/ProfileInfo.module.scss'; // Estilo local
 import { Card } from '../../../../components/Card/Card';
 
 export const ProfileInfo: React.FC = () => {

@@ -25,7 +25,7 @@ export const useAuth = () => {
     };
 
     window.addEventListener(AUTH_EVENT_NAME, handleAuthChange);
-    window.addEventListener('storage', handleAuthChange); // Sincronia entre abas [cite: 7]
+    window.addEventListener('storage', handleAuthChange); 
 
     return () => {
       window.removeEventListener(AUTH_EVENT_NAME, handleAuthChange);
@@ -34,8 +34,7 @@ export const useAuth = () => {
   }, []);
 
   /**
-   * LOGIN VIA GOOGLE (Callback)
-   * Chamado na página /google-callback quando o C# devolve o token na URL
+   * LOGIN GOOGLE
    */
   const handleGoogleCallback = useCallback(async (token: string) => {
     try {
@@ -43,11 +42,9 @@ export const useAuth = () => {
       StorageService.setItem(STORAGE_KEYS.TOKEN, token);
 
       // 2. Busca os dados completos no Backend (User + Subscription + Payments)
-      // O endpoint /me do seu backend já retorna o DTO completo [cite: 59, 60]
       const fullUserData = await authService.getMe();
 
       // 3. CACHE: Salva TUDO no Storage (Preenche o "cookie" do front)
-      // Isso atualiza o estado user via evento disparado abaixo
       StorageService.setItem(STORAGE_KEYS.USER_SESSION, fullUserData); 
       
       // 4. Avisa a aplicação que o usuário mudou

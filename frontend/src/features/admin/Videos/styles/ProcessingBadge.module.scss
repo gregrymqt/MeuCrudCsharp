@@ -1,0 +1,56 @@
+@use '../../../../styles/variables' as *; // Ajuste o caminho para suas variáveis
+
+.badgeContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 120px;
+  max-width: 100%;
+}
+
+.statusRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.75rem;
+  color: $text-secondary; // ou #6c757d
+
+  strong {
+    color: $primary-color; // ou sua cor de destaque
+  }
+}
+
+.progressTrack {
+  width: 100%;
+  height: 6px;
+  background-color: rgba(0, 0, 0, 0.1); // Fundo cinza claro
+  border-radius: 3px;
+  overflow: hidden;
+  position: relative;
+}
+
+.progressBar {
+  height: 100%;
+  background-color: #ffc107; // Amarelo (padrão para "Processando")
+  border-radius: 3px;
+  transition: width 0.4s ease-in-out; // Animação suave do crescimento
+  
+  // Opcional: Efeito de "listras" animadas (Candy stripe)
+  background-image: linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.15) 25%,
+    transparent 25%,
+    transparent 50%,
+    rgba(255, 255, 255, 0.15) 50%,
+    rgba(255, 255, 255, 0.15) 75%,
+    transparent 75%,
+    transparent
+  );
+  background-size: 1rem 1rem;
+  animation: progress-bar-stripes 1s linear infinite;
+}
+
+@keyframes progress-bar-stripes {
+  from { background-position: 1rem 0; }
+  to { background-position: 0 0; }
+}

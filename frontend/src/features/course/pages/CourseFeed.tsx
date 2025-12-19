@@ -1,14 +1,12 @@
 import React, { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import styles from './CourseFeed.module.scss';
+import styles from '../styles/CourseFeed.module.scss';
+import { CourseRow } from '../components/CourseRow/CourseRow';
+import { CourseSkeleton } from '../components/CourseSkeleton/CourseSkeleton';
+import { useCourses } from '../hooks/useCourses';
+import type { VideoCardUI } from '../types/course.type';
 
-// Sub-componentes da Feature Course
-import { CourseRow } from './components/CourseRow/CourseRow';
-import { CourseSkeleton } from './components/CourseSkeleton/CourseSkeleton';
 
-// Hook (Lógica de Negócio da Listagem)
-import { useCourses } from './hooks/useCourses';
-import type { VideoCardUI } from './types/course.type';
 
 export const CourseFeed: React.FC = () => {
   const navigate = useNavigate();

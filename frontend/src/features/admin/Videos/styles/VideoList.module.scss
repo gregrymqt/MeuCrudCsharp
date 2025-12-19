@@ -1,0 +1,76 @@
+@use '../../../../styles/variables' as * ;
+
+.listContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  
+  @include desktop {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  h2 {
+    font-size: 1.5rem;
+    color: $text-dark;
+    border-left: 4px solid $primary-color;
+    padding-left: 12px;
+    margin: 0;
+  }
+}
+
+.createBtn {
+  background-color: $primary-color;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  transition: background-color $transition-speed;
+  
+  &:hover {
+    background-color: $primary-hover;
+  }
+}
+
+.statusBadge {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 600;
+
+  &.available { background-color: rgba(40, 167, 69, 0.1); color: #28a745; }
+  &.processing { background-color: rgba(255, 193, 7, 0.1); color: #ffc107; }
+  &.error { background-color: rgba(220, 53, 69, 0.1); color: #dc3545; }
+}
+
+.playBtn {
+  background: none;
+  border: 1px solid $border-color;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+  color: $primary-color;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+
+  &:hover {
+    background-color: $primary-color;
+    color: white;
+    border-color: $primary-color;
+  }
+}

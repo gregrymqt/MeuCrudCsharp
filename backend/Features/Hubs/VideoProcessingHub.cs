@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.SignalR;
+
 namespace MeuCrudCsharp.Features.Hubs
 {
     public class VideoProcessingHub : Hub
@@ -16,7 +17,7 @@ namespace MeuCrudCsharp.Features.Hubs
             await Groups.AddToGroupAsync(Context.ConnectionId, groupName);
             _mapping.Add(storageIdentifier, Context.ConnectionId);
         }
-    
+
         public override async Task OnDisconnectedAsync(Exception? exception)
         {
             // Agora funciona! Pegamos a chave (storageIdentifier) a partir da conexão.

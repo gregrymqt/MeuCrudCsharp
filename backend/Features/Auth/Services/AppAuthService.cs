@@ -42,8 +42,6 @@ namespace MeuCrudCsharp.Features.Auth.Services
                     "Não foi possível obter os dados do provedor externo."
                 );
             }
-
-            // CORREÇÃO: Acesso ao banco via repositório.
             var user = await _userRepository.FindByGoogleIdAsync(googleId);
 
             if (user == null)
@@ -51,9 +49,6 @@ namespace MeuCrudCsharp.Features.Auth.Services
                 user = await _userManager.FindByEmailAsync(email);
                 if (user == null)
                 {
-                    // ... Lógica para criar o novo usuário ...
-                    // (O código aqui dentro permanece o mesmo, pois já usa o _userManager)
-                    // --- INÍCIO DO CÓDIGO INALTERADO ---
                     _logger.LogInformation(
                         "Nenhum usuário encontrado para {Email}. Criando uma nova conta.",
                         email
@@ -134,22 +129,25 @@ namespace MeuCrudCsharp.Features.Auth.Services
                 Name = user.Name ?? "Usuário",
                 Email = user.Email, // Herdado de IdentityUser
                 AvatarUrl = user.AvatarUrl, // [cite: 43]
-                LastPayments = user.Payments.Select(p => new PaymentHistoryDto
-                {
-                    Amount = p.Amount, // [cite: 55]
-                    DateApproved = p.DateApproved, // [cite: 52]
-                    Status = p.Status.ToString(), // Do TransactionBase
-                    Method = p.Method, // [cite: 50]
-                    LastFourDigits = p.LastFourDigits // [cite: 53]
-                }).ToList()
+                LastPayments = user
+                    .Payments.Select(p => new PaymentHistoryDto
+                    {
+                        Amount = p.Amount, // [cite: 55]
+                        DateApproved = p.DateApproved, // [cite: 52]
+                        Status = p.Status.ToString(), // Do TransactionBase
+                        Method = p.Method, // [cite: 50]
+                        LastFourDigits = p.LastFourDigits, // [cite: 53]
+                    })
+                    .ToList(),
             };
 
             // 3. Mapeia a Assinatura se existir
             if (user.Subscription != null)
             {
                 // Lógica simples para determinar se está ativo (data futura e status paid/active)
-                bool isActive = user.Subscription.CurrentPeriodEndDate > DateTime.UtcNow
-                                && user.Subscription.Status == "paid"; // Ajuste conforme seu Enum de Status
+                bool isActive =
+                    user.Subscription.CurrentPeriodEndDate > DateTime.UtcNow
+                    && user.Subscription.Status == "paid"; // Ajuste conforme seu Enum de Status
 
                 sessionDto.Subscription = new SubscriptionDto
                 {
@@ -158,7 +156,7 @@ namespace MeuCrudCsharp.Features.Auth.Services
                     Price = user.Subscription.Plan.TransactionAmount, // Herdado de TransactionBase
                     StartDate = user.Subscription.CurrentPeriodStartDate, // [cite: 64]
                     EndDate = user.Subscription.CurrentPeriodEndDate, // [cite: 65]
-                    IsActive = isActive
+                    IsActive = isActive,
                 };
             }
 

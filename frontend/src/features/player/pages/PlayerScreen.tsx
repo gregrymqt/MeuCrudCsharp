@@ -1,10 +1,10 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom'; // Necessário para pegar o ID da URL
 
-import { VideoPlayerFrame } from './components/PlayerFrame/VideoPlayerFrame';
-import { VideoMetadata } from './components/MetaData/VideoMetadata';
-import { useVideoPlayer } from './hooks/useVideoPlayer'; // O hook que criamos
-import styles from './PlayerScreen.module.scss';
+import styles from '../styles/PlayerScreen.module.scss';
+import { VideoMetadata } from '../components/MetaData/VideoMetadata';
+import { VideoPlayerFrame } from '../components/PlayerFrame/VideoPlayerFrame';
+import { useVideoPlayer } from '../hooks/useVideoPlayer';
 
 export const PlayerScreen: React.FC = () => {
   // 1. Pega o ID da rota (ex: /watch/guid-do-video)

@@ -1,8 +1,10 @@
 import React from 'react';
-import { useAdminTerminal } from '../../hooks/useAdminTerminal';
-import type { TerminalFormData } from '../../types/adminProfile.types';
+
 import  { Card } from '../../../../components/Card/Card';
 import { type FormField, GenericForm } from '../../../../components/Form/GenericForm';
+import { useAdminTerminal } from '../hooks/useAdminTerminal';
+import type { TerminalFormData } from '../types/adminProfile.types';
+import styles from '../styles/AdminTerminal.module.scss';
 
 export const AdminTerminal: React.FC = () => {
   const { handleTerminalCommand } = useAdminTerminal();
@@ -48,10 +50,10 @@ export const AdminTerminal: React.FC = () => {
   ];
 
   return (
-    <Card className="admin-terminal-card">
+    <Card className={styles.terminalCard}>
       <Card.Body title="Terminal de Comando"> 
          {/* [cite: 39] Usando sub-componente Body */}
-        <p style={{ marginBottom: '1rem', color: '#6c757d' }}>
+        <p className={styles.description}>
             Configure os parâmetros abaixo para inicializar o ambiente administrativo desejado.
         </p>
         

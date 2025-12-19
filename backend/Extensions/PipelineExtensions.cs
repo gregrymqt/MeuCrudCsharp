@@ -2,8 +2,8 @@ using Hangfire;
 using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Features.Hubs;
 using MeuCrudCsharp.Models;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 namespace MeuCrudCsharp.Extensions;
 
@@ -44,7 +44,7 @@ public static class PipelineExtensions
         // --- 4. Autenticação e Autorização ---
         // AQUI ESTAVA A REDUNDÂNCIA:
         // Substituímos a configuração manual pela chamada ao método do AuthExtensions
-        app.UseAuthFeatures(); 
+        app.UseAuthFeatures();
 
         // --- 5. Middlewares Específicos ---
         app.UseHangfireDashboard();
@@ -56,10 +56,8 @@ public static class PipelineExtensions
 
         app.MapRazorPages();
         app.MapControllers();
-        
-        app.MapControllerRoute(
-            name: "default", 
-            pattern: "{controller=Home}/{action=Index}/{id?}");
+
+        app.MapControllerRoute(name: "default", pattern: "{controller=Home}/{action=Index}/{id?}");
 
         return app;
     }

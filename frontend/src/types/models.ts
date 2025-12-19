@@ -149,7 +149,7 @@ export interface Course {
 }
 
 export interface Video {
-  id: number;
+  id: string;
   publicId: string;
   title: string;
   description: string;

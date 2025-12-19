@@ -1,0 +1,43 @@
+@use '../../../../styles/variables' as *;
+
+.adminContainer {
+  display: flex;
+  width: 100%;
+  min-height: 100vh;
+  background-color: $bg-grey;
+  position: relative;
+  overflow-x: hidden;
+}
+
+.contentArea {
+  flex: 1;
+  padding: 20px;
+  width: 100%;
+  transition: margin-left $transition-speed ease;
+
+  // Mobile First: Header do Sidebar cuida do topo
+  margin-left: 0;
+  padding-top: calc(#{$header-height} + 20px);
+
+  @include desktop {
+    padding-top: 40px;
+    display: flex;
+    justify-content: center;
+  }
+}
+
+.contentWrapper {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  background-color: $bg-light;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px $shadow;
+  padding: 24px;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}

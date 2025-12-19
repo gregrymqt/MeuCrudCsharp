@@ -13,7 +13,7 @@ namespace MeuCrudCsharp.Features.Videos.Controller
     public class AdminVideosController : ApiControllerBase
     {
         private readonly IAdminVideoService _videoService;
-        
+
         // Removemos IWebHostEnvironment e IBackgroundJobClient daqui.
         // Quem usa eles agora é o Service (internamente).
         public AdminVideosController(IAdminVideoService videoService)
@@ -26,10 +26,11 @@ namespace MeuCrudCsharp.Features.Videos.Controller
         /// </summary>
         [HttpPost] // Agora é um POST na raiz /api/admin/videos
         public async Task<IActionResult> CreateVideo(
-            [FromForm] IFormFile videoFile, 
-            [FromForm] string title, 
+            [FromForm] IFormFile videoFile,
+            [FromForm] string title,
             [FromForm] string description,
-            [FromForm] IFormFile? thumbnailFile)
+            [FromForm] IFormFile? thumbnailFile
+        )
         {
             if (videoFile == null || videoFile.Length == 0)
                 return BadRequest("O arquivo de vídeo é obrigatório.");
@@ -38,13 +39,21 @@ namespace MeuCrudCsharp.Features.Videos.Controller
                 return BadRequest("O título do vídeo é obrigatório.");
 
             // O Service cuida de salvar o arquivo (UploadService) e salvar no Banco (Repository)
-            var videoCriado = await _videoService.HandleVideoUploadAsync(videoFile, title, description, thumbnailFile);
+            var videoCriado = await _videoService.HandleVideoUploadAsync(
+                videoFile,
+                title,
+                description,
+                thumbnailFile
+            );
 
             return CreatedAtAction(nameof(GetAllVideos), new { id = videoCriado.Id }, videoCriado);
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAllVideos([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+        public async Task<IActionResult> GetAllVideos(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10
+        )
         {
             var result = await _videoService.GetAllVideosAsync(page, pageSize);
             return Ok(result);
