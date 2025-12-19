@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { PixService } from "../services/pix.service";
-import { AlertService } from "../../../../../shared/services/alert.service"; // Ajuste caminho
-import { socketService } from "../../../../../shared/services/socket.service"; // Ajuste caminho
+import { AlertService } from "../../../../../../shared/services/alert.service"; // Ajuste caminho
+import { socketService } from "../../../../../../shared/services/socket.service"; // Ajuste caminho
 
 import {
   type PixStep,
@@ -10,9 +10,9 @@ import {
   type PixPayer,
   type CreatePixDTO,
 } from "../types/pix.types";
-import { ApiError } from "../../../../../shared/services/api.service";
-import { AppHubs } from "../../../../../shared/enums/hub.enums";
-import { useSocketListener } from "../../../../../shared/hooks/useSocket";
+import { ApiError } from "../../../../../../shared/services/api.service";
+import { AppHubs } from "../../../../../../shared/enums/hub.enums";
+import { useSocketListener } from "../../../../../../shared/hooks/useSocket";
 import type { PaymentSocketMessage } from "../../../types/payment.types";
 
 interface UsePixPaymentProps {

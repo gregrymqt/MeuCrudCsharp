@@ -7,7 +7,7 @@ using MeuCrudCsharp.Features.MercadoPago.Claims.Interfaces;
 using MeuCrudCsharp.Models;
 using Microsoft.EntityFrameworkCore;
 
-namespace MeuCrudCsharp.Features.MercadoPago.Claims.Services;
+namespace MeuCrudCsharp.Features.MercadoPago.Claims.Repositories;
 
 public class ClaimRepository : IClaimRepository
 {
@@ -38,7 +38,7 @@ public class ClaimRepository : IClaimRepository
         if (!string.IsNullOrEmpty(searchTerm))
         {
             query = query.Where(c =>
-                c.ClaimId.Contains(searchTerm) || c.User.Name.Contains(searchTerm)
+                c.MpClaimId.ToString().Contains(searchTerm) || c.User.Name.Contains(searchTerm)
             );
         }
 
@@ -70,5 +70,13 @@ public class ClaimRepository : IClaimRepository
             _context.Claims.Update(claim);
             await _context.SaveChangesAsync();
         }
+    }
+
+    public async Task<List<Models.Claims>> GetClaimsByUserIdAsync(string userId)
+    {
+        return await _context.Claims
+            .Where(c => c.UserId == userId)
+            .OrderByDescending(c => c.DataCreated)
+            .ToListAsync();
     }
 }

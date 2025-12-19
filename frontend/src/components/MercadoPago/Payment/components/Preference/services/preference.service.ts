@@ -1,5 +1,5 @@
 // src/pages/Payment/services/preference.service.ts
-import { ApiService } from "../../../../../shared/services/api.service";
+import { ApiService } from "../../../../../../shared/services/api.service";
 
 interface PreferenceResponse {
   preferenceId: string;

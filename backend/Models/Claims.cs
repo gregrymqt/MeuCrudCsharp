@@ -15,6 +15,10 @@ public enum ClaimStatus
     [Display(Name = "Em Análise")]
     EmAnalise, // A equipe está investigando a reclamação.
 
+    // ADICIONAR ESTE:
+    [Display(Name = "Respondido pelo Vendedor")]
+    RespondidoPeloVendedor,
+
     [Display(Name = "Resolvido - Ganhamos")]
     ResolvidoGanhamos, // A disputa foi resolvida a nosso favor.
 
@@ -29,58 +33,26 @@ public enum ClaimStatus
 public class Claims
 {
     [Key]
-    public int Id { get; set; }
+    public int Id { get; set; } // ID Interno do Banco
 
-    /// <summary>
-    /// O ID da notificação recebida (ex: o 'id' do webhook do Mercado Pago).
-    /// </summary>
+    // Este é o ID real que o MP usa (ex: 5012391221)
     [Required]
-    public long NotificationId { get; set; }
+    public long MpClaimId { get; set; }
 
-    /// <summary>
-    /// O ID do recurso associado (ex: o ID do reembolso ou da disputa).
-    /// </summary>
+    // ID do pagamento vinculado (Resource ID)
+    public string? PaymentId { get; set; }
+
     [Required]
-    public string? ClaimId { get; set; }
+    public string Type { get; set; } // mediations, payment, etc
 
-    /// <summary>
-    /// O tipo de notificação (ex: "refund", "chargeback", "dispute").
-    /// </summary>
-    [Required]
-    public string? Type { get; set; }
-
-    /// <summary>
-    /// Data em que o registro foi criado no banco de dados.
-    /// </summary>
     public DateTime DataCreated { get; set; } = DateTime.UtcNow;
 
-    // --- NOVOS CAMPOS ADICIONADOS ---
-
-    /// <summary>
-    /// Status interno para acompanhamento da equipe.
-    /// </summary>
     public ClaimStatus Status { get; set; } = ClaimStatus.Novo;
 
-    /// <summary>
-    /// Campo de texto para notas internas da equipe sobre a reclamação.
-    /// </summary>
-    public string? InternalNotes { get; set; }
+    // Link para o painel do MP (útil para o Admin clicar e ir direto)
+    public string? MercadoPagoPanelUrl => $"https://www.mercadopago.com.br/developers/panel/notifications/claims/{MpClaimId}";
 
-    /// <summary>
-    /// Link direto para a página de detalhes da claim no painel do Mercado Pago.
-    /// </summary>
-    public string? MercadoPagoClaimUrl { get; set; }
-
-    /// <summary>
-    /// Tipo de pagamento se foi por pagamento ou assinatura.
-    /// </summary>
-    public string? TypePayment { get; set; }
-
-    /// <summary>
-    /// Id referente ao user que realizou a claim.
-    /// </summary>
     [ForeignKey("user_id")]
     public string? UserId { get; set; }
-
     public virtual Users? User { get; set; }
 }

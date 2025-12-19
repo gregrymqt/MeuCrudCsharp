@@ -5,12 +5,12 @@ using MercadoPago.Client.Customer;
 using MercadoPago.Resource;
 using MercadoPago.Resource.Customer;
 using MeuCrudCsharp.Data;
+using MeuCrudCsharp.Features.Auth.Interfaces;
 using MeuCrudCsharp.Features.Caching.Interfaces;
 using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.MercadoPago.Base;
 using MeuCrudCsharp.Features.MercadoPago.Clients.DTOs;
 using MeuCrudCsharp.Features.MercadoPago.Clients.Interfaces;
-using MeuCrudCsharp.Features.User.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Clients.Services;
@@ -205,13 +205,7 @@ public class ClientService : MercadoPagoServiceBase, IClientService
                 return cards ?? new List<CardInCustomerResponseDto>();
             },
             expirationTime
-        );
-    }
-
-    public async Task<CardInCustomerResponseDto> GetCardInCustomerAsync(string cardId)
-    {
-        var customerId = await GetCurrentUserCustomerIdAsync();
-        return await GetCardInCustomerAsync(customerId, cardId);
+        ) ?? throw new ResourceNotFoundException("Cartões não encontrados.");
     }
 
     public async Task<CardInCustomerResponseDto> GetCardInCustomerAsync(
@@ -256,7 +250,7 @@ public class ClientService : MercadoPagoServiceBase, IClientService
                 return cards ?? new CardInCustomerResponseDto(null, null, null, null);
             },
             expirationTime
-        );
+        ) ?? throw new ResourceNotFoundException("Cartão não encontrado.");
     }
 
     private async Task<string> GetCurrentUserCustomerIdAsync()
@@ -300,6 +294,6 @@ public class ClientService : MercadoPagoServiceBase, IClientService
                 return user.CustomerId;
             },
             expirationTime
-        );
+        ) ?? throw new ResourceNotFoundException("Erro ao buscar o ID do cliente MP.");
     }
 }

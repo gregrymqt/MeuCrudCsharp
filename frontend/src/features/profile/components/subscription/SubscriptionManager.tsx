@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { Card } from '../../../../components/Card/Card'; // [cite: 1]
-import { MercadoPagoBrick } from '../../../../components/Payment/components/Credit-Card/components/MercadoPagoBrick'; // [cite: 3]
+import { MercadoPagoBrick } from '../../../../components/MercadoPago/Payment/components/Credit-Card/components/MercadoPagoBrick'; // [cite: 3]
 import styles from './SubscriptionManager.module.scss'; // [cite: 2]
 
 // Types e Hooks
 import { type SubscriptionDetails } from '../../types/profile.types'; // [cite: 2]
 import { useSubscriptionActions } from '../../hooks/useSubscriptionActions'; // [cite: 3]
 import { useRefundNotification } from '../../hooks/useRefundNotification'; // <--- NOVO: Hook do Socket
-import type { BrickPaymentData } from '../../../../components/Payment/components/Credit-Card/types/credit-card.types';
+import type { BrickPaymentData } from '../../../../components/MercadoPago/Payment/components/Credit-Card/types/credit-card.types';
 
 interface SubscriptionProps {
   data: SubscriptionDetails;

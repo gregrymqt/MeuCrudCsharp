@@ -1,5 +1,5 @@
 // src/pages/Payment/services/credit-card.service.ts
-import { ApiService } from "../../../../../shared/services/api.service"; // Ajuste o caminho
+import { ApiService } from "../../../../../../shared/services/api.service"; // Ajuste o caminho
 import type { CreditCardPaymentRequestDto, PaymentResponse } from "../types/credit-card.types";
 
 export const CreditCardService = {

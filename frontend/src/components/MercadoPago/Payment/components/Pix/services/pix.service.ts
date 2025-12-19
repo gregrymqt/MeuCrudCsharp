@@ -1,4 +1,4 @@
-import { ApiService } from "../../../../../shared/services/api.service";
+import { ApiService } from "../../../../../../shared/services/api.service";
 import type {
   CreatePixDTO,
   PixResponse,

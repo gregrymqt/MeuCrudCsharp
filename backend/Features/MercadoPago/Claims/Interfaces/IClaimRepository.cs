@@ -14,4 +14,5 @@ public interface IClaimRepository
     );
     Task<Models.Claims?> GetByIdAsync(long id);
     Task UpdateClaimStatusAsync(Models.Claims claim, string newStatus);
+    Task<List<Models.Claims>> GetClaimsByUserIdAsync(string userId);
 }

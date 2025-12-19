@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { type FormField, GenericForm } from '../../../../Form/GenericForm';
+import { type FormField, GenericForm } from '../../../../../Form/GenericForm';
 import type { PixPayer, IdentificationType } from '../types/pix.types';
 
 
