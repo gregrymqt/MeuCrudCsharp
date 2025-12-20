@@ -16,6 +16,7 @@ import { PlayerScreen } from "../features/player/pages/PlayerScreen";
 import { AdminClaimsPage } from "../features/Claim/components/AdminClaimsPage";
 import { UserClaimsPage } from "../features/Claim/components/UserClaimsPage";
 import { ChargebackManager } from "../pages/ChargeBack/ChargebackManager";
+import { WalletPage } from "../pages/Wallet/WalletPage";
 
 export const AppRoutes = () => {
   return (
@@ -39,6 +40,7 @@ export const AppRoutes = () => {
           <Route element={<SubscriptionRoute />}>
             <Route path="/cursos" element={<CourseFeed />} /> {/* [cite: 4] */}
             <Route path="/player/:videoId" element={<PlayerScreen />} />
+            <Route path="/wallet" element={<WalletPage />} />
           </Route>
         </Route>
 

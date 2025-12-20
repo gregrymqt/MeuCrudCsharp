@@ -52,7 +52,10 @@ namespace MeuCrudCsharp.Features.Auth.Controllers
             // Define que, após o Google logar, ele deve chamar a nossa action 'GoogleCallback' abaixo
             var redirectUrl = Url.Action(nameof(GoogleCallback), "Auth");
 
-            var properties = _signInManager.ConfigureExternalAuthenticationProperties("Google", redirectUrl);
+            var properties = _signInManager.ConfigureExternalAuthenticationProperties(
+                "Google",
+                redirectUrl
+            );
 
             // Isso lança o desafio (302 Redirect) para a URL do Google Accounts
             return new ChallengeResult("Google", properties);
@@ -85,7 +88,7 @@ namespace MeuCrudCsharp.Features.Auth.Controllers
 
             try
             {
-                // REUTILIZANDO SUA LÓGICA EXISTENTE 
+                // REUTILIZANDO SUA LÓGICA EXISTENTE
                 // O método SignInWithGoogleAsync já cria o usuário, faz updates e gera o cookie se necessário
                 var user = await _authService.SignInWithGoogleAsync(info.Principal, HttpContext);
 
@@ -112,7 +115,9 @@ namespace MeuCrudCsharp.Features.Auth.Controllers
             try
             {
                 // 1. Pega o ID do usuário de dentro do Token (Claim "sub" ou ClaimTypes.NameIdentifier)
-                var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                var userId = User.FindFirst(
+                    System.Security.Claims.ClaimTypes.NameIdentifier
+                )?.Value;
 
                 if (string.IsNullOrEmpty(userId))
                     return Unauthorized("Token inválido: ID do usuário não encontrado.");
@@ -142,7 +147,10 @@ namespace MeuCrudCsharp.Features.Auth.Controllers
             try
             {
                 // 1. Pega o Token do Header Authorization
-                var token = HttpContext.Request.Headers["Authorization"].ToString().Replace("Bearer ", "");
+                var token = HttpContext
+                    .Request.Headers["Authorization"]
+                    .ToString()
+                    .Replace("Bearer ", "");
 
                 if (string.IsNullOrEmpty(token))
                     return BadRequest("Token não encontrado.");
@@ -167,7 +175,9 @@ namespace MeuCrudCsharp.Features.Auth.Controllers
                         ttl // Tempo de vida exato
                     );
 
-                    _logger.LogInformation($"Token invalidado e adicionado à blacklist por {ttl.TotalMinutes} minutos.");
+                    _logger.LogInformation(
+                        $"Token invalidado e adicionado à blacklist por {ttl.TotalMinutes} minutos."
+                    );
                 }
 
                 // 4. Logout do Identity (Cookie) caso esteja usando cookie híbrido

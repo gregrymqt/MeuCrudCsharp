@@ -1,0 +1,74 @@
+@use '../../styles/variables' as *;
+
+.pageLayout {
+  display: flex;
+  flex-direction: column; // Mobile: Empilhado
+  min-height: 100vh;
+  background-color: $bg-grey;
+
+  // Área principal de conteúdo
+  .mainContent {
+    flex: 1;
+    padding: 1.5rem;
+    padding-top: calc(#{$header-height} + 1.5rem); // Mobile: Compensa o Header fixo
+    transition: padding $transition-speed ease;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  // --- DESKTOP BREAKPOINT ---
+  @include desktop {
+    flex-direction: row; // Desktop: Lado a lado
+
+    .mainContent {
+      padding: 2rem;
+      // No desktop, o header da sidebar some, então removemos o padding extra
+      padding-top: 2rem; 
+      
+      // Centraliza o conteúdo (opcional, bom para telas muito largas)
+      display: flex;
+      flex-direction: column;
+      align-items: center; 
+    }
+
+    // Wrapper para limitar a largura do conteúdo (UX Clean)
+    .contentWrapper {
+      width: 100%;
+      max-width: 1000px;
+    }
+  }
+}
+
+// Estilo simples para o Logo/Brand na Sidebar
+.brandLogo {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: $primary-color;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  
+  i { color: $text-dark; }
+}
+
+// Estilo para o botão de Logout no footer da Sidebar
+.logoutBtn {
+  width: 100%;
+  padding: 0.75rem;
+  background: none;
+  border: 1px solid rgba($text-dark, 0.1);
+  color: $text-dark;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+
+  &:hover {
+    background-color: rgba($primary-color, 0.1);
+    color: $primary-color;
+    border-color: $primary-color;
+  }
+}

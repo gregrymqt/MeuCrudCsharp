@@ -40,6 +40,15 @@ public class SubscriptionRepository : ISubscriptionRepository
         return await query.FirstOrDefaultAsync(s => s.ExternalId == externalId);
     }
 
+    public async Task<Subscription?> GetActiveByUserIdAsync(string userId)
+    {
+        return await _context
+            .Subscriptions.AsNoTracking()
+            .Where(s => s.UserId == userId && (s.Status == "authorized" || s.Status == "pending"))
+            .OrderByDescending(s => s.CurrentPeriodEndDate)
+            .FirstOrDefaultAsync();
+    }
+
     public void Remove(Subscription subscription)
     {
         _context.Subscriptions.Remove(subscription);

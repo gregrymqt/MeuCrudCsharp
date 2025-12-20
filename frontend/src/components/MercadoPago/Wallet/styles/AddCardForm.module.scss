@@ -1,0 +1,84 @@
+@use '../../../../styles/variables' as *; // Importando seu arquivo _variables.scss
+
+.add-card-container {
+  background-color: $bg-light;
+  border-radius: 8px;
+  padding: 1rem;
+  box-shadow: 0 4px 12px $shadow;
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  transition: all $transition-speed ease;
+
+  // Header do componente
+  .form-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid $border-color;
+
+    h3 {
+      font-size: 1.25rem;
+      color: $text-dark;
+      margin: 0;
+      font-weight: 600;
+    }
+
+    .btn-close {
+      background: none;
+      border: none;
+      color: $secondary-color;
+      font-size: 1.5rem;
+      cursor: pointer;
+      padding: 0;
+      line-height: 1;
+      
+      &:hover {
+        color: $text-dark;
+      }
+    }
+  }
+
+  // Área de Loading
+  .loading-state {
+    text-align: center;
+    padding: 2rem;
+    color: $secondary-color;
+    font-size: 0.9rem;
+    
+    .spinner {
+      // Simples spinner css
+      display: inline-block;
+      width: 24px;
+      height: 24px;
+      border: 3px solid rgba($primary-color, 0.3);
+      border-radius: 50%;
+      border-top-color: $primary-color;
+      animation: spin 1s ease-in-out infinite;
+      margin-bottom: 0.5rem;
+    }
+  }
+
+  // Wrapper do Brick do MP para garantir largura correta
+  .brick-wrapper {
+    min-height: 300px;
+    
+    // Ajustes finos caso o iframe do MP precise
+    iframe {
+      width: 100% !important;
+    }
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  // Desktop Breakpoint
+  @include desktop {
+    padding: 2rem;
+    max-width: 600px; // Tamanho ideal para formulário de cartão no desktop
+    border: 1px solid $border-color; // Borda sutil no desktop
+  }
+}
