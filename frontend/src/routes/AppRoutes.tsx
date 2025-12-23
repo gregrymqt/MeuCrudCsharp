@@ -17,6 +17,7 @@ import { AdminClaimsPage } from "../features/Claim/components/AdminClaimsPage";
 import { UserClaimsPage } from "../features/Claim/components/UserClaimsPage";
 import { ChargebackManager } from "../pages/ChargeBack/ChargebackManager";
 import { WalletPage } from "../pages/Wallet/WalletPage";
+import { TransactionsPage } from "../pages/Transactions/TransactionsPage";
 
 export const AppRoutes = () => {
   return (
@@ -40,7 +41,8 @@ export const AppRoutes = () => {
           <Route element={<SubscriptionRoute />}>
             <Route path="/cursos" element={<CourseFeed />} /> {/* [cite: 4] */}
             <Route path="/player/:videoId" element={<PlayerScreen />} />
-            <Route path="/wallet" element={<WalletPage />} />
+            <Route path="/carteira" element={<WalletPage />} />
+            <Route path="/pagamentos" element={<TransactionsPage />} />
           </Route>
         </Route>
 
