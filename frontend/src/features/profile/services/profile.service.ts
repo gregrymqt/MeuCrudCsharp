@@ -1,17 +1,11 @@
 import  { ApiService } from '../../../shared/services/api.service';
 import type { 
-  PaymentItem, 
   CreditCard, 
   UpdateStatusRequest, 
   UpdateCardRequest 
 } from '../types/profile.types';
 
 export const ProfileService = {
-
-  // Endpoint: GET /payment-history 
-  getPaymentHistory: async (): Promise<PaymentItem[]> => {
-    return await ApiService.get<PaymentItem[]>('/profile/payment-history');
-  },
 
   // Endpoint: GET /cards 
   getCards: async (): Promise<CreditCard[]> => {
@@ -31,11 +25,6 @@ export const ProfileService = {
   // Endpoint: PUT /subscription/card 
   updateSubscriptionCard: async (data: UpdateCardRequest): Promise<{ message: string }> => {
     return await ApiService.put('/profile/subscription/card', data);
-  },
-
-  // Endpoint: POST /refunds/request 
-  requestRefund: async (): Promise<{ message: string }> => {
-    return await ApiService.post('/profile/refunds/request', {});
   },
 
   // Endpoint: PUT /profile/avatar 

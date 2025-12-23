@@ -1,0 +1,47 @@
+@use '../../styles/variables' as *;
+
+.pageContainer {
+  display: flex;
+  min-height: 100vh;
+  background-color: $bg-body; // Ex: #f4f6f8
+  position: relative;
+  
+  // Mobile First: Container ocupa tudo
+  flex-direction: column; 
+
+  // Desktop
+  @media (min-width: 768px) {
+    flex-direction: row;
+  }
+}
+
+.contentArea {
+  flex: 1;
+  padding: 1.5rem;
+  width: 100%; // Garante que não estoure em telas pequenas
+  
+  // Ajuste para não ficar colado no header mobile da sidebar
+  margin-top: 50px; 
+
+  @media (min-width: 768px) {
+    margin-top: 0;
+    padding: 2rem;
+    overflow-y: auto; // Scroll interno se necessário
+    max-height: 100vh;
+  }
+}
+
+.pageHeader {
+  margin-bottom: 2rem;
+
+  h2 {
+    font-size: 1.75rem;
+    color: $text-color;
+    font-weight: 600;
+  }
+
+  p {
+    color: $text-muted;
+    font-size: 0.95rem;
+  }
+}

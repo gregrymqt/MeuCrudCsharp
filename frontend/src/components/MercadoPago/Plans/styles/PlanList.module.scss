@@ -1,0 +1,113 @@
+@use '../../../../styles/variables' as *;// Supondo que exista para cores globais
+
+.container {
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  padding: 1.5rem;
+  width: 100%;
+}
+
+// --- Tabs ---
+.tabsHeader {
+  display: flex;
+  gap: 1rem;
+  border-bottom: 1px solid #eee;
+  margin-bottom: 1.5rem;
+
+  button {
+    background: none;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 500;
+    color: #666; // $text-muted
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s ease;
+
+    &:hover {
+      color: #000; // $primary-color
+    }
+
+    &.active {
+      color: #009ee3; // Exemplo de cor do Mercado Pago ou sua Primary
+      border-bottom-color: #009ee3;
+    }
+  }
+}
+
+// --- Search Area (Tab ID) ---
+.searchBar {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  align-items: center;
+
+  input {
+    flex: 1;
+    max-width: 300px;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    outline: none;
+
+    &:focus {
+      border-color: #009ee3;
+    }
+  }
+
+  button {
+    padding: 0.5rem 1rem;
+    background-color: #009ee3;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+
+    &:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+
+    &:hover:not(:disabled) {
+      filter: brightness(0.9);
+    }
+  }
+}
+
+// --- Pagination Controls ---
+.paginationControls {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #eee;
+
+  span {
+    font-size: 0.9rem;
+    color: #555;
+  }
+
+  button {
+    background: none;
+    border: 1px solid #ddd;
+    padding: 0.4rem 0.8rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover:not(:disabled) {
+      background-color: #f5f5f5;
+      border-color: #bbb;
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+}

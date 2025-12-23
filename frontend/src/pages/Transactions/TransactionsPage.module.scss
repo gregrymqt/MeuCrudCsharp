@@ -1,0 +1,58 @@
+@use '../../styles/variables' as *; // Importando do seu arquivo _variables.scss [cite: 17]
+
+.pageContainer {
+  display: flex;
+  flex-direction: column; // Mobile: Sidebar (Header) em cima, conteúdo embaixo
+  min-height: 100vh;
+  background-color: $bg-grey; // [cite: 17]
+  position: relative;
+
+  // Mixin para Desktop (min-width: 992px)
+  @include desktop { // 
+    flex-direction: row; // Desktop: Sidebar à esquerda, conteúdo à direita
+  }
+}
+
+.contentArea {
+  flex: 1;
+  padding: 1.5rem;
+  width: 100%;
+  
+  // No mobile, a Sidebar exibe um header de 60px ($header-height).
+  // Precisamos garantir que o conteúdo não fique escondido atrás dele se for fixed,
+  // ou apenas dar um respiro visual.
+  margin-top: 0; 
+
+  @media (max-width: 991px) {
+    // Ajuste fino para mobile, caso o header da sidebar seja fixed.
+    // Se não for, esse padding extra ajuda na estética.
+    padding-top: 1rem; 
+  }
+
+  // Estilo do cabeçalho da página (Título e subtítulo)
+  header {
+    margin-bottom: 2rem;
+    
+    h2 {
+      color: $text-dark; // [cite: 17]
+      font-size: 1.75rem;
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+    }
+
+    p {
+      color: $secondary-color; // [cite: 17]
+      font-size: 1rem;
+    }
+  }
+
+  // Animação suave na troca de conteúdo
+  .fadeEntry {
+    animation: fadeIn $transition-speed ease-in-out; // [cite: 17]
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}

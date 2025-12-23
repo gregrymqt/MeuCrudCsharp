@@ -1,0 +1,54 @@
+.failed-payments-container {
+  padding: 1rem;
+  background-color: #fff;
+  border-radius: 8px;
+
+  h3 {
+    margin-bottom: 1.5rem;
+    color: #333;
+  }
+
+  .tabs-header {
+    display: flex;
+    gap: 1rem;
+    border-bottom: 2px solid #f0f0f0;
+    margin-bottom: 1rem;
+
+    button {
+      background: none;
+      border: none;
+      padding: 0.8rem 1.5rem;
+      font-weight: 600;
+      color: #666;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.3s;
+
+      &:hover {
+        color: #d9534f; // Cor de destaque (vermelho para erros)
+      }
+
+      &.active {
+        color: #d9534f;
+        border-bottom-color: #d9534f;
+      }
+    }
+  }
+
+  .status-badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: bold;
+
+    &.rejected, &.cancelled {
+      background-color: #fdecea;
+      color: #c0392b;
+    }
+
+    &.refunded, &.partially_refunded {
+      background-color: #e8f6f3;
+      color: #16a085; // Verde teal para indicar resolução/estorno
+    }
+  }
+}

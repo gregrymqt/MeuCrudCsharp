@@ -23,7 +23,7 @@ export type ChargebackStatus = typeof ChargebackStatus[keyof typeof ChargebackSt
 export const ClaimStatus = {
   Novo: 0,
   EmAnalise: 1,
-  RespondidoPeloVendedor:2,
+  RespondidoPeloVendedor: 2,
   ResolvidoGanhamos: 3,
   ResolvidoPerdemos: 4
 } as const;
@@ -63,7 +63,7 @@ export interface User extends IdentityUser {
   createdAt: string; // Vem como ISO String ("2025-12-12T...")
   googleId?: string;
   customerId?: string;
-  
+
   subscription?: Subscription;
   payments?: Payment[];
 }
@@ -167,7 +167,7 @@ export interface MercadoPagoNotification {
   action?: string;
   api_version?: string;
   // CORREÇÃO DO ERRO DE 'ANY': Usamos unknown ou Record para objetos dinâmicos desconhecidos
-  data?: Record<string, unknown> | null; 
+  data?: Record<string, unknown> | null;
   date_created: string;
   id: number;
   live_mode: boolean;
