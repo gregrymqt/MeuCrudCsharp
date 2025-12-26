@@ -15,7 +15,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MeuCrudCsharp.Features.Profiles.UserAccount.Controllers
-{   
+{
     [Route("api/user-account")]
     public class UserAccountController : ApiControllerBase
     {
@@ -25,7 +25,7 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Controllers
         private readonly UserManager<Users> _userManager;
         private readonly ILogger<UserAccountController> _logger;
         private readonly IUserContext _userContext;
-        
+
 
         public UserAccountController(
             IUserAccountService userAccountService,
@@ -43,7 +43,7 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Controllers
             _logger = logger;
             _userContext = userContext;
         }
-        
+
         [HttpGet("profile-summary")]
         public async Task<IActionResult> GetProfileSummary()
         {
@@ -58,38 +58,8 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Controllers
             var cardData = new { IsAdmin = isAdmin, UserProfile = userProfile, Subscription = subscription };
             return Ok(cardData);
         }
-        
-        [HttpGet("subscription-details")]
-        public async Task<IActionResult> GetSubscriptionDetails()
-        {
-            var userId = _userContext.GetCurrentUserId().ToString() ?? throw new ArgumentException("No user id claim found");
-            var subscription = await _userAccountService.GetUserSubscriptionDetailsAsync(userId);
-            return Ok(subscription);
-        }
-        
-        [HttpPut("subscription/status")]
-        public async Task<IActionResult> UpdateSubscriptionStatus([FromBody] SubscriptionResponseDto dto)
-        {
-            try
-            {
-                var success = await _userAccountService.UpdateSubscriptionStatusAsync(dto.Status);
-                if (!success)
-                {
-                    return NotFound(new { message = "Assinatura não encontrada ou falha ao atualizar o status." });
-                }
-                return Ok(new { message = $"Assinatura atualizada para '{dto.Status}' com sucesso." });
-            }
-            catch (AppServiceException ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Erro inesperado no endpoint UpdateSubscriptionStatus.");
-                return StatusCode(500, new { message = "Ocorreu um erro inesperado." });
-            }
-        }
-        
+
+
         [HttpGet("cards")]
         public async Task<IActionResult> ListMyCards()
         {
@@ -104,7 +74,7 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
-        
+
         [HttpDelete("cards/{cardId}")]
         public async Task<IActionResult> DeleteMyCard(string cardId)
         {
@@ -124,7 +94,7 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
-        
+
         [HttpPut("subscription/card")]
         public async Task<IActionResult> ChangeSubscriptionCard([FromBody] CardRequestDto? request)
         {
@@ -143,7 +113,7 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Controllers
                 return StatusCode(500, new { message = "Ocorreu um erro inesperado." });
             }
         }
-        
+
         [HttpGet("payment-history")]
         public async Task<IActionResult> GetPaymentHistory()
         {

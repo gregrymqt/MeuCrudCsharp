@@ -1,29 +1,29 @@
 import { ApiService } from '../../../shared/services/api.service';
-import type { UserSession } from '../types/auth.types';
+import type { UserSessionDto } from '../types/auth.types';
 
 export const authService = {
   /**
-   * Redireciona para o endpoint do Backend que inicia o fluxo OAuth
+   * Redireciona para o Google Login
    */
   loginGoogle: () => {
-    // URL base do backend (C#)
-    const baseUrl = import.meta.env.VITE_GENERAL__BASEURL || 'https://localhost:5045'; 
-    window.location.href = `${baseUrl}/api/auth/google-login`; 
+    const baseUrl = import.meta.env.VITE_GENERAL__BASEURL || 'https://localhost:5045';
+    window.location.href = `${baseUrl}/api/auth/google-login`;
   },
 
   /**
-   * Busca os dados completos do usuário (Perfil + Assinatura + Pagamentos)
+   * Busca os dados LEVES do usuário (Perfil + Flags booleanas)
    * Endpoint: GET /api/auth/me
+   * Retorna: UserSessionDto (sem listas pesadas)
    */
-  getMe: async (): Promise<UserSession> => {
-    return await ApiService.get<UserSession>('/auth/me'); 
+  getMe: async (): Promise<UserSessionDto> => {
+    // O backend agora retorna apenas dados básicos e os booleanos [cite: 4, 5]
+    return await ApiService.get<UserSessionDto>('/auth/me');
   },
 
   /**
-   * Invalida o token no backend (Blacklist)
-   * Endpoint: POST /api/auth/logout
+   * Logout no servidor
    */
   logout: async (): Promise<void> => {
-    await ApiService.post('/auth/logout', {}); 
+    await ApiService.post('/auth/logout', {});
   }
 };

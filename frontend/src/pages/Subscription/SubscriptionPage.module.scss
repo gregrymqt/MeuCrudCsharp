@@ -1,0 +1,130 @@
+@use '../../styles/variables' as v;
+
+// Container principal da página
+.pageContainer {
+  padding: 1.5rem;
+  max-width: 1200px; // 
+  margin: 0 auto;
+}
+
+// Título principal
+.headerTitle {
+  color: v.$text-dark;
+  margin-bottom: 2rem;
+  font-size: 1.8rem;
+  border-bottom: 1px solid v.$border-color;
+  padding-bottom: 1rem; // [cite: 9]
+}
+
+// Grid Layout: Sidebar (esquerda) + Conteúdo (direita)
+.layoutGrid {
+  display: grid;
+  grid-template-columns: 1fr; // Mobile: Conteúdo empilhado (1 coluna)
+  gap: 2rem;
+  align-items: start;
+  position: relative;
+
+  // Configuração Desktop: Sidebar Fixa (280px) | Conteúdo Flexível
+  @include v.desktop {
+    grid-template-columns: 280px 1fr; // 
+  }
+}
+
+// Área onde o conteúdo da assinatura será renderizado
+.contentArea {
+  min-height: 400px;
+  animation: fadeIn 0.3s ease-in-out; // [cite: 12]
+}
+
+// Animação de entrada suave
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); } // [cite: 13]
+}
+
+// Utilitário para centralizar loading (retirado do inline style)
+.loadingContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 3rem;
+}
+
+// --- Estilos extraídos do Componente ---
+
+// Botão de Logout (Sidebar)
+.logoutBtn {
+  background: none;
+  border: none;
+  padding: 0;
+  color: #dc3545; // Vermelho (text-danger)
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: none;
+  transition: opacity 0.2s;
+
+  &:hover {
+    opacity: 0.8;
+    color: darken(#dc3545, 10%);
+  }
+}
+
+// Alertas (Info / Empty State)
+.infoAlert {
+  padding: 1rem 1.5rem;
+  background-color: #cff4fc; // Fundo azul claro (alert-info)
+  border: 1px solid #b6effb;
+  color: #055160;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+
+  h4 {
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+    font-size: 1.25rem;
+    font-weight: 600;
+  }
+
+  p { margin-bottom: 0; }
+}
+
+// Spinner de Carregamento
+.spinner {
+  width: 2rem;
+  height: 2rem;
+  border: 0.25em solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spinner-border 0.75s linear infinite;
+  color: v.$primary-color;
+}
+
+@keyframes spinner-border {
+  to { transform: rotate(360deg); }
+}
+
+// Utilitário para esconder texto visualmente (Acessibilidade)
+.visuallyHidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0,0,0,0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+// Container de Ações
+.actionsContainer {
+  margin-top: 1.5rem;
+}
+
+// Wrapper com animação
+.fadeIn {
+  animation: fadeIn 0.3s ease-in-out;
+}

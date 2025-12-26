@@ -114,18 +114,16 @@ namespace MeuCrudCsharp.Features.Auth.Controllers
         {
             try
             {
-                // 1. Pega o ID do usuário de dentro do Token (Claim "sub" ou ClaimTypes.NameIdentifier)
-                var userId = User.FindFirst(
-                    System.Security.Claims.ClaimTypes.NameIdentifier
-                )?.Value;
+                var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
 
-                if (string.IsNullOrEmpty(userId))
-                    return Unauthorized("Token inválido: ID do usuário não encontrado.");
+                if (string.IsNullOrEmpty(userId)) // [cite: 33]
+                    return Unauthorized("Token inválido.");
 
-                // 2. Chama o serviço para buscar os dados completos
+                // 2. Chama o serviço otimizado
+                // O retorno agora é o DTO leve com booleanos
                 var userSession = await _authService.GetAuthenticatedUserDataAsync(userId);
 
-                return Ok(userSession);
+                return Ok(userSession); // [cite: 35]
             }
             catch (ResourceNotFoundException ex)
             {

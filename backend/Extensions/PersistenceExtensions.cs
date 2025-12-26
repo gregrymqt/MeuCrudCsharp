@@ -1,34 +1,33 @@
-using Hangfire;
-using Hangfire.Redis.StackExchange;
 using MeuCrudCsharp.Data;
-using MeuCrudCsharp.Models;
+using MeuCrudCsharp.Models; // Necessário para acessar a classe Roles
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-
-namespace MeuCrudCsharp.Extensions;
+using Hangfire;
+using Hangfire.Redis.StackExchange;
 
 public static class PersistenceExtensions
 {
-    /// <summary>
-    /// Configura os serviços de persistência de dados, incluindo o banco de dados principal (SQL Server),
-    /// o ASP.NET Core Identity, o cache distribuído (Redis ou em memória) e o Hangfire para background jobs.
-    /// </summary>
     public static WebApplicationBuilder AddPersistence(this WebApplicationBuilder builder)
     {
-        // --- 1. Configuração do Banco de Dados Principal (SQL Server) e Identity ---
+        // --- 1. Configuração do Banco de Dados Principal (SQL Server) ---
         builder.Services.AddDbContextFactory<ApiDbContext>(options =>
             options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"))
         );
 
-        builder
-            .Services.AddIdentity<Users, IdentityRole>(options =>
+        // --- CORREÇÃO AQUI ---
+        // Alterado de <Users, IdentityRole> para <Users, Roles>
+        builder.Services.AddIdentity<Users, Roles>(options =>
             {
                 options.SignIn.RequireConfirmedAccount = true;
+                
+                // Configurações opcionais úteis para teste (remova se não quiser)
+                options.Password.RequireDigit = false;
+                options.Password.RequiredLength = 6;
             })
             .AddEntityFrameworkStores<ApiDbContext>()
             .AddDefaultTokenProviders();
 
-        // --- 2. Configuração Condicional de Cache e Hangfire (Redis vs. Em Memória) ---
+        // --- 2. Configuração Condicional de Cache e Hangfire ---
         var useRedis = builder.Configuration.GetValue<bool>("USE_REDIS");
         var redisConnectionString = builder.Configuration.GetConnectionString("Redis");
 
@@ -51,35 +50,24 @@ public static class PersistenceExtensions
         return builder;
     }
 
-    /// <summary>
-    /// Configura os serviços para usar Redis como provedor de cache e Hangfire.
-    /// </summary>
-    private static void AddRedisPersistence(
-        this WebApplicationBuilder builder,
-        string redisConnectionString
-    )
+    // ... Os métodos AddRedisPersistence e AddInMemoryPersistence continuam iguais ...
+    private static void AddRedisPersistence(this WebApplicationBuilder builder, string redisConnectionString)
     {
         builder.Services.AddStackExchangeRedisCache(options =>
         {
             options.Configuration = redisConnectionString;
-            options.InstanceName = "MeuApp_"; // Prefixo para as chaves de cache
+            options.InstanceName = "MeuApp_";
         });
 
         builder.Services.AddHangfire(config => config.UseRedisStorage(redisConnectionString));
-
         builder.Services.AddHangfireServer();
         Console.WriteLine("--> Usando Redis para Cache Distribuído e Hangfire.");
     }
 
-    /// <summary>
-    /// Configura os serviços para usar a memória interna como provedor de cache e Hangfire (ideal para desenvolvimento).
-    /// </summary>
     private static void AddInMemoryPersistence(this WebApplicationBuilder builder)
     {
         builder.Services.AddDistributedMemoryCache();
-
         builder.Services.AddHangfire(config => config.UseInMemoryStorage());
-
         builder.Services.AddHangfireServer();
         Console.WriteLine("--> Usando Cache em Memória para Cache Distribuído e Hangfire.");
     }

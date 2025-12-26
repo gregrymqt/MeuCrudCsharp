@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { StorageService, STORAGE_KEYS } from '../../../shared/services/storage.service';
 import { ApiError } from '../../../shared/services/api.service';
-import { authService } from '../services/auth.service'; // Importa o novo service
+import { authService } from '../services/auth.service';
 import type { UserSession } from '../types/auth.types';
 
 const AUTH_EVENT_NAME = 'greg:auth_update';
@@ -10,14 +10,14 @@ const AUTH_EVENT_NAME = 'greg:auth_update';
 export const useAuth = () => {
   const navigate = useNavigate();
 
-  // 1. ESTADO INICIAL (Cache Local)
+  // 1. ESTADO INICIAL
   const [user, setUser] = useState<UserSession | null>(() => 
-    StorageService.getItem<UserSession>(STORAGE_KEYS.USER_SESSION) 
+    StorageService.getItem<UserSession>(STORAGE_KEYS.USER_SESSION)
   );
 
   const isAuthenticated = !!user;
 
-  // 2. REATIVIDADE (Sincroniza abas e eventos de login/logout)
+  // 2. REATIVIDADE (Sincroniza abas)
   useEffect(() => {
     const handleAuthChange = () => {
       const updatedUser = StorageService.getItem<UserSession>(STORAGE_KEYS.USER_SESSION);
@@ -25,7 +25,7 @@ export const useAuth = () => {
     };
 
     window.addEventListener(AUTH_EVENT_NAME, handleAuthChange);
-    window.addEventListener('storage', handleAuthChange); 
+    window.addEventListener('storage', handleAuthChange);
 
     return () => {
       window.removeEventListener(AUTH_EVENT_NAME, handleAuthChange);
@@ -38,21 +38,27 @@ export const useAuth = () => {
    */
   const handleGoogleCallback = useCallback(async (token: string) => {
     try {
-      // 1. Salva o Token recebido na URL
+      // 1. Salva Token
       StorageService.setItem(STORAGE_KEYS.TOKEN, token);
 
-      // 2. Busca os dados completos no Backend (User + Subscription + Payments)
-      const fullUserData = await authService.getMe();
+      // 2. Busca dados otimizados (Agora vem rápido e leve)
+      const userDto = await authService.getMe();
 
-      // 3. CACHE: Salva TUDO no Storage (Preenche o "cookie" do front)
-      StorageService.setItem(STORAGE_KEYS.USER_SESSION, fullUserData); 
+      // 3. Monta sessão (Junta DTO + Token se quiser persistir junto)
+      const sessionData: UserSession = {
+        ...userDto,
+        token // Opcional, já que salvamos na chave TOKEN acima
+      };
+
+      // 4. Salva no Storage
+      StorageService.setItem(STORAGE_KEYS.USER_SESSION, sessionData);
       
-      // 4. Avisa a aplicação que o usuário mudou
+      // 5. Notifica app
       window.dispatchEvent(new Event(AUTH_EVENT_NAME)); 
-
       navigate('/', { replace: true });
+
     } catch (error) {
-      console.error("Erro ao processar login Google", error);
+      console.error("Erro no login Google:", error);
       navigate('/login?error=google_failed');
     }
   }, [navigate]);
@@ -62,48 +68,37 @@ export const useAuth = () => {
    */
   const logout = useCallback(async () => {
     try {
-      // Tenta invalidar no backend (Blacklist)
-      await authService.logout(); 
+      await authService.logout();
     } catch (error) {
-      console.error("Erro logout server (ignorando para limpar local):", error); 
+      // Ignora erro de rede no logout
     } finally {
-      // Sempre limpa o front, mesmo se o server falhar
-      StorageService.clear(); 
+      StorageService.clear();
       window.dispatchEvent(new Event(AUTH_EVENT_NAME));
       navigate('/login');
     }
   }, [navigate]);
 
   /**
-   * REFRESH SESSION (Ex: Ao recarregar a página)
+   * REFRESH SESSION
+   * Útil para atualizar as flags (ex: acabou de assinar, hasActiveSubscription vira true)
    */
   const refreshSession = async () => {
     try {
-      const freshUser = await authService.getMe(); 
-      
+      const freshData = await authService.getMe();
       const currentUser = StorageService.getItem<UserSession>(STORAGE_KEYS.USER_SESSION);
-      // Mescla segura para não perder campos locais se houver
-      const newSession = { ...currentUser, ...freshUser }; 
+      
+      // Atualiza mantendo o token existente se ele não vier do getMe
+      const newSession: UserSession = {
+        ...currentUser, // Mantém token antigo
+        ...freshData,   // Sobrescreve dados e flags [cite: 17]
+      };
 
-      StorageService.setItem(STORAGE_KEYS.USER_SESSION, newSession); 
+      StorageService.setItem(STORAGE_KEYS.USER_SESSION, newSession);
       window.dispatchEvent(new Event(AUTH_EVENT_NAME));
     } catch (error: unknown) {
       if (error instanceof ApiError && error.status === 401) {
-        logout(); 
+        logout();
       }
-    }
-  };
-
-  /**
-   * UPDATE USER (Atualização Otimista/Parcial)
-   */
-  const updateUser = async (data: Partial<UserSession>) => { // Ajustado para Partial
-    const currentUser = StorageService.getItem<UserSession>(STORAGE_KEYS.USER_SESSION);
-    if (currentUser) {
-      const newSession = { ...currentUser, ...data } as UserSession;
-      StorageService.setItem(STORAGE_KEYS.USER_SESSION, newSession);
-      window.dispatchEvent(new Event(AUTH_EVENT_NAME));
-      return newSession;
     }
   };
 
@@ -111,9 +106,8 @@ export const useAuth = () => {
     user,
     isAuthenticated,
     logout,
-    updateUser,
     refreshSession,
-    loginGoogle: authService.loginGoogle, // Passa direto do service [cite: 19]
+    loginGoogle: authService.loginGoogle,
     handleGoogleCallback
   };
 };

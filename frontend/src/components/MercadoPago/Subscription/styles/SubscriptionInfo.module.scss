@@ -1,0 +1,54 @@
+@use '../../../../styles/variables' as v; // Ajuste o caminho
+
+.dataGrid {
+  display: grid;
+  grid-template-columns: 1fr; // Mobile First: 1 coluna
+  gap: 1rem;
+  margin-top: 0.5rem;
+
+  // Desktop
+  @include v.desktop {
+    grid-template-columns: repeat(2, 1fr); // 2 Colunas
+  }
+}
+
+.dataItem {
+  display: flex;
+  flex-direction: column;
+
+  label {
+    font-size: 0.85rem;
+    color: v.$secondary-color; // [cite: 15]
+    margin-bottom: 0.2rem;
+    font-weight: 600;
+  }
+
+  span {
+    font-size: 1rem;
+    color: v.$text-dark;
+    font-weight: 500;
+  }
+}
+
+// Badges
+.badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 50px;
+  font-size: 0.85rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  width: fit-content;
+
+  &.active, &.authorized {
+    background-color: #d4edda;
+    color: #155724; // [cite: 17]
+  }
+  &.paused {
+    background-color: #fff3cd;
+    color: #856404; // [cite: 18]
+  }
+  &.cancelled {
+    background-color: #f8d7da;
+    color: #721c24;
+  }
+}

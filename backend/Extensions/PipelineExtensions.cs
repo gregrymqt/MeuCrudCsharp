@@ -68,15 +68,19 @@ public static class PipelineExtensions
     private static async Task SeedInitialRoles(IApplicationBuilder app)
     {
         using var scope = app.ApplicationServices.CreateScope();
-        var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+
+        // CORREÇÃO AQUI: Mudamos de RoleManager<IdentityRole> para RoleManager<Roles>
+        var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<Roles>>();
 
         string[] roles = { AppRoles.Admin, AppRoles.User, AppRoles.Manager };
 
-        foreach (var role in roles)
+        foreach (var roleName in roles)
         {
-            if (!await roleManager.RoleExistsAsync(role))
+            // Verifica se a role existe
+            if (!await roleManager.RoleExistsAsync(roleName))
             {
-                await roleManager.CreateAsync(new IdentityRole(role));
+                // CORREÇÃO AQUI: Instanciamos 'Roles' em vez de 'IdentityRole'
+                await roleManager.CreateAsync(new Roles(roleName));
             }
         }
     }

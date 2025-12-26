@@ -49,6 +49,13 @@ public class SubscriptionRepository : ISubscriptionRepository
             .FirstOrDefaultAsync();
     }
 
+    public async Task<Subscription?> GetActiveSubscriptionByUserIdAsync(string userId) =>
+        await _context
+            .Subscriptions.Include(s => s.Plan) // Incluir o plano é importante para os detalhes
+            .FirstOrDefaultAsync(s =>
+                s.UserId == userId && (s.Status == "active" || s.Status == "paused")
+            );
+
     public void Remove(Subscription subscription)
     {
         _context.Subscriptions.Remove(subscription);
@@ -57,5 +64,16 @@ public class SubscriptionRepository : ISubscriptionRepository
     public async Task<int> SaveChangesAsync()
     {
         return await _context.SaveChangesAsync();
+    }
+
+    public Task<bool> HasActiveSubscriptionByUserIdAsync(string userId)
+    {
+        return _context.Subscriptions
+            .AsNoTracking()
+            .AnyAsync(s =>
+                s.UserId == userId &&
+                s.CurrentPeriodEndDate > DateTime.UtcNow && // [cite: 8]
+                (s.Status == "paid" || s.Status == "authorized") // [cite: 8, 38]
+            );
     }
 }

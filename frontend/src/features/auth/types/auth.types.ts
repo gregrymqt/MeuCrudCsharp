@@ -1,14 +1,16 @@
-import { type User, AppRoles } from "../../../types/models";
+// Define o formato exato que vem do Backend (C#)
+// UserSessionDto [cite: 1]
+export interface UserSessionDto {
+  publicId: string; // Mapeado de Guid [cite: 1]
+  name: string;
+  email: string;
+  avatarUrl: string;
+  roles: string[];
+  hasActiveSubscription: boolean; // 
+  hasPaymentHistory: boolean;     // [cite: 5]
+}
 
-/**
- * UserSession: O "Documento Completo"
- * Estende a interface User (do models.ts) para herdar TODA a estrutura do banco.
- * Adiciona apenas os campos técnicos de sessão (tokens e roles).
- */
-export interface UserSession extends User {
-  // Controle de Acesso e Sessão (Não estão na tabela Users, mas vêm no Login)
-  token: string;          // JWT
-  refreshToken?: string;  // Para renovar sem logar de novo
-  roles: AppRoles[];      // Lista de permissões (Admin, User, etc.)
-  expiration?: string;    // Data de validade do token
+// Interface usada no Front (pode incluir token se você mesclar no login)
+export interface UserSession extends UserSessionDto {
+  token?: string; // Mantemos opcional pois o token pode estar apenas no Storage separado
 }

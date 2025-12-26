@@ -2,7 +2,6 @@ namespace MeuCrudCsharp.Features.MercadoPago.Subscriptions.DTOs;
 
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
-using Payments.Dtos; // Usado por SubscriptionWithCardRequestDto
 
 /// <summary>
 /// Representa os dados necessários para criar uma nova assinatura com o provedor de pagamentos.
@@ -98,3 +97,4 @@ public record UpdateSubscriptionValueDto(
     [Required(ErrorMessage = "O ID da moeda é obrigatório.")]
     string CurrencyId = "BRL" // O valor padrão pode ser definido diretamente no construtor do record
 );
+

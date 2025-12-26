@@ -12,7 +12,11 @@ public interface ISubscriptionRepository
         bool asNoTracking = true
     );
 
+    Task<Subscription?> GetActiveSubscriptionByUserIdAsync(string userId);
+
     Task<Subscription?> GetActiveByUserIdAsync(string userId);
+
+    Task<bool> HasActiveSubscriptionByUserIdAsync(string userId);
     Task<int> SaveChangesAsync();
 
     void Remove(Subscription subscription);

@@ -1,25 +1,28 @@
-import { Navigate, Outlet } from 'react-router-dom';
-import { useAuth } from '../features/auth/hooks/useAuth';
-import { AppRoles } from '../types/models';
+import { Navigate, Outlet } from "react-router-dom";
+import { useAuth } from "../features/auth/hooks/useAuth";
+import { AppRoles } from "../types/models";
 
 export const SubscriptionRoute = () => {
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
 
-  // 1. Regra de Admin: Se for Admin, libera tudo (VIP)
+  // Segurança extra: se não estiver logado, manda pro login
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // 1. Admin sempre passa (Regra VIP)
+  // Precisamos das roles no DTO para isso funcionar
   const isAdmin = user?.roles?.includes(AppRoles.Admin);
 
-  // 2. Regra de Assinatura:
-  // Verifica se existe subscription E se o status é válido
-  // Baseado no seu código anterior, status 'active' ou 'authorized' liberam acesso
-  const hasActiveSubscription = 
-    user?.subscription && 
-    (user.subscription.status === 'active' || user.subscription.status === 'authorized');
+  // 2. Verificação Otimizada
+  // Em vez de checar user.subscription.status, usamos apenas o booleano 
+  const hasAccess = user?.hasActiveSubscription;
 
-  // Lógica de Decisão
-  if (isAdmin || hasActiveSubscription) {
+  // Lógica: Admin OU Assinante Ativo
+  if (isAdmin || hasAccess) {
     return <Outlet />;
   }
 
-  // Se não tiver assinatura, manda para a tela de Planos (Upsell)
+  // Se falhar, manda para a vitrine de planos (Upsell)
   return <Navigate to="/plans" replace />;
 };

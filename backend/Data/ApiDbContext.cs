@@ -9,7 +9,7 @@ namespace MeuCrudCsharp.Data
     /// Contexto de dados da aplicação baseado em ASP.NET Identity.
     /// Expõe os conjuntos de entidades e integra com o Identity para autenticação e usuários.
     /// </summary>
-    public class ApiDbContext : IdentityDbContext<Users>
+    public class ApiDbContext : IdentityDbContext<Users, Roles, string>
     {
         /// <summary>
         /// Inicializa uma nova instância do contexto com as opções fornecidas.

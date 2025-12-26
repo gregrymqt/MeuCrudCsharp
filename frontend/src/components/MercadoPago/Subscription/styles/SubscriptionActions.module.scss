@@ -1,0 +1,58 @@
+@use '../../../../styles/variables' as v;
+
+.actionText {
+  color: v.$secondary-color;
+  margin-bottom: 1rem;
+}
+
+.actionsWrapper {
+  display: flex;
+  flex-direction: column; // Mobile First
+  gap: 1rem;
+  width: 100%;
+
+  @include v.desktop {
+    flex-direction: row; // Desktop lado a lado
+    align-items: center;
+  }
+}
+
+// Botões Específicos (estilização extra sobre seus botões padrão se necessário)
+.btnAction {
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.2s;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  &.pause {
+    background-color: #ffc107;
+    color: #212529;
+  }
+
+  &.reactivate {
+    background-color: v.$primary-color; // [cite: 42]
+    color: white;
+  }
+
+  &.cancel {
+    background-color: transparent;
+    border: 1px solid #dc3545; // [cite: 44]
+    color: #dc3545;
+    
+    &:hover:not(:disabled) {
+      background-color: #dc3545;
+      color: white;
+    }
+  }
+}

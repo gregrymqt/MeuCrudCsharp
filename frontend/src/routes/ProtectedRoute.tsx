@@ -1,31 +1,31 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
-import { AppRoles } from '../types/models'; // Seus Enums
 import { useAuth } from '../features/auth/hooks/useAuth';
+import { AppRoles } from '../types/models'; // Ajuste o caminho se necessário
 
+// --- PROTECTED ROUTE (Baseada em Autenticação e Roles) ---
 interface ProtectedRouteProps {
-  allowedRoles?: AppRoles[]; // Array de roles permitidas (Opcional)
+  allowedRoles?: AppRoles[];
 }
 
 export const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
   const { user, isAuthenticated } = useAuth();
   const location = useLocation();
 
-  // 1. Verificação Básica: Está logado?
+  // 1. Verificação de Autenticação
   if (!isAuthenticated) {
-    // Redireciona para login, mas salva onde ele queria ir (state)
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // 2. Verificação de Role (Se a rota exigir roles específicas)
+  // 2. Verificação de Permissão (Roles)
+  // Agora acessamos user.roles, que deve ser adicionado ao DTO
   if (allowedRoles && allowedRoles.length > 0) {
-    // Verifica se o usuário tem ALGUMA das roles permitidas
-    const hasPermission = user?.roles.some(role => allowedRoles.includes(role));
-
+    // Se o usuário não tiver roles ou não tiver a role necessária
+    const hasPermission = user?.roles?.some(role => allowedRoles.includes(role as AppRoles));
+    
     if (!hasPermission) {
       return <Navigate to="/acesso-negado" replace />;
     }
   }
 
-  // 3. Tudo certo? Renderiza o conteúdo (Outlet)
   return <Outlet />;
 };
