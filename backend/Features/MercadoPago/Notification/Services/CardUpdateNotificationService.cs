@@ -99,7 +99,8 @@ public class CardUpdateNotificationService : ICardUpdateNotificationService
         var viewModel = new CardUpdateEmailViewModel(
             UserName: user.Name,
             LastFourDigits: lastFourDigits,
-            AccountUrl: $"{_generalSettings.BaseUrl}/Profile/User/index.cshtml"
+            // Digamos que no React a rota seja: <Route path="/perfil" ... />
+            AccountUrl: $"{_generalSettings.FrontendUrl}/perfil"
         );
 
         await SendEmailFromTemplateAsync(

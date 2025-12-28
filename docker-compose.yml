@@ -3,12 +3,10 @@ services:
   redis:
     image: "redis:alpine"
     container_name: redis-cache
-    # Comando vital: Ativa o Append Only File (Persistência segura)
     command: redis-server --appendonly yes
     ports:
       - "6379:6379"
     volumes:
-      # Mapeia a pasta do Redis para o seu host, garantindo que o AOF seja salvo
       - ./redis-data:/data
     restart: always
 
@@ -24,17 +22,29 @@ services:
     volumes:
       - sql-server-data:/var/opt/mssql
     healthcheck:
-      # Usando o script de healthcheck oficial da Microsoft
       test: ["CMD", "/opt/mssql-tools18/bin/sqlcmd", "-S", "127.0.0.1,1433", "-U", "sa", "-P", "Opala@1704.Test!", "-Q", "SELECT 1", "-C"]   
       interval: 20s
       timeout: 15s
       retries: 10
-      start_period: 120s # Tempo de inicialização longo para seu notebook
+      start_period: 120s
+
+  # --- NOVO: Serviço do MongoDB ---
+  mongo-db:
+    image: mongo:latest
+    container_name: mongo-db
+    restart: always
+    ports:
+      - "27017:27017" # Porta padrão do Mongo
+    volumes:
+      - mongo-data:/data/db # Volume para persistir os dados
+    # Se quiser autenticação (opcional para dev local), descomente as linhas abaixo:
+    # environment:
+    #   MONGO_INITDB_ROOT_USERNAME: admin
+    #   MONGO_INITDB_ROOT_PASSWORD: password123
 
   # --- Serviço da sua Aplicação Web ---
   webapp:
     container_name: backend-api
-    # Aponta para a pasta backend onde está o Dockerfile do C#
     build: 
       context: ./backend
       dockerfile: Dockerfile
@@ -44,25 +54,31 @@ services:
       - .env
     environment:
       - ASPNETCORE_URLS=http://+:8080
-      # Lendo todas as variáveis do .env para dentro do container
-      - ConnectionStrings__DefaultConnection=\${ConnectionStrings__DefaultConnection}
-      - ConnectionStrings__Redis=\${ConnectionStrings__Redis}
-      - MercadoPago__AccessToken=\${MercadoPago__AccessToken}
-      - MercadoPago__WebhookSecret=\${MercadoPago__WebhookSecret}
-      - MercadoPago__PublicKey=\${MercadoPago__PublicKey}
-      - Jwt__Key=\${Jwt__Key}
-      - Google__ClientId=\${Google__ClientId}
-      - Google__ClientSecret=\${Google__ClientSecret}
-      - SendGrid__ApiKey=\${SendGrid__ApiKey}
-      - SendGrid__FromEmail=\${SendGrid__FromEmail}
-      - SendGrid__FromName=\${SendGrid__FromName}
-      - General__BaseUrl=\${GENERAL_BASEURL}
-      - USE_REDIS=\${USE_REDIS}
+      # --- Configurações de Banco de Dados ---
+      - ConnectionStrings__DefaultConnection=${ConnectionStrings__DefaultConnection}
+      # AQUI: A string de conexão aponta para o nome do container "mongo-db"
+      - ConnectionStrings__MongoConnection=mongodb://mongo-db:27017
+      - ConnectionStrings__Redis=${ConnectionStrings__Redis}
+      # --- Configurações Externas ---
+      - MercadoPago__AccessToken=${MercadoPago__AccessToken}
+      - MercadoPago__WebhookSecret=${MercadoPago__WebhookSecret}
+      - MercadoPago__PublicKey=${MercadoPago__PublicKey}
+      - Jwt__Key=${Jwt__Key}
+      - Google__ClientId=${Google__ClientId}
+      - Google__ClientSecret=${Google__ClientSecret}
+      - SendGrid__ApiKey=${SendGrid__ApiKey}
+      - SendGrid__FromEmail=${SendGrid__FromEmail}
+      - SendGrid__FromName=${SendGrid__FromName}
+      - General__BaseUrl=${GENERAL_BASEURL}
+      - USE_REDIS=${USE_REDIS}
     depends_on:
       redis:
         condition: service_started
       sql-server-db:
         condition: service_healthy
+      # O backend agora espera o Mongo iniciar também
+      mongo-db:
+        condition: service_started
     volumes:
       - ./uploads:/app/wwwroot/uploads
       - ./logs:/app/logs    
@@ -73,14 +89,14 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-      # Passamos a variavel de build para o Vite "assar" ela no HTML/JS
       args:
         - VITE_GENERAL_BASEURL=${GENERAL_BASEURL} 
     ports:
-      - "5173:80"  # <--- AQUI: Acesso externo 5173 -> Interno 80
+      - "5173:80"
     depends_on:
       - webapp      
 
-# --- Definição do Volume (para persistir os dados do SQL) ---
+# --- Definição dos Volumes ---
 volumes:
   sql-server-data:
+  mongo-data: # Volume criado para o Mongo

@@ -7,11 +7,12 @@ namespace MeuCrudCsharp.Features.Hubs
     /// Serviço genérico que mantém um mapeamento bidirecional entre uma Chave <T>
     /// e as conexões do SignalR associadas a ela.
     /// </summary>
-    public class ConnectionMapping<T> where T : notnull
+    public class ConnectionMapping<T>
+        where T : notnull
     {
         // Mapeia Chave -> Conjunto de ConnectionIds
         private readonly ConcurrentDictionary<T, HashSet<string>> _keyToConnections = new();
-        
+
         // Mapeia ConnectionId -> Chave
         private readonly ConcurrentDictionary<string, T> _connectionToKey = new();
 
@@ -21,7 +22,7 @@ namespace MeuCrudCsharp.Features.Hubs
         public void Add(T key, string connectionId)
         {
             _connectionToKey.TryAdd(connectionId, key);
-            
+
             var connections = _keyToConnections.GetOrAdd(key, _ => new HashSet<string>());
             lock (connections)
             {
@@ -42,7 +43,9 @@ namespace MeuCrudCsharp.Features.Hubs
         /// </summary>
         public IEnumerable<string> GetConnections(T key)
         {
-            return _keyToConnections.TryGetValue(key, out var connections) ? connections : Enumerable.Empty<string>();
+            return _keyToConnections.TryGetValue(key, out var connections)
+                ? connections
+                : Enumerable.Empty<string>();
         }
 
         /// <summary>

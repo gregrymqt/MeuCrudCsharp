@@ -1,8 +1,7 @@
-import { useState } from 'react';
-import { useAuth } from '../../auth/hooks/useAuth'; // Seu hook de auth
-import { ProfileService } from '../services/profile.service';
-import { ApiError } from '../../../shared/services/api.service';
-import type { UserSession } from '../../auth/types/auth.types';
+import { useState } from "react";
+import { useAuth } from "../../auth/hooks/useAuth"; // Seu hook de auth
+import { ProfileService } from "../services/profile.service";
+import { ApiError } from "../../../shared/services/api.service";
 
 interface AvatarFormData {
   file: FileList; // React Hook Form retorna FileList para inputs do tipo 'file'
@@ -10,7 +9,7 @@ interface AvatarFormData {
 
 export const useAvatarUpdate = () => {
   const [isLoading, setIsLoading] = useState(false);
-  const { user ,updateUser } = useAuth(); // Pega a função que atualiza o cookie [cite: 1]
+  const { user, refreshSession } = useAuth(); // Pega a função que atualiza o cookie [cite: 1]
 
   const updateAvatar = async (data: AvatarFormData) => {
     if (!user) return;
@@ -25,22 +24,20 @@ export const useAvatarUpdate = () => {
 
       // 1. Preparar o FormData
       const formData = new FormData();
-      formData.append('avatar', data.file[0]); // Pega o primeiro arquivo
+      formData.append("avatar", data.file[0]); // Pega o primeiro arquivo
 
       // 2. Enviar para API
-      const response = await ProfileService.updateAvatar(formData);
+      await ProfileService.updateAvatar(formData);
 
       // 3. Atualizar a Sessão Local (Cookie/Storage) com a nova URL retornada
-      // A função updateUser mescla os dados, então passamos apenas o que mudou [cite: 2]
-      const userData = { ...user, avatarUrl: response.avatarUrl };
-      await updateUser(userData as UserSession);
+      // A função refreshSession atualiza o cookie com os dados do usuário
+      await refreshSession();
 
-      alert('Foto de perfil atualizada com sucesso!');
-      
+      alert("Foto de perfil atualizada com sucesso!");
     } catch (error) {
-      if(error instanceof ApiError)  {
-      console.error(error);
-      alert(error.message || "Erro ao atualizar foto.");
+      if (error instanceof ApiError) {
+        console.error(error);
+        alert(error.message || "Erro ao atualizar foto.");
       }
     } finally {
       setIsLoading(false);

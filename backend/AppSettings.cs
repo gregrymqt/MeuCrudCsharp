@@ -2,6 +2,7 @@ public class GeneralSettings
 {
     public const string SectionName = "GENERAL";
     public string? BaseUrl { get; set; }
+    public string? FrontendUrl { get; set; }
 }
 
 public class MercadoPagoSettings

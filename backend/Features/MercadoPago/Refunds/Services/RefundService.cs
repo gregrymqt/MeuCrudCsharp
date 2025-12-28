@@ -4,7 +4,6 @@ using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.MercadoPago.Base;
 using MeuCrudCsharp.Features.MercadoPago.Refunds.DTOs;
 using MeuCrudCsharp.Features.MercadoPago.Refunds.Interfaces;
-using MeuCrudCsharp.Features.User.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Refunds.Services

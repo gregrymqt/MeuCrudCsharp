@@ -6,7 +6,6 @@ import { MainLayout } from "../components/layout/MainLayout";
 import { AccessDenied } from "../pages/AccessDenied/AccessDenied";
 import { GoogleCallbackPage } from "../features/auth/components/GoogleCallbackPage";
 import { Home } from "../pages/Home/Home";
-import { ProfileDashboard } from "../features/profile/pages/ProfileDashboard";
 import { AdminCourseManager } from "../features/admin/Courses/components/AdminCourseManager";
 import { AdminProfile } from "../pages/Admin/AdminProfile";
 import { GoogleLoginButton } from "../features/auth/pages/GoogleLoginButton";
@@ -19,6 +18,9 @@ import { ChargebackManager } from "../pages/ChargeBack/ChargebackManager";
 import { WalletPage } from "../pages/Wallet/WalletPage";
 import { TransactionsPage } from "../pages/Transactions/TransactionsPage";
 import { SubscriptionPage } from "../pages/Subscription/SubscriptionPage";
+import { ProfileDashboard } from "../pages/Profile/ProfileDashboard";
+import { CreateSupportPage } from "../pages/Support/CreateSupportPage";
+import { SupportAdminPage } from "../pages/Support/SupportAdminPage";
 
 export const AppRoutes = () => {
   return (
@@ -49,6 +51,7 @@ export const AppRoutes = () => {
         </Route>
 
         <Route path="/acesso-negado" element={<AccessDenied />} />
+        <Route path="/suporte/novo" element={<CreateSupportPage />} />
 
         {/* Nível 2: Apenas ADMIN */}
         <Route element={<ProtectedRoute allowedRoles={[AppRoles.Admin]} />}>
@@ -56,6 +59,7 @@ export const AppRoutes = () => {
           <Route path="/admin/cursos" element={<AdminCourseManager />} />
           <Route path="/admin/reclamacoes" element={<AdminClaimsPage />} />
           <Route path="/admin/contestacoes" element={<ChargebackManager />} />
+          <Route path="/admin/suporte" element={<SupportAdminPage />} />
         </Route>
 
         {/* Nível 3: Manager OU Admin */}

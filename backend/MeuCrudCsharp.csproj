@@ -34,6 +34,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="8.0.4" />
+    <PackageReference Include="MongoDB.Driver" Version="3.5.2" />
     
     <!-- Pacotes de terceiros (Scrutor, SendGrid, etc.) que são compatíveis -->
     <PackageReference Include="Scrutor" Version="6.1.0" />
@@ -48,15 +49,25 @@
 
   <ItemGroup>
     <!-- Suas pastas permanecem iguais -->
+    <Folder Include="Documents\Attributes\" />
+    <Folder Include="Documents\Interfaces\" />
     <Folder Include="Features/Auth/Controllers/" />
     <Folder Include="Features/Auth/Dtos/" />
     <Folder Include="Features/Auth/Middlewares/" />
     <Folder Include="Features/MercadoPago/Payments/Repositories/" />
     <Folder Include="Features/Security/" />
     <Folder Include="Features/Videos/Repositories/" />
+    <Folder Include="Features\Courses\Repositories\" />
     <Folder Include="Features\MercadoPago\Chargebacks\Controllers\" />
     <Folder Include="Features\MercadoPago\Chargebacks\Interfaces\" />
     <Folder Include="Features\MercadoPago\Clients\Controllers\" />
+    <Folder Include="Features\Profiles\Admin\Repositories\" />
+    <Folder Include="Features\Support\Controllers\" />
+    <Folder Include="Features\Support\DTOs\" />
+    <Folder Include="Features\Support\Interfaces\" />
+    <Folder Include="Features\Support\Repositories\" />
+    <Folder Include="Features\Support\Services\" />
+    <Folder Include="Features\Support\Utils\" />
     <Folder Include="Log\" />
     <Folder Include="Migrations\" />
     <Folder Include="wwwroot\videos\" />

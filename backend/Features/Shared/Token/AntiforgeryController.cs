@@ -1,3 +1,4 @@
+using MeuCrudCsharp.Features.Base;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Mvc;
 
@@ -5,7 +6,7 @@ namespace MeuCrudCsharp.Features.Shared.Token;
 
 [ApiController]
 [Route("api/antiforgery")]
-public class AntiforgeryController : ControllerBase
+public class AntiforgeryController : ApiControllerBase
 {
     private readonly IAntiforgery _antiforgery;
 
@@ -24,11 +25,12 @@ public class AntiforgeryController : ControllerBase
         var tokens = _antiforgery.GetAndStoreTokens(HttpContext);
 
         // Envia o token que o JavaScript precisa colocar no cabeçalho
-        return Ok(new
-        {
-            token = tokens.RequestToken,
-            headerName = tokens.HeaderName // O nome do header que o ASP.NET Core espera
-        });
+        return Ok(
+            new
+            {
+                token = tokens.RequestToken,
+                headerName = tokens.HeaderName, // O nome do header que o ASP.NET Core espera
+            }
+        );
     }
 }
-

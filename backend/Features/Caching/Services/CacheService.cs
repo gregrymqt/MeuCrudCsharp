@@ -141,7 +141,7 @@ public class CacheService : ICacheService
             // Define o tempo de vida (Janela de tempo do Rate Limit)
             // Obs: Nesta implementação simples, a janela "renova" a cada request (Sliding Window).
             // Isso é bom para segurança: se o usuário continuar floodando, ele nunca sai do castigo.
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(expirationSeconds)
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(expirationSeconds),
         };
 
         await _cache.SetStringAsync(key, count.ToString(), options);

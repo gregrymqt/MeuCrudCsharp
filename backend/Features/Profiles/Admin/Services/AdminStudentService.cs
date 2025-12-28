@@ -1,43 +1,27 @@
-﻿using MeuCrudCsharp.Data;
-using MeuCrudCsharp.Features.Caching.Interfaces;
+﻿using MeuCrudCsharp.Features.Caching.Interfaces;
 using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.Profiles.Admin.Dtos;
 using MeuCrudCsharp.Features.Profiles.Admin.Interfaces;
-using Microsoft.EntityFrameworkCore;
 
 namespace MeuCrudCsharp.Features.Profiles.Admin.Services
 {
-    /// <summary>
-    /// Implements <see cref="IAdminStudentService"/> to provide administrative functionalities for student profiles.
-    /// </summary>
     public class AdminStudentService : IAdminStudentService
     {
-        private readonly ApiDbContext _context;
+        private readonly IStudentRepository _repository; // <--- Mudou aqui
         private readonly ICacheService _cacheService;
         private readonly ILogger<AdminStudentService> _logger;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="AdminStudentService"/> class.
-        /// </summary>
-        /// <param name="context">The database context.</param>
-        /// <param name="cacheService">The caching service for performance optimization.</param>
-        /// <param name="logger">The logger for recording events and errors.</param>
         public AdminStudentService(
-            ApiDbContext context,
+            IStudentRepository repository, // <--- Injeção do Repository
             ICacheService cacheService,
             ILogger<AdminStudentService> logger
         )
         {
-            _context = context;
+            _repository = repository;
             _cacheService = cacheService;
             _logger = logger;
         }
 
-        /// <inheritdoc />
-        /// <remarks>
-        /// This method caches the list of students for 5 minutes to improve performance
-        /// on repeated requests.
-        /// </remarks>
         public async Task<PaginatedResult<StudentDto>> GetAllStudentsAsync(int page, int pageSize)
         {
             string cacheKey = $"Admin_AllStudents_Page{page}_Size{pageSize}";
@@ -52,8 +36,13 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Services
                             "Buscando a lista de alunos do banco de dados (cache miss)."
                         );
 
-                        var totalCount = await _context.Users.AsNoTracking().CountAsync();
+                        // Chamada ao Repositório
+                        var (users, totalCount) = await _repository.GetAllWithSubscriptionsAsync(
+                            page,
+                            pageSize
+                        );
 
+                        // Se não tiver registros, retorna vazio
                         if (totalCount == 0)
                         {
                             return new PaginatedResult<StudentDto>
@@ -65,38 +54,31 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Services
                             };
                         }
 
-                        var students = await _context
-                            .Users.AsNoTracking()
-                            .Include(u => u.Subscription)
-                            .ThenInclude(s => s.Plan)
-                            .OrderBy(u => u.Name)
-                            // ALTERADO: Aplica a paginação na consulta do banco de dados
-                            .Skip((page - 1) * pageSize)
-                            .Take(pageSize)
+                        // Mapeamento (Entity -> DTO)
+                        var studentDtos = users
                             .Select(u => new StudentDto(
                                 u.PublicId.ToString(),
                                 u.Name,
                                 u.Email,
                                 u.Subscription != null ? u.Subscription.Status : "Sem Assinatura",
-                                u.Subscription != null ? u.Subscription.Plan.Name : "N/A",
+                                u.Subscription?.Plan != null ? u.Subscription.Plan.Name : "N/A",
                                 u.CreatedAt,
                                 u.Subscription != null ? u.Subscription.Id : "Sem Assinatura"
                             ))
-                            .ToListAsync();
+                            .ToList();
 
-                        // 3. Monta o objeto de resultado
+                        // Monta o objeto de resultado
                         return new PaginatedResult<StudentDto>
                         {
-                            Items = students,
+                            Items = studentDtos,
                             TotalCount = totalCount,
                             CurrentPage = page,
-                            // Calcula o número total de páginas
                             TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize),
                         };
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError(ex, "Falha ao buscar o aluno no banco de dados.");
+                        _logger.LogError(ex, "Falha ao buscar os alunos no repositório.");
                         throw new AppServiceException(
                             "An error occurred while querying student data.",
                             ex
@@ -111,13 +93,10 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Services
         {
             try
             {
-                _logger.LogInformation("Buscando o alunos pelo id no banco de dados (cache miss).");
+                _logger.LogInformation("Buscando o aluno pelo id no banco de dados (cache miss).");
 
-                var user = await _context
-                    .Users.AsNoTracking()
-                    .Include(users => users.Subscription)
-                    .ThenInclude(s => s.Plan)
-                    .SingleOrDefaultAsync(u => u.PublicId == id);
+                // Chamada ao Repositório
+                var user = await _repository.GetByPublicIdWithSubscriptionAsync(id);
 
                 if (user == null)
                 {
@@ -125,6 +104,7 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Services
                     throw new KeyNotFoundException($"Aluno com ID {id} não encontrado.");
                 }
 
+                // Mapeamento (Entity -> DTO)
                 var studentDto = new StudentDto(
                     user.PublicId.ToString(),
                     user.Name,
@@ -139,7 +119,7 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Falha ao buscar o aluno no banco de dados.");
+                _logger.LogError(ex, "Falha ao buscar o aluno no repositório.");
                 throw new AppServiceException("An error occurred while querying student data.", ex);
             }
         }

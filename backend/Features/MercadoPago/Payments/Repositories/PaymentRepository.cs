@@ -17,15 +17,16 @@ public class PaymentRepository : IPaymentRepository
     public async Task<bool> HasAnyPaymentByUserIdAsync(string userId)
     {
         // Gera um "SELECT 1 ... LIMIT 1", muito performático
-        return await _context.Payments
-            .AsNoTracking()
-            .AnyAsync(p => p.UserId == userId);
+        return await _context.Payments.AsNoTracking().AnyAsync(p => p.UserId == userId);
     }
 
-    public async Task<List<Models.Payments>> GetPaymentsByUserIdAndTypeAsync(string userId, string? method = null)
+    public async Task<List<Models.Payments>> GetPaymentsByUserIdAndTypeAsync(
+        string userId,
+        string? method = null
+    )
     {
-        var query = _context.Payments
-            .AsNoTracking() // Leitura rápida sem trackear mudanças
+        var query = _context
+            .Payments.AsNoTracking() // Leitura rápida sem trackear mudanças
             .Where(p => p.UserId == userId);
 
         if (!string.IsNullOrEmpty(method))

@@ -1,18 +1,19 @@
+using System.Reflection;
 using Hangfire;
 using MeuCrudCsharp.Data;
+using MeuCrudCsharp.Documents.Attributes; // <--- CERTIFIQUE-SE QUE ESTE USING APONTA PARA ONDE CRIOU O ATRIBUTO
+using MeuCrudCsharp.Documents.Interfaces; // Certifique-se que IMongoDocument está aqui
 using MeuCrudCsharp.Features.Hubs;
 using MeuCrudCsharp.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using MongoDB.Bson;
+using MongoDB.Driver;
 
 namespace MeuCrudCsharp.Extensions;
 
 public static class PipelineExtensions
 {
-    /// <summary>
-    /// Configura o pipeline de requisições HTTP (middlewares) e endpoints da aplicação.
-    /// Também executa tarefas de inicialização, como o seeding de roles no banco de dados.
-    /// </summary>
     public static async Task<WebApplication> UseAppPipeline(this WebApplication app)
     {
         // --- 1. Configuração de Erros e Segurança Básica ---
@@ -37,13 +38,14 @@ public static class PipelineExtensions
         await ApplyMigrations(app);
         await SeedInitialRoles(app);
 
+        // NOVO: Chama a configuração dos índices do Mongo
+        await ConfigureMongoDbIndexes(app);
+
         // --- 3. Roteamento e CORS ---
         app.UseRouting();
         app.UseCors(WebServicesExtensions.CorsPolicyName);
 
         // --- 4. Autenticação e Autorização ---
-        // AQUI ESTAVA A REDUNDÂNCIA:
-        // Substituímos a configuração manual pela chamada ao método do AuthExtensions
         app.UseAuthFeatures();
 
         // --- 5. Middlewares Específicos ---
@@ -62,24 +64,17 @@ public static class PipelineExtensions
         return app;
     }
 
-    /// <summary>
-    /// Cria as roles definidas em AppRoles no banco de dados durante a inicialização.
-    /// </summary>
     private static async Task SeedInitialRoles(IApplicationBuilder app)
     {
         using var scope = app.ApplicationServices.CreateScope();
-
-        // CORREÇÃO AQUI: Mudamos de RoleManager<IdentityRole> para RoleManager<Roles>
         var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<Roles>>();
 
         string[] roles = { AppRoles.Admin, AppRoles.User, AppRoles.Manager };
 
         foreach (var roleName in roles)
         {
-            // Verifica se a role existe
             if (!await roleManager.RoleExistsAsync(roleName))
             {
-                // CORREÇÃO AQUI: Instanciamos 'Roles' em vez de 'IdentityRole'
                 await roleManager.CreateAsync(new Roles(roleName));
             }
         }
@@ -99,6 +94,79 @@ public static class PipelineExtensions
         catch (Exception ex)
         {
             Console.WriteLine($"--> Erro ao aplicar migrations: {ex.Message}");
+        }
+    }
+
+    private static async Task ConfigureMongoDbIndexes(IApplicationBuilder app)
+    {
+        using var scope = app.ApplicationServices.CreateScope();
+        var database = scope.ServiceProvider.GetService<IMongoDatabase>();
+
+        // Se o Mongo não estiver configurado, ignora
+        if (database == null)
+            return;
+
+        // 1. Pega todas as classes que implementam IMongoDocument
+        var documentTypes = AppDomain
+            .CurrentDomain.GetAssemblies()
+            .SelectMany(s => s.GetTypes())
+            .Where(p =>
+                typeof(IMongoDocument).IsAssignableFrom(p) && !p.IsInterface && !p.IsAbstract
+            );
+
+        foreach (var docType in documentTypes)
+        {
+            // 2. Tenta pegar o nome da coleção via propriedade estática "CollectionName"
+            var collectionNameProperty = docType.GetProperty(
+                "CollectionName",
+                BindingFlags.Public | BindingFlags.Static
+            );
+            var collectionName = collectionNameProperty?.GetValue(null) as string;
+
+            // Se a classe não definiu um nome, pulamos (ou usamos uma lógica padrão se preferir)
+            if (string.IsNullOrEmpty(collectionName))
+                continue;
+
+            // --- CORREÇÃO DO ERRO CS0103 ---
+            // A variável 'collection' precisa ser criada aqui para ser usada dentro do próximo loop
+            var collection = database.GetCollection<BsonDocument>(collectionName);
+
+            // 3. Pega todas as propriedades marcadas com [MongoIndex]
+            var propertiesToIndex = docType
+                .GetProperties()
+                .Where(prop => Attribute.IsDefined(prop, typeof(MongoIndexAttribute)));
+
+            foreach (var prop in propertiesToIndex)
+            {
+                var attribute = prop.GetCustomAttribute<MongoIndexAttribute>();
+
+                // Pega o nome do campo no Bson (se existir), senão usa o nome da propriedade
+                var bsonElement =
+                    prop.GetCustomAttribute<MongoDB.Bson.Serialization.Attributes.BsonElementAttribute>();
+                var fieldName = bsonElement?.ElementName ?? prop.Name;
+
+                try
+                {
+                    var indexKeys = attribute.Descending
+                        ? Builders<BsonDocument>.IndexKeys.Descending(fieldName)
+                        : Builders<BsonDocument>.IndexKeys.Ascending(fieldName);
+
+                    var indexOptions = new CreateIndexOptions { Unique = attribute.Unique };
+                    var indexModel = new CreateIndexModel<BsonDocument>(indexKeys, indexOptions);
+
+                    // Agora a variável 'collection' existe e pode ser usada
+                    await collection.Indexes.CreateOneAsync(indexModel);
+                    Console.WriteLine(
+                        $"--> [Mongo] Index criado em '{collectionName}': {fieldName}"
+                    );
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(
+                        $"--> [Mongo] Erro ao criar index em '{collectionName}': {ex.Message}"
+                    );
+                }
+            }
         }
     }
 }

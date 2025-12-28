@@ -170,7 +170,7 @@ public class ChargeBackNotificationService : IChargeBackNotificationService
         );
 
         var htmlBody = await _razorViewToStringRenderer.RenderViewToStringAsync(
-            "Features/Shared/EmailTemplates/ChargebackReceived/index.cshtml",
+            "Pages/EmailTemplates/ChargebackReceived/index.cshtml",
             viewModel
         );
 

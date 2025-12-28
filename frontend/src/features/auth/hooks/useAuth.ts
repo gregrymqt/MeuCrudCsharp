@@ -70,6 +70,7 @@ export const useAuth = () => {
     try {
       await authService.logout();
     } catch (error) {
+      console.error("Erro no logout:", error);
       // Ignora erro de rede no logout
     } finally {
       StorageService.clear();

@@ -1,9 +1,10 @@
+using Hangfire;
+using Hangfire.Redis.StackExchange;
 using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Models; // Necessário para acessar a classe Roles
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Hangfire;
-using Hangfire.Redis.StackExchange;
+using MongoDB.Driver;
 
 public static class PersistenceExtensions
 {
@@ -16,10 +17,11 @@ public static class PersistenceExtensions
 
         // --- CORREÇÃO AQUI ---
         // Alterado de <Users, IdentityRole> para <Users, Roles>
-        builder.Services.AddIdentity<Users, Roles>(options =>
+        builder
+            .Services.AddIdentity<Users, Roles>(options =>
             {
                 options.SignIn.RequireConfirmedAccount = true;
-                
+
                 // Configurações opcionais úteis para teste (remova se não quiser)
                 options.Password.RequireDigit = false;
                 options.Password.RequiredLength = 6;
@@ -27,7 +29,22 @@ public static class PersistenceExtensions
             .AddEntityFrameworkStores<ApiDbContext>()
             .AddDefaultTokenProviders();
 
-        // --- 2. Configuração Condicional de Cache e Hangfire ---
+        // --- 2. Configuração do MongoDB (NOVO) ---
+        // Aqui configuramos para que qualquer Service possa pedir um IMongoDatabase
+        builder.Services.AddSingleton<IMongoClient>(sp =>
+        {
+            var mongoConnString = builder.Configuration.GetConnectionString("MongoConnection");
+            return new MongoClient(mongoConnString);
+        });
+
+        builder.Services.AddScoped<IMongoDatabase>(sp =>
+        {
+            var client = sp.GetRequiredService<IMongoClient>();
+            // Defina o nome do banco aqui (ou pegue do appsettings se preferir)
+            return client.GetDatabase("MeuCrudSupportDb");
+        });
+
+        // --- 3. Configuração Condicional de Cache e Hangfire ---
         var useRedis = builder.Configuration.GetValue<bool>("USE_REDIS");
         var redisConnectionString = builder.Configuration.GetConnectionString("Redis");
 
@@ -36,10 +53,9 @@ public static class PersistenceExtensions
             if (string.IsNullOrEmpty(redisConnectionString))
             {
                 throw new InvalidOperationException(
-                    "A variável de ambiente USE_REDIS está como 'true', mas a string de conexão do Redis não foi encontrada."
+                    "A variável USE_REDIS é true mas a connection string está vazia."
                 );
             }
-
             builder.AddRedisPersistence(redisConnectionString);
         }
         else
@@ -51,7 +67,10 @@ public static class PersistenceExtensions
     }
 
     // ... Os métodos AddRedisPersistence e AddInMemoryPersistence continuam iguais ...
-    private static void AddRedisPersistence(this WebApplicationBuilder builder, string redisConnectionString)
+    private static void AddRedisPersistence(
+        this WebApplicationBuilder builder,
+        string redisConnectionString
+    )
     {
         builder.Services.AddStackExchangeRedisCache(options =>
         {
