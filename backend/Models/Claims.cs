@@ -1,59 +1,65 @@
-using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using MeuCrudCsharp.Models.Enums; // Certifique-se de usar o namespace onde criou os Enums acima
 
-namespace MeuCrudCsharp.Models;
-
-/// <summary>
-/// Define o status interno de uma reclamação (claim) para acompanhamento.
-/// </summary>
-public enum ClaimStatus
+namespace MeuCrudCsharp.Models
 {
-    [Display(Name = "Novo")]
-    Novo, // A reclamação acabou de ser registrada.
+    // Seu status interno (Mantido conforme )
+    public enum InternalClaimStatus
+    {
+        [Display(Name = "Novo")]
+        Novo,
 
-    [Display(Name = "Em Análise")]
-    EmAnalise, // A equipe está investigando a reclamação.
+        [Display(Name = "Em Análise")]
+        EmAnalise,
 
-    // ADICIONAR ESTE:
-    [Display(Name = "Respondido pelo Vendedor")]
-    RespondidoPeloVendedor,
+        [Display(Name = "Respondido pelo Vendedor")]
+        RespondidoPeloVendedor,
 
-    [Display(Name = "Resolvido - Ganhamos")]
-    ResolvidoGanhamos, // A disputa foi resolvida a nosso favor.
+        [Display(Name = "Resolvido - Ganhamos")]
+        ResolvidoGanhamos,
 
-    [Display(Name = "Resolvido - Perdemos")]
-    ResolvidoPerdemos, // A disputa foi resolvida a favor do cliente.
-}
+        [Display(Name = "Resolvido - Perdemos")]
+        ResolvidoPerdemos
+    }
 
-/// <summary>
-/// Representa uma notificação de claim (disputa, reembolso, etc.) recebida.
-/// Ajuda a garantir a idempotência e o rastreamento de eventos.
-/// </summary>
-public class Claims
-{
-    [Key]
-    public int Id { get; set; } // ID Interno do Banco
+    public class Claims
+    {
+        [Key]
+        public int Id { get; set; } // ID Interno do Banco [cite: 19]
 
-    // Este é o ID real que o MP usa (ex: 5012391221)
-    [Required]
-    public long MpClaimId { get; set; }
+        // Este é o ID real que o MP usa (ex: 5012391221)
+        [Required]
+        public long MpClaimId { get; set; } // Mudei para long pois geralmente é numérico, mas string também funciona [cite: 20]
 
-    // ID do pagamento vinculado (Resource ID)
-    public string? PaymentId { get; set; }
+        // ID do pagamento vinculado (Resource ID)
+        // CORREÇÃO: De 'ResorceId' para 'ResourceId'
+        public string? ResourceId { get; set; }
 
-    [Required]
-    public string Type { get; set; } // mediations, payment, etc
+        // Agora usando o Enum forte em vez de string
+        [Required]
+        [Column(TypeName = "nvarchar(50)")] // Salva como string no banco para legibilidade
+        public ClaimType Type { get; set; } // "mediations", "cancel_purchase" etc [cite: 22]
 
-    public DateTime DataCreated { get; set; } = DateTime.UtcNow;
+        // Agora usando o Enum forte em vez de string
+        [Column(TypeName = "nvarchar(50)")]
+        public ClaimResource? ResourceType { get; set; } // "payment", "subscription" etc [cite: 23]
 
-    public ClaimStatus Status { get; set; } = ClaimStatus.Novo;
+        // Novo campo sugerido para guardar o status original do MP (opened/closed) separadamente do seu status interno
+        [Column(TypeName = "nvarchar(20)")]
+        public ClaimStage? CurrentStage { get; set; } // claim, dispute, etc [cite: 4]
 
-    // Link para o painel do MP (útil para o Admin clicar e ir direto)
-    public string? MercadoPagoPanelUrl =>
-        $"https://www.mercadopago.com.br/developers/panel/notifications/claims/{MpClaimId}";
+        public DateTime DataCreated { get; set; } = DateTime.UtcNow;
 
-    [ForeignKey("user_id")]
-    public string? UserId { get; set; }
-    public virtual Users? User { get; set; }
+        // Seu status interno de controle
+        public InternalClaimStatus Status { get; set; } = InternalClaimStatus.Novo; 
+
+        public string? MercadoPagoPanelUrl =>
+            $"https://www.mercadopago.com.br/developers/panel/notifications/claims/{MpClaimId}"; 
+
+        [ForeignKey("user_id")]
+        public string? UserId { get; set; }
+    
+        public virtual Users? User { get; set; }
+    }
 }

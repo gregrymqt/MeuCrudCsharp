@@ -1,120 +1,134 @@
 using System;
+using System.Collections.Generic;
 using System.Text.Json.Serialization;
+using MeuCrudCsharp.Models.Enums; // Certifique-se que este namespace está correto
 
-namespace MeuCrudCsharp.Features.MercadoPago.Claims.DTOs;
-
-public class MercadoPagoClaimsDTOs
+namespace MeuCrudCsharp.Features.MercadoPago.Claims.DTOs
 {
-    public class MpClaimSearchResponse
+    public class MercadoPagoClaimsDTOs
     {
-        [JsonPropertyName("paging")]
-        public MpPaging Paging { get; set; }
+        public class MpClaimSearchResponse
+        {
+            [JsonPropertyName("paging")]
+            public MpPaging Paging { get; set; }
 
-        [JsonPropertyName("results")]
-        public List<MpClaimItem> Results { get; set; }
-    }
+            [JsonPropertyName("results")]
+            public List<MpClaimItem> Results { get; set; }
+        }
 
-    public class MpPaging
-    {
-        [JsonPropertyName("total")]
-        public int Total { get; set; }
+        public class MpPaging
+        {
+            [JsonPropertyName("total")]
+            public int Total { get; set; }
 
-        [JsonPropertyName("limit")]
-        public int Limit { get; set; }
+            [JsonPropertyName("limit")]
+            public int Limit { get; set; }
 
-        [JsonPropertyName("offset")]
-        public int Offset { get; set; }
-    }
+            [JsonPropertyName("offset")]
+            public int Offset { get; set; }
+        }
 
-    public class MpClaimItem
-    {
-        [JsonPropertyName("id")]
-        public long Id { get; set; } // ID da Reclamação no MP
+        public class MpClaimItem
+        {
+            [JsonPropertyName("id")]
+            public long Id { get; set; }
 
-        [JsonPropertyName("resource_id")]
-        public string ResourceId { get; set; } // ID do Pagamento vinculado
+            [JsonPropertyName("resource_id")]
+            public string ResourceId { get; set; } // ID do Pagamento (ex: "123456")
 
-        [JsonPropertyName("status")]
-        public string Status { get; set; } // opened, closed, refund_delivered
+            // --- ALTERAÇÃO: Adicionado o campo Resource que faltava ---
+            [JsonPropertyName("resource")]
+            [JsonConverter(typeof(JsonStringEnumConverter))]
+            public ClaimResource Resource { get; set; } // Payment, Order, etc.
 
-        [JsonPropertyName("type")]
-        public string Type { get; set; } // mediations, returns, etc.
+            // --- ALTERAÇÃO: De string para Enum MpClaimStatus ---
+            [JsonPropertyName("status")]
+            [JsonConverter(typeof(JsonStringEnumConverter))]
+            public MpClaimStatus Status { get; set; } // Opened, Closed
 
-        [JsonPropertyName("stage")]
-        public string Stage { get; set; } // dispute, claim, etc.
+            // --- ALTERAÇÃO: De string para Enum ClaimType ---
+            [JsonPropertyName("type")]
+            [JsonConverter(typeof(JsonStringEnumConverter))]
+            public ClaimType Type { get; set; } // Mediations, Returns, etc.
 
-        [JsonPropertyName("players")]
-        public List<MpPlayer> Players { get; set; }
+            // --- ALTERAÇÃO: De string para Enum ClaimStage ---
+            [JsonPropertyName("stage")]
+            [JsonConverter(typeof(JsonStringEnumConverter))]
+            public ClaimStage Stage { get; set; } // Dispute, Claim, etc.
 
-        [JsonPropertyName("date_created")]
-        public DateTime DateCreated { get; set; }
+            [JsonPropertyName("players")]
+            public List<MpPlayer> Players { get; set; }
 
-        [JsonPropertyName("last_updated")]
-        public DateTime LastUpdated { get; set; }
-    }
+            [JsonPropertyName("date_created")]
+            public DateTime DateCreated { get; set; }
 
-    public class MpPlayer
-    {
-        [JsonPropertyName("role")]
-        public string Role { get; set; } // "complainant" (comprador), "respondent" (você)
+            [JsonPropertyName("last_updated")]
+            public DateTime LastUpdated { get; set; }
+        }
 
-        [JsonPropertyName("id")]
-        public long UserId { get; set; }
+        public class MpPlayer
+        {
+            [JsonPropertyName("role")]
+            public string Role { get; set; } // "complainant" ou "respondent" (Poderíamos criar um Enum para isso também se quiser)
 
-        [JsonPropertyName("type")]
-        public string Type { get; set; } // "user"
-    }
+            [JsonPropertyName("id")]
+            public long UserId { get; set; }
 
-    // ==========================================
-    // MENSAGENS (CHAT)
-    // ==========================================
-    public class MpMessageResponse
-    {
-        [JsonPropertyName("id")]
-        public string Id { get; set; }
+            [JsonPropertyName("type")]
+            public string Type { get; set; } // "user"
+        }
 
-        [JsonPropertyName("sender_role")]
-        public string SenderRole { get; set; } // "complainant", "respondent", "mediator"
+        // ==========================================
+        // MENSAGENS (CHAT)
+        // ==========================================
+        public class MpMessageResponse
+        {
+            [JsonPropertyName("id")]
+            public string Id { get; set; }
 
-        [JsonPropertyName("receiver_role")]
-        public string ReceiverRole { get; set; }
+            [JsonPropertyName("sender_role")]
+            public string SenderRole { get; set; } // "complainant", "respondent", "mediator"
 
-        [JsonPropertyName("message")]
-        public string Message { get; set; }
+            [JsonPropertyName("receiver_role")]
+            public string ReceiverRole { get; set; }
 
-        [JsonPropertyName("date_created")]
-        public DateTime DateCreated { get; set; }
+            [JsonPropertyName("message")]
+            public string Message { get; set; }
 
-        [JsonPropertyName("attachments")]
-        public List<MpAttachment>? Attachments { get; set; }
-    }
+            [JsonPropertyName("date_created")]
+            public DateTime DateCreated { get; set; }
 
-    public class MpAttachment
-    {
-        [JsonPropertyName("filename")]
-        public string Filename { get; set; }
+            [JsonPropertyName("attachments")]
+            public List<MpAttachment>? Attachments { get; set; }
+        }
 
-        [JsonPropertyName("original_filename")]
-        public string OriginalFilename { get; set; }
-    }
+        public class MpAttachment
+        {
+            [JsonPropertyName("filename")]
+            public string Filename { get; set; }
 
-    // ==========================================
-    // PAYLOADS DE ENVIO (REQUESTS)
-    // ==========================================
-    public class MpPostMessageRequest
-    {
-        [JsonPropertyName("receiver_role")]
-        public string ReceiverRole { get; set; } // "complainant" ou "respondent"
+            [JsonPropertyName("original_filename")]
+            public string OriginalFilename { get; set; }
+        }
 
-        [JsonPropertyName("message")]
-        public string Message { get; set; }
+        // ==========================================
+        // PAYLOADS DE ENVIO (REQUESTS)
+        // ==========================================
+        public class MpPostMessageRequest
+        {
+            [JsonPropertyName("receiver_role")]
+            public string ReceiverRole { get; set; }
 
-        [JsonPropertyName("attachments")]
-        public List<string>? Attachments { get; set; } // Lista de nomes de arquivos
-    }
+            [JsonPropertyName("message")]
+            public string Message { get; set; }
 
-    public class ReplyRequestDto
-    {
-        public string Message { get; set; }
+            [JsonPropertyName("attachments")]
+            public List<string>? Attachments { get; set; }
+        }
+
+        public class ReplyRequestDto
+        {
+            public string Message { get; set; }
+        }
     }
 }

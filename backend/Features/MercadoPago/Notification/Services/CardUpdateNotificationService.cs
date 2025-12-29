@@ -6,6 +6,7 @@ using MeuCrudCsharp.Features.MercadoPago.Clients.Interfaces;
 using MeuCrudCsharp.Features.MercadoPago.Notification.Interfaces;
 using MeuCrudCsharp.Features.MercadoPago.Webhooks.DTOs;
 using MeuCrudCsharp.Models;
+using Microsoft.CodeAnalysis.CodeActions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -19,6 +20,7 @@ public class CardUpdateNotificationService : ICardUpdateNotificationService
     private readonly IEmailSenderService _emailSenderService;
     private readonly IRazorViewToStringRenderer _razorViewToStringRenderer;
     private readonly GeneralSettings _generalSettings;
+    private readonly IClientMercadoPagoService _mpService;
 
     public CardUpdateNotificationService(
         ILogger<CardUpdateNotificationService> logger,
@@ -26,7 +28,8 @@ public class CardUpdateNotificationService : ICardUpdateNotificationService
         IClientService clientService,
         IEmailSenderService emailSenderService,
         IRazorViewToStringRenderer razorViewToStringRenderer,
-        IOptions<GeneralSettings> generalSettings
+        IOptions<GeneralSettings> generalSettings,
+        IClientMercadoPagoService mpService
     )
     {
         _logger = logger;
@@ -35,6 +38,7 @@ public class CardUpdateNotificationService : ICardUpdateNotificationService
         _emailSenderService = emailSenderService;
         _razorViewToStringRenderer = razorViewToStringRenderer;
         _generalSettings = generalSettings.Value;
+        _mpService = mpService;
     }
 
     public async Task VerifyAndProcessCardUpdate(CardUpdateNotificationPayload cardUpdatePayload)
@@ -67,9 +71,9 @@ public class CardUpdateNotificationService : ICardUpdateNotificationService
             cardUpdatePayload.NewCardId,
             cardUpdatePayload.CustomerId
         );
-        var cardDetails = await _clientService.GetCardInCustomerAsync(
+        var cardDetails = await _mpService.GetCardAsync(
             cardUpdatePayload.CustomerId,
-            cardUpdatePayload.NewCardId.ToString()
+            cardUpdatePayload.NewCardId
         );
 
         if (string.IsNullOrEmpty(cardDetails?.LastFourDigits))

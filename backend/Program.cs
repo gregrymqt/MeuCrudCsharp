@@ -9,7 +9,7 @@ Log.Logger = new LoggerConfiguration()
     .Enrich.FromLogContext()
     .WriteTo.Console() // Continua escrevendo no console, como já faz hoje
     .WriteTo.File(
-        "Log/log-.txt",
+        "log/log-.txt",
         rollingInterval: RollingInterval.Day,
         shared: true, // <-- A MUDANÇA MÁGICA ESTÁ AQUI
         flushToDiskInterval: TimeSpan.FromSeconds(1), // É bom adicionar isso quando 'shared' é true

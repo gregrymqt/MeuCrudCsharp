@@ -21,12 +21,17 @@ import { SubscriptionPage } from "../pages/Subscription/SubscriptionPage";
 import { ProfileDashboard } from "../pages/Profile/ProfileDashboard";
 import { CreateSupportPage } from "../pages/Support/CreateSupportPage";
 import { SupportAdminPage } from "../pages/Support/SupportAdminPage";
+import { AboutPage } from "../pages/About/AboutPage";
 
 export const AppRoutes = () => {
   return (
     <Routes>
       {/* === ROTAS PÚBLICAS === */}
       <Route path="/login" element={<GoogleLoginButton />} />
+      <Route path="/acesso-negado" element={<AccessDenied />} />
+      <Route path="/suporte/novo" element={<CreateSupportPage />} />
+      <Route path="/sobre" element={<AboutPage />} />
+      
       {/* === LAYOUT PRINCIPAL === */}
       <Route element={<MainLayout />}>
         <Route path="/" element={<Home />} />
@@ -49,9 +54,6 @@ export const AppRoutes = () => {
             <Route path="/assinaturas" element={<SubscriptionPage />} />
           </Route>
         </Route>
-
-        <Route path="/acesso-negado" element={<AccessDenied />} />
-        <Route path="/suporte/novo" element={<CreateSupportPage />} />
 
         {/* Nível 2: Apenas ADMIN */}
         <Route element={<ProtectedRoute allowedRoles={[AppRoles.Admin]} />}>

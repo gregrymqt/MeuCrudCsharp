@@ -7,29 +7,25 @@ namespace MeuCrudCsharp.Features.MercadoPago.Webhooks.DTOs
     public class MercadoPagoWebhookNotification
     {
         [JsonPropertyName("id")]
-        public string Id { get; set; }
+        public string Id { get; set; } // ID da notificação ou do recurso
 
         [JsonPropertyName("type")]
-        public string Type { get; set; }
+        public string Type { get; set; } // ex: "chargeback"
 
         [JsonPropertyName("date_created")]
         public DateTime DateCreated { get; set; }
 
         [JsonPropertyName("action")]
-        public string Action { get; set; }
+        public string Action { get; set; } // ex: "chargeback.created" ou "chargeback.updated"
 
-        [JsonPropertyName("api_version")]
-        public string ApiVersion { get; set; }
-
-        [JsonPropertyName("application_id")]
-        public string ApplicationId { get; set; }
-
-        [JsonPropertyName("user_id")]
-        public string UserId { get; set; }
-
-        // ALTERAÇÃO IMPORTANTE: Usamos JsonElement para manipular o JSON cru
         [JsonPropertyName("data")]
-        public JsonElement Data { get; set; }
+        public MercadoPagoWebhookData Data { get; set; }
+    }
+
+    public class MercadoPagoWebhookData
+    {
+        [JsonPropertyName("id")]
+        public string Id { get; set; } // AQUI ESTÁ O ID DO CHARGEBACK
     }
 
     // DTO para o Payload do Chargeback
@@ -57,7 +53,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Webhooks.DTOs
     public class CardUpdateNotificationPayload
     {
         [JsonPropertyName("id")]
-        public string Id { get; set; }
+        public string NewCardId { get; set; }
 
         [JsonPropertyName("customer_id")]
         public string CustomerId { get; set; }

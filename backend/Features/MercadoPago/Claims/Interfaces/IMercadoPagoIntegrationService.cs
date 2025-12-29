@@ -11,6 +11,8 @@ public interface IMercadoPagoIntegrationService
     // O resto continua igual, pois ID é único
     Task<List<MpMessageResponse>> GetClaimMessagesAsync(long claimId);
 
+    Task<MpClaimItem?> GetClaimByIdAsync(long claimId);
+
     Task SendMessageAsync(
         long claimId,
         string message,

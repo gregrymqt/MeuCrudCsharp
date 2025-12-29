@@ -1,9 +1,9 @@
 using MeuCrudCsharp.Data;
+using MeuCrudCsharp.Features.Auth.Interfaces;
 using MeuCrudCsharp.Features.Emails.Interfaces;
 using MeuCrudCsharp.Features.Emails.ViewModels;
 using MeuCrudCsharp.Features.MercadoPago.Notification.Interfaces;
 using MeuCrudCsharp.Features.MercadoPago.Plans.Interfaces;
-using MeuCrudCsharp.Features.User.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 

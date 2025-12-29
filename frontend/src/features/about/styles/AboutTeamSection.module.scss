@@ -1,0 +1,86 @@
+@use '../../../styles/variables' as *;
+
+.container {
+  width: 100%;
+  padding: $spacing-xl $spacing-md;
+  background-color: $color-white; // Alternar cor de fundo para separar da seção 1
+}
+
+.header {
+  text-align: center;
+  margin-bottom: $spacing-xl;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+
+  .title {
+    font-size: $font-size-xxl;
+    color: $color-text-primary;
+    margin-bottom: $spacing-sm;
+    font-weight: 700;
+  }
+
+  .subtitle {
+    font-size: $font-size-md;
+    color: $color-text-secondary;
+  }
+}
+
+// O Wrapper que controla os Cards
+.gridWrapper {
+  display: grid;
+  gap: $spacing-lg; // Espaço entre os cards
+  max-width: $container-max-width;
+  margin: 0 auto;
+
+  // 1. Mobile (Padrão): 1 Card por linha
+  grid-template-columns: 1fr;
+
+  // 2. Tablet: 2 Cards por linha
+  @media (min-width: $breakpoint-md) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  // 3. Desktop: 3 Cards por linha (O que você pediu)
+  // Se tiver 5 itens, o grid joga os 2 últimos para a próxima linha automaticamente
+  @media (min-width: $breakpoint-lg) {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+// Estilização Específica do Card dentro desta seção
+.teamCard {
+  // Ajustes finos no card genérico, se necessário
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  height: 100%; // Garante que todos tenham mesma altura na linha
+  
+  &:hover {
+    transform: translateY(-5px); // Efeito de elevação UI/UX
+    box-shadow: $shadow-lg;
+  }
+}
+
+.role {
+  font-size: $font-size-sm;
+  color: $color-primary;
+  font-weight: 600;
+  text-transform: uppercase;
+  margin-top: -5px; // Ajuste visual
+}
+
+.socialLinks {
+  display: flex;
+  gap: $spacing-md;
+  
+  a {
+    text-decoration: none;
+    color: $color-text-secondary;
+    font-size: $font-size-sm;
+    font-weight: 500;
+    transition: color 0.2s;
+
+    &:hover {
+      color: $color-primary;
+    }
+  }
+}

@@ -8,6 +8,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Claims.Services;
 
 public class MercadoPagoIntegrationService : MercadoPagoServiceBase, IMercadoPagoIntegrationService
 {
+    const string BaseEndpoint = "post-purchase/v1/claims";
     public MercadoPagoIntegrationService(
         IHttpClientFactory httpClientFactory,
         ILogger<MercadoPagoIntegrationService> logger
@@ -22,7 +23,7 @@ public class MercadoPagoIntegrationService : MercadoPagoServiceBase, IMercadoPag
     )
     {
         // Agora injetamos a role na URL
-        var endpoint = $"v1/claims/search?role={role}&offset={offset}&limit={limit}";
+        var endpoint = $"{BaseEndpoint}/search?role={role}&offset={offset}&limit={limit}";
 
         var jsonResponse = await SendMercadoPagoRequestAsync<object>(
             HttpMethod.Get,
@@ -33,16 +34,32 @@ public class MercadoPagoIntegrationService : MercadoPagoServiceBase, IMercadoPag
             ?? new MpClaimSearchResponse();
     }
 
+    public async Task<MpClaimItem?> GetClaimByIdAsync(long claimId)
+    {
+        var endpoint = $"{BaseEndpoint}/{claimId}";
+
+        var jsonResponse = await SendMercadoPagoRequestAsync<object>(
+            HttpMethod.Get,
+            endpoint,
+            null
+        );
+
+        if (jsonResponse == null) return null;
+
+        // Usa a classe MpClaimItem que já está nas suas DTOs (Source 45)
+        return JsonSerializer.Deserialize<MpClaimItem>(jsonResponse);
+    }
+
     public async Task EscalateToMediationAsync(long claimId)
     {
         // Endpoint de mediação
-        var endpoint = $"v1/claims/{claimId}/actions/open-dispute";
+        var endpoint = $"{BaseEndpoint}/{claimId}/actions/open-dispute";
         await SendMercadoPagoRequestAsync<object>(HttpMethod.Post, endpoint, null);
     }
 
     public async Task<List<MpMessageResponse>> GetClaimMessagesAsync(long claimId)
     {
-        var endpoint = $"v1/claims/{claimId}/messages";
+        var endpoint = $"{BaseEndpoint}/{claimId}/messages";
 
         var jsonResponse = await SendMercadoPagoRequestAsync<object>(
             HttpMethod.Get,
@@ -62,7 +79,7 @@ public class MercadoPagoIntegrationService : MercadoPagoServiceBase, IMercadoPag
     )
     {
         // Documentação: POST /v1/claims/{id}/actions/send-message
-        var endpoint = $"v1/claims/{claimId}/actions/send-message";
+        var endpoint = $"{BaseEndpoint}/{claimId}/actions/send-message";
 
         var payload = new MpPostMessageRequest
         {

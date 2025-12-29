@@ -1,0 +1,44 @@
+@use '../../styles/variables' as *;
+
+// Container principal da página
+.pageContainer {
+  width: 100%;
+  min-height: 100vh; // Garante que o footer vá para baixo se houver pouco conteúdo
+  display: flex;
+  flex-direction: column;
+  background-color: $color-bg; // Fundo base da página
+}
+
+// Wrapper para cada seção renderizada dinamicamente
+.sectionWrapper {
+  width: 100%;
+  
+  // Estratégia de separação visual:
+  // Se for a última seção, remove margem extra para colar no footer
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  // Alternância visual (Opcional, mas muito bom para UI):
+  // Seções pares e ímpares podem ter comportamentos diferentes se desejar.
+  // Como seus componentes já definem suas cores de fundo,
+  // aqui focamos apenas no fluxo.
+}
+
+// Loading State
+.loadingContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 50vh;
+  color: $color-primary;
+  font-size: $font-size-lg;
+  font-weight: 600;
+}
+
+// Empty State (Caso a API não retorne nada)
+.emptyState {
+  text-align: center;
+  padding: $spacing-xxl;
+  color: $color-text-secondary;
+}
