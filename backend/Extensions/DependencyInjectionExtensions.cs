@@ -25,6 +25,12 @@ public static class DependencyInjectionExtensions
                         // Admin Profile
                         "MeuCrudCsharp.Features.Profiles.Admin.Services",
                         "MeuCrudCsharp.Features.Profiles.Admin.Repositories",
+                        // About Feature
+                        "MeuCrudCsharp.Features.About.Services",
+                        "MeuCrudCsharp.Features.About.Repositories",
+                        // Home Feature
+                        "MeuCrudCsharp.Features.Home.Services",
+                        "MeuCrudCsharp.Features.Home.Repositories",
                         // --- 2. Features Gerais (Baseado nas Imagens) ---
                         "MeuCrudCsharp.Features.Auth.Services",
                         "MeuCrudCsharp.Features.Auth.Repositories",

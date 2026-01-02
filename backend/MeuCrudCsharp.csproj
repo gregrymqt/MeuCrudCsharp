@@ -51,9 +51,18 @@
     <!-- Suas pastas permanecem iguais -->
     <Folder Include="Documents\Attributes\" />
     <Folder Include="Documents\Interfaces\" />
+    <Folder Include="Features/About/" />
+    <Folder Include="Features/About/Controllers/" />
+    <Folder Include="Features/About/DTOs/" />
+    <Folder Include="Features/About/Interfaces/" />
+    <Folder Include="Features/About/Repositories/" />
+    <Folder Include="Features/About/Services/" />
     <Folder Include="Features/Auth/Controllers/" />
     <Folder Include="Features/Auth/Dtos/" />
     <Folder Include="Features/Auth/Middlewares/" />
+    <Folder Include="Features/Home/Controllers/" />
+    <Folder Include="Features/Home/Repostories/" />
+    <Folder Include="Features/Home/Services/" />
     <Folder Include="Features/MercadoPago/Payments/Repositories/" />
     <Folder Include="Features/Security/" />
     <Folder Include="Features/Videos/Repositories/" />

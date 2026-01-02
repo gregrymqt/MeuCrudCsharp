@@ -1,4 +1,5 @@
 ﻿using MeuCrudCsharp.Models;
+using MeuCrudCsharp.Models.About;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -58,6 +59,10 @@ namespace MeuCrudCsharp.Data
         /// </summary>
         public DbSet<EntityFile> Files { get; set; }
 
+        public DbSet<HomeHero> HomeHeroes { get; set; }
+        public DbSet<HomeService> HomeServices { get; set; }
+        public DbSet<AboutSection> AboutSections { get; set; }
+        public DbSet<TeamMember> TeamMembers { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
