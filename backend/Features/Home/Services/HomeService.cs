@@ -72,32 +72,28 @@ public class HomeService : IHomeService
 
     public async Task<HeroSlideDto> CreateHeroAsync(CreateUpdateHeroDto dto)
     {
-        // 1. Lógica de Upload usando IFileService
         string imageUrl = string.Empty;
+        int? fileId = null;
 
+        // CREATE
         if (dto.File != null)
         {
-            // Salva o arquivo físico e no banco de arquivos
             var arquivoSalvo = await _fileService.SalvarArquivoAsync(dto.File, FEATURE_CATEGORY);
-
-            // Usamos o caminho relativo retornado pelo serviço de arquivos
-            // Você pode precisar prefixar com "/" ou a URL base dependendo de como serve estáticos
             imageUrl = arquivoSalvo.CaminhoRelativo;
+            fileId = arquivoSalvo.Id;
         }
 
-        // 2. Criação da Entidade
         var entity = new HomeHero
         {
             Title = dto.Title,
             Subtitle = dto.Subtitle,
-            ImageUrl = imageUrl, // Salva o caminho retornado pelo FileService
+            ImageUrl = imageUrl,
+            FileId = fileId, // Importante
             ActionText = dto.ActionText,
             ActionUrl = dto.ActionUrl,
         };
 
         await _repository.AddHeroAsync(entity);
-
-        // 3. Limpa cache
         await _cache.RemoveAsync(HOME_CACHE_KEY);
 
         // 4. Retorna o DTO de leitura
@@ -124,15 +120,29 @@ public class HomeService : IHomeService
         entity.ActionText = dto.ActionText;
         entity.ActionUrl = dto.ActionUrl;
 
-        // Atualiza imagem APENAS se um novo arquivo foi enviado
+        // UPDATE
         if (dto.File != null)
         {
-            // Como HomeHero guarda apenas a string e não o ID do EntityFile,
-            // tratamos como um novo upload.
-            // (Idealmente, se HomeHero tivesse 'FileId', usaríamos SubstituirArquivoAsync)
-
-            var arquivoSalvo = await _fileService.SalvarArquivoAsync(dto.File, FEATURE_CATEGORY);
-            entity.ImageUrl = arquivoSalvo.CaminhoRelativo;
+            if (entity.FileId.HasValue)
+            {
+                // Substitui
+                var arquivoAtualizado = await _fileService.SubstituirArquivoAsync(
+                    entity.FileId.Value,
+                    dto.File
+                );
+                entity.ImageUrl = arquivoAtualizado.CaminhoRelativo;
+                entity.FileId = arquivoAtualizado.Id;
+            }
+            else
+            {
+                // Salva novo
+                var arquivoSalvo = await _fileService.SalvarArquivoAsync(
+                    dto.File,
+                    FEATURE_CATEGORY
+                );
+                entity.ImageUrl = arquivoSalvo.CaminhoRelativo;
+                entity.FileId = arquivoSalvo.Id;
+            }
         }
 
         await _repository.UpdateHeroAsync(entity);
@@ -145,9 +155,11 @@ public class HomeService : IHomeService
         if (entity == null)
             throw new ResourceNotFoundException($"Hero com ID {id} não encontrado.");
 
-        // Nota: Se você quisesse apagar o arquivo físico, precisaria buscar o ID dele
-        // através do caminho (ImageUrl) ou alterar a model HomeHero para ter FileId.
-        // Por enquanto, removemos apenas o registro do Hero.
+        // DELETE
+        if (entity.FileId.HasValue)
+        {
+            await _fileService.DeletarArquivoAsync(entity.FileId.Value);
+        }
 
         await _repository.DeleteHeroAsync(entity);
         await _cache.RemoveAsync(HOME_CACHE_KEY);

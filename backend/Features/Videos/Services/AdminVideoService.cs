@@ -3,6 +3,7 @@ using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Features.Caching.Interfaces;
 using MeuCrudCsharp.Features.Courses.Interfaces;
 using MeuCrudCsharp.Features.Exceptions;
+using MeuCrudCsharp.Features.Files.Interfaces;
 using MeuCrudCsharp.Features.Files.Services;
 using MeuCrudCsharp.Features.Videos.DTOs;
 using MeuCrudCsharp.Features.Videos.Interfaces;
@@ -15,7 +16,7 @@ namespace MeuCrudCsharp.Features.Videos.Services;
 public class AdminVideoService : IAdminVideoService
 {
     private readonly IVideoRepository _videoRepository;
-    private readonly UploadService _uploadService;
+    private readonly IFileService _uploadService;
     private readonly IBackgroundJobClient _jobs;
     private readonly ICacheService _cacheService;
     private readonly IWebHostEnvironment _env; // ⭐️ Adicionado para o Helper
@@ -25,7 +26,7 @@ public class AdminVideoService : IAdminVideoService
 
     public AdminVideoService(
         IVideoRepository videoRepository,
-        UploadService uploadService,
+        IFileService uploadService,
         IBackgroundJobClient jobs,
         ICacheService cacheService,
         IWebHostEnvironment env, // ⭐️ Injetando

@@ -21,6 +21,8 @@ namespace MeuCrudCsharp.Models
         // Esse caminho vem da lógica do seu EntityFile.
         public string ImageUrl { get; set; } = string.Empty;
 
+        public int? FileId { get; set; } // FK opcional para rastrear o arquivo
+
         [MaxLength(50)]
         public string ActionText { get; set; } = string.Empty; // Texto do botão
 

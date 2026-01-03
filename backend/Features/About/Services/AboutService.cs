@@ -78,12 +78,14 @@ public class AboutService : IAboutService
     public async Task<AboutSectionDto> CreateSectionAsync(CreateUpdateAboutSectionDto dto)
     {
         string imageUrl = string.Empty;
+        int? fileId = null;
 
         // Upload se houver arquivo
         if (dto.File != null)
         {
             var arquivoSalvo = await _fileService.SalvarArquivoAsync(dto.File, CAT_SECTION);
             imageUrl = arquivoSalvo.CaminhoRelativo;
+            fileId = arquivoSalvo.Id; // Captura o ID
         }
 
         var entity = new AboutSection
@@ -92,6 +94,7 @@ public class AboutService : IAboutService
             Description = dto.Description,
             ImageAlt = dto.ImageAlt,
             ImageUrl = imageUrl,
+            FileId = fileId, // Salva o ID
             OrderIndex = 0,
         };
 
@@ -119,11 +122,28 @@ public class AboutService : IAboutService
         entity.Description = dto.Description;
         entity.ImageAlt = dto.ImageAlt;
 
-        // Se enviou nova imagem, substitui
+        // UPDATE: Lógica de Substituição
         if (dto.File != null)
         {
-            var arquivoSalvo = await _fileService.SalvarArquivoAsync(dto.File, CAT_SECTION);
-            entity.ImageUrl = arquivoSalvo.CaminhoRelativo;
+            if (entity.FileId.HasValue)
+            {
+                // Se já tinha arquivo, SUBSTITUI (apaga o antigo físico e atualiza metadados)
+                var arquivoAtualizado = await _fileService.SubstituirArquivoAsync(
+                    entity.FileId.Value,
+                    dto.File
+                );
+                entity.ImageUrl = arquivoAtualizado.CaminhoRelativo;
+                // O ID geralmente se mantém o mesmo no update, ou muda dependendo da sua impl.
+                // Assumindo que o objeto retornado tem os dados corretos:
+                entity.FileId = arquivoAtualizado.Id;
+            }
+            else
+            {
+                // Se não tinha arquivo antes, apenas SALVA
+                var arquivoSalvo = await _fileService.SalvarArquivoAsync(dto.File, CAT_SECTION);
+                entity.ImageUrl = arquivoSalvo.CaminhoRelativo;
+                entity.FileId = arquivoSalvo.Id;
+            }
         }
 
         await _repository.UpdateSectionAsync(entity);
@@ -136,6 +156,12 @@ public class AboutService : IAboutService
         if (entity == null)
             throw new ResourceNotFoundException($"Seção {id} não encontrada.");
 
+        // DELETE: Apaga o arquivo físico e registro do arquivo
+        if (entity.FileId.HasValue)
+        {
+            await _fileService.DeletarArquivoAsync(entity.FileId.Value);
+        }
+
         await _repository.DeleteSectionAsync(entity);
         await _cache.RemoveAsync(ABOUT_CACHE_KEY);
     }
@@ -147,11 +173,13 @@ public class AboutService : IAboutService
     public async Task<TeamMemberDto> CreateTeamMemberAsync(CreateUpdateTeamMemberDto dto)
     {
         string photoUrl = string.Empty;
+        int? fileId = null;
 
         if (dto.File != null)
         {
             var arquivoSalvo = await _fileService.SalvarArquivoAsync(dto.File, CAT_TEAM);
             photoUrl = arquivoSalvo.CaminhoRelativo;
+            fileId = arquivoSalvo.Id;
         }
 
         var entity = new TeamMember
@@ -161,6 +189,7 @@ public class AboutService : IAboutService
             LinkedinUrl = dto.LinkedinUrl,
             GithubUrl = dto.GithubUrl,
             PhotoUrl = photoUrl,
+            FileId = fileId,
         };
 
         await _repository.AddTeamMemberAsync(entity);
@@ -188,11 +217,24 @@ public class AboutService : IAboutService
         entity.LinkedinUrl = dto.LinkedinUrl;
         entity.GithubUrl = dto.GithubUrl;
 
-        // Se enviou nova foto, substitui
+        // UPDATE: Substituição inteligente
         if (dto.File != null)
         {
-            var arquivoSalvo = await _fileService.SalvarArquivoAsync(dto.File, CAT_TEAM);
-            entity.PhotoUrl = arquivoSalvo.CaminhoRelativo;
+            if (entity.FileId.HasValue)
+            {
+                var arquivoAtualizado = await _fileService.SubstituirArquivoAsync(
+                    entity.FileId.Value,
+                    dto.File
+                );
+                entity.PhotoUrl = arquivoAtualizado.CaminhoRelativo;
+                entity.FileId = arquivoAtualizado.Id;
+            }
+            else
+            {
+                var arquivoSalvo = await _fileService.SalvarArquivoAsync(dto.File, CAT_TEAM);
+                entity.PhotoUrl = arquivoSalvo.CaminhoRelativo;
+                entity.FileId = arquivoSalvo.Id;
+            }
         }
 
         await _repository.UpdateTeamMemberAsync(entity);
@@ -204,6 +246,12 @@ public class AboutService : IAboutService
         var entity = await _repository.GetTeamMemberByIdAsync(id);
         if (entity == null)
             throw new ResourceNotFoundException($"Membro {id} não encontrado.");
+
+        // DELETE: Limpeza do arquivo
+        if (entity.FileId.HasValue)
+        {
+            await _fileService.DeletarArquivoAsync(entity.FileId.Value);
+        }
 
         await _repository.DeleteTeamMemberAsync(entity);
         await _cache.RemoveAsync(ABOUT_CACHE_KEY);

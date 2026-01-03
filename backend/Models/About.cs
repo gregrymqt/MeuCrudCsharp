@@ -11,7 +11,7 @@ namespace MeuCrudCsharp.Models
         public int Id { get; set; }
 
         // Pode ser útil para ordenar as seções na tela
-        public int OrderIndex { get; set; } 
+        public int OrderIndex { get; set; }
 
         [Required]
         [MaxLength(200)]
@@ -20,7 +20,9 @@ namespace MeuCrudCsharp.Models
         public string Description { get; set; } = string.Empty; // Pode ser HTML ou Texto longo
 
         public string ImageUrl { get; set; } = string.Empty; // URL vinda do upload
-        
+
+        public int? FileId { get; set; } // FK opcional para rastrear o arquivo
+
         public string ImageAlt { get; set; } = string.Empty;
     }
 
@@ -40,10 +42,12 @@ namespace MeuCrudCsharp.Models
 
         public string PhotoUrl { get; set; } = string.Empty; // URL vinda do upload
 
+        public int? FileId { get; set; } // FK opcional para rastrear o arquivo
+
         [MaxLength(200)]
         public string? LinkedinUrl { get; set; } // Nullable [cite: 33]
 
         [MaxLength(200)]
-        public string? GithubUrl { get; set; }   // Nullable [cite: 34]
+        public string? GithubUrl { get; set; } // Nullable [cite: 34]
     }
 }
