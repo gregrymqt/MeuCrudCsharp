@@ -1,0 +1,74 @@
+@use '../../../styles/variables' as *; // Ajuste o caminho
+
+.pageContainer {
+  display: flex;
+  min-height: 100vh;
+  background-color: $bg-light; //
+  flex-direction: column;
+
+  @include desktop { //
+    flex-direction: row;
+  }
+}
+
+.contentArea {
+  flex: 1;
+  padding: 1rem;
+  width: 100%;
+  overflow-x: hidden;
+
+  @include desktop {
+    padding: 2rem;
+    // Se a sidebar for position: fixed, adicione margin-left: 260px;
+  }
+
+  header {
+    margin-bottom: 2rem;
+    
+    h1 {
+      color: $text-dark; //
+      font-size: 1.75rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    p {
+      color: $secondary-color; //
+    }
+  }
+}
+
+// --- ABAS INTERNAS ---
+.tabsContainer {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid $border-color; //
+  
+  .tabButton {
+    flex: 1;
+    padding: 1rem;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    font-weight: 600;
+    color: $secondary-color;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-size: 1rem;
+
+    &:hover {
+      color: $primary-color; //
+      background-color: rgba($primary-color, 0.05);
+    }
+
+    &.active {
+      color: $primary-color;
+      border-bottom-color: $primary-color;
+    }
+
+    @include desktop {
+      flex: initial;
+      min-width: 150px;
+    }
+  }
+}

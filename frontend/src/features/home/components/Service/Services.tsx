@@ -1,7 +1,7 @@
 // components/Home/Services.tsx
 import React from 'react';
-import styles from './Home.module.scss';
-import type { ServiceData } from '../types/home.types';
+import styles from '../styles/Home.module.scss';
+import type { ServiceData } from '../../types/home.types';
 
 interface ServicesProps {
   data: ServiceData[];

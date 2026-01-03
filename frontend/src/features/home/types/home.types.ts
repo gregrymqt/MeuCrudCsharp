@@ -1,30 +1,10 @@
-// 1. Enum para identificar o tipo de conteúdo vindo do banco
-export const ContentType = {
-  HERO: 'HERO',
-  SERVICE: 'SERVICE',
-} as const;
-
-export type ContentType = typeof ContentType[keyof typeof ContentType];
-
-// 2. Interface "Crua" (como os dados vêm do Backend C#)
-export interface RawContentItem {
-  id: number;
-  contentType: ContentType; // O discriminador
-  title: string;
-  subtitle?: string;     // Usado no Hero
-  description?: string;  // Usado no Service
-  imageUrl?: string;
-  actionText?: string;   // Texto do botão
-  actionUrl?: string;    // Link do botão
-  iconClass?: string;    // Usado no Service
-  metadata?: string;     // Campo extra genérico
-}
-
-// 3. Interfaces de UI
+// =================================================================
+// 1. DADOS DE LEITURA (O que vem do C#)
+// =================================================================
 
 export interface HeroSlideData {
   id: number;
-  imageUrl: string;
+  imageUrl: string; 
   title: string;
   subtitle: string;
   actionText: string;
@@ -40,11 +20,20 @@ export interface ServiceData {
   actionUrl: string;
 }
 
-// (Interface AboutData removida daqui)
-
-// 4. O formato final que o Hook vai entregar para a View
+// Resposta do endpoint GET /api/Home
 export interface HomeContent {
   hero: HeroSlideData[];
   services: ServiceData[];
-  // about removido
 }
+
+// =================================================================
+// 2. DADOS DE ESCRITA (O que o Form envia)
+// =================================================================
+
+// HERO: Extende os dados base, remove ID e URL, adiciona FileList
+export interface HeroFormValues extends Omit<HeroSlideData, 'id' | 'imageUrl'> {
+  newImage?: FileList; // O input type="file" retorna isso
+}
+
+// SERVICE: Apenas remove o ID (não tem upload de arquivo)
+export type ServiceFormValues = Omit<ServiceData, 'id'>

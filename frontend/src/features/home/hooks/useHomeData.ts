@@ -1,47 +1,45 @@
-import { useState, useEffect } from 'react';
-import { HomeService } from '../services/home.service';
-import { type HomeContent } from '../types/home.types';
-import { ApiError } from '../../../shared/services/api.service';
-
+import { useState, useCallback, useEffect } from "react";
+import { HomeService } from "../services/home.service";
+import type { HeroSlideData, ServiceData } from "../types/home.types";
+import { ApiError } from "../../../shared/services/api.service";
 
 export const useHomeData = () => {
-  const [data, setData] = useState<HomeContent | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [heroSlides, setHeroSlides] = useState<HeroSlideData[]>([]);
+  const [services, setServices] = useState<ServiceData[]>([]);
+  
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let isMounted = true;
-
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const result = await HomeService.getHomeData();
-        
-        if (isMounted) {
-          setData(result);
-          setError(null);
-        }
-      } catch (err) {
-        if (isMounted) {
-          // Usa a classe de erro personalizada que definimos no ApiService
-          if (err instanceof ApiError) {
-            setError(err.message);
-          } else {
-            setError('Falha ao carregar conteúdo da home.');
-          }
-          console.error(err);
-        }
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    };
-
-    fetchData();
-
-    return () => {
-      isMounted = false;
-    };
+  const fetchData = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const data = await HomeService.getHomeContent();
+      
+      // Separa os dados conforme a estrutura do DTO HomeContent
+      setHeroSlides(data.hero || []);
+      setServices(data.services || []);
+      
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : "Erro ao carregar dados da Home.";
+      setError(msg);
+      // Opcional: Mostrar alerta visual apenas se for crítico
+      console.error(msg);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
-  return { data, loading, error };
+  // Busca automática ao montar o componente
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  return {
+    heroSlides,
+    services,
+    isLoading,
+    error,
+    refreshData: fetchData, // Essencial para recarregar após um CRUD
+  };
 };

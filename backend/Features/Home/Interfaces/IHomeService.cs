@@ -1,20 +1,20 @@
-using System;
+using System.Threading.Tasks;
 using MeuCrudCsharp.Features.Home.DTOs;
 
 namespace MeuCrudCsharp.Features.Home.Interfaces;
 
 public interface IHomeService
-    {
-        // Método principal que o Front-end chama ao carregar a página
-        Task<HomeContentDto> GetHomeContentAsync();
+{
+    // Leitura
+    Task<HomeContentDto> GetHomeContentAsync();
 
-        // CRUD Hero
-        Task<HeroSlideDto> CreateHeroAsync(HeroSlideDto dto);
-        Task UpdateHeroAsync(int id, HeroSlideDto dto);
-        Task DeleteHeroAsync(int id);
+    // CRUD Hero (Agora aceita CreateUpdateHeroDto)
+    Task<HeroSlideDto> CreateHeroAsync(CreateUpdateHeroDto dto);
+    Task UpdateHeroAsync(int id, CreateUpdateHeroDto dto);
+    Task DeleteHeroAsync(int id);
 
-        // CRUD Services
-        Task<ServiceDto> CreateServiceAsync(ServiceDto dto);
-        Task UpdateServiceAsync(int id, ServiceDto dto);
-        Task DeleteServiceAsync(int id);
-    }
+    // CRUD Services (Agora aceita CreateUpdateServiceDto)
+    Task<ServiceDto> CreateServiceAsync(CreateUpdateServiceDto dto);
+    Task UpdateServiceAsync(int id, CreateUpdateServiceDto dto);
+    Task DeleteServiceAsync(int id);
+}

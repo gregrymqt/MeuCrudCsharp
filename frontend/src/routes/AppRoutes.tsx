@@ -22,6 +22,8 @@ import { ProfileDashboard } from "../pages/Profile/ProfileDashboard";
 import { CreateSupportPage } from "../pages/Support/CreateSupportPage";
 import { SupportAdminPage } from "../pages/Support/SupportAdminPage";
 import { AboutPage } from "../pages/About/AboutPage";
+import { AdminAboutPage } from "../pages/About/AdminAboutPage";
+import { AdminHomePage } from "../pages/Home/AdminHomePage";
 
 export const AppRoutes = () => {
   return (
@@ -31,7 +33,6 @@ export const AppRoutes = () => {
       <Route path="/acesso-negado" element={<AccessDenied />} />
       <Route path="/suporte/novo" element={<CreateSupportPage />} />
       <Route path="/sobre" element={<AboutPage />} />
-      
       {/* === LAYOUT PRINCIPAL === */}
       <Route element={<MainLayout />}>
         <Route path="/" element={<Home />} />
@@ -62,6 +63,8 @@ export const AppRoutes = () => {
           <Route path="/admin/reclamacoes" element={<AdminClaimsPage />} />
           <Route path="/admin/contestacoes" element={<ChargebackManager />} />
           <Route path="/admin/suporte" element={<SupportAdminPage />} />
+          <Route path="/admin/About" element={<AdminAboutPage />} />
+          <Route path="/admin/Home" element={<AdminHomePage />} />
         </Route>
 
         {/* Nível 3: Manager OU Admin */}

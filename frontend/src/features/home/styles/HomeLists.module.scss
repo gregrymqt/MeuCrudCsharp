@@ -1,0 +1,57 @@
+@use '../../../styles/variables' as *; // Ajuste o caminho conforme sua estrutura
+
+.listContainer {
+  background-color: $bg-light;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px $shadow;
+  border: 1px solid $border-color;
+  overflow: hidden; // Garante que bordas arredondadas funcionem
+  margin-top: 1rem;
+}
+
+// Miniatura para o Hero (Retangular)
+.heroThumbnail {
+  width: 80px;
+  height: 45px;
+  object-fit: cover; // Garante que a imagem preencha sem distorcer
+  border-radius: 4px;
+  border: 1px solid $border-color;
+  background-color: $bg-grey;
+}
+
+// Ícone para o Service (Circular)
+.serviceIconWrapper {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background-color: rgba($primary-color, 0.1); // Fundo sutil
+  color: $primary-color; // Ícone na cor principal
+  font-size: 1.1rem;
+  
+  // Transição suave ao passar o mouse na linha (opcional)
+  transition: all $transition-speed;
+}
+
+// Ajuste para coluna de ações ficar alinhada à direita
+.actionsCell {
+  display: flex;
+  justify-content: flex-end;
+}
+
+// Helper para truncar texto longo na tabela
+.truncateText {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px; // Limite para desktop
+  display: block;
+  color: $secondary-color;
+  font-size: 0.9rem;
+
+  @media (max-width: 768px) {
+    max-width: 120px; // Limite menor para mobile
+  }
+}

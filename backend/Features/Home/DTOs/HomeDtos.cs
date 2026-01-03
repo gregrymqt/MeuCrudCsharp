@@ -1,71 +1,65 @@
-using System;
+using System.Collections.Generic;
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Http; // Necessário para IFormFile
 
 namespace MeuCrudCsharp.Features.Home.DTOs;
 
-// ==========================================
-    // 1. HOME PAGE DTOs
-    // ==========================================
+// =================================================================
+// DTOs DE LEITURA (SAÍDA - GET)
+// =================================================================
 
-    /// <summary>
-    /// Representa o objeto final que o Hook do Front recebe para a Home.
-    /// Ref: types/home.types.ts [HomeContent]
-    /// </summary>
-    public class HomeContentDto
-    {
-        [JsonPropertyName("hero")]
-        public List<HeroSlideDto> Hero { get; set; } = new();
+public class HomeContentDto
+{
+    [JsonPropertyName("hero")]
+    public List<HeroSlideDto> Hero { get; set; } = new();
 
-        [JsonPropertyName("services")]
-        public List<ServiceDto> Services { get; set; } = new();
-    }
+    [JsonPropertyName("services")]
+    public List<ServiceDto> Services { get; set; } = new();
+}
 
-    /// <summary>
-    /// DTO para o Carrossel/Hero Principal
-    /// Ref: types/home.types.ts [HeroSlideData]
-    /// </summary>
-    public class HeroSlideDto
-    {
-        [JsonPropertyName("id")]
-        public int Id { get; set; }
+public class HeroSlideDto
+{
+    public int Id { get; set; }
+    public string ImageUrl { get; set; } = string.Empty;
+    public string Title { get; set; } = string.Empty;
+    public string Subtitle { get; set; } = string.Empty;
+    public string ActionText { get; set; } = string.Empty;
+    public string ActionUrl { get; set; } = string.Empty;
+}
 
-        [JsonPropertyName("imageUrl")]
-        public string ImageUrl { get; set; } = string.Empty;
+public class ServiceDto
+{
+    public int Id { get; set; }
+    public string IconClass { get; set; } = string.Empty;
+    public string Title { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public string ActionText { get; set; } = string.Empty;
+    public string ActionUrl { get; set; } = string.Empty;
+}
 
-        [JsonPropertyName("title")]
-        public string Title { get; set; } = string.Empty;
+// =================================================================
+// DTOs DE ESCRITA (ENTRADA - POST/PUT)
+// Devem ser usados com [FromForm] nos Controllers
+// =================================================================
 
-        [JsonPropertyName("subtitle")]
-        public string Subtitle { get; set; } = string.Empty;
+public class CreateUpdateHeroDto
+{
+    public string Title { get; set; } = string.Empty;
+    public string Subtitle { get; set; } = string.Empty;
 
-        [JsonPropertyName("actionText")]
-        public string ActionText { get; set; } = string.Empty;
+    // Arquivo físico enviado pelo formulário
+    // O nome 'File' deve bater com o formData.append('file', ...) do Front
+    public IFormFile? File { get; set; }
 
-        [JsonPropertyName("actionUrl")]
-        public string ActionUrl { get; set; } = string.Empty;
-    }
+    public string ActionText { get; set; } = string.Empty;
+    public string ActionUrl { get; set; } = string.Empty;
+}
 
-    /// <summary>
-    /// DTO para a seção de Serviços/Features
-    /// Ref: types/home.types.ts [ServiceData]
-    /// </summary>
-    public class ServiceDto
-    {
-        [JsonPropertyName("id")]
-        public int Id { get; set; }
-
-        [JsonPropertyName("iconClass")]
-        public string IconClass { get; set; } = string.Empty;
-
-        [JsonPropertyName("title")]
-        public string Title { get; set; } = string.Empty;
-
-        [JsonPropertyName("description")]
-        public string Description { get; set; } = string.Empty;
-
-        [JsonPropertyName("actionText")]
-        public string ActionText { get; set; } = string.Empty;
-
-        [JsonPropertyName("actionUrl")]
-        public string ActionUrl { get; set; } = string.Empty;
-    }
+public class CreateUpdateServiceDto
+{
+    public string IconClass { get; set; } = string.Empty;
+    public string Title { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public string ActionText { get; set; } = string.Empty;
+    public string ActionUrl { get; set; } = string.Empty;
+}

@@ -22,12 +22,8 @@ public class HomeController : ApiControllerBase
     // LEITURA (PÚBLICA)
     // =========================================================
 
-    /// <summary>
-    /// Retorna todo o conteúdo da Home (Hero + Services).
-    /// Aberto para qualquer usuário (não requer login).
-    /// </summary>
     [HttpGet]
-    [AllowAnonymous] // Sobrescreve o [Authorize] da ApiControllerBase 
+    [AllowAnonymous]
     public async Task<IActionResult> GetHomeContent()
     {
         try
@@ -37,51 +33,58 @@ public class HomeController : ApiControllerBase
         }
         catch (Exception ex)
         {
-            // Como não herdei de MercadoPagoApiControllerBase, replico a lógica de erro aqui
-            return StatusCode(500, new { success = false, message = "Erro ao carregar a home.", error = ex.Message });
+            return StatusCode(
+                500,
+                new
+                {
+                    success = false,
+                    message = "Erro ao carregar a home.",
+                    error = ex.Message,
+                }
+            );
         }
     }
 
     // =========================================================
-    // ESCRITA (RESTRITO - Requer Token JWT)
-    // O [Authorize] da base class  protege estes métodos
+    // HERO - REQUER UPLOAD DE ARQUIVO (FORMDATA)
     // =========================================================
 
     [HttpPost("hero")]
-    public async Task<IActionResult> CreateHero([FromBody] HeroSlideDto dto)
+    // Mudamos para [FromForm] para aceitar arquivo + texto
+    // Usamos o DTO de escrita CreateUpdateHeroDto
+    public async Task<IActionResult> CreateHero([FromForm] CreateUpdateHeroDto dto)
     {
-        if (!ModelState.IsValid) return BadRequest(ModelState);
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
 
         try
         {
             var result = await _service.CreateHeroAsync(dto);
+            // Retorna 201 Created
             return CreatedAtAction(nameof(GetHomeContent), null, result);
-        }
-        catch (AppServiceException ex) // [cite: 2]
-        {
-            return BadRequest(new { success = false, message = ex.Message });
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new { success = false, message = "Erro ao criar hero.", error = ex.Message });
+            return BadRequest(new { success = false, message = ex.Message });
         }
     }
 
     [HttpPut("hero/{id}")]
-    public async Task<IActionResult> UpdateHero(int id, [FromBody] HeroSlideDto dto)
+    // Mudamos para [FromForm] aqui também
+    public async Task<IActionResult> UpdateHero(int id, [FromForm] CreateUpdateHeroDto dto)
     {
         try
         {
             await _service.UpdateHeroAsync(id, dto);
             return NoContent();
         }
-        catch (ResourceNotFoundException ex) // [cite: 4]
+        catch (ResourceNotFoundException ex) //
         {
             return NotFound(new { success = false, message = ex.Message });
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new { success = false, message = "Erro ao atualizar hero.", error = ex.Message });
+            return BadRequest(new { success = false, message = ex.Message });
         }
     }
 
@@ -93,38 +96,36 @@ public class HomeController : ApiControllerBase
             await _service.DeleteHeroAsync(id);
             return NoContent();
         }
-        catch (ResourceNotFoundException ex) // [cite: 4]
+        catch (ResourceNotFoundException ex) //
         {
             return NotFound(new { success = false, message = ex.Message });
         }
-        catch (Exception ex)
-        {
-            return StatusCode(500, new { success = false, message = "Erro ao deletar hero.", error = ex.Message });
-        }
     }
 
+    // =========================================================
+    // SERVICES - APENAS TEXTO (JSON)
+    // =========================================================
+
     [HttpPost("services")]
-    public async Task<IActionResult> CreateService([FromBody] ServiceDto dto)
+    // Mantemos [FromBody] pois ServiceDto não tem arquivo (apenas strings)
+    public async Task<IActionResult> CreateService([FromBody] CreateUpdateServiceDto dto)
     {
-        if (!ModelState.IsValid) return BadRequest(ModelState);
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
 
         try
         {
             var result = await _service.CreateServiceAsync(dto);
             return CreatedAtAction(nameof(GetHomeContent), null, result);
         }
-        catch (AppServiceException ex)
-        {
-            return BadRequest(new { success = false, message = ex.Message });
-        }
         catch (Exception ex)
         {
-            return StatusCode(500, new { success = false, message = "Erro ao criar serviço.", error = ex.Message });
+            return BadRequest(new { success = false, message = ex.Message });
         }
     }
 
     [HttpPut("services/{id}")]
-    public async Task<IActionResult> UpdateService(int id, [FromBody] ServiceDto dto)
+    public async Task<IActionResult> UpdateService(int id, [FromBody] CreateUpdateServiceDto dto)
     {
         try
         {
@@ -134,10 +135,6 @@ public class HomeController : ApiControllerBase
         catch (ResourceNotFoundException ex)
         {
             return NotFound(new { success = false, message = ex.Message });
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, new { success = false, message = "Erro ao atualizar serviço.", error = ex.Message });
         }
     }
 
@@ -153,10 +150,5 @@ public class HomeController : ApiControllerBase
         {
             return NotFound(new { success = false, message = ex.Message });
         }
-        catch (Exception ex)
-        {
-            return StatusCode(500, new { success = false, message = "Erro ao deletar serviço.", error = ex.Message });
-        }
     }
-
 }

@@ -1,0 +1,87 @@
+@use '../../../styles/variables' as *;
+; // Ajuste o caminho
+
+.pageContainer {
+  display: flex;
+  min-height: 100vh;
+  background-color: #f3f4f6; // Cor de fundo suave
+
+  // Layout Mobile: Coluna única (Sidebar é overlay)
+  flex-direction: column;
+
+  @include desktop {
+    flex-direction: row; // Desktop: Sidebar lado a lado com conteúdo
+  }
+}
+
+.contentArea {
+  flex: 1;
+  padding: 1rem;
+  width: 100%; // Garante que não estoure no mobile
+  overflow-x: hidden;
+
+  @include desktop {
+    padding: 2rem;
+    margin-left: 260px; // Espaço reservado para a Sidebar fixa (se ela for fixa)
+    // Se a sidebar não for position:fixed, remova a margin-left
+  }
+
+  header {
+    margin-bottom: 2rem;
+    
+    h1 {
+      color: $text-color;
+      font-size: 1.75rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    p {
+      color: $text-secondary;
+    }
+  }
+}
+
+// --- ESTILO DAS ABAS INTERNAS (Membros / Seções) ---
+.tabsContainer {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid $border-color;
+  
+  // Mobile: Abas ocupam 50% cada para facilitar o toque
+  .tabButton {
+    flex: 1;
+    padding: 1rem;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    font-weight: 600;
+    color: $text-secondary;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-size: 1rem;
+
+    &:hover {
+      color: $primary-color;
+      background-color: rgba($primary-color, 0.05);
+    }
+
+    &.active {
+      color: $primary-color;
+      border-bottom-color: $primary-color;
+    }
+
+    @include desktop {
+      flex: initial; // Desktop: Tamanho do texto
+      min-width: 150px;
+    }
+  }
+}
+
+.emptyState {
+  text-align: center;
+  padding: 3rem;
+  color: $text-secondary;
+  background: #fff;
+  border-radius: 8px;
+}

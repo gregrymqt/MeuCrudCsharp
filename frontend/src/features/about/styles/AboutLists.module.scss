@@ -1,0 +1,33 @@
+// components/lists/AboutLists.module.scss
+@use '../../../styles/variables' as *; // Ajuste o caminho
+
+.listContainer {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  overflow: hidden;
+}
+
+// Estilo para a imagem da Seção (Retangular)
+.sectionThumbnail {
+  width: 60px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid #e5e7eb;
+}
+
+// Estilo para a foto do Membro (Redonda/Avatar)
+.memberAvatar {
+  width: 45px;
+  height: 45px;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 2px solid $primary-color; // Exemplo de uso de variável
+}
+
+// Ajuste para coluna de ações ficar alinhada
+.actionsCell {
+  display: flex;
+  justify-content: flex-end;
+}

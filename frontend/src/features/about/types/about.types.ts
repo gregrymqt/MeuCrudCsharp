@@ -1,13 +1,10 @@
-// types/AboutTypes.ts
-
-// Define os tipos de seção que sua API pode retornar
 export type AboutContentType = 'section1' | 'section2';
 
 export interface AboutSectionData {
-    id: number; // ou string, dependendo do seu banco
+    id: number;
     contentType: AboutContentType;
     title: string;
-    description: string; // Pode ser HTML ou Markdown se vier formatado
+    description: string;
     imageUrl: string;
     imageAlt: string;
 }
@@ -17,18 +14,32 @@ export interface TeamMember {
     name: string;
     role: string;
     photoUrl: string;
-    linkedinUrl?: string; // Opcional: Link para perfil
-    githubUrl?: string;   // Opcional: Link para portfolio
+    linkedinUrl?: string;
+    githubUrl?: string;
 }
 
-// O dado que a API vai retornar para a Seção 2
 export interface AboutTeamData {
-    id: number | string; // <--- ADICIONE ISSO AQUI PARA CORRIGIR O ERRO
+    id: number | string;
     contentType: 'section2';
     title: string;
-    description?: string; // Um subtítulo opcional para a seção
+    description?: string;
     members: TeamMember[];
 }
 
-// Union Type atualizado
+// NOVO: Espelho do C# AboutPageContentDto
+export interface AboutPageResponse {
+    sections: AboutSectionData[];
+    teamSection: AboutTeamData;
+}
+
 export type AboutSectionContent = AboutSectionData | AboutTeamData;
+
+// --- TIPOS ESPECÍFICOS PARA OS FORMULÁRIOS ---
+
+export interface AboutSectionFormValues extends Omit<AboutSectionData, 'id' | 'contentType' | 'imageUrl'> {
+  newImage?: FileList; 
+}
+
+export interface TeamMemberFormValues extends Omit<TeamMember, 'id' | 'photoUrl'> {
+  newPhoto?: FileList;
+}

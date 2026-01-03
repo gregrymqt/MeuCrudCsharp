@@ -1,0 +1,235 @@
+@use '../../../styles/variables' as *; // Importando suas variáveis globais
+
+// =========================================
+// 1. ESTRUTURA GERAL
+// =========================================
+.mainWrapper {
+  width: 100%;
+  overflow-x: hidden;
+}
+
+.container {
+  width: 100%;
+  padding-right: 15px;
+  padding-left: 15px;
+  margin-right: auto;
+  margin-left: auto;
+
+  // Breakpoints para container
+  @media (min-width: 768px) { max-width: 720px; }
+  @media (min-width: 992px) { max-width: 960px; }
+  @media (min-width: 1200px) { max-width: 1140px; }
+}
+
+// =========================================
+// 2. LOADING & ERROR STATES
+// =========================================
+.loadingContainer,
+.errorContainer,
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  text-align: center;
+  gap: 1rem;
+  color: $secondary-color;
+
+  p {
+    font-size: 1.2rem;
+  }
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba($primary-color, 0.1);
+  border-top-color: $primary-color;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+// =========================================
+// 3. HERO SECTION (Usado no Hero.tsx)
+// =========================================
+.heroSection {
+  position: relative;
+  width: 100%;
+  height: 80vh; // Altura padrão do Hero
+  background-color: #000; // Fallback
+  transition: opacity 0.3s ease-out; // Suavidade no scroll opacity hook
+
+  // Ajustes no Swiper (Carousel)
+  :global(.swiper) {
+    width: 100%;
+    height: 100%;
+  }
+
+  :global(.swiper-slide) {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    // Overlay escuro para melhorar leitura do texto sobre a imagem
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.4); 
+      z-index: 1;
+    }
+  }
+}
+
+// Conteúdo interno do Slide (Título, Subtítulo, Botão)
+.slideContent {
+  position: relative;
+  z-index: 2; // Acima do overlay
+  text-align: center;
+  color: #fff;
+  padding: 0 1rem;
+  max-width: 800px;
+  animation: fadeInUp 0.8s ease-out;
+
+  h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+
+    @media (min-width: 768px) {
+      font-size: 3.5rem;
+    }
+  }
+
+  p {
+    font-size: 1rem;
+    margin-bottom: 2rem;
+    opacity: 0.9;
+    
+    @media (min-width: 768px) {
+      font-size: 1.25rem;
+    }
+  }
+
+  a {
+    // Estilo do botão dentro do hero
+    display: inline-block;
+    padding: 0.75rem 2rem;
+    background-color: $primary-color;
+    color: #fff;
+    border-radius: 50px;
+    text-decoration: none;
+    font-weight: 600;
+    transition: transform 0.2s, background-color 0.2s;
+
+    &:hover {
+      background-color: darken($primary-color, 10%);
+      transform: translateY(-2px);
+    }
+  }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+// =========================================
+// 4. SERVICES SECTION (Usado no Services.tsx)
+// =========================================
+.servicesSection {
+  padding: 4rem 0;
+  background-color: $bg-light;
+
+  h2 { // .section-title
+    text-align: center;
+    margin-bottom: 3rem;
+    font-size: 2rem;
+    color: $text-dark;
+    position: relative;
+
+    &::after {
+      content: '';
+      display: block;
+      width: 60px;
+      height: 4px;
+      background-color: $primary-color;
+      margin: 0.5rem auto 0;
+      border-radius: 2px;
+    }
+  }
+}
+
+// Grid Responsivo
+.grid {
+  display: grid;
+  gap: 2rem;
+  
+  // Mobile: 1 coluna. Tablet: 2 colunas. Desktop: 3 ou 4.
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+// Card de Serviço
+.serviceCard {
+  background: #fff;
+  padding: 2rem;
+  border-radius: 12px;
+  text-align: center;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  border: 1px solid transparent;
+
+  &:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    border-color: rgba($primary-color, 0.2);
+
+    i {
+      transform: scale(1.1);
+      color: $primary-color;
+    }
+  }
+
+  // Ícone (FontAwesome)
+  i {
+    font-size: 3rem;
+    color: lighten($primary-color, 10%);
+    margin-bottom: 1.5rem;
+    display: block;
+    transition: all 0.3s ease;
+  }
+
+  h3 {
+    font-size: 1.25rem;
+    color: $text-dark;
+    margin-bottom: 1rem;
+    font-weight: 600;
+  }
+
+  p {
+    color: $secondary-color;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    margin-bottom: 1.5rem;
+  }
+
+  // Botão secundário (outline ou link simples)
+  a {
+    color: $primary-color;
+    font-weight: 600;
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.2s;
+
+    &:hover {
+      border-bottom-color: $primary-color;
+    }
+  }
+}

@@ -1,0 +1,80 @@
+@use '../../../styles/variables' as *; // Ajuste o caminho conforme seu projeto
+
+.formContainer {
+  background-color: $bg-light; //
+  padding: 1.5rem;
+  border-radius: 8px;
+  box-shadow: $shadow; //
+  border: 1px solid $border-color;
+  margin-top: 1rem;
+  
+  // Mobile-first: Full width
+  width: 100%;
+
+  // Desktop: Limita largura para melhor leitura
+  @include desktop { //
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 2.5rem;
+  }
+
+  .header {
+    margin-bottom: 2rem;
+    border-bottom: 2px solid $primary-color; //
+    padding-bottom: 0.5rem;
+    
+    h3 {
+      margin: 0;
+      color: $text-dark; //
+      font-size: 1.25rem;
+    }
+    
+    p {
+      color: $secondary-color; //
+      font-size: 0.9rem;
+      margin-top: 4px;
+    }
+  }
+
+  // Preview de Imagem (UX: Ajuda o usuário a saber o que está editando)
+  .currentImagePreview {
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background-color: $bg-grey; //
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+
+    img {
+      width: 100px;
+      height: 60px;
+      object-fit: cover;
+      border-radius: 4px;
+      border: 1px solid $border-color;
+    }
+
+    .info {
+      font-size: 0.85rem;
+      color: $text-dark;
+      
+      strong { display: block; margin-bottom: 2px; }
+      span { color: $secondary-color; }
+    }
+  }
+
+  // Dica para campo de ícone
+  .iconHint {
+    font-size: 0.8rem;
+    color: $primary-color;
+    margin-top: -8px;
+    margin-bottom: 1rem;
+    display: block;
+
+    a {
+      color: inherit;
+      text-decoration: underline;
+    }
+  }
+}

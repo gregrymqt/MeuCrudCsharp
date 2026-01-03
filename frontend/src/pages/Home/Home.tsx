@@ -1,50 +1,62 @@
 import React from 'react';
-import { About } from '../../features/home/components/About';
-import { Hero } from '../../features/home/components/Hero';
-import { Services } from '../../features/home/components/Services';
+import styles from '../../features/home/styles/Home.module.scss'; // Ajuste o caminho conforme sua estrutura
+
+// Componentes
+import { Services } from '../../features/home/components/Service/Services';
+import { Hero } from '../../features/home/components/Hero/Hero';
+
+// Hook
 import { useHomeData } from '../../features/home/hooks/useHomeData';
 
-
 export const Home: React.FC = () => {
-  // O Hook cuida de toda a "sujeira" (chamada de API, separação de tipos, loading)
-  const { data, loading, error } = useHomeData();
+  // CORREÇÃO: O hook retorna heroSlides, services e isLoading (não 'data' e 'loading')
+  const { heroSlides, services, isLoading, error, refreshData } = useHomeData();
 
-  if (loading) {
+  // Loading State
+  if (isLoading) {
     return (
-      <div className="loading-container">
-        {/* Aqui você pode por um Spinner ou Skeleton Screen */}
+      <div className={styles.loadingContainer}>
+        <div className={styles.spinner}></div>
         <p>Carregando experiências...</p>
       </div>
     );
   }
 
+  // Error State
   if (error) {
     return (
-      <div className="error-container">
+      <div className={styles.errorContainer}>
+        <i className="fas fa-exclamation-triangle"></i>
         <p>Ops! {error}</p>
-        <button onClick={() => window.location.reload()}>Tentar Novamente</button>
+        <button onClick={() => refreshData()} className="btn btn-primary">
+          Tentar Novamente
+        </button>
       </div>
     );
   }
 
-  if (!data) return null;
+  // Empty State (opcional, caso não venha nada)
+  if (!isLoading && heroSlides.length === 0 && services.length === 0) {
+    return (
+      <div className={styles.emptyState}>
+        <p>O site está sendo atualizado. Volte em breve!</p>
+      </div>
+    );
+  }
 
   return (
-    <main>
+    <main className={styles.mainWrapper}>
+      
       {/* Renderiza Hero apenas se tiver slides */}
-      {data.hero.length > 0 && (
-        <Hero slides={data.hero} />
+      {heroSlides.length > 0 && (
+        <Hero slides={heroSlides} />
       )}
 
       {/* Renderiza Services apenas se tiver itens */}
-      {data.services.length > 0 && (
-        <Services data={data.services} />
+      {services.length > 0 && (
+        <Services data={services} />
       )}
 
-      {/* Renderiza About apenas se o objeto existir */}
-      {data.about && (
-        <About data={data.about} />
-      )}
     </main>
   );
 };
