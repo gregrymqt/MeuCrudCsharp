@@ -2,6 +2,7 @@ using MeuCrudCsharp.Features.About.DTOs;
 using MeuCrudCsharp.Features.About.Interfaces;
 using MeuCrudCsharp.Features.Base;
 using MeuCrudCsharp.Features.Exceptions;
+using MeuCrudCsharp.Features.Files.Attributes;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -46,6 +47,7 @@ public class AboutController : ApiControllerBase
     // ==========================================
 
     [HttpPost("sections")]
+    [AllowLargeFile(2048)] // Permite upload de arquivos até 2GB
     public async Task<IActionResult> CreateSection([FromForm] CreateUpdateAboutSectionDto dto)
     {
         if (!ModelState.IsValid)
@@ -63,6 +65,7 @@ public class AboutController : ApiControllerBase
     }
 
     [HttpPut("sections/{id}")]
+    [AllowLargeFile(2048)] // Permite upload de arquivos até 2GB
     public async Task<IActionResult> UpdateSection(
         int id,
         [FromForm] CreateUpdateAboutSectionDto dto
@@ -102,6 +105,7 @@ public class AboutController : ApiControllerBase
     // ==========================================
 
     [HttpPost("team")]
+    [AllowLargeFile(2048)] // Permite upload de arquivos até 2GB
     public async Task<IActionResult> CreateTeamMember([FromForm] CreateUpdateTeamMemberDto dto)
     {
         if (!ModelState.IsValid)
@@ -119,6 +123,7 @@ public class AboutController : ApiControllerBase
     }
 
     [HttpPut("team/{id}")]
+    [AllowLargeFile(2048)] // Permite upload de arquivos até 2GB
     public async Task<IActionResult> UpdateTeamMember(
         int id,
         [FromForm] CreateUpdateTeamMemberDto dto

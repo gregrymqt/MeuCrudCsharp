@@ -25,15 +25,10 @@ public static class DependencyInjectionExtensions
                         // Admin Profile
                         "MeuCrudCsharp.Features.Profiles.Admin.Services",
                         "MeuCrudCsharp.Features.Profiles.Admin.Repositories",
-                        // About Feature
-                        "MeuCrudCsharp.Features.About.Services",
-                        "MeuCrudCsharp.Features.About.Repositories",
-                        // Home Feature
-                        "MeuCrudCsharp.Features.Home.Services",
-                        "MeuCrudCsharp.Features.Home.Repositories",
-                        // --- 2. Features Gerais (Baseado nas Imagens) ---
+                        // Auth Feature
                         "MeuCrudCsharp.Features.Auth.Services",
                         "MeuCrudCsharp.Features.Auth.Repositories",
+                        // --- 2. Features Gerais (Baseado nas Imagens) ---
                         "MeuCrudCsharp.Features.Files.Services",
                         "MeuCrudCsharp.Features.Files.Repositories",
                         "MeuCrudCsharp.Features.Profiles.UserAccount.Services",
@@ -43,6 +38,10 @@ public static class DependencyInjectionExtensions
                         "MeuCrudCsharp.Features.Videos.Services",
                         "MeuCrudCsharp.Features.Videos.Repositories",
                         "MeuCrudCsharp.Features.Videos.Notification",
+                        "MeuCrudCsharp.Features.About.Services",
+                        "MeuCrudCsharp.Features.About.Repositories",
+                        "MeuCrudCsharp.Features.Home.Services",
+                        "MeuCrudCsharp.Features.Home.Repositories",
                         // Essenciais (Caching e Emails geralmente têm a implementação dentro de .Services)
                         "MeuCrudCsharp.Features.Caching.Services",
                         "MeuCrudCsharp.Features.Emails.Services",

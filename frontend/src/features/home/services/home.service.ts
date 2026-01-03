@@ -1,4 +1,4 @@
-import { ApiService } from "../../../shared/services/api.service"; // Ajuste o caminho conforme seu projeto
+import { ApiService } from "../../../shared/services/api.service";
 import type {
   HomeContent,
   HeroSlideData,
@@ -7,54 +7,40 @@ import type {
   ServiceFormValues,
 } from "../types/home.types";
 
-const ENDPOINT = "/Home"; 
-
-// --- HELPER: Converte Objeto JS -> FormData (Necessário para C# [FromForm]) ---
-const createHeroFormData = (data: HeroFormValues): FormData => {
-  const formData = new FormData();
-
-  // Mapeamento dos campos de texto
-  // O ASP.NET Core faz o binding case-insensitive (title -> Title)
-  if (data.title) formData.append("title", data.title);
-  if (data.subtitle) formData.append("subtitle", data.subtitle);
-  if (data.actionText) formData.append("actionText", data.actionText);
-  if (data.actionUrl) formData.append("actionUrl", data.actionUrl);
-
-  // Mapeamento do Arquivo
-  // Importante: "file" deve bater com "public IFormFile? File" no seu DTO C#
-  if (data.newImage && data.newImage.length > 0) {
-    formData.append("file", data.newImage[0]);
-  }
-
-  return formData;
-};
+const ENDPOINT = "/Home";
 
 export const HomeService = {
-
-  // =========================================================
-  // LEITURA (GET)
-  // =========================================================
+  // GET (Padrão)
   getHomeContent: async (): Promise<HomeContent> => {
     return await ApiService.get<HomeContent>(`${ENDPOINT}`);
   },
 
-  // =========================================================
-  // HERO (Possui Upload - Usa FormData)
-  // =========================================================
+  // --- HERO SLIDES (Com Upload) ---
+
   createHero: async (data: HeroFormValues): Promise<HeroSlideData> => {
-    const formData = createHeroFormData(data);
-    // Usa postFormData para garantir que o browser defina o Boundary correto
-    return await ApiService.postFormData<HeroSlideData>(
+    // Desestrutura para separar o FileList do DTO
+    const { newImage, ...dto } = data;
+
+    // Pega o arquivo físico se existir
+    const file = newImage && newImage.length > 0 ? newImage[0] : null;
+
+    return await ApiService.postWithFile<HeroSlideData, typeof dto>(
       `${ENDPOINT}/hero`,
-      formData
+      dto,
+      file,
+      "file" // Backend: IFormFile file
     );
   },
 
   updateHero: async (id: number, data: HeroFormValues): Promise<void> => {
-    const formData = createHeroFormData(data);
-    return await ApiService.putFormData<void>(
+    const { newImage, ...dto } = data;
+    const file = newImage && newImage.length > 0 ? newImage[0] : null;
+
+    return await ApiService.putWithFile<void, typeof dto>(
       `${ENDPOINT}/hero/${id}`,
-      formData
+      dto,
+      file,
+      "file"
     );
   },
 
@@ -62,9 +48,7 @@ export const HomeService = {
     return await ApiService.delete<void>(`${ENDPOINT}/hero/${id}`);
   },
 
-  // =========================================================
-  // SERVICES (Apenas Texto - Usa JSON padrão)
-  // =========================================================
+  // SERVICES (JSON Padrão - Sem alterações necessárias)
   createService: async (data: ServiceFormValues): Promise<ServiceData> => {
     return await ApiService.post<ServiceData>(`${ENDPOINT}/services`, data);
   },

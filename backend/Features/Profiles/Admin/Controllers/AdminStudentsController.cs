@@ -38,8 +38,11 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Controllers
         /// <response code="401">If the user is not authenticated.</response>
         /// <response code="403">If the user is not in the 'Admin' role.</response>
         /// <response code="500">If an unexpected server error occurs.</response>
-       [HttpGet]
-        public async Task<IActionResult> GetAllStudents([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+        [HttpGet]
+        public async Task<IActionResult> GetAllStudents(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10
+        )
         {
             try
             {
@@ -53,7 +56,7 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Controllers
                 return StatusCode(500, "An internal error occurred while fetching students.");
             }
         }
-        
+
         [HttpGet("{id}")]
         public async Task<IActionResult> GetStudentById(Guid id)
         {

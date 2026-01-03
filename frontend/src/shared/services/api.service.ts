@@ -1,59 +1,97 @@
-import { StorageService, STORAGE_KEYS } from './storage.service';
+import { StorageService, STORAGE_KEYS } from "./storage.service";
+import { SmartUploadHandler } from "./upload.utils"; // <-- Importe o arquivo criado acima
 
 // --- INTERFACES AUXILIARES ---
-// Define o formato esperado de um erro vindo da API para evitar usar 'any'
 interface ApiErrorResponse {
   message?: string;
-  errors?: Record<string, string[]>; // Para erros de validação do ASP.NET
+  errors?: Record<string, string[]>;
   [key: string]: unknown;
 }
 
 // --- 1. CLASSE DE ERRO PERSONALIZADA ---
 export class ApiError extends Error {
   public status: number;
-  public data: unknown; // [Corrigido]: any -> unknown
+  public data: unknown;
 
-  constructor(status: number, message: string, data?: unknown) { // [Corrigido]: any -> unknown
+  constructor(status: number, message: string, data?: unknown) {
     super(message);
     this.status = status;
     this.data = data;
-    this.name = 'ApiError';
+    this.name = "ApiError";
   }
 }
 
-// --- 2. CONFIGURAÇÃO BASE ---
-const BASE_URL = '/api';
+const toFormData = <T extends Record<string, unknown>>(
+  data: T,
+  files?: File | File[] | FileList | null, // Aceita 1 ou vários
+  fileKey: string = "files" // Nome do campo (No C# use List<IFormFile> files)
+): FormData => {
+  const formData = new FormData();
+
+  // 1. Anexa os dados do objeto (DTO)
+  Object.entries(data).forEach(([key, value]) => {
+    if (value === undefined || value === null) return;
+
+    if (value instanceof Date) {
+      formData.append(key, value.toISOString());
+    } else if (typeof value === "object" && !(value instanceof File)) {
+      formData.append(key, JSON.stringify(value));
+    } else {
+      formData.append(key, String(value));
+    }
+  });
+
+  // 2. Anexa os arquivos
+  if (files) {
+    if (files instanceof FileList) {
+      // Se vier direto do <input type="file" multiple>
+      Array.from(files).forEach((file) => formData.append(fileKey, file));
+    } else if (Array.isArray(files)) {
+      // Se vier de um array [File, File]
+      files.forEach((file) => formData.append(fileKey, file));
+    } else {
+      // Se for apenas um arquivo único
+      formData.append(fileKey, files);
+    }
+  }
+
+  return formData;
+};
+
+// --- 3. CONFIGURAÇÃO BASE ---
+const BASE_URL = "/api";
 
 const getHeaders = (isFormData = false): HeadersInit => {
-  const headers: HeadersInit = {
-    'ngrok-skip-browser-warning': 'true',
+  const headers: Record<string, string> = {
+    "ngrok-skip-browser-warning": "true",
   };
 
+  // Se for FormData, NÃO definimos 'Content-Type'.
+  // O navegador define automaticamente como multipart/form-data com o boundary correto.
   if (!isFormData) {
-    headers['Content-Type'] = 'application/json';
-    headers['Accept'] = 'application/json';
+    headers["Content-Type"] = "application/json";
+    headers["Accept"] = "application/json";
   }
 
   const token = StorageService.getItem<string>(STORAGE_KEYS.TOKEN);
   if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+    headers["Authorization"] = `Bearer ${token}`;
   }
 
   const csrfToken = StorageService.getItem<string>(STORAGE_KEYS.CSRF_TOKEN);
   if (csrfToken) {
-    headers['X-CSRF-TOKEN'] = csrfToken;
+    headers["X-CSRF-TOKEN"] = csrfToken;
   }
 
   return headers;
 };
 
-// --- 3. TRATAMENTO DE RESPOSTA E ERROS ---
+// --- 4. TRATAMENTO DE RESPOSTA E ERROS ---
 const handleResponse = async <T>(response: Response): Promise<T> => {
-  let data: unknown = null; // [Corrigido]: any -> unknown
-  const contentType = response.headers.get('content-type');
-  
-  // Tenta fazer o parse de acordo com o tipo
-  if (contentType && contentType.includes('application/json')) {
+  let data: unknown = null;
+  const contentType = response.headers.get("content-type");
+
+  if (contentType && contentType.includes("application/json")) {
     data = await response.json();
   } else {
     data = await response.text();
@@ -63,47 +101,43 @@ const handleResponse = async <T>(response: Response): Promise<T> => {
     return data as T;
   }
 
-  // --- 4. TRATAMENTO DE ERROS ---
-  // Fazemos um cast seguro para nossa interface de erro para ler as propriedades
-  const errorData = data as ApiErrorResponse; 
-  let errorMessage = 'Ocorreu um erro inesperado.';
+  const errorData = data as ApiErrorResponse;
+  let errorMessage = "Ocorreu um erro inesperado.";
 
   switch (response.status) {
-    case 400: // Bad Request
+    case 400:
       if (errorData && errorData.errors) {
-        // Pega as mensagens de erro do ASP.NET (ValidationProblemDetails)
-        errorMessage = Object.values(errorData.errors).flat().join(', ');
-      } else if (typeof errorData?.message === 'string') {
+        errorMessage = Object.values(errorData.errors).flat().join(", ");
+      } else if (typeof errorData?.message === "string") {
         errorMessage = errorData.message;
       } else {
-        errorMessage = 'Dados inválidos. Verifique os campos.';
+        errorMessage = "Dados inválidos. Verifique os campos.";
       }
       break;
 
-    case 401: // Unauthorized
-      errorMessage = 'Sessão expirada. Faça login novamente.';
-      window.dispatchEvent(new Event('auth:logout'));
+    case 401:
+      errorMessage = "Sessão expirada. Faça login novamente.";
+      window.dispatchEvent(new Event("auth:logout"));
       break;
 
-    case 403: // Forbidden
-      errorMessage = 'Você não tem permissão para realizar esta ação.';
+    case 403:
+      errorMessage = "Você não tem permissão para realizar esta ação.";
       break;
 
-    case 404: // Not Found
-      errorMessage = 'Recurso não encontrado.';
+    case 404:
+      errorMessage = "Recurso não encontrado.";
       break;
 
-    case 422: // Unprocessable Entity
-      errorMessage = 'Não foi possível processar as instruções presentes.';
+    case 422:
+      errorMessage = "Não foi possível processar as instruções presentes.";
       break;
-      
-    case 500: // Internal Server Error
-      errorMessage = 'Erro interno no servidor. Tente novamente mais tarde.';
+
+    case 500:
+      errorMessage = "Erro interno no servidor. Tente novamente mais tarde.";
       break;
 
     default:
-      // Tenta pegar a mensagem de erro genérica ou o status text
-      if (typeof errorData?.message === 'string') {
+      if (typeof errorData?.message === "string") {
         errorMessage = errorData.message;
       } else {
         errorMessage = response.statusText || errorMessage;
@@ -113,78 +147,175 @@ const handleResponse = async <T>(response: Response): Promise<T> => {
   throw new ApiError(response.status, errorMessage, data);
 };
 
-// --- 5. O WRAPPER API (MÉTODOS CRUD) ---
+// --- 5. O WRAPPER API (MÉTODOS) ---
 export const ApiService = {
-  
-  // GET Genérico
+  // --- MÉTODOS JSON PADRÃO ---
+
   get: async <T>(endpoint: string, options?: RequestInit): Promise<T> => {
-    const headers = { ...(getHeaders() as Record<string, string>), ...(options?.headers || {}) };
+    const headers = {
+      ...getHeaders(),
+      ...((options?.headers as Record<string, string>) || {}),
+    };
 
     const response = await fetch(`${BASE_URL}${endpoint}`, {
-      method: 'GET',
+      method: "GET",
       headers: headers as HeadersInit,
     });
     return await handleResponse<T>(response);
   },
 
-  // POST JSON Genérico
-  // [Atualizado]: Aceita options para passar headers extras (ex: Idempotency-Key)
-  post: async <T>(endpoint: string, body: unknown, options?: RequestInit): Promise<T> => {
-    // Mescla os headers padrão com os headers passados no options
-    const headers = { ...(getHeaders() as Record<string, string>), ...(options?.headers || {}) };
+  post: async <TResponse, TBody = unknown>(
+    endpoint: string,
+    body: TBody,
+    options?: RequestInit
+  ): Promise<TResponse> => {
+    const headers = {
+      ...getHeaders(),
+      ...((options?.headers as Record<string, string>) || {}),
+    };
 
     const response = await fetch(`${BASE_URL}${endpoint}`, {
-      method: 'POST',
-      headers: headers as HeadersInit,
-      body: JSON.stringify(body),
-    });
-    return await handleResponse<T>(response);
-  },
-
-  // PUT JSON Genérico
-  put: async <T>(endpoint: string, body: unknown, options?: RequestInit): Promise<T> => {
-    const headers = { ...(getHeaders() as Record<string, string>), ...(options?.headers || {}) };
-
-    const response = await fetch(`${BASE_URL}${endpoint}`, {
-      method: 'PUT',
+      method: "POST",
       headers: headers as HeadersInit,
       body: JSON.stringify(body),
     });
-    return await handleResponse<T>(response);
+    return await handleResponse<TResponse>(response);
   },
 
-  // DELETE Genérico
+  put: async <TResponse, TBody = unknown>(
+    endpoint: string,
+    body: TBody,
+    options?: RequestInit
+  ): Promise<TResponse> => {
+    const headers = {
+      ...getHeaders(),
+      ...((options?.headers as Record<string, string>) || {}),
+    };
+
+    const response = await fetch(`${BASE_URL}${endpoint}`, {
+      method: "PUT",
+      headers: headers as HeadersInit,
+      body: JSON.stringify(body),
+    });
+    return await handleResponse<TResponse>(response);
+  },
+
   delete: async <T>(endpoint: string, options?: RequestInit): Promise<T> => {
-    const headers = { ...(getHeaders() as Record<string, string>), ...(options?.headers || {}) };
+    const headers = {
+      ...getHeaders(),
+      ...((options?.headers as Record<string, string>) || {}),
+    };
 
     const response = await fetch(`${BASE_URL}${endpoint}`, {
-      method: 'DELETE',
+      method: "DELETE",
       headers: headers as HeadersInit,
     });
     return await handleResponse<T>(response);
   },
 
-  // --- MÉTODOS ESPECIAIS PARA FORM-DATA ---
-  
-  postFormData: async <T>(endpoint: string, formData: FormData, options?: RequestInit): Promise<T> => {
-    const headers = { ...(getHeaders(true) as Record<string, string>), ...(options?.headers || {}) };
+  /**
+   * Envia DTO + Arquivos.
+   * - Se for 1 arquivo pequeno: Envia direto.
+   * - Se forem muitos ou grandes: Usa o SmartUploadHandler.
+   */
+  postWithFile: async <TResponse, TBody extends Record<string, unknown>>(
+    endpoint: string,
+    data: TBody,
+    files?: File | File[] | FileList | null,
+    fileKey: string = "files",
+    options?: RequestInit,
+    bypassSmartLogic: boolean = false // <-- NOVO PARÂMETRO DE CONTROLE
+  ): Promise<TResponse> => {
+    // Normalização dos arquivos para Array
+    let fileArray: File[] = [];
+    if (files) {
+      if (files instanceof FileList) fileArray = Array.from(files);
+      else if (Array.isArray(files)) fileArray = files;
+      else fileArray = [files];
+    }
+
+    // LÓGICA DE DECISÃO:
+    // Se não devemos ignorar a lógica smart E (temos mais de 1 arquivo OU temos 1 arquivo grande > 50MB)
+    const isComplexUpload =
+      fileArray.length > 1 ||
+      (fileArray.length === 1 && fileArray[0].size > 50 * 1024 * 1024);
+
+    if (!bypassSmartLogic && isComplexUpload) {
+      console.log("Detectado upload complexo. Usando SmartHandler...");
+      // Chama o gerenciador e retorna o resultado (pode precisar adaptar o retorno dependendo do que sua tela espera)
+      // Aqui retornamos o array de resultados, ou o primeiro sucesso se for unitário.
+      const results = await SmartUploadHandler(
+        endpoint,
+        data,
+        fileArray,
+        fileKey
+      );
+
+      // Se deu erro em tudo, lança erro. Se deu sucesso parcial, retorna o que deu.
+      const errors = results.filter((r) => r.status === "error");
+      if (errors.length === results.length) throw errors[0].error;
+
+      return results as unknown as TResponse;
+    }
+
+    // --- CAMINHO RÁPIDO (FAST PATH) ---
+    // Cria o FormData e envia direto (fetch normal)
+    const formData = toFormData(data, files, fileKey);
+    const headers = {
+      ...getHeaders(true),
+      ...((options?.headers as Record<string, string>) || {}),
+    };
 
     const response = await fetch(`${BASE_URL}${endpoint}`, {
-      method: 'POST',
+      method: "POST",
       headers: headers as HeadersInit,
       body: formData,
     });
-    return await handleResponse<T>(response);
+    return await handleResponse<TResponse>(response);
   },
 
-  putFormData: async <T>(endpoint: string, formData: FormData, options?: RequestInit): Promise<T> => {
-    const headers = { ...(getHeaders(true) as Record<string, string>), ...(options?.headers || {}) };
+  // Faça o mesmo para o putWithFile se desejar
+  putWithFile: async <TResponse, TBody extends Record<string, unknown>>(
+    endpoint: string,
+    data: TBody,
+    files?: File | File[] | FileList | null,
+    fileKey: string = "files",
+    options?: RequestInit,
+    bypassSmartLogic: boolean = false
+  ): Promise<TResponse> => {
+    // ... mesma lógica de normalização de array ...
+    let fileArray: File[] = [];
+    if (files) {
+      if (files instanceof FileList) fileArray = Array.from(files);
+      else if (Array.isArray(files)) fileArray = files;
+      else fileArray = [files];
+    }
+
+    const isComplexUpload =
+      fileArray.length > 1 ||
+      (fileArray.length === 1 && fileArray[0].size > 50 * 1024 * 1024);
+
+    if (!bypassSmartLogic && isComplexUpload) {
+      const results = await SmartUploadHandler(
+        endpoint,
+        data,
+        fileArray,
+        fileKey
+      );
+      return results as unknown as TResponse;
+    }
+
+    const formData = toFormData(data, files, fileKey);
+    const headers = {
+      ...getHeaders(true),
+      ...((options?.headers as Record<string, string>) || {}),
+    };
 
     const response = await fetch(`${BASE_URL}${endpoint}`, {
-      method: 'PUT',
+      method: "PUT",
       headers: headers as HeadersInit,
       body: formData,
     });
-    return await handleResponse<T>(response);
-  }
+    return await handleResponse<TResponse>(response);
+  },
 };

@@ -1,5 +1,3 @@
-// src/features/admin/videos/services/video.service.ts
-
 import { ApiService } from "../../../../shared/services/api.service";
 import type { Video } from "../../../../types/models";
 import type {
@@ -9,10 +7,10 @@ import type {
   UpdateVideoParams,
 } from "../types/video-manager.types";
 
-const BASE_ENDPOINT = "/admin/videos"; //
+const BASE_ENDPOINT = "/admin/videos";
 
 export const VideoService = {
-  // GET: Listar vídeos paginados
+  // GET
   getAll: async (filters: VideoFilters): Promise<PaginatedResponse<Video>> => {
     const params = new URLSearchParams({
       page: filters.page.toString(),
@@ -24,46 +22,41 @@ export const VideoService = {
     );
   },
 
-  // POST: Upload de Vídeo
+  // POST - Criação (Pode conter Vídeo Grande + Thumbnail)
   create: async (data: CreateVideoParams): Promise<Video> => {
-    const formData = new FormData();
+    const { videoFile, thumbnailFile, ...dto } = data;
 
-    // Anexando campos de texto
-    formData.append("title", data.title);
-    formData.append("description", data.description);
-    formData.append("courseId", data.courseId);
+    // Cria um array apenas com os arquivos que existem (não nulos)
+    const files: File[] = [];
+    if (videoFile) files.push(videoFile);
+    if (thumbnailFile) files.push(thumbnailFile);
 
-    // Anexando Arquivos (IFormFile no C#)
-    formData.append("videoFile", data.videoFile);
-
-    if (data.thumbnailFile) {
-      formData.append("thumbnailFile", data.thumbnailFile);
-    }
-
-    // Usa o método específico para FormData do seu ApiService
-    return await ApiService.postFormData<Video>(BASE_ENDPOINT, formData);
-  },
-
-  // PUT: Atualizar Vídeo
-  update: async (id: string, data: UpdateVideoParams): Promise<Video> => {
-    const formData = new FormData();
-
-    formData.append("title", data.title);
-    formData.append("description", data.description);
-
-    // Apenas anexa se houver nova thumbnail
-    if (data.thumbnailFile) {
-      formData.append("thumbnailFile", data.thumbnailFile);
-    }
-
-    // Usa o método específico para FormData do seu ApiService
-    return await ApiService.putFormData<Video>(
-      `${BASE_ENDPOINT}/${id}`,
-      formData
+    // Enviamos o array 'files'.
+    // O ApiService detectará se o vídeo é grande e usará o SmartHandler automaticamente.
+    return await ApiService.postWithFile<Video, typeof dto>(
+      BASE_ENDPOINT,
+      dto,
+      files,
+      "files" // Backend deve esperar: public List<IFormFile> files { get; set; }
     );
   },
 
-  // DELETE: Remover Vídeo
+  // PUT - Atualização
+  update: async (id: string, data: UpdateVideoParams): Promise<Video> => {
+    const { thumbnailFile, ...dto } = data;
+
+    // Na atualização, geralmente só atualizamos a thumbnail ou dados de texto
+    const file = thumbnailFile || null;
+
+    return await ApiService.putWithFile<Video, typeof dto>(
+      `${BASE_ENDPOINT}/${id}`,
+      dto,
+      file,
+      "thumbnailFile" // Se for só a thumb, podemos usar o nome específico se o backend exigir
+    );
+  },
+
+  // DELETE
   delete: async (id: string): Promise<void> => {
     await ApiService.delete(`${BASE_ENDPOINT}/${id}`);
   },

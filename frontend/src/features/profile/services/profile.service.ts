@@ -1,13 +1,20 @@
 import { ApiService } from "../../../shared/services/api.service";
+
+// Definição do retorno esperado
+interface AvatarResponse {
+  avatarUrl: string;
+  message: string;
+}
+
 export const ProfileService = {
   // Endpoint: PUT /profile/avatar
-  updateAvatar: async (
-    formData: FormData
-  ): Promise<{ avatarUrl: string; message: string }> => {
-    // Usa o putFormData que já lida com headers multipart
-    return await ApiService.putFormData<{ avatarUrl: string; message: string }>(
+  updateAvatar: async (file: File): Promise<AvatarResponse> => {
+    // Passamos um objeto vazio {} como corpo, pois só queremos enviar o arquivo
+    return await ApiService.putWithFile<AvatarResponse, Record<string, unknown>>(
       "/profile/avatar",
-      formData
+      {}, 
+      file,
+      'file' // Nome do campo esperado no C# (IFormFile file)
     );
   },
 };

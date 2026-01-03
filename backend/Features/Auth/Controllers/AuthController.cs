@@ -114,7 +114,9 @@ namespace MeuCrudCsharp.Features.Auth.Controllers
         {
             try
             {
-                var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                var userId = User.FindFirst(
+                    System.Security.Claims.ClaimTypes.NameIdentifier
+                )?.Value;
 
                 if (string.IsNullOrEmpty(userId)) // [cite: 33]
                     return Unauthorized("Token inválido.");

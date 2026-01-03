@@ -1,6 +1,7 @@
 using Hangfire;
 using MeuCrudCsharp.Features.Base;
 using MeuCrudCsharp.Features.Exceptions;
+using MeuCrudCsharp.Features.Files.Attributes;
 using MeuCrudCsharp.Features.Videos.DTOs;
 using MeuCrudCsharp.Features.Videos.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -25,6 +26,7 @@ namespace MeuCrudCsharp.Features.Videos.Controller
         /// Endpoint unificado: Recebe o arquivo e os dados, salva tudo e dispara o processamento.
         /// </summary>
         [HttpPost] // Agora é um POST na raiz /api/admin/videos
+        [AllowLargeFile(3072)] // Permite uploads de até 3GB
         public async Task<IActionResult> CreateVideo(
             [FromForm] IFormFile videoFile,
             [FromForm] string title,
@@ -60,6 +62,7 @@ namespace MeuCrudCsharp.Features.Videos.Controller
         }
 
         [HttpPut("{id:guid}")]
+        [AllowLargeFile(1024)] // Permite uploads de até 1GB para atualizações
         public async Task<IActionResult> UpdateVideo(Guid id, [FromForm] UpdateVideoDto dto)
         {
             try

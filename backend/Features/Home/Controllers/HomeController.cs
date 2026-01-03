@@ -1,6 +1,7 @@
 using System;
 using MeuCrudCsharp.Features.Base;
 using MeuCrudCsharp.Features.Exceptions;
+using MeuCrudCsharp.Features.Files.Attributes;
 using MeuCrudCsharp.Features.Home.DTOs;
 using MeuCrudCsharp.Features.Home.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -50,6 +51,7 @@ public class HomeController : ApiControllerBase
     // =========================================================
 
     [HttpPost("hero")]
+    [AllowLargeFile(2048)] // Permite upload de arquivos até 2GB
     // Mudamos para [FromForm] para aceitar arquivo + texto
     // Usamos o DTO de escrita CreateUpdateHeroDto
     public async Task<IActionResult> CreateHero([FromForm] CreateUpdateHeroDto dto)
@@ -70,6 +72,7 @@ public class HomeController : ApiControllerBase
     }
 
     [HttpPut("hero/{id}")]
+    [AllowLargeFile(2048)] // Permite upload de arquivos até 2GB
     // Mudamos para [FromForm] aqui também
     public async Task<IActionResult> UpdateHero(int id, [FromForm] CreateUpdateHeroDto dto)
     {

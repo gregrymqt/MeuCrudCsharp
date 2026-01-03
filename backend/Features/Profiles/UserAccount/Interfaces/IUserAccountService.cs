@@ -11,16 +11,6 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Interfaces
     /// </summary>
     public interface IUserAccountService
     {
-        Task<UserProfileDto> GetUserProfileAsync(string userId);
-
-        Task<SubscriptionDetailsDto?> GetUserSubscriptionDetailsAsync(string userId);
-
-        Task<IEnumerable<Payments>> GetUserPaymentHistoryAsync(string userId, int pageNumber = 1, int pageSize = 10);
-
-        Task<PaymentReceiptDto> GetPaymentForReceiptAsync(string userId, string paymentId);
-
-        Task<bool> UpdateSubscriptionCardAsync(string newCardToken);
-
-        Task<bool> UpdateSubscriptionStatusAsync(string newStatus);
+        Task<AvatarUpdateResponse> UpdateProfilePictureAsync(IFormFile file);
     }
 }

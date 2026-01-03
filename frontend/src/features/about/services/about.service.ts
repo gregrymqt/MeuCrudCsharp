@@ -1,70 +1,33 @@
 import { ApiService } from "../../../shared/services/api.service";
-import type { 
-  AboutSectionFormValues, 
-  AboutSectionData, 
-  TeamMemberFormValues, 
+import type {
+  AboutSectionFormValues,
+  AboutSectionData,
+  TeamMemberFormValues,
   TeamMember,
-  AboutPageResponse 
+  AboutPageResponse,
 } from "../types/about.types";
 
-const ENDPOINT = "/About"; // Base do controller
-
-// --- HELPER PARA CONVERTER OBJETO EM FORMDATA ---
-// Correção: Removemos o Record<string, T> e usamos apenas T.
-// O 'keyof T' garante que a chave do arquivo existe no tipo.
-const createFormData = <T extends object>(
-  data: T,
-  fileKey: keyof T,
-  fileList?: FileList
-): FormData => {
-  const formData = new FormData();
-
-  // 'as any' é necessário aqui para iterar sobre chaves desconhecidas pelo compilador
-  // mas seguro pois estamos apenas convertendo para string
-  const dataObj = data as Record<string, any>;
-
-  Object.keys(dataObj).forEach((key) => {
-    // Ignora a chave do arquivo (tratada depois) e valores nulos
-    if (key !== fileKey && dataObj[key] !== undefined && dataObj[key] !== null) {
-      formData.append(key, dataObj[key].toString());
-    }
-  });
-
-  // Anexa o arquivo físico se existir
-  if (fileList && fileList.length > 0) {
-    // Atenção: O backend C# deve esperar 'file' no [FromForm] ou propriedade IFormFile
-    formData.append("file", fileList[0]);
-  }
-
-  return formData;
-};
+const ENDPOINT = "/About";
 
 export const AboutService = {
-  // =========================================================
-  // LEITURA (PÚBLICA)
-  // =========================================================
-
-  // Retorna todo o conteúdo da página tipado corretamente
+  // LEITURA
   getAboutPage: async (): Promise<AboutPageResponse> => {
-    // GET /api/About
     return await ApiService.get<AboutPageResponse>(`${ENDPOINT}`);
   },
 
-  // =========================================================
-  // SEÇÃO 1: TEXTO + IMAGEM
-  // =========================================================
+  // --- SEÇÃO (Texto + Imagem) ---
 
   createSection: async (
     data: AboutSectionFormValues
   ): Promise<AboutSectionData> => {
-    // Converte para FormData para enviar a imagem
-    // O erro de Record<string, T> foi corrigido na função helper
-    const formData = createFormData<AboutSectionFormValues>(data, "newImage", data.newImage);
+    const { newImage, ...dto } = data;
+    const file = newImage && newImage.length > 0 ? newImage[0] : null;
 
-    // POST /api/About/sections
-    return await ApiService.postFormData<AboutSectionData>(
+    return await ApiService.postWithFile<AboutSectionData, typeof dto>(
       `${ENDPOINT}/sections`,
-      formData
+      dto,
+      file,
+      "file"
     );
   },
 
@@ -72,31 +35,33 @@ export const AboutService = {
     id: number,
     data: AboutSectionFormValues
   ): Promise<void> => {
-    const formData = createFormData<AboutSectionFormValues>(data, "newImage", data.newImage);
+    const { newImage, ...dto } = data;
+    const file = newImage && newImage.length > 0 ? newImage[0] : null;
 
-    // PUT /api/About/sections/{id}
-    return await ApiService.putFormData<void>(
+    return await ApiService.putWithFile<void, typeof dto>(
       `${ENDPOINT}/sections/${id}`,
-      formData
+      dto,
+      file,
+      "file"
     );
   },
 
   deleteSection: async (id: number): Promise<void> => {
-    // DELETE /api/About/sections/{id}
     return await ApiService.delete<void>(`${ENDPOINT}/sections/${id}`);
   },
 
-  // =========================================================
-  // SEÇÃO 2: MEMBROS DA EQUIPE
-  // =========================================================
+  // --- MEMBROS DA EQUIPE (Foto) ---
 
   createTeamMember: async (data: TeamMemberFormValues): Promise<TeamMember> => {
-    const formData = createFormData<TeamMemberFormValues>(data, "newPhoto", data.newPhoto);
+    const { newPhoto, ...dto } = data;
+    const file = newPhoto && newPhoto.length > 0 ? newPhoto[0] : null;
 
-    // POST /api/About/team
-    return await ApiService.postFormData<TeamMember>(
+    // Se o backend espera 'newPhoto', altere o 4º parâmetro para 'newPhoto'
+    return await ApiService.postWithFile<TeamMember, typeof dto>(
       `${ENDPOINT}/team`,
-      formData
+      dto,
+      file,
+      "file"
     );
   },
 
@@ -104,17 +69,18 @@ export const AboutService = {
     id: number | string,
     data: TeamMemberFormValues
   ): Promise<void> => {
-    const formData = createFormData<TeamMemberFormValues>(data, "newPhoto", data.newPhoto);
+    const { newPhoto, ...dto } = data;
+    const file = newPhoto && newPhoto.length > 0 ? newPhoto[0] : null;
 
-    // PUT /api/About/team/{id}
-    return await ApiService.putFormData<void>(
+    return await ApiService.putWithFile<void, typeof dto>(
       `${ENDPOINT}/team/${id}`,
-      formData
+      dto,
+      file,
+      "file"
     );
   },
 
   deleteTeamMember: async (id: number | string): Promise<void> => {
-    // DELETE /api/About/team/{id}
     return await ApiService.delete<void>(`${ENDPOINT}/team/${id}`);
   },
 };

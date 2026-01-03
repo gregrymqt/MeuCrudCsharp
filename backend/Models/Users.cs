@@ -10,7 +10,7 @@ namespace MeuCrudCsharp.Models
     {
         public Guid PublicId { get; set; } = Guid.NewGuid(); //
         public string? Name { get; set; } //
-        public string? AvatarUrl { get; set; } //
+        public int AvatarFileId { get; set; } //
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow; //
 
         // --- Autenticação Externa ---
