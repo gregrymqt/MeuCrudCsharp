@@ -22,33 +22,30 @@ namespace MeuCrudCsharp.Features.Videos.Controller
             _videoService = videoService;
         }
 
-        /// <summary>
-        /// Endpoint unificado: Recebe o arquivo e os dados, salva tudo e dispara o processamento.
-        /// </summary>
-        [HttpPost] // Agora é um POST na raiz /api/admin/videos
-        [AllowLargeFile(3072)] // Permite uploads de até 3GB
-        public async Task<IActionResult> CreateVideo(
-            [FromForm] IFormFile videoFile,
-            [FromForm] string title,
-            [FromForm] string description,
-            [FromForm] IFormFile? thumbnailFile
-        )
+        [HttpPost]
+        [AllowLargeFile(3072)] // 3GB
+        public async Task<IActionResult> CreateVideo([FromForm] CreateVideoDto dto)
         {
-            if (videoFile == null || videoFile.Length == 0)
-                return BadRequest("O arquivo de vídeo é obrigatório.");
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
 
-            if (string.IsNullOrEmpty(title))
-                return BadRequest("O título do vídeo é obrigatório.");
+            try
+            {
+                // Retorna NULL se for chunk intermediário
+                var result = await _videoService.HandleVideoUploadAsync(dto);
 
-            // O Service cuida de salvar o arquivo (UploadService) e salvar no Banco (Repository)
-            var videoCriado = await _videoService.HandleVideoUploadAsync(
-                videoFile,
-                title,
-                description,
-                thumbnailFile
-            );
+                if (result == null)
+                {
+                    return Ok(new { message = $"Chunk {dto.ChunkIndex} do vídeo recebido." });
+                }
 
-            return CreatedAtAction(nameof(GetAllVideos), new { id = videoCriado.Id }, videoCriado);
+                // Tudo concluído
+                return CreatedAtAction(nameof(GetAllVideos), new { id = result.Id }, result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
         }
 
         [HttpGet]

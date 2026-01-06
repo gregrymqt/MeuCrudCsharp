@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
+using MeuCrudCsharp.Features.Files.DTOs;
 using Microsoft.AspNetCore.Http; // Necessário para IFormFile
 
 namespace MeuCrudCsharp.Features.Home.DTOs;
@@ -42,15 +43,10 @@ public class ServiceDto
 // Devem ser usados com [FromForm] nos Controllers
 // =================================================================
 
-public class CreateUpdateHeroDto
+public class CreateUpdateHeroDto : BaseUploadDto
 {
     public string Title { get; set; } = string.Empty;
     public string Subtitle { get; set; } = string.Empty;
-
-    // Arquivo físico enviado pelo formulário
-    // O nome 'File' deve bater com o formData.append('file', ...) do Front
-    public IFormFile? File { get; set; }
-
     public string ActionText { get; set; } = string.Empty;
     public string ActionUrl { get; set; } = string.Empty;
 }

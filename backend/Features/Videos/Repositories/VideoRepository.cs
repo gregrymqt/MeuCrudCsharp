@@ -2,10 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq; // Necessário para Skip/Take
 using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
 using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Features.Videos.Interfaces;
 using MeuCrudCsharp.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace MeuCrudCsharp.Features.Videos.Repositories
 {
@@ -22,15 +22,13 @@ namespace MeuCrudCsharp.Features.Videos.Repositories
         {
             // CORREÇÃO: Include deve apontar para a Entidade Relacionada (tabela Files), não para uma string.
             // Assumindo que sua Model Video tem: public virtual EntityFile File { get; set; }
-            return await _context.Videos
-                .Include(v => v.File) 
-                .FirstOrDefaultAsync(v => v.Id == id);
+            return await _context.Videos.Include(v => v.File).FirstOrDefaultAsync(v => v.Id == id);
         }
-        
+
         public async Task<Video> GetByStorageIdentifierAsync(string storageId)
         {
-            return await _context.Videos
-                .Include(v => v.File) // É bom trazer o arquivo aqui também se for usar o path
+            return await _context
+                .Videos.Include(v => v.File) // É bom trazer o arquivo aqui também se for usar o path
                 .FirstOrDefaultAsync(v => v.StorageIdentifier == storageId);
         }
 
@@ -45,7 +43,7 @@ namespace MeuCrudCsharp.Features.Videos.Repositories
             _context.Videos.Update(video);
             await _context.SaveChangesAsync();
         }
-        
+
         public async Task UpdateStatusAsync(int videoId, VideoStatus newStatus)
         {
             var video = await _context.Videos.FindAsync(videoId);
@@ -57,7 +55,10 @@ namespace MeuCrudCsharp.Features.Videos.Repositories
         }
 
         // IMPLEMENTAÇÃO DA PAGINAÇÃO
-        public async Task<(List<Video> Items, int TotalCount)> GetAllPaginatedAsync(int page, int pageSize)
+        public async Task<(List<Video> Items, int TotalCount)> GetAllPaginatedAsync(
+            int page,
+            int pageSize
+        )
         {
             var query = _context.Videos.AsNoTracking(); // AsNoTracking melhora performance para leitura
 
@@ -80,14 +81,14 @@ namespace MeuCrudCsharp.Features.Videos.Repositories
         {
             // Assumindo que sua Model tem uma propriedade 'Guid Id' ou 'Guid PublicId'
             // Se o ID principal for int, você deve ter criado um campo 'PublicId' na model.
-            
+
             // Opção A: Se o ID da tabela JÁ É o Guid
             // return await _context.Videos.Include(v => v.File).FirstOrDefaultAsync(v => v.Id == publicId);
 
             // Opção B: Se o ID é int, mas existe uma coluna PublicId (Recomendado para segurança)
-             return await _context.Videos
-                 .Include(v => v.File)
-                 .FirstOrDefaultAsync(v => v.PublicId == publicId);
+            return await _context
+                .Videos.Include(v => v.File)
+                .FirstOrDefaultAsync(v => v.PublicId == publicId);
         }
 
         // IMPLEMENTAÇÃO DO DELETE

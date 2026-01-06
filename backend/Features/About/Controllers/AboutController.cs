@@ -47,7 +47,7 @@ public class AboutController : ApiControllerBase
     // ==========================================
 
     [HttpPost("sections")]
-    [AllowLargeFile(2048)] // Permite upload de arquivos até 2GB
+    [AllowLargeFile(2048)]
     public async Task<IActionResult> CreateSection([FromForm] CreateUpdateAboutSectionDto dto)
     {
         if (!ModelState.IsValid)
@@ -55,8 +55,17 @@ public class AboutController : ApiControllerBase
 
         try
         {
+            // O resultado pode ser NULL se for um chunk intermediário
             var result = await _service.CreateSectionAsync(dto);
-            return CreatedAtAction(nameof(GetAboutPageContent), null, result);
+
+            if (result == null)
+            {
+                // Chunk recebido com sucesso, mande o próximo!
+                return Ok(new { message = $"Chunk {dto.ChunkIndex} recebido." });
+            }
+
+            // Upload completo e registro criado
+            return CreatedAtAction(nameof(GetAboutPageContent), null, result); // Ajuste o nameof conforme sua rota de GET
         }
         catch (Exception ex)
         {
@@ -65,7 +74,7 @@ public class AboutController : ApiControllerBase
     }
 
     [HttpPut("sections/{id}")]
-    [AllowLargeFile(2048)] // Permite upload de arquivos até 2GB
+    [AllowLargeFile(2048)]
     public async Task<IActionResult> UpdateSection(
         int id,
         [FromForm] CreateUpdateAboutSectionDto dto
@@ -73,8 +82,14 @@ public class AboutController : ApiControllerBase
     {
         try
         {
-            await _service.UpdateSectionAsync(id, dto);
-            return NoContent();
+            bool finished = await _service.UpdateSectionAsync(id, dto);
+
+            if (!finished)
+            {
+                return Ok(new { message = $"Chunk {dto.ChunkIndex} atualizado." });
+            }
+
+            return NoContent(); // Update concluído com sucesso
         }
         catch (ResourceNotFoundException ex)
         {
@@ -105,7 +120,7 @@ public class AboutController : ApiControllerBase
     // ==========================================
 
     [HttpPost("team")]
-    [AllowLargeFile(2048)] // Permite upload de arquivos até 2GB
+    [AllowLargeFile(2048)]
     public async Task<IActionResult> CreateTeamMember([FromForm] CreateUpdateTeamMemberDto dto)
     {
         if (!ModelState.IsValid)
@@ -114,6 +129,12 @@ public class AboutController : ApiControllerBase
         try
         {
             var result = await _service.CreateTeamMemberAsync(dto);
+
+            if (result == null)
+            {
+                return Ok(new { message = $"Chunk {dto.ChunkIndex} recebido." });
+            }
+
             return CreatedAtAction(nameof(GetAboutPageContent), null, result);
         }
         catch (Exception ex)
@@ -131,7 +152,12 @@ public class AboutController : ApiControllerBase
     {
         try
         {
-            await _service.UpdateTeamMemberAsync(id, dto);
+            bool finished = await _service.UpdateTeamMemberAsync(id, dto);
+            if (finished)
+            {
+                return Ok(new { message = $"Chunk {dto.ChunkIndex} atualizado." });
+            }
+
             return NoContent();
         }
         catch (ResourceNotFoundException ex)

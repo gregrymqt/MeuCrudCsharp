@@ -1,4 +1,3 @@
-using System;
 using MeuCrudCsharp.Features.Base;
 using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.Files.Attributes;
@@ -19,10 +18,9 @@ public class HomeController : ApiControllerBase
         _service = service;
     }
 
-    // =========================================================
-    // LEITURA (PÚBLICA)
-    // =========================================================
-
+    // ==========================================
+    // LEITURA (GET)
+    // ==========================================
     [HttpGet]
     [AllowAnonymous]
     public async Task<IActionResult> GetHomeContent()
@@ -46,14 +44,12 @@ public class HomeController : ApiControllerBase
         }
     }
 
-    // =========================================================
-    // HERO - REQUER UPLOAD DE ARQUIVO (FORMDATA)
-    // =========================================================
+    // ==========================================
+    // HERO (COM UPLOAD E CHUNKS)
+    // ==========================================
 
     [HttpPost("hero")]
-    [AllowLargeFile(2048)] // Permite upload de arquivos até 2GB
-    // Mudamos para [FromForm] para aceitar arquivo + texto
-    // Usamos o DTO de escrita CreateUpdateHeroDto
+    [AllowLargeFile(2048)]
     public async Task<IActionResult> CreateHero([FromForm] CreateUpdateHeroDto dto)
     {
         if (!ModelState.IsValid)
@@ -61,8 +57,16 @@ public class HomeController : ApiControllerBase
 
         try
         {
+            // O retorno será NULL se for um chunk intermediário
             var result = await _service.CreateHeroAsync(dto);
-            // Retorna 201 Created
+
+            if (result == null)
+            {
+                // Responde 200 OK para o React mandar o próximo pedaço
+                return Ok(new { message = $"Chunk {dto.ChunkIndex} do Hero recebido." });
+            }
+
+            // Upload terminou e registro foi criado
             return CreatedAtAction(nameof(GetHomeContent), null, result);
         }
         catch (Exception ex)
@@ -72,16 +76,22 @@ public class HomeController : ApiControllerBase
     }
 
     [HttpPut("hero/{id}")]
-    [AllowLargeFile(2048)] // Permite upload de arquivos até 2GB
-    // Mudamos para [FromForm] aqui também
+    [AllowLargeFile(2048)]
     public async Task<IActionResult> UpdateHero(int id, [FromForm] CreateUpdateHeroDto dto)
     {
         try
         {
-            await _service.UpdateHeroAsync(id, dto);
-            return NoContent();
+            // O retorno será FALSE se for um chunk intermediário
+            bool finished = await _service.UpdateHeroAsync(id, dto);
+
+            if (!finished)
+            {
+                return Ok(new { message = $"Chunk {dto.ChunkIndex} do Hero atualizado." });
+            }
+
+            return NoContent(); // 204: Tudo pronto
         }
-        catch (ResourceNotFoundException ex) //
+        catch (ResourceNotFoundException ex)
         {
             return NotFound(new { success = false, message = ex.Message });
         }
@@ -99,18 +109,18 @@ public class HomeController : ApiControllerBase
             await _service.DeleteHeroAsync(id);
             return NoContent();
         }
-        catch (ResourceNotFoundException ex) //
+        catch (ResourceNotFoundException ex)
         {
             return NotFound(new { success = false, message = ex.Message });
         }
     }
 
-    // =========================================================
-    // SERVICES - APENAS TEXTO (JSON)
-    // =========================================================
+    // ==========================================
+    // SERVICES (JSON PURO - SEM CHUNKS)
+    // ==========================================
 
+    // Mantemos [FromBody] e removemos a herança de BaseUploadDto na classe DTO
     [HttpPost("services")]
-    // Mantemos [FromBody] pois ServiceDto não tem arquivo (apenas strings)
     public async Task<IActionResult> CreateService([FromBody] CreateUpdateServiceDto dto)
     {
         if (!ModelState.IsValid)

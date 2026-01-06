@@ -9,12 +9,12 @@ public interface IAboutService
     Task<AboutPageContentDto> GetAboutPageContentAsync();
 
     // Seção (Usa DTO de escrita)
-    Task<AboutSectionDto> CreateSectionAsync(CreateUpdateAboutSectionDto dto);
-    Task UpdateSectionAsync(int id, CreateUpdateAboutSectionDto dto);
+    Task<AboutSectionDto?> CreateSectionAsync(CreateUpdateAboutSectionDto dto);
+    Task<bool> UpdateSectionAsync(int id, CreateUpdateAboutSectionDto dto);
     Task DeleteSectionAsync(int id);
 
     // Membros (Usa DTO de escrita)
     Task<TeamMemberDto> CreateTeamMemberAsync(CreateUpdateTeamMemberDto dto);
-    Task UpdateTeamMemberAsync(int id, CreateUpdateTeamMemberDto dto);
+    Task<bool> UpdateTeamMemberAsync(int id, CreateUpdateTeamMemberDto dto);
     Task DeleteTeamMemberAsync(int id);
 }

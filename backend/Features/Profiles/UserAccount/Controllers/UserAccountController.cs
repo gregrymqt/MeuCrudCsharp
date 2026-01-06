@@ -17,7 +17,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace MeuCrudCsharp.Features.Profiles.UserAccount.Controllers;
 
-[Route("api/user-account")]
+[Route("api/user-account")] // Rota Base
 public class UserAccountController : ApiControllerBase
 {
     private readonly IUserAccountService _userAccountService;
@@ -32,31 +32,28 @@ public class UserAccountController : ApiControllerBase
         _logger = logger;
     }
 
-    [HttpPost("avatar")] // Endpoint: api/user-account/avatar
-    [AllowLargeFile(20)] // Limite de 20MB para avatar (exemplo)
+    // Alinhado para POST
+    [HttpPost("avatar")]
+    [AllowLargeFile(20)] // Limite de 20MB está ótimo para avatar
     public async Task<IActionResult> UploadProfilePicture([FromForm] IFormFile file)
     {
-        // Validações básicas de controller
+        // Validação defensiva
         if (file == null || file.Length == 0)
         {
-            return BadRequest("Nenhum arquivo enviado.");
+            return BadRequest(new { message = "Nenhum arquivo enviado." });
         }
 
         try
         {
-            // Chama a service que orquestra tudo
+            // O Service deve salvar direto (sem lógica de chunks aqui)
             var result = await _userAccountService.UpdateProfilePictureAsync(file);
 
             return Ok(result);
         }
-        catch (UnauthorizedAccessException)
-        {
-            return Unauthorized();
-        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Erro ao atualizar avatar.");
-            return StatusCode(500, "Erro interno ao processar a imagem.");
+            return StatusCode(500, new { message = "Erro interno ao processar a imagem." });
         }
     }
 }

@@ -2,24 +2,20 @@
 
 import React, { useState, useEffect } from "react";
 
-// Tipos e Models
-import type { Video } from "../../../../types/models";
-import type { VideoTab, VideoFormData } from "../types/video-manager.types";
-import type { SidebarItem } from "../../../../components/SideBar/types/sidebar.types";
-
-// Componentes
-import { Sidebar } from "../../../../components/SideBar/components/Sidebar";
-import { VideoForm } from "../components/VideoForm"; // Ajuste o caminho se necessário
-import { VideoList } from "../components/VideoList"; // Ajuste o caminho se necessário
-import { VideoPlayer } from "../components/VideoPlayer"; // Ajuste o caminho se necessário
-
 // Styles
-import styles from "../styles/AdminVideoManager.module.scss";
+import styles from "AdminVideoManager.module.scss";
+import { Sidebar } from "../../components/SideBar/components/Sidebar";
+import type { SidebarItem } from "../../components/SideBar/types/sidebar.types";
+import { VideoForm } from "../../features/admin/Videos/components/VideoForm";
+import { VideoList } from "../../features/admin/Videos/components/VideoList";
+import { VideoPlayer } from "../../features/admin/Videos/components/VideoPlayer";
+import { useAdminVideos } from "../../features/admin/Videos/hooks/useAdminVideos";
+import type { VideoTab, VideoFormData } from "../../features/admin/Videos/types/video-manager.types";
+import { useCourses } from "../../features/course/hooks/useCourses";
+import { AlertService } from "../../shared/services/alert.service";
+import type { Video } from "../../types/models";
 
-// HOOKS REAIS (Integração)
-import { useAdminVideos } from "../hooks/useAdminVideos";
-import { useCourses } from "../../Courses/hooks/useCourses";
-import { AlertService } from "../../../../shared/services/alert.service";
+
 
 export const AdminVideoManager: React.FC = () => {
   // 1. Instanciando os Hooks de Dados

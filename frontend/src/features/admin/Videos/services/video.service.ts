@@ -23,21 +23,37 @@ export const VideoService = {
   },
 
   // POST - Criação (Pode conter Vídeo Grande + Thumbnail)
+  // VideoService.ts
+
   create: async (data: CreateVideoParams): Promise<Video> => {
-    const { videoFile, thumbnailFile, ...dto } = data;
+    // Separa os arquivos do DTO de texto
+    const { videoFile, thumbnailFile, ...textDto } = data;
 
-    // Cria um array apenas com os arquivos que existem (não nulos)
-    const files: File[] = [];
-    if (videoFile) files.push(videoFile);
-    if (thumbnailFile) files.push(thumbnailFile);
+    const formData = new FormData();
+    // Campos de Texto
+    formData.append("Title", textDto.title);
+    formData.append("Description", textDto.description);
+    formData.append("CourseId", textDto.courseId); // Backend precisa disso!
 
-    // Enviamos o array 'files'.
-    // O ApiService detectará se o vídeo é grande e usará o SmartHandler automaticamente.
-    return await ApiService.postWithFile<Video, typeof dto>(
+    // Arquivos
+    if (videoFile) {
+      // Chave 'File' para casar com BaseUploadDto no C#
+      formData.append("File", videoFile);
+    }
+
+    if (thumbnailFile) {
+      // Chave 'ThumbnailFile' para casar com CreateVideoDto no C#
+      formData.append("ThumbnailFile", thumbnailFile);
+    }
+
+    // Como o chunking é complexo, recomendo usar a sua ApiService
+    // mas passando o nome da chave do arquivo principal como 'File'
+
+    return await ApiService.postWithFile<Video, any>(
       BASE_ENDPOINT,
-      dto,
-      files,
-      "files" // Backend deve esperar: public List<IFormFile> files { get; set; }
+      { ...textDto, ThumbnailFile: thumbnailFile }, // Passa a Thumb como "dado" se o handler suportar File em objeto
+      videoFile, // O arquivo principal (Vídeo) que será fatiado
+      "File" // Nome da chave no Backend (BaseUploadDto.File)
     );
   },
 

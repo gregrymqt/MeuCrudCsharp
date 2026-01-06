@@ -1,32 +1,31 @@
 ﻿using Hangfire;
-using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Features.Caching.Interfaces;
-using MeuCrudCsharp.Features.Courses.Interfaces;
 using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.Files.Interfaces;
-using MeuCrudCsharp.Features.Files.Services;
 using MeuCrudCsharp.Features.Videos.DTOs;
 using MeuCrudCsharp.Features.Videos.Interfaces;
 using MeuCrudCsharp.Features.Videos.Utils;
 using MeuCrudCsharp.Models;
-using Microsoft.EntityFrameworkCore;
 
 namespace MeuCrudCsharp.Features.Videos.Services;
 
 public class AdminVideoService : IAdminVideoService
 {
     private readonly IVideoRepository _videoRepository;
-    private readonly IFileService _uploadService;
+    private readonly IFileService _fileService;
     private readonly IBackgroundJobClient _jobs;
     private readonly ICacheService _cacheService;
     private readonly IWebHostEnvironment _env; // ⭐️ Adicionado para o Helper
     private readonly ILogger<AdminVideoService> _logger;
 
+    private const string CAT_VIDEO = "Videos";
+    private const string CAT_THUMB = "VideoThumbnails";
+
     private const string VideosCacheVersionKey = "videos_cache_version";
 
     public AdminVideoService(
         IVideoRepository videoRepository,
-        IFileService uploadService,
+        IFileService fileService,
         IBackgroundJobClient jobs,
         ICacheService cacheService,
         IWebHostEnvironment env, // ⭐️ Injetando
@@ -34,65 +33,93 @@ public class AdminVideoService : IAdminVideoService
     )
     {
         _videoRepository = videoRepository;
-        _uploadService = uploadService;
+        _fileService = fileService;
         _jobs = jobs;
         _cacheService = cacheService;
         _env = env;
         _logger = logger;
     }
 
-    public async Task<Video> HandleVideoUploadAsync(
-        IFormFile videoFile,
-        string title,
-        string description,
-        IFormFile? thumbnailFile
-    )
+    public async Task<VideoDto?> HandleVideoUploadAsync(CreateVideoDto dto)
     {
-        // 1. Upload do Vídeo (Fisico + Metadados na tabela Files) [cite: 7]
-        // Salva em: wwwroot/uploads/Videos
-        var videoEntityFile = await _uploadService.SalvarArquivoAsync(videoFile, "Videos");
+        // Precisamos capturar o ID do arquivo salvo, não só a URL
+        int fileId = 0;
+        string thumbnailUrl = string.Empty;
+        string storageIdentifier = Guid.NewGuid().ToString();
 
-        // 2. Upload da Thumbnail (Opcional) [cite: 8]
-        string? thumbnailUrl = null;
-        if (thumbnailFile != null)
+        // 1. Lógica de Chunking (Para o VÍDEO)
+        if (dto.IsChunk && dto.File != null)
         {
-            var thumbEntityFile = await _uploadService.SalvarArquivoAsync(
-                thumbnailFile,
-                "Thumbnails"
+            // CS8604 Resolvido: Garantindo que fileName não é nulo
+            var fileName = dto.FileName ?? $"{Guid.NewGuid()}.tmp";
+
+            var tempPath = await _fileService.ProcessChunkAsync(
+                dto.File,
+                fileName,
+                dto.ChunkIndex,
+                dto.TotalChunks
             );
-            thumbnailUrl = thumbEntityFile.CaminhoRelativo; // [cite: 10]
+
+            if (tempPath == null)
+                return null; // Ainda recebendo pedaços
+
+            var videoSalvo = await _fileService.SalvarArquivoDoTempAsync(
+                tempPath,
+                fileName,
+                CAT_VIDEO
+            );
+
+            // Captura o ID do arquivo para salvar na FK
+            fileId = videoSalvo.Id;
+        }
+        else if (dto.File != null)
+        {
+            var videoSalvo = await _fileService.SalvarArquivoAsync(dto.File, CAT_VIDEO);
+            fileId = videoSalvo.Id;
         }
 
-        // 3. Criação da Entidade Vídeo
-        var video = new Video
+        // 2. Lógica da Thumbnail
+        if (dto.ThumbnailFile != null)
         {
-            Title = title,
-            Description = description,
-            StorageIdentifier = Guid.NewGuid().ToString(), // ID usado na pasta HLS [cite: 11]
-            FileId = videoEntityFile.Id, // Vínculo com o arquivo bruto
+            var thumbSalva = await _fileService.SalvarArquivoAsync(dto.ThumbnailFile, CAT_THUMB);
+            thumbnailUrl = thumbSalva.CaminhoRelativo;
+        }
+
+        // 3. Salvar no Banco
+        var entity = new Video
+        {
+            Title = dto.Title,
+            Description = dto.Description,
+            CourseId = dto.CourseId, // Agora ambos são int (CS0029 resolvido)
+            StorageIdentifier = storageIdentifier,
+
+            // CORREÇÃO: A Model não tem "VideoUrl", ela usa FileId
+            FileId = fileId,
+
             ThumbnailUrl = thumbnailUrl,
+
+            // CORREÇÃO: Usando o Enum (CS0029 resolvido)
             Status = VideoStatus.Processing,
+
             UploadDate = DateTime.UtcNow,
+            Duration = TimeSpan.Zero,
         };
 
-        await _videoRepository.AddAsync(video); // [cite: 12]
+        // CORREÇÃO: Usando _videoRepository em vez de _repository (CS0103 resolvido)
+        await _videoRepository.AddAsync(entity);
 
-        // 4. Invalidação de Cache
-        await _cacheService.InvalidateCacheByKeyAsync(VideosCacheVersionKey);
+        return new VideoDto
+        {
+            // CORREÇÃO: Mapeando PublicId (Guid) para o DTO (CS0029 resolvido)
+            Id = entity.PublicId,
 
-        // 5. Job de Processamento
-        _logger.LogInformation(
-            "Enfileirando job para o vídeo {Identifier}",
-            video.StorageIdentifier
-        );
+            Title = entity.Title,
 
-        // Dispara o Job passando o ID do Vídeo e do Arquivo Original [cite: 14]
-        // Nota: Mantive 'VideoProcessingService' conforme seu arquivo, verifique se o nome da classe do Job é esse mesmo.
-        _jobs.Enqueue<VideoProcessingService>(job =>
-            job.ProcessVideoToHlsAsync(video.Id, videoEntityFile.Id)
-        );
+            // CORREÇÃO: Convertendo Enum para String (CS0029 resolvido)
+            Status = entity.Status.ToString(),
 
-        return video;
+            ThumbnailUrl = entity.ThumbnailUrl ?? string.Empty,
+        };
     }
 
     public async Task<PaginatedResultDto<VideoDto>> GetAllVideosAsync(int page, int pageSize)
@@ -149,10 +176,7 @@ public class AdminVideoService : IAdminVideoService
             // Nota: O método SalvarArquivoAsync cria um novo registro e arquivo.
             // Como ThumbnailUrl é apenas uma string na model Video (e não uma FK para Files),
             // apenas atualizamos o caminho.
-            var novaThumb = await _uploadService.SalvarArquivoAsync(
-                dto.ThumbnailFile,
-                "Thumbnails"
-            );
+            var novaThumb = await _fileService.SalvarArquivoAsync(dto.ThumbnailFile, "Thumbnails");
             video.ThumbnailUrl = novaThumb.CaminhoRelativo; // [cite: 26]
         }
 
@@ -175,7 +199,7 @@ public class AdminVideoService : IAdminVideoService
         if (video.FileId > 0)
         {
             // Isso remove o arquivo físico da pasta uploads/Videos e o registro na tabela Files [cite: 28, 29]
-            await _uploadService.DeletarArquivoAsync(video.FileId);
+            await _fileService.DeletarArquivoAsync(video.FileId);
         }
 
         // 2. Deletar Pasta HLS (Usando o Helper que acabamos de criar)

@@ -1,5 +1,7 @@
 using System;
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
+using MeuCrudCsharp.Features.Files.DTOs;
 
 namespace MeuCrudCsharp.Features.About.DTOs;
 
@@ -87,25 +89,33 @@ public class TeamMemberDto
     public string? GithubUrl { get; set; }
 }
 
-public class CreateUpdateAboutSectionDto
+public class CreateUpdateAboutSectionDto : BaseUploadDto
 {
+    [Required]
     public string Title { get; set; } = string.Empty;
+
+    [Required]
     public string Description { get; set; } = string.Empty;
+
+    [Required]
     public string ImageAlt { get; set; } = string.Empty;
 
-    // O arquivo enviado pelo frontend (formData.append('file', ...))
-    public IFormFile? File { get; set; }
+    public int OrderIndex { get; set; } = 0;
 }
 
-public class CreateUpdateTeamMemberDto
+public class CreateUpdateTeamMemberDto : BaseUploadDto
 {
+    [Required]
     public string Name { get; set; } = string.Empty;
-    public string Role { get; set; } = string.Empty;
-    public string? LinkedinUrl { get; set; }
-    public string? GithubUrl { get; set; }
 
-    // O arquivo enviado pelo frontend
-    public IFormFile? File { get; set; }
+    [Required]
+    public string Role { get; set; } = string.Empty;
+
+    [Required]
+    public string? LinkedinUrl { get; set; }
+
+    [Required]
+    public string? GithubUrl { get; set; }
 }
 
 public class AboutPageContentDto

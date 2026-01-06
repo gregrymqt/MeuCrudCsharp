@@ -5,6 +5,21 @@ namespace MeuCrudCsharp.Features.Files.Interfaces;
 
 public interface IFileService
 {
+    Task<string?> ProcessChunkAsync(
+        IFormFile chunk,
+        string fileName,
+        int chunkIndex,
+        int totalChunks
+    );
+
+    Task<EntityFile> SalvarArquivoDoTempAsync(
+        string tempPath,
+        string nomeOriginal,
+        string categoria
+    );
+
+    Task<EntityFile> SubstituirArquivoDoTempAsync(int fileId, string tempPath, string nomeOriginal);
+
     // Salva um novo arquivo no disco e no banco
     Task<EntityFile> SalvarArquivoAsync(IFormFile arquivo, string featureCategoria);
 

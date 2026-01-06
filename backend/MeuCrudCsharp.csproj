@@ -68,6 +68,7 @@
     <Folder Include="Features/Videos/Repositories/" />
     <Folder Include="Features\Courses\Repositories\" />
     <Folder Include="Features\Files\Attributes\" />
+    <Folder Include="Features\Files\DTOs\" />
     <Folder Include="Features\MercadoPago\Chargebacks\Controllers\" />
     <Folder Include="Features\MercadoPago\Chargebacks\Interfaces\" />
     <Folder Include="Features\MercadoPago\Clients\Controllers\" />

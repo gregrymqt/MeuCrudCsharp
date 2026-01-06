@@ -11,7 +11,7 @@ namespace MeuCrudCsharp.Features.Videos.Interfaces
         /// <summary>
         /// Realiza o upload do vídeo e thumbnail (usando UploadService) e cria o registro no banco.
         /// </summary>
-        Task<Video> HandleVideoUploadAsync(IFormFile videoFile, string title, string description, IFormFile? thumbnailFile);
+        Task<VideoDto?> HandleVideoUploadAsync(CreateVideoDto dto);
 
         /// <summary>
         /// Atualiza os dados de um vídeo existente.
