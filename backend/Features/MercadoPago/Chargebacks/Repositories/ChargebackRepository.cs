@@ -24,24 +24,38 @@ public class ChargebackRepository : IChargebackRepository
         int pageSize
     )
     {
-        // Assume que você tem uma entidade Chargeback no seu ApiDbContext
         var query = _context.Chargebacks.Include(c => c.User).AsQueryable();
 
-        // Aplicar filtros
+        // 1. Filtro Inteligente
         if (!string.IsNullOrEmpty(searchTerm))
         {
-            query = query.Where(c =>
-                c.ChargebackId.ToString().Contains(searchTerm) || c.User.Name.Contains(searchTerm)
-            );
+            if (long.TryParse(searchTerm, out var idSearch))
+            {
+                // Busca exata pelo ID ou parcial pelo nome
+                query = query.Where(c =>
+                    c.ChargebackId == idSearch || c.User.Name.Contains(searchTerm)
+                );
+            }
+            else
+            {
+                // Busca apenas textual
+                query = query.Where(c => c.User.Name.Contains(searchTerm));
+            }
         }
 
-        if (!string.IsNullOrEmpty(statusFilter))
+        // 2. Filtro de Enum Corrigido
+        if (
+            !string.IsNullOrEmpty(statusFilter)
+            && Enum.TryParse<ChargebackStatus>(statusFilter, true, out var statusEnum)
+        )
         {
-            query = query.Where(c => c.Status.ToString() == statusFilter);
+            query = query.Where(c => c.Status == statusEnum);
         }
 
+        // Contagem antes da paginação
         var totalCount = await query.CountAsync();
 
+        // Paginação
         var chargebacks = await query
             .OrderByDescending(c => c.CreatedAt)
             .Skip((page - 1) * pageSize)
@@ -49,5 +63,31 @@ public class ChargebackRepository : IChargebackRepository
             .ToListAsync();
 
         return (chargebacks, totalCount);
+    }
+
+    public async Task<bool> ExistsByExternalIdAsync(long chargebackId)
+    {
+        // Verifica se existe sem travar o registro (AsNoTracking)
+        return await _context
+            .Chargebacks.AsNoTracking()
+            .AnyAsync(c => c.ChargebackId == chargebackId);
+    }
+
+    public async Task<Chargeback?> GetByExternalIdAsync(long chargebackId)
+    {
+        // Busca para edição, então NÃO usamos AsNoTracking aqui (o EF precisa rastrear mudanças)
+        return await _context.Chargebacks.FirstOrDefaultAsync(c => c.ChargebackId == chargebackId);
+    }
+
+    public async Task AddAsync(Chargeback chargeback)
+    {
+        await _context.Chargebacks.AddAsync(chargeback);
+        // O SaveChanges será chamado pelo UnitOfWork
+    }
+
+    public void Update(Chargeback chargeback)
+    {
+        _context.Chargebacks.Update(chargeback);
+        // O SaveChanges será chamado pelo UnitOfWork
     }
 }

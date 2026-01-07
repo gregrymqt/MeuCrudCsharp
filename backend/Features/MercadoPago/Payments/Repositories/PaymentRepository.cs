@@ -40,4 +40,26 @@ public class PaymentRepository : IPaymentRepository
             .OrderByDescending(p => p.DateApproved) // [cite: 42]
             .ToListAsync();
     }
+
+    public async Task<Models.Payments?> GetByExternalIdWithUserAsync(string externalPaymentId)
+    {
+        return await _context
+            .Payments.Include(p => p.User) // Essencial para pegar o e-mail do cliente
+            .FirstOrDefaultAsync(p => p.ExternalId == externalPaymentId);
+    }
+
+    public void Update(Models.Payments payment)
+    {
+        _context.Payments.Update(payment);
+    }
+
+    public async Task AddAsync(Models.Payments payment)
+    {
+        await _context.Payments.AddAsync(payment);
+    }
+
+    public async Task Remove(Models.Payments payment)
+    {
+        _context.Payments.Remove(payment);
+    }
 }

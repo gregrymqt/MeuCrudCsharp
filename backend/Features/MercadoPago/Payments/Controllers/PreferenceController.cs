@@ -11,78 +11,32 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace MeuCrudCsharp.Features.MercadoPago.Payments.Controllers
+namespace MeuCrudCsharp.Features.MercadoPago.Payments.Controllers;
+
+[Route("api/preferences")]
+public class PreferenceController : MercadoPagoApiControllerBase
 {
-    /// <summary>
-    /// Controladora responsável por criar preferências de pagamento no Mercado Pago.
-    /// </summary>
-    [Route("api/preferences")]
-    public class PreferenceController : MercadoPagoApiControllerBase
+    private readonly IPreferencePaymentService _preferencePaymentService;
+
+    public PreferenceController(IPreferencePaymentService preferencePaymentService)
     {
-        private readonly IPreferencePaymentService _preferencePaymentServiceService;
+        _preferencePaymentService = preferencePaymentService;
+    }
 
-        /// <summary>
-        /// Inicializa uma nova instância da classe <see cref="PreferenceController"/>.
-        /// </summary>
-        /// <param name="preferencePaymentServiceService">O serviço que contém a lógica para criar preferências de pagamento.</param>
-        public PreferenceController(IPreferencePaymentService preferencePaymentServiceService)
+    [HttpPost]
+    public async Task<IActionResult> Create([FromBody] CreatePreferenceDto model)
+    {
+        try
         {
-            _preferencePaymentServiceService = preferencePaymentServiceService;
+            // O Service agora resolve o User internamente via IUserContext
+            var preferenceId = await _preferencePaymentService.CreatePreferenceAsync(model);
+
+            return Ok(new { preferenceId });
         }
-
-        /// <summary>
-        /// Cria uma nova preferência de pagamento para o usuário autenticado.
-        /// </summary>
-        /// <remarks>
-        /// A preferência de pagamento é um conjunto de informações sobre um produto ou serviço
-        /// que é usado pelo frontend (Payment Brick) para iniciar o processo de pagamento.
-        /// </remarks>
-        /// <param name="request">DTO contendo o valor do pagamento.</param>
-        /// <returns>Um objeto contendo o ID da preferência criada.</returns>
-        /// <response code="200">Retorna o ID da preferência criada com sucesso.</response>
-        /// <response code="400">Se os dados da requisição forem inválidos (ex: valor não positivo).</response>
-        /// <response code="401">Se o usuário não estiver autenticado.</response>
-        /// <response code="500">Se ocorrer um erro interno na aplicação.</response>
-        /// <response code="502">Se houver uma falha de comunicação com a API do Mercado Pago.</response>
-        [HttpPost]
-        public async Task<IActionResult> Create(decimal amount)
+        catch (Exception ex)
         {
-            try
-            {
-                // O ClaimsPrincipal (User) é automaticamente populado pelo ASP.NET Core
-                var preference = await _preferencePaymentServiceService.CreatePreferenceAsync(
-                    amount,
-                    User
-                );
-
-                return Ok(new { preferenceId = preference.Id });
-            }
-            catch (ArgumentException ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
-            catch (ExternalApiException ex)
-            {
-                return StatusCode(
-                    502,
-                    new
-                    {
-                        message = "O serviço de pagamento está indisponível no momento.",
-                        error = ex.Message,
-                    }
-                );
-            }
-            catch (AppServiceException ex)
-            {
-                return StatusCode(
-                    500,
-                    new
-                    {
-                        message = "Ocorreu um erro interno ao processar sua solicitação.",
-                        error = ex.Message,
-                    }
-                );
-            }
+            // Seus tratamentos de erro padronizados
+            return BadRequest(new { message = ex.Message });
         }
     }
 }

@@ -16,7 +16,7 @@ public class MercadoPagoChargebackResponse
     [JsonPropertyName("coverage_applied")]
     public bool CoverageApplied { get; set; }
 
-    [JsonPropertyName("coverage_elegible")]
+    [JsonPropertyName("coverage_eligible")]
     public bool CoverageEligible { get; set; }
 
     [JsonPropertyName("documentation_required")]

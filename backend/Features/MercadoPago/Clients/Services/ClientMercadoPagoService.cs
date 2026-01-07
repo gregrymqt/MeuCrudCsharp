@@ -11,7 +11,6 @@ namespace MeuCrudCsharp.Features.MercadoPago.Clients.Services;
 
 public class ClientMercadoPagoService : MercadoPagoServiceBase, IClientMercadoPagoService
 {
-    // Construtor repassa o HttpClient e Logger para a Base
     public ClientMercadoPagoService(
         IHttpClientFactory httpClientFactory,
         ILogger<ClientMercadoPagoService> logger
@@ -32,36 +31,49 @@ public class ClientMercadoPagoService : MercadoPagoServiceBase, IClientMercadoPa
         return await customerClient.CreateCardAsync(customerId, request);
     }
 
+    // --- CORREÇÃO AQUI: Usando o objeto do SDK em vez de JSON cru ---
     public async Task<List<CardInCustomerResponseDto>> ListCardsAsync(string customerId)
     {
         var customerClient = new CustomerClient();
-        var response = await customerClient.ListCardsAsync(customerId);
 
-        var jsonContent = response.ApiResponse.Content;
-        if (string.IsNullOrEmpty(jsonContent))
+        // O SDK já retorna uma lista iterável de Cards
+        var cards = await customerClient.ListCardsAsync(customerId);
+
+        if (cards == null || !cards.Any())
             return new List<CardInCustomerResponseDto>();
 
-        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-        return JsonSerializer.Deserialize<List<CardInCustomerResponseDto>>(jsonContent, options)
-            ?? new List<CardInCustomerResponseDto>();
+        // Mapeamos do Objeto do SDK -> Nosso DTO
+        return cards
+            .Select(c => new CardInCustomerResponseDto(
+                c.Id,
+                c.LastFourDigits,
+                c.ExpirationMonth,
+                c.ExpirationYear,
+                new PaymentMethodDto(c.PaymentMethod?.Id, c.PaymentMethod?.Name)
+            ))
+            .ToList();
     }
 
     public async Task<CardInCustomerResponseDto> GetCardAsync(string customerId, string cardId)
     {
         var customerClient = new CustomerClient();
-        var response = await customerClient.GetCardAsync(customerId, cardId);
+        var c = await customerClient.GetCardAsync(customerId, cardId);
 
-        var jsonContent = response.ApiResponse.Content;
-        if (string.IsNullOrEmpty(jsonContent))
+        if (c == null)
             return null;
 
-        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-        return JsonSerializer.Deserialize<CardInCustomerResponseDto>(jsonContent, options);
+        return new CardInCustomerResponseDto(
+            c.Id,
+            c.LastFourDigits,
+            c.ExpirationMonth,
+            c.ExpirationYear,
+            new PaymentMethodDto(c.PaymentMethod?.Id, c.PaymentMethod?.Name)
+        );
     }
 
     public async Task<CardInCustomerResponseDto> DeleteCardAsync(string customerId, string cardId)
     {
-        // Aqui usamos o método manual da Base Class, pois o SDK as vezes tem limitações no delete
+        // Mantemos sua lógica manual aqui, pois o Delete do SDK as vezes falha
         var endpoint = $"/v1/customers/{customerId}/cards/{cardId}";
 
         var responseBody = await SendMercadoPagoRequestAsync(
@@ -70,7 +82,9 @@ public class ClientMercadoPagoService : MercadoPagoServiceBase, IClientMercadoPa
             (object?)null
         );
 
-        return JsonSerializer.Deserialize<CardInCustomerResponseDto>(responseBody)
+        // Aqui tudo bem usar JSON manual pois é uma resposta raw do nosso BaseService
+        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+        return JsonSerializer.Deserialize<CardInCustomerResponseDto>(responseBody, options)
             ?? throw new AppServiceException("Falha ao desserializar resposta do MP.");
     }
 }

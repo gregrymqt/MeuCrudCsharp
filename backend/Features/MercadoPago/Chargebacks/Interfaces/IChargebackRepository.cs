@@ -12,4 +12,8 @@ public interface IChargebackRepository
         int page,
         int pageSize
     );
+    Task<bool> ExistsByExternalIdAsync(long chargebackId);
+    Task<Chargeback?> GetByExternalIdAsync(long chargebackId);
+    Task AddAsync(Chargeback chargeback);
+    void Update(Chargeback chargeback);
 }

@@ -13,5 +13,12 @@ namespace MeuCrudCsharp.Features.MercadoPago.Clients.Interfaces
         Task<WalletCardDto> AddCardToWalletAsync(string userId, string cardToken);
 
         Task<List<WalletCardDto>> GetUserWalletAsync(string userId);
+
+        Task<CustomerWithCardResponseDto> CreateCustomerWithCardAsync(
+            string email,
+            string name,
+            string token
+        );
+        Task<CardInCustomerResponseDto> AddCardToCustomerAsync(string customerId, string token);
     }
 }

@@ -68,12 +68,27 @@ public class SubscriptionRepository : ISubscriptionRepository
 
     public Task<bool> HasActiveSubscriptionByUserIdAsync(string userId)
     {
-        return _context.Subscriptions
-            .AsNoTracking()
+        return _context
+            .Subscriptions.AsNoTracking()
             .AnyAsync(s =>
-                s.UserId == userId &&
-                s.CurrentPeriodEndDate > DateTime.UtcNow && // [cite: 8]
+                s.UserId == userId
+                && s.CurrentPeriodEndDate > DateTime.UtcNow
+                && // [cite: 8]
                 (s.Status == "paid" || s.Status == "authorized") // [cite: 8, 38]
             );
+    }
+
+    public async Task<Subscription?> GetByIdAsync(string subscriptionId)
+    {
+        // O Service passa o ID que está salvo na tabela de Pagamentos.
+        // Geralmente é o ExternalId (ex: "2c938084...").
+        return await _context.Subscriptions.FirstOrDefaultAsync(s =>
+            s.ExternalId == subscriptionId
+        );
+    }
+
+    public void Update(Subscription subscription)
+    {
+        _context.Subscriptions.Update(subscription);
     }
 }

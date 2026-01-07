@@ -3,7 +3,7 @@ using MercadoPago.Client.Common;
 using MercadoPago.Client.Payment;
 using MercadoPago.Error;
 using MercadoPago.Resource.Payment;
-using MeuCrudCsharp.Data;
+
 using MeuCrudCsharp.Features.Auth.Interfaces;
 using MeuCrudCsharp.Features.Caching.Interfaces;
 using MeuCrudCsharp.Features.Caching.Record;
@@ -13,6 +13,7 @@ using MeuCrudCsharp.Features.MercadoPago.Notification.Record;
 using MeuCrudCsharp.Features.MercadoPago.Payments.Dtos;
 using MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces;
 using MeuCrudCsharp.Features.MercadoPago.Utils;
+using MeuCrudCsharp.Features.Shared.Work;
 using Microsoft.Extensions.Options;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services;
@@ -22,7 +23,12 @@ public class PixPaymentService : IPixPaymentService
     private readonly ILogger<PixPaymentService> _logger;
     private readonly ICacheService _cacheService;
     private readonly IPaymentNotificationHub _notificationHub;
-    private readonly ApiDbContext _dbContext;
+
+    // REMOVIDO: private readonly ApiDbContext _dbContext;
+    // ADICIONADO: Repository e UnitOfWork
+    private readonly IPaymentRepository _paymentRepository;
+    private readonly IUnitOfWork _unitOfWork;
+
     private readonly GeneralSettings _generalsettings;
     private const string IDEMPOTENCY_PREFIX = "PixPayment";
     private readonly IUserContext _userContext;
@@ -31,7 +37,8 @@ public class PixPaymentService : IPixPaymentService
         ILogger<PixPaymentService> logger,
         ICacheService cacheService,
         IPaymentNotificationHub notificationHub,
-        ApiDbContext dbContext,
+        IPaymentRepository paymentRepository, // Injeção do Repo
+        IUnitOfWork unitOfWork, // Injeção do UoW
         IOptions<GeneralSettings> settings,
         IUserContext userContext
     )
@@ -39,7 +46,8 @@ public class PixPaymentService : IPixPaymentService
         _logger = logger;
         _cacheService = cacheService;
         _notificationHub = notificationHub;
-        _dbContext = dbContext;
+        _paymentRepository = paymentRepository;
+        _unitOfWork = unitOfWork;
         _generalsettings = settings.Value;
         _userContext = userContext;
     }
@@ -78,7 +86,7 @@ public class PixPaymentService : IPixPaymentService
                         idempotencyKey,
                         mpex.ApiError?.Message
                     );
-                    return new CachedResponse(errorBody, 400); // Bad Request
+                    return new CachedResponse(errorBody, 400);
                 }
                 catch (Exception ex)
                 {
@@ -92,7 +100,7 @@ public class PixPaymentService : IPixPaymentService
                         "Erro inesperado ao processar PIX (IdempotencyKey: {Key})",
                         idempotencyKey
                     );
-                    return new CachedResponse(errorBody, 500); // Internal Server Error
+                    return new CachedResponse(errorBody, 500);
                 }
             },
             TimeSpan.FromHours(24)
@@ -107,7 +115,7 @@ public class PixPaymentService : IPixPaymentService
         string externalReference
     )
     {
-        if (String.IsNullOrEmpty(userId))
+        if (string.IsNullOrEmpty(userId))
         {
             throw new ArgumentException("userId is required");
         }
@@ -121,6 +129,7 @@ public class PixPaymentService : IPixPaymentService
                 new PaymentStatusUpdate("A processar o seu pagamento...", "processing", false)
             );
 
+            // 1. Prepara a Entidade
             novoPixPayment = new Models.Payments()
             {
                 UserId = userId,
@@ -134,9 +143,13 @@ public class PixPaymentService : IPixPaymentService
                 CustomerCpf = request.Payer.Identification.Number,
             };
 
-            await _dbContext.Payments.AddAsync(novoPixPayment);
+            // 2. Persiste Inicialmente (Status "Iniciando") via Repository
+            await _paymentRepository.AddAsync(novoPixPayment);
+            await _unitOfWork.CommitAsync(); // Gera o ID no Banco
+
             _logger.LogInformation(
-                "Pix payment adicionado com sucesso, com o Id:" + novoPixPayment.Id
+                "Pix payment adicionado com sucesso, com o Id: {Id}",
+                novoPixPayment.Id
             );
 
             await _notificationHub.SendStatusUpdateAsync(
@@ -148,6 +161,7 @@ public class PixPaymentService : IPixPaymentService
                 )
             );
 
+            // 3. Chama Mercado Pago
             var requestOptions = new RequestOptions
             {
                 CustomHeaders = { { "X-Idempotency-Key", externalReference } },
@@ -176,18 +190,23 @@ public class PixPaymentService : IPixPaymentService
 
             Payment payment = await paymentClient.CreateAsync(paymentRequest, requestOptions);
 
+            // 4. Atualiza a Entidade com dados do MP
             novoPixPayment.PaymentId = payment.Id.ToString();
             novoPixPayment.Status = PaymentStatusMapper.MapFromMercadoPago(payment.Status);
             novoPixPayment.DateApproved = payment.DateApproved;
             novoPixPayment.UpdatedAt = DateTime.UtcNow;
 
-            await _dbContext.SaveChangesAsync();
+            // Usa o Update do Repository + Commit
+            _paymentRepository.Update(novoPixPayment);
+            await _unitOfWork.CommitAsync();
+
             _logger.LogInformation(
                 "Pagamento PIX {PaymentId} para o usuário {UserId} salvo com sucesso.",
                 novoPixPayment.PaymentId,
                 userId
             );
 
+            // 5. Notifica via Hub
             if (
                 payment.Status == "approved"
                 || payment.Status == "pending"
@@ -217,9 +236,10 @@ public class PixPaymentService : IPixPaymentService
                 );
             }
 
+            // 6. Retorno
             return new PaymentResponseDto(
                 payment.Status,
-                payment.Id.Value,
+                payment.Id.GetValueOrDefault(), // Safe unwrap
                 null,
                 "Pagamento PIX criado com sucesso.",
                 payment.PointOfInteraction?.TransactionData?.QrCode,
@@ -248,14 +268,14 @@ public class PixPaymentService : IPixPaymentService
                 );
             }
 
-            if (novoPixPayment != null)
+            // Rollback manual (Remover o registro temporário se falhar)
+            if (novoPixPayment != null && novoPixPayment.Id != null)
             {
-                _dbContext.Payments.Remove(novoPixPayment);
-
-                await _dbContext.SaveChangesAsync();
+                _paymentRepository.Remove(novoPixPayment);
+                await _unitOfWork.CommitAsync();
 
                 _logger.LogWarning(
-                    "Registro de pagamento para o usuário {UserId} foi removido do contexto devido a uma falha.",
+                    "Registro de pagamento para o usuário {UserId} foi removido devido a uma falha.",
                     userId
                 );
             }

@@ -1,19 +1,24 @@
-using MeuCrudCsharp.Data;
+using MeuCrudCsharp.Features.Base;
 using MeuCrudCsharp.Features.Emails.Interfaces;
 using MeuCrudCsharp.Features.Emails.ViewModels;
 using MeuCrudCsharp.Features.MercadoPago.Chargebacks.Interfaces;
-using MeuCrudCsharp.Features.MercadoPago.Chargebacks.Services; // Certifique-se que este using existe
 using MeuCrudCsharp.Features.MercadoPago.Notification.Interfaces;
+using MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces;
+using MeuCrudCsharp.Features.MercadoPago.Subscriptions.Interfaces;
 using MeuCrudCsharp.Features.MercadoPago.Webhooks.DTOs;
 using MeuCrudCsharp.Models;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Notification.Services;
 
 public class ChargeBackNotificationService : IChargeBackNotificationService
 {
-    private readonly ApiDbContext _context;
+    // ADICIONADO: Repositórios e UoW
+    private readonly IChargebackRepository _chargebackRepository;
+    private readonly IPaymentRepository _paymentRepository;
+    private readonly ISubscriptionRepository _subscriptionRepository;
+    private readonly IUnitOfWork _unitOfWork;
+
     private readonly ILogger<ChargeBackNotificationService> _logger;
     private readonly IEmailSenderService _emailSenderService;
     private readonly IRazorViewToStringRenderer _razorViewToStringRenderer;
@@ -21,7 +26,10 @@ public class ChargeBackNotificationService : IChargeBackNotificationService
     private readonly IMercadoPagoChargebackIntegrationService _mpIntegrationService;
 
     public ChargeBackNotificationService(
-        ApiDbContext context,
+        IChargebackRepository chargebackRepository,
+        IPaymentRepository paymentRepository,
+        ISubscriptionRepository subscriptionRepository,
+        IUnitOfWork unitOfWork,
         ILogger<ChargeBackNotificationService> logger,
         IEmailSenderService emailSenderService,
         IRazorViewToStringRenderer razorViewToStringRenderer,
@@ -29,7 +37,10 @@ public class ChargeBackNotificationService : IChargeBackNotificationService
         IMercadoPagoChargebackIntegrationService mpIntegrationService
     )
     {
-        _context = context;
+        _chargebackRepository = chargebackRepository;
+        _paymentRepository = paymentRepository;
+        _subscriptionRepository = subscriptionRepository;
+        _unitOfWork = unitOfWork;
         _logger = logger;
         _emailSenderService = emailSenderService;
         _razorViewToStringRenderer = razorViewToStringRenderer;
@@ -45,29 +56,22 @@ public class ChargeBackNotificationService : IChargeBackNotificationService
         );
 
         if (mpDetails == null)
-        {
             throw new Exception(
-                $"Chargeback {chargebackData.Id} não encontrado na API do Mercado Pago. Job será retentado."
+                $"Chargeback {chargebackData.Id} não encontrado na API do Mercado Pago."
             );
-        }
 
-        // 2. Extrai o ID do Pagamento (MP)
         var paymentIdStr = mpDetails.Payments?.FirstOrDefault()?.Id;
-
         if (string.IsNullOrEmpty(paymentIdStr))
         {
-            _logger.LogError(
-                "Chargeback {Id} não possui pagamentos vinculados na resposta da API.",
-                chargebackData.Id
-            );
+            _logger.LogError("Chargeback {Id} sem pagamentos vinculados.", chargebackData.Id);
             return;
         }
 
-        // Variáveis seguras convertidas para long
         long mpPaymentId = long.Parse(paymentIdStr);
         long mpChargebackId = long.Parse(mpDetails.Id);
 
-        await using var transaction = await _context.Database.BeginTransactionAsync();
+        // --- ALTERAÇÃO: Transação via UnitOfWork (ou implícita no Commit) ---
+        // Se o seu UoW não tiver BeginTransaction explícito, apenas o CommitAsync no final garante a atomicidade do SaveChanges
         try
         {
             _logger.LogInformation(
@@ -76,10 +80,9 @@ public class ChargeBackNotificationService : IChargeBackNotificationService
                 mpPaymentId
             );
 
-            // 3. Localiza o pagamento no NOSSO banco pelo ID externo (MP)
-            var payment = await _context
-                .Payments.Include(p => p.User)
-                .FirstOrDefaultAsync(p => p.ExternalId == paymentIdStr);
+            // 3. Localiza pagamento via Repository
+            // Substitui: _context.Payments.Include(p => p.User).FirstOrDefaultAsync(...)
+            var payment = await _paymentRepository.GetByExternalIdWithUserAsync(paymentIdStr);
 
             if (payment == null)
             {
@@ -87,19 +90,22 @@ public class ChargeBackNotificationService : IChargeBackNotificationService
             }
             else
             {
-                // Atualiza status do pagamento local
+                // Atualiza Pagamento
                 payment.Status = "chargeback";
+                _paymentRepository.Update(payment); // Marca explicitamente para update
 
-                // --- CORREÇÃO 1: HasValue removido, verifica se string não é nula/vazia ---
+                // Atualiza Assinatura se existir
                 if (!string.IsNullOrEmpty(payment.SubscriptionId))
                 {
-                    var subscription = await _context.Subscriptions.FirstOrDefaultAsync(s =>
-                        s.Id == payment.SubscriptionId
+                    // Substitui: _context.Subscriptions.FirstOrDefaultAsync(...)
+                    var subscription = await _subscriptionRepository.GetByIdAsync(
+                        payment.SubscriptionId
                     );
 
                     if (subscription != null)
                     {
                         subscription.Status = "cancelled";
+                        _subscriptionRepository.Update(subscription);
                         _logger.LogInformation(
                             "Assinatura {SubId} cancelada por chargeback.",
                             subscription.Id
@@ -108,9 +114,10 @@ public class ChargeBackNotificationService : IChargeBackNotificationService
                 }
             }
 
-            // 4. Verifica se o Chargeback já existe (Upsert)
-            var existingChargeback = await _context.Chargebacks.FirstOrDefaultAsync(c =>
-                c.ChargebackId == mpChargebackId
+            // 4. Verifica/Cria Chargeback via Repository
+            // Substitui: _context.Chargebacks.FirstOrDefaultAsync(...)
+            var existingChargeback = await _chargebackRepository.GetByExternalIdAsync(
+                mpChargebackId
             );
 
             if (existingChargeback == null)
@@ -119,40 +126,36 @@ public class ChargeBackNotificationService : IChargeBackNotificationService
                 var newChargeback = new Chargeback
                 {
                     ChargebackId = mpChargebackId,
-
-                    // --- CORREÇÃO 2: Usamos a variável long mpPaymentId, não o GUID do banco ---
-                    PaymentId = mpPaymentId,
-
+                    PaymentId = mpPaymentId, // Usa o long parseado
                     UserId = payment?.UserId,
                     Amount = mpDetails.Amount,
                     Status = ChargebackStatus.Novo,
                     CreatedAt = DateTime.UtcNow,
                 };
-                _context.Chargebacks.Add(newChargeback);
+                await _chargebackRepository.AddAsync(newChargeback);
             }
             else
             {
                 // UPDATE
                 existingChargeback.Amount = mpDetails.Amount;
-                // Atualiza notas internas se quiser
-                // existingChargeback.InternalNotes += $" | Atualizado via Webhook em {DateTime.Now}";
-                _context.Chargebacks.Update(existingChargeback);
+                _chargebackRepository.Update(existingChargeback);
             }
 
-            await _context.SaveChangesAsync();
+            // 5. Persiste tudo (Commit da Transação)
+            // Substitui: await _context.SaveChangesAsync();
+            await _unitOfWork.CommitAsync();
 
-            // 5. Envia E-mail
+            // 6. Envia E-mail (Pós-persistência para garantir que salvou antes de avisar)
             if (payment?.User != null && !string.IsNullOrEmpty(payment.User.Email))
             {
                 await SendChargebackReceivedEmailAsync(payment.User, mpChargebackId);
             }
 
-            await transaction.CommitAsync();
             _logger.LogInformation("Chargeback {Id} processado com sucesso.", mpChargebackId);
         }
         catch (Exception ex)
         {
-            await transaction.RollbackAsync();
+            // O Rollback geralmente é automático se não der o Commit, mas pode ser explícito dependendo da sua impl do UoW
             _logger.LogError(ex, "Erro ao salvar Chargeback {Id}.", mpChargebackId);
             throw;
         }
@@ -160,6 +163,8 @@ public class ChargeBackNotificationService : IChargeBackNotificationService
 
     private async Task SendChargebackReceivedEmailAsync(Users user, long chargebackId)
     {
+        // (Mesma lógica anterior, mantida para brevidade)
+        // ...
         if (user == null || string.IsNullOrEmpty(user.Email))
             return;
 

@@ -32,8 +32,6 @@ namespace MeuCrudCsharp.Models
         [Column(TypeName = "decimal(10, 2)")]
         public decimal Amount { get; set; }
 
-        // A FK para Subscription é uma string (Guid), o que já é seguro.
-        // Não precisamos de uma propriedade de PublicId separada aqui.
         [Required]
         public string SubscriptionId { get; set; } = null!;
 

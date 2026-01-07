@@ -9,6 +9,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Claims.Services;
 public class MercadoPagoIntegrationService : MercadoPagoServiceBase, IMercadoPagoIntegrationService
 {
     const string BaseEndpoint = "post-purchase/v1/claims";
+
     public MercadoPagoIntegrationService(
         IHttpClientFactory httpClientFactory,
         ILogger<MercadoPagoIntegrationService> logger
@@ -44,7 +45,8 @@ public class MercadoPagoIntegrationService : MercadoPagoServiceBase, IMercadoPag
             null
         );
 
-        if (jsonResponse == null) return null;
+        if (jsonResponse == null)
+            return null;
 
         // Usa a classe MpClaimItem que já está nas suas DTOs (Source 45)
         return JsonSerializer.Deserialize<MpClaimItem>(jsonResponse);

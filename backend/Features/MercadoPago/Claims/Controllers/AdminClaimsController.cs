@@ -3,6 +3,7 @@ using MeuCrudCsharp.Features.MercadoPago.Claims.Services;
 using MeuCrudCsharp.Features.MercadoPago.Claims.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using static MeuCrudCsharp.Features.MercadoPago.Claims.DTOs.MercadoPagoClaimsDTOs;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Claims.Controllers;
 
@@ -49,11 +50,11 @@ public class AdminClaimsController : MercadoPagoApiControllerBase
         }
     }
 
-    // POST: api/admin/claims/reply
-    // Admin responde o aluno [cite: 3]
-    [HttpPost("reply")]
+    // Rota fica: POST api/admin/claims/15/reply
+    [HttpPost("{id}/reply")]
     public async Task<IActionResult> ReplyToClaim(
-        [FromBody] MercadoPagoClaimsViewModels.ReplyClaimViewModel model
+        long id,
+        [FromBody] MercadoPagoClaimsViewModels.ReplyClaimViewModel model // Reutilize o DTO simples que tem só a mensagem
     )
     {
         if (!ModelState.IsValid)
@@ -61,10 +62,7 @@ public class AdminClaimsController : MercadoPagoApiControllerBase
 
         try
         {
-            // O Service busca pelo ID do banco (15), descobre o ID do MP (50...)
-            // e manda a mensagem.
-            await _adminClaimService.ReplyToClaimAsync(model.InternalId, model.Message);
-
+            await _adminClaimService.ReplyToClaimAsync(id, model.Message);
             return Ok(new { message = "Resposta enviada com sucesso." });
         }
         catch (Exception ex)

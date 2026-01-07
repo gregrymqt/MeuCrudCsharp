@@ -1,23 +1,18 @@
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Clients.DTOs;
 
 // --- BACK-END / MP (Records Imutáveis) ---
 
-public record CardInCustomerResponseDto(
-    [property: JsonPropertyName("id")] string? Id,
-    [property: JsonPropertyName("last_four_digits")] string? LastFourDigits,
-    [property: JsonPropertyName("expiration_month")] int? ExpirationMonth,
-    [property: JsonPropertyName("expiration_year")] int? ExpirationYear,
-    // Adicionado para o Front saber a bandeira (visa, master)
-    [property: JsonPropertyName("payment_method")] PaymentMethodDto? PaymentMethod
-);
+public record PaymentMethodDto(string? Id, string? Name);
 
-// O MP geralmente retorna o método de pagamento dentro de um objeto ou como id direto.
-// Se o seu JSON retornar direto o ID, mude para string. Se for objeto:
-public record PaymentMethodDto(
-    [property: JsonPropertyName("id")] string? Id,
-    [property: JsonPropertyName("name")] string? Name
+public record CardInCustomerResponseDto(
+    string? Id,
+    string? LastFourDigits,
+    int? ExpirationMonth,
+    int? ExpirationYear,
+    PaymentMethodDto? PaymentMethod
 );
 
 public record CustomerWithCardResponseDto(
@@ -42,5 +37,6 @@ public class WalletCardDto
 
 public class AddCardRequestDto
 {
+    [Required(ErrorMessage = "O token do cartão é obrigatório.")]
     public string CardToken { get; set; }
 }

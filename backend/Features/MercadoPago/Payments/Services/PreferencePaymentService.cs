@@ -6,158 +6,124 @@ using MercadoPago.Client;
 using MercadoPago.Client.Preference;
 using MercadoPago.Error;
 using MercadoPago.Resource.Preference;
+using MeuCrudCsharp.Features.Auth.Interfaces;
 using MeuCrudCsharp.Features.Exceptions;
+using MeuCrudCsharp.Features.MercadoPago.Payments.Dtos;
 using MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces;
+using MeuCrudCsharp.Features.Shared.Work;
+using MeuCrudCsharp.Models;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
+public class PreferencePaymentService : IPreferencePaymentService
 {
-    /// <summary>
-    /// Implementa <see cref="IPreferencePaymentService"/> para criar preferências de pagamento no Mercado Pago.
-    /// </summary>
-    public class PreferencePaymentService : IPreferencePaymentService
+    private readonly ILogger<PreferencePaymentService> _logger;
+    private readonly GeneralSettings _generalSettings;
+    private readonly IUserContext _userContext;
+    private readonly IUserRepository _userRepository;
+
+    // ADICIONADO: Para salvar o "rastro" do pagamento antes de ir pro MP
+    private readonly IPaymentRepository _paymentRepository;
+    private readonly IUnitOfWork _unitOfWork;
+
+    public PreferencePaymentService(
+        ILogger<PreferencePaymentService> logger,
+        IOptions<GeneralSettings> settings,
+        IUserContext userContext,
+        IPaymentRepository paymentRepository,
+        IUnitOfWork unitOfWork,
+        IUserRepository userRepository
+    )
     {
-        private readonly IConfiguration _configuration;
-        private readonly ILogger<PreferencePaymentService> _logger;
-        private readonly GeneralSettings _generalSettings;
+        _logger = logger;
+        _generalSettings = settings.Value;
+        _userContext = userContext;
+        _paymentRepository = paymentRepository;
+        _unitOfWork = unitOfWork;
+        _userRepository = userRepository;
+    }
 
-        /// <summary>
-        /// Inicializa uma nova instância da classe <see cref="PreferencePaymentService"/>.
-        /// </summary>
-        /// <param name="configuration">A configuração da aplicação para obter URLs e outras configurações.</param>
-        /// <param name="logger">O serviço de logging.</param>
-        public PreferencePaymentService(
-            IConfiguration configuration,
-            ILogger<PreferencePaymentService> logger,
-            IOptions<GeneralSettings> redirectSettings
-        )
+    public async Task<string> CreatePreferenceAsync(CreatePreferenceDto model)
+    {
+        var userId = await _userContext.GetCurrentUserId(); // Pega user completo (com email)
+        var user = await _userRepository.GetByIdAsync(userId);
+        if (userId == null)
+            throw new UnauthorizedAccessException("Usuário não encontrado.");
+
+        if (model.Amount <= 0)
+            throw new ArgumentException("O valor deve ser maior que zero.");
+
+        // 1. Gera a Referência que vai ligar o MP ao seu Banco
+        var externalReference = Guid.NewGuid().ToString();
+
+        try
         {
-            _configuration = configuration;
-            _logger = logger;
-            _generalSettings = redirectSettings.Value;
+            // 2. SALVA NO BANCO (Estado Inicial)
+            // Isso é vital para o Webhook funcionar depois
+            var initialPayment = new Payments
+            {
+                UserId = user.Id,
+                Status = "pending", // Ou "in_process"
+                Amount = model.Amount,
+                Method = "preference_checkout", // Para você saber que foi via Link
+                ExternalId = externalReference, // O Segredo está aqui!
+                PayerEmail = user.Email,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+            };
+
+            await _paymentRepository.AddAsync(initialPayment);
+            await _unitOfWork.CommitAsync();
+
+            // 3. Cria a Preferência no MP
+            var requestOptions = new RequestOptions();
+            requestOptions.CustomHeaders.Add("x-idempotency-key", Guid.NewGuid().ToString());
+
+            var baseUrl = _generalSettings.BaseUrl;
+
+            var preferenceRequest = new PreferenceRequest
+            {
+                Items = new List<PreferenceItemRequest>
+                {
+                    new PreferenceItemRequest
+                    {
+                        Id = "CURSO-V1", // Pode vir do DTO se quiser
+                        Title = model.Title,
+                        Description = model.Description,
+                        Quantity = 1,
+                        UnitPrice = model.Amount,
+                        CurrencyId = "BRL",
+                    },
+                },
+                Payer = new PreferencePayerRequest { Name = user.Name, Email = user.Email },
+                Purpose = "wallet_purchase",
+                ExternalReference = externalReference, // VITAL: Manda o GUID salvo pro MP
+                NotificationUrl = $"{baseUrl}/webhook/mercadopago", // O Webhook vai usar esse GUID
+                BackUrls = new PreferenceBackUrlsRequest
+                {
+                    Success = $"{baseUrl}/pagamento/success",
+                    Failure = $"{baseUrl}/pagamento/error",
+                    Pending = $"{baseUrl}/pagamento/pending",
+                },
+                AutoReturn = "approved", // Opcional: Volta pro site automaticamente
+            };
+
+            var client = new PreferenceClient();
+            Preference preference = await client.CreateAsync(preferenceRequest, requestOptions);
+
+            _logger.LogInformation(
+                "Preferência criada: {PrefId} | Ref: {Ref}",
+                preference.Id,
+                externalReference
+            );
+
+            return preference.Id;
         }
-
-        /// <inheritdoc />
-        /// <summary>
-        /// Cria uma nova preferência de pagamento.
-        /// </summary>
-        /// <param name="amount">O valor da preferência.</param>
-        /// <param name="user">O usuário que está criando a preferência.</param>
-        /// <returns>A preferência de pagamento criada.</returns>
-        public async Task<Preference> CreatePreferenceAsync(decimal amount, ClaimsPrincipal user)
+        catch (Exception ex)
         {
-            if (user?.Identity?.IsAuthenticated != true)
-                throw new ArgumentException("Usuário não autenticado.", nameof(user));
-
-            var userEmail = user.FindFirstValue(ClaimTypes.Email);
-            if (string.IsNullOrEmpty(userEmail))
-                throw new ArgumentException("O e-mail do usuário é obrigatório.", nameof(user));
-
-            var userName = user.FindFirstValue(ClaimTypes.Name);
-            if (string.IsNullOrEmpty(userName))
-                throw new ArgumentException("O userName do usuário é obrigatório.", nameof(user));
-
-            if (amount <= 0)
-                throw new ArgumentOutOfRangeException(
-                    nameof(amount),
-                    "O valor deve ser maior que zero."
-                );
-
-            try
-            {
-                var preferenceClient = new PreferenceClient();
-                var requestOptions = new RequestOptions();
-                requestOptions.CustomHeaders.Add("x-idempotency-key", Guid.NewGuid().ToString());
-
-                var baseUrl =
-                    _generalSettings.BaseUrl
-                    ?? throw new InvalidOperationException(
-                        "A URL de redirecionamento não está configurada."
-                    );
-
-                var externalReference = Guid.NewGuid().ToString();
-
-                var successUrl = $"{baseUrl}/pagamento/success";
-                var failureUrl = $"{baseUrl}/pagamento/error";
-                var pendingUrl = $"{baseUrl}/pagamento/pending";
-                var notificationUrl = baseUrl + "/webhook/mercadopago";
-
-                var preferenceRequest = new PreferenceRequest
-                {
-                    Items = new List<PreferenceItemRequest>
-                    {
-                        new PreferenceItemRequest
-                        {
-                            Id = "CURSO-PSI-01",
-                            Title = "Curso Online de Psicologia com Luciana Venancio",
-                            Description =
-                                "Acesso vitalício ao curso completo, incluindo todos os módulos e materiais de apoio.",
-                            CategoryId = "education",
-                            Quantity = 1,
-                            UnitPrice = amount,
-                            CurrencyId = "BRL",
-                        },
-                    },
-                    Payer = new PreferencePayerRequest { Name = userName, Email = userEmail },
-                    Purpose = "wallet_purchase",
-                    ExternalReference = externalReference,
-                    NotificationUrl = notificationUrl,
-                    BackUrls = new PreferenceBackUrlsRequest
-                    {
-                        Success = successUrl,
-                        Failure = failureUrl,
-                        Pending = pendingUrl,
-                    },
-                };
-
-                _logger.LogInformation(
-                    "Criando preferência de pagamento para o usuário {UserEmail} no valor de {Amount}",
-                    userEmail,
-                    amount
-                );
-
-                Preference preference = await preferenceClient.CreateAsync(
-                    preferenceRequest,
-                    requestOptions
-                );
-
-                if (preference == null || string.IsNullOrEmpty(preference.Id))
-                {
-                    throw new AppServiceException(
-                        "A resposta da API do gateway de pagamento foi inválida ao criar a preferência."
-                    );
-                }
-
-                _logger.LogInformation(
-                    "Preferência {PreferenceId} criada com sucesso.",
-                    preference.Id
-                );
-                return preference;
-            }
-            catch (MercadoPagoApiException mpex)
-            {
-                _logger.LogError(
-                    mpex,
-                    "Erro na API do Mercado Pago ao criar preferência para {UserEmail}. Erro: {ApiError}",
-                    userEmail,
-                    mpex.ApiError.Message
-                );
-                throw new ExternalApiException(
-                    "Ocorreu um erro ao comunicar com o gateway de pagamento.",
-                    mpex
-                );
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(
-                    ex,
-                    "Erro inesperado ao criar preferência para {UserEmail}.",
-                    userEmail
-                );
-                throw new AppServiceException("Ocorreu um erro inesperado em nosso sistema.", ex);
-            }
+            _logger.LogError(ex, "Erro ao criar preferência MP.");
+            throw new AppServiceException("Erro ao gerar link de pagamento.", ex);
         }
     }
 }

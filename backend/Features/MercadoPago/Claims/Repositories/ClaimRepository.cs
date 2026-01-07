@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Features.MercadoPago.Claims.Interfaces;
 using MeuCrudCsharp.Models;
+using MeuCrudCsharp.Models.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Claims.Repositories;
@@ -20,7 +21,7 @@ public class ClaimRepository : IClaimRepository
 
     public async Task<Models.Claims?> GetByIdAsync(long id)
     {
-        return await _context.Claims.FindAsync(id);
+        return await _context.Claims.Include(c => c.User).FirstOrDefaultAsync(c => c.Id == id);
     }
 
     public async Task<(List<Models.Claims> Claims, int TotalCount)> GetPaginatedClaimsAsync(
@@ -30,27 +31,25 @@ public class ClaimRepository : IClaimRepository
         int pageSize
     )
     {
-        var query = _context
-            .Claims.Include(c => c.User) // Inclui o usuário para poder filtrar pelo nome
-            .AsQueryable();
+        var query = _context.Claims.Include(c => c.User).AsQueryable();
 
-        // Aplicar filtros
+        // 1. Correção do Erro CS8602 (Dereference of possibly null reference)
         if (!string.IsNullOrEmpty(searchTerm))
         {
             query = query.Where(c =>
-                c.MpClaimId.ToString().Contains(searchTerm) || c.User.Name.Contains(searchTerm)
+                c.MpClaimId.ToString().Contains(searchTerm)
+                || (c.User != null && c.User.Name.Contains(searchTerm)) // Verificação de nulo adicionada
             );
         }
 
         if (!string.IsNullOrEmpty(statusFilter))
         {
-            query = query.Where(c => c.Status.ToString().ToLower() == statusFilter);
+            // Filtra convertendo o Enum do banco para string para comparar
+            query = query.Where(c => c.Status.ToString() == statusFilter);
         }
 
-        // Obter a contagem total de itens antes da paginação
         var totalCount = await query.CountAsync();
 
-        // Aplicar ordenação e paginação
         var claims = await query
             .OrderByDescending(c => c.DataCreated)
             .Skip((page - 1) * pageSize)
@@ -62,9 +61,9 @@ public class ClaimRepository : IClaimRepository
 
     public async Task UpdateClaimStatusAsync(Models.Claims claim, string newStatus)
     {
-        // Tenta converter a string do novo status para o enum correspondente.
-        // O 'true' ignora a diferença entre maiúsculas e minúsculas.
-        if (Enum.TryParse<ClaimStatus>(newStatus, true, out var parsedStatus))
+        // 2. Correção do Erro CS0266 (Conversão de Enum incorreta)
+        // O seu model usa 'InternalClaimStatus', não 'MpClaimStatus'
+        if (Enum.TryParse<InternalClaimStatus>(newStatus, true, out var parsedStatus))
         {
             claim.Status = parsedStatus;
             _context.Claims.Update(claim);

@@ -27,10 +27,8 @@ public class UserClaimService : IUserClaimService
     // 1. Minhas Reclamações
     public async Task<List<ClaimSummaryViewModel>> GetMyClaimsAsync()
     {
-        var userId =
-            _userContext.GetCurrentUserId().ToString() ?? throw new UnauthorizedAccessException();
+        var userId = _userContext.GetCurrentUserId().ToString() ?? throw new UnauthorizedAccessException();
 
-        // Busca no banco local apenas as claims deste usuário
         var myClaims = await _claimRepository.GetClaimsByUserIdAsync(userId);
 
         return myClaims
@@ -39,9 +37,11 @@ public class UserClaimService : IUserClaimService
                 InternalId = c.Id,
                 MpClaimId = c.MpClaimId,
                 Status = c.Status.ToString(),
-                Type = c.Type,
+                // CORREÇÃO 1: ToString() no Enum Type
+                Type = c.Type.ToString(),
                 DateCreated = c.DataCreated,
-                IsUrgent = c.Status == ClaimStatus.RespondidoPeloVendedor,
+                // CORREÇÃO 2: Nome correto do Enum (InternalClaimStatus)
+                IsUrgent = c.Status == InternalClaimStatus.RespondidoPeloVendedor,
             })
             .ToList();
     }

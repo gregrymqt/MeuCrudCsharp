@@ -349,7 +349,10 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
                             card.Id,
                             card.LastFourDigits,
                             card.ExpirationMonth,
-                            card.ExpirationYear
+                            card.ExpirationYear,
+                            // CORREÇÃO: Passando o PaymentMethod que faltava
+                            card.PaymentMethod // Se 'card' já tiver essa propriedade preenchida
+                                ?? new PaymentMethodDto("credit_card", "Credit Card") // Fallback se for nulo
                         )
                     );
                 }

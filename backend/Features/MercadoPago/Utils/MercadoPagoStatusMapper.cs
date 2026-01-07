@@ -13,15 +13,17 @@ namespace MeuCrudCsharp.Features.MercadoPago.Utils
             { "cancelled", InternalPaymentStatus.Cancelado },
             { "authorized", InternalPaymentStatus.Autorizado },
             { "in_mediation", InternalPaymentStatus.EmDisputa },
-            { "charged_back", InternalPaymentStatus.Chargeback }
+            { "charged_back", InternalPaymentStatus.Chargeback },
         };
 
         public static string MapFromMercadoPago(string mercadoPagoStatus)
         {
             var key = mercadoPagoStatus?.ToLowerInvariant() ?? string.Empty;
-            
+
             // O valor padrão também usa a constante
-            return _statusMap.TryGetValue(key, out var status) ? status : InternalPaymentStatus.Pendente;
+            return _statusMap.TryGetValue(key, out var status)
+                ? status
+                : InternalPaymentStatus.Pendente;
         }
     }
 }

@@ -17,23 +17,15 @@ public record CreatePixPaymentRequest(
 /// Representa os dados de uma requisição de pagamento com cartão de crédito enviada pelo frontend.
 /// </summary>
 public record CreditCardPaymentRequestDto(
-    [Required(ErrorMessage = "O token do cartão é obrigatório.")] string? Token,
-    [Required(ErrorMessage = "O número de parcelas é obrigatório.")]
-    [Range(1, int.MaxValue, ErrorMessage = "O número de parcelas deve ser no mínimo 1.")]
-        int Installments,
-    [Required(ErrorMessage = "O método de pagamento é obrigatório.")] string? PaymentMethodId,
-    string? IssuerId,
-    [Required(ErrorMessage = "Os dados do pagador são obrigatórios.")] PayerRequestDto? Payer,
-    [Required(ErrorMessage = "O valor do pagamento é obrigatório.")]
-    [Range(
-        typeof(decimal),
-        "0.01",
-        "1000000.00",
-        ErrorMessage = "O valor do pagamento deve ser positivo."
-    )]
-        decimal Amount,
-    string? Plano,
-    [Required(ErrorMessage = "O ID do plano é obrigatório.")] Guid PlanExternalId
+    [Required] string Token,
+    [Required] int Installments,
+    [Required] string PaymentMethodId,
+    [Required] string IssuerId,
+    [Required] decimal Amount,
+    // Opcionais (pois dependem se é assinatura ou pagamento único)
+    string? Plano, // "anual", "mensal"
+    string? PlanExternalId, // Guid do plano no seu banco
+    [Required] PayerRequestDto Payer
 );
 
 /// <summary>
@@ -72,4 +64,10 @@ public record PaymentResponseDto(
     string? Message,
     string? QrCodeBase64,
     string? QrCode
+);
+
+public record CreatePreferenceDto(
+    decimal Amount,
+    string Title, // Ex: "Curso de Psicologia"
+    string Description
 );

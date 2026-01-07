@@ -47,7 +47,9 @@ public class ChargeBackViewModels
         public string Customer { get; set; }
         public decimal Amount { get; set; }
         public DateTime Date { get; set; }
-        public string Status { get; set; }
+
+        // ChargebackSummaryViewModel
+        public int Status { get; set; } // Retorna 0, 1, 2...
         public string MercadoPagoUrl { get; set; }
     }
 }

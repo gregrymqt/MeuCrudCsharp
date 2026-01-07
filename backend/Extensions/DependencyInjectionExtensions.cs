@@ -64,7 +64,8 @@ public static class DependencyInjectionExtensions
                         "MeuCrudCsharp.Features.MercadoPago.Claims.Repositories",
                         "MeuCrudCsharp.Features.MercadoPago.Hub",
                         // --- 4. Configurações Globais ---
-                        "MeuCrudCsharp.AppSettings"
+                        "MeuCrudCsharp.AppSettings",
+                        "MeuCrudCsharp.Features.Shared.Work"
                     )
                 )
                 .AsImplementedInterfaces()

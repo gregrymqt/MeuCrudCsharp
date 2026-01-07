@@ -12,6 +12,9 @@ public interface ISubscriptionRepository
         bool asNoTracking = true
     );
 
+    Task<Subscription?> GetByIdAsync(string subscriptionId);
+    void Update(Subscription subscription);
+
     Task<Subscription?> GetActiveSubscriptionByUserIdAsync(string userId);
 
     Task<Subscription?> GetActiveByUserIdAsync(string userId);

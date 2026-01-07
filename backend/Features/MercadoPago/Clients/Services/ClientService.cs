@@ -98,6 +98,31 @@ public class ClientService : IClientService
         };
     }
 
+    public async Task<CustomerWithCardResponseDto> CreateCustomerWithCardAsync(
+        string email,
+        string name,
+        string token
+    )
+    {
+        // 1. Cria o Customer no MP
+        var customer = await _mpService.CreateCustomerAsync(email, name);
+
+        // 2. Adiciona o Cartão ao Customer criado
+        var card = await _mpService.AddCardAsync(customer.Id, token);
+
+        // 3. Monta o DTO de resposta composta
+        // Mapeia o Card do SDK/MP para o nosso DTO
+        var cardDto = new CardInCustomerResponseDto(
+            card.Id,
+            card.LastFourDigits,
+            card.ExpirationMonth,
+            card.ExpirationYear,
+            new PaymentMethodDto(card.PaymentMethod?.Id, card.PaymentMethod?.Name)
+        );
+
+        return new CustomerWithCardResponseDto(customer.Id, customer.Email, cardDto);
+    }
+
     // --- DELETE ---
     public async Task RemoveCardFromWalletAsync(string userId, string cardId)
     {
@@ -118,7 +143,7 @@ public class ClientService : IClientService
 
     // --- MÉTODOS PRIVADOS ---
 
-    private async Task<CardInCustomerResponseDto> AddCardToCustomerAsync(
+    public async Task<CardInCustomerResponseDto> AddCardToCustomerAsync(
         string customerId,
         string cardToken
     )

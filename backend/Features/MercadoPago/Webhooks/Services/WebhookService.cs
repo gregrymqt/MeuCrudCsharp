@@ -33,21 +33,27 @@ namespace MeuCrudCsharp.Features.MercadoPago.Webhooks.Services
             if (string.IsNullOrEmpty(_mercadoPagoSettings.WebhookSecret))
             {
                 _logger.LogWarning("WebhookSecret não configurado. Validação ignorada.");
-                return false; 
+                return false;
             }
 
             try
             {
-                if (!request.Headers.TryGetValue("x-request-id", out var xRequestId) ||
-                    !request.Headers.TryGetValue("x-signature", out var xSignature))
+                if (
+                    !request.Headers.TryGetValue("x-request-id", out var xRequestId)
+                    || !request.Headers.TryGetValue("x-signature", out var xSignature)
+                )
                 {
                     _logger.LogWarning("Headers de assinatura ausentes.");
                     return false;
                 }
 
                 var signatureParts = xSignature.ToString().Split(',');
-                var ts = signatureParts.FirstOrDefault(p => p.Trim().StartsWith("ts="))?.Split('=')[1];
-                var hash = signatureParts.FirstOrDefault(p => p.Trim().StartsWith("v1="))?.Split('=')[1];
+                var ts = signatureParts
+                    .FirstOrDefault(p => p.Trim().StartsWith("ts="))
+                    ?.Split('=')[1];
+                var hash = signatureParts
+                    .FirstOrDefault(p => p.Trim().StartsWith("v1="))
+                    ?.Split('=')[1];
 
                 if (string.IsNullOrEmpty(ts) || string.IsNullOrEmpty(hash))
                 {
@@ -62,7 +68,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Webhooks.Services
                     return false;
                 }
 
-                var dataId = notification.Data.Id; 
+                var dataId = notification.Data.Id;
                 // ----------------------------------------------------------------
 
                 var manifest = $"id:{dataId};request-id:{xRequestId};ts:{ts};";
@@ -77,7 +83,11 @@ namespace MeuCrudCsharp.Features.MercadoPago.Webhooks.Services
 
                 if (!calculatedHash.Equals(hash))
                 {
-                    _logger.LogWarning("Assinatura inválida. Recebido: {Hash}, Calculado: {Calc}", hash, calculatedHash);
+                    _logger.LogWarning(
+                        "Assinatura inválida. Recebido: {Hash}, Calculado: {Calc}",
+                        hash,
+                        calculatedHash
+                    );
                     return false;
                 }
 
@@ -90,12 +100,16 @@ namespace MeuCrudCsharp.Features.MercadoPago.Webhooks.Services
             }
         }
 
-        public async Task ProcessWebhookNotificationAsync(MercadoPagoWebhookNotification notification)
+        public async Task ProcessWebhookNotificationAsync(
+            MercadoPagoWebhookNotification notification
+        )
         {
             // --- CORREÇÃO 2: Verificação de nulo padrão do C# ---
             if (notification.Data == null || string.IsNullOrEmpty(notification.Data.Id))
             {
-                _logger.LogWarning("Notificação recebida sem dados válidos (Data null ou Id vazio).");
+                _logger.LogWarning(
+                    "Notificação recebida sem dados válidos (Data null ou Id vazio)."
+                );
                 return;
             }
             // ----------------------------------------------------
@@ -104,7 +118,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Webhooks.Services
             {
                 // Como o objeto já veio deserializado, nós apenas repassamos o ID para os Jobs.
                 // O Webhook do MP geralmente só manda o ID dentro do Data mesmo.
-                
+
                 string entityId = notification.Data.Id;
 
                 switch (notification.Type)
@@ -112,30 +126,45 @@ namespace MeuCrudCsharp.Features.MercadoPago.Webhooks.Services
                     case "payment":
                         // --- CORREÇÃO 3: Criamos o DTO manualmente em vez de deserializar de novo ---
                         var paymentData = new PaymentNotificationData { Id = entityId };
-                        
+
                         _logger.LogInformation("Job Pagamento ID: {Id}", paymentData.Id);
-                        await _queueService.EnqueueJobAsync<ProcessPaymentNotificationJob, PaymentNotificationData>(paymentData);
+                        await _queueService.EnqueueJobAsync<
+                            ProcessPaymentNotificationJob,
+                            PaymentNotificationData
+                        >(paymentData);
                         break;
 
                     case "subscription_authorized_payment":
                         var subPaymentData = new PaymentNotificationData { Id = entityId };
 
-                        _logger.LogInformation("Job Assinatura Pagamento ID: {Id}", subPaymentData.Id);
-                        await _queueService.EnqueueJobAsync<ProcessRenewalSubscriptionJob, PaymentNotificationData>(subPaymentData);
+                        _logger.LogInformation(
+                            "Job Assinatura Pagamento ID: {Id}",
+                            subPaymentData.Id
+                        );
+                        await _queueService.EnqueueJobAsync<
+                            ProcessRenewalSubscriptionJob,
+                            PaymentNotificationData
+                        >(subPaymentData);
                         break;
 
                     case "subscription_preapproval_plan":
                         var planData = new PaymentNotificationData { Id = entityId };
 
                         _logger.LogInformation("Job Plano ID: {Id}", planData.Id);
-                        await _queueService.EnqueueJobAsync<ProcessPlanSubscriptionJob, PaymentNotificationData>(planData);
+                        await _queueService.EnqueueJobAsync<
+                            ProcessPlanSubscriptionJob,
+                            PaymentNotificationData
+                        >(planData);
                         break;
 
                     case "subscription_preapproval":
                         var subData = new PaymentNotificationData { Id = entityId };
 
                         _logger.LogInformation("Job Assinatura ID: {Id}", subData.Id);
-                        await _queueService.EnqueueJobAsync<ProcessCreateSubscriptionJob, PaymentNotificationData>(subData);
+                        await _queueService.EnqueueJobAsync<
+                            ProcessCreateSubscriptionJob,
+                            PaymentNotificationData
+                        >(subData);
                         break;
 
                     case "claim":
@@ -143,7 +172,10 @@ namespace MeuCrudCsharp.Features.MercadoPago.Webhooks.Services
                         var claimData = new ClaimNotificationPayload { Id = entityId };
 
                         _logger.LogInformation("Job Claim ID: {Id}", claimData.Id);
-                        await _queueService.EnqueueJobAsync<ProcessClaimJob, ClaimNotificationPayload>(claimData);
+                        await _queueService.EnqueueJobAsync<
+                            ProcessClaimJob,
+                            ClaimNotificationPayload
+                        >(claimData);
                         break;
 
                     case "automatic-payments":
@@ -151,15 +183,24 @@ namespace MeuCrudCsharp.Features.MercadoPago.Webhooks.Services
                         var cardData = new CardUpdateNotificationPayload { CustomerId = entityId }; // Suposição baseada no log anterior
 
                         _logger.LogInformation("Job Cartão Cliente: {Id}", cardData.CustomerId);
-                        await _queueService.EnqueueJobAsync<ProcessCardUpdateJob, CardUpdateNotificationPayload>(cardData);
+                        await _queueService.EnqueueJobAsync<
+                            ProcessCardUpdateJob,
+                            CardUpdateNotificationPayload
+                        >(cardData);
                         break;
 
-                    case "chargeback": 
+                    case "chargeback":
                     case "topic_chargebacks_wh":
                         var chargebackData = new ChargebackNotificationPayload { Id = entityId };
 
-                        _logger.LogInformation("Enfileirando notificação de Chargeback ID: {ChargebackId}", chargebackData.Id);
-                        await _queueService.EnqueueJobAsync<ProcessChargebackJob, ChargebackNotificationPayload>(chargebackData);
+                        _logger.LogInformation(
+                            "Enfileirando notificação de Chargeback ID: {ChargebackId}",
+                            chargebackData.Id
+                        );
+                        await _queueService.EnqueueJobAsync<
+                            ProcessChargebackJob,
+                            ChargebackNotificationPayload
+                        >(chargebackData);
                         break;
 
                     default:
@@ -169,7 +210,11 @@ namespace MeuCrudCsharp.Features.MercadoPago.Webhooks.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erro ao processar payload do webhook tipo {Type}", notification.Type);
+                _logger.LogError(
+                    ex,
+                    "Erro ao processar payload do webhook tipo {Type}",
+                    notification.Type
+                );
             }
         }
     }

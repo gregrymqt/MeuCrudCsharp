@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using MeuCrudCsharp.Features.MercadoPago.Webhooks.DTOs;
+using MeuCrudCsharp.Features.MercadoPago.Webhooks.Interfaces;
 using MeuCrudCsharp.Features.MercadoPago.Webhooks.Services;
 using Microsoft.AspNetCore.Mvc;
 

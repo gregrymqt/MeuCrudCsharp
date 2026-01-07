@@ -54,11 +54,12 @@ public class AdminClaimService : IAdminClaimService
                         .Select(c => new ClaimSummaryViewModel
                         {
                             InternalId = c.Id,
-                            MpClaimId = c.MpClaimId, // Importante para o frontend clicar
+                            MpClaimId = c.MpClaimId,
                             CustomerName = c.User?.Name ?? "Desconhecido",
                             Status = c.Status.ToString(),
                             DateCreated = c.DataCreated,
-                            Type = c.Type,
+                            // CORREÇÃO CS0029: Convertendo Enum para String
+                            Type = c.Type.ToString(),
                         })
                         .ToList();
 

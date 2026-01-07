@@ -1,9 +1,8 @@
-import  { ApiService } from "../../../../shared/services/api.service";
+import { ApiService } from "../../../../shared/services/api.service";
 import type {
   ClaimSummary,
   ClaimDetail,
   ReplyClaimPayload,
-  ReplyUserPayload,
 } from "../types/claims.type";
 
 export const ClaimService = {
@@ -50,9 +49,12 @@ export const ClaimService = {
 
     // Responder à Loja [cite: 4]
     reply: async (internalId: number, message: string) => {
-      const payload: ReplyUserPayload = { message };
-      // Note que a rota do user inclui o ID na URL
-      return await ApiService.post(`/user/claims/${internalId}/reply`, payload);
+      // Agora o ID vai na URL, igual ao método do usuário
+      const payload = { message };
+      return await ApiService.post(
+        `/admin/claims/${internalId}/reply`,
+        payload
+      );
     },
 
     // Pedir Mediação (Escalar) [cite: 4]
