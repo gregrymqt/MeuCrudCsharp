@@ -4,23 +4,24 @@ using Microsoft.EntityFrameworkCore;
 
 namespace MeuCrudCsharp.Models
 {
-    // Mantendo a herança do IdentityUser
     [Index(nameof(GoogleId), IsUnique = true, Name = "IX_Users_GoogleId")]
     public class Users : IdentityUser
     {
-        public Guid PublicId { get; set; } = Guid.NewGuid(); //
-        public string? Name { get; set; } //
-        public int? AvatarFileId { get; set; } // Precisa ser nullable (?)
+        public Guid PublicId { get; set; } = Guid.NewGuid();
+        public string? Name { get; set; }
+
+        // --- IMAGENS ---
+        public int? AvatarFileId { get; set; }
+
+        // ADICIONE ISTO AQUI PARA CORRIGIR O ERRO CS0117 e CS1061:
+        public string? AvatarUrl { get; set; }
 
         // --- Autenticação Externa ---
-        public string? GoogleId { get; set; } //
-        public string? CustomerId { get; set; } // (Stripe/MercadoPago ID)
+        public string? GoogleId { get; set; }
+        public string? CustomerId { get; set; }
 
         // --- Relacionamentos ---
-        // Relacionamento 1:1 ou 1:N com Assinatura (Depende da sua regra, aqui pus 1:1 opcional)
-        public virtual Subscription? Subscription { get; set; } //
-
-        // Relacionamento 1:N com Pagamentos
-        public virtual ICollection<Payments> Payments { get; set; } = new List<Payments>(); //
+        public virtual Subscription? Subscription { get; set; }
+        public virtual ICollection<Payments> Payments { get; set; } = new List<Payments>();
     }
 }

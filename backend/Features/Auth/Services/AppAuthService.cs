@@ -127,17 +127,16 @@ namespace MeuCrudCsharp.Features.Auth.Services
 
         public async Task<UserSessionDto> GetAuthenticatedUserDataAsync(string userId)
         {
-            // 1. Busca dados básicos do usuário [cite: 1]
+            // 1. Busca dados básicos do usuário
             var user = await _userRepository.GetByIdAsync(userId);
 
-            if (user == null) // [cite: 2]
+            if (user == null) //
                 throw new ResourceNotFoundException("Usuário não encontrado.");
 
-            // 2. Consultas Paralelas (Opcional, mas melhora performance)
-            // Disparamos as 3 consultas ao mesmo tempo para o banco
+            // 2. Consultas Paralelas
             var paymentTask = _paymentRepository.HasAnyPaymentByUserIdAsync(userId);
             var subTask = _subscriptionRepository.HasActiveSubscriptionByUserIdAsync(userId);
-            var rolesTask = _userRoleRepository.GetRolesByUserIdAsync(userId); // Nova task
+            var rolesTask = _userRoleRepository.GetRolesByUserIdAsync(userId);
 
             // Aguardamos todas terminarem
             await Task.WhenAll(paymentTask, subTask, rolesTask);
@@ -145,16 +144,22 @@ namespace MeuCrudCsharp.Features.Auth.Services
             // 3. Monta o DTO com os resultados
             return new UserSessionDto
             {
-                PublicId = user.PublicId, // [cite: 3]
-                Name = user.Name ?? "Usuário", // [cite: 5, 6]
-                Email = user.Email, // [cite: 6]
-                AvatarUrl = user.AvatarUrl, // [cite: 6]
+                PublicId = user.PublicId, //
+                Name = user.Name ?? "Usuário", //
 
-                HasPaymentHistory = paymentTask.Result, // [cite: 3]
-                HasActiveSubscription = subTask.Result, // [cite: 4]
+                // CORREÇÃO CS8601: Tratando possível nulo do IdentityUser.Email
+                Email = user.Email ?? string.Empty, //
+
+                // Agora isso funciona pois adicionamos a propriedade na Model
+                AvatarUrl = user.AvatarUrl, //
+
+                HasPaymentHistory = paymentTask.Result, //
+
+                // CORREÇÃO: Faltava uma vírgula aqui
+                HasActiveSubscription = subTask.Result, //
 
                 // 4. Preenche as Roles
-                Roles = rolesTask.Result ?? new List<string>()
+                Roles = rolesTask.Result ?? new List<string>(),
             };
         }
     }

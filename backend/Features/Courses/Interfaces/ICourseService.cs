@@ -35,7 +35,7 @@ namespace MeuCrudCsharp.Features.Courses.Interfaces
         /// <param name="createDto">O DTO com os dados para a criação do curso.</param>
         /// <returns>Uma tarefa que representa a operação assíncrona. O resultado da tarefa contém o DTO do curso recém-criado.</returns>
         /// <exception cref="AppServiceException">Lançada se já existir um curso com o mesmo nome ou se ocorrer outro erro de serviço.</exception>
-        Task<CourseDto> CreateCourseAsync(CreateCourseDto createDto);
+        Task<CourseDto> CreateCourseAsync(CreateUpdateCourseDto createDto);
 
         /// <summary>
         /// Atualiza um curso existente.
@@ -44,7 +44,7 @@ namespace MeuCrudCsharp.Features.Courses.Interfaces
         /// <param name="updateDto">O DTO com os novos dados do curso.</param>
         /// <returns>Uma tarefa que representa a operação assíncrona. O resultado da tarefa contém o DTO do curso atualizado.</returns>
         /// <exception cref="ResourceNotFoundException">Lançada se o curso com o ID especificado não for encontrado.</exception>
-        Task<CourseDto> UpdateCourseAsync(Guid id, UpdateCourseDto updateDto);
+        Task<CourseDto> UpdateCourseAsync(Guid id, CreateUpdateCourseDto updateDto);
 
         /// <summary>
         /// Exclui um curso pelo seu ID.

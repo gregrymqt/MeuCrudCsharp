@@ -15,7 +15,11 @@ namespace MeuCrudCsharp.Features.Auth.Middlewares
         public async Task InvokeAsync(HttpContext context, ICacheService cacheService)
         {
             // 1. Tenta pegar o token do Header
-            var token = context.Request.Headers["Authorization"].FirstOrDefault()?.Split(" ").Last();
+            var token = context
+                .Request.Headers["Authorization"]
+                .FirstOrDefault()
+                ?.Split(" ")
+                .Last();
 
             if (!string.IsNullOrEmpty(token))
             {
@@ -27,7 +31,9 @@ namespace MeuCrudCsharp.Features.Auth.Middlewares
                 {
                     // 3. Se estiver na lista negra, retorna 401 e CORTA a requisição aqui
                     context.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
-                    await context.Response.WriteAsJsonAsync(new { message = "Token revogado. Faça login novamente." });
+                    await context.Response.WriteAsJsonAsync(
+                        new { message = "Token revogado. Faça login novamente." }
+                    );
                     return;
                 }
             }

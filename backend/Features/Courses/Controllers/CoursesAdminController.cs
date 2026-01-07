@@ -4,6 +4,7 @@ using MeuCrudCsharp.Features.Base;
 using MeuCrudCsharp.Features.Courses.DTOs;
 using MeuCrudCsharp.Features.Courses.Interfaces;
 using MeuCrudCsharp.Features.Exceptions;
+using MeuCrudCsharp.Features.Videos.DTOs;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -21,7 +22,6 @@ namespace MeuCrudCsharp.Features.Courses.Controllers
             _courseService = courseService;
         }
 
-        // ✅ CORRIGIDO: Agora suporta paginação
         [HttpGet]
         public async Task<IActionResult> GetCoursesPaginated(
             [FromQuery] int pageNumber = 1,
@@ -30,7 +30,6 @@ namespace MeuCrudCsharp.Features.Courses.Controllers
         {
             try
             {
-                // Chama o método correto da service, passando os parâmetros da query string
                 var paginatedResult = await _courseService.GetCoursesWithVideosPaginatedAsync(
                     pageNumber,
                     pageSize
@@ -39,10 +38,9 @@ namespace MeuCrudCsharp.Features.Courses.Controllers
             }
             catch (AppServiceException ex)
             {
-                // Este catch pode ser mais genérico, pois a service já trata erros específicos
                 return StatusCode(
                     500,
-                    new { message = "Ocorreu um erro ao buscar os cursos.", details = ex.Message }
+                    new { message = "Erro ao buscar cursos.", details = ex.Message }
                 );
             }
         }
@@ -50,55 +48,62 @@ namespace MeuCrudCsharp.Features.Courses.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetCoursesByPublicId(Guid id)
         {
-            if (String.IsNullOrEmpty(id.ToString()))
+            // CORREÇÃO: Guid nunca é null. Verifica se é vazio (0000-000...)
+            if (id == Guid.Empty)
             {
-                throw new Exception("O ID não pode ser vazio.");
+                return BadRequest(new { message = "O ID não pode ser vazio." });
             }
 
+            // A Service retorna a entidade 'Course' (conforme sua interface)
             var course = await _courseService.FindCourseByPublicIdOrFailAsync(id);
 
+            // Mapeamento manual para DTO (Correto)
             var courseDto = new CourseDto
             {
                 PublicId = course.PublicId,
                 Name = course.Name,
                 Description = course.Description,
+                // Mapeie os vídeos se necessário
+                Videos =
+                    course
+                        .Videos?.Select(v => new VideoDto
+                        {
+                            Id = v.PublicId, // Assumindo que VideoDto tem Id/PublicId
+                            Title = v.Title,
+                        })
+                        .ToList() ?? new List<VideoDto>(),
             };
 
             return Ok(courseDto);
         }
-
-        // ✅ Perfeito, nenhuma alteração necessária
-        // Na sua classe de controle (ex: AdminCoursesController.cs)
 
         [HttpGet("search")]
         public async Task<ActionResult<IEnumerable<CourseDto>>> SearchCoursesByNameAsync(
             [FromQuery] string name
         )
         {
-            // A validação inicial continua sendo uma boa prática
             if (string.IsNullOrWhiteSpace(name))
             {
                 return Ok(Enumerable.Empty<CourseDto>());
             }
 
-            // ✅ Chama o novo método da service que retorna uma lista
             var courses = await _courseService.SearchCoursesByNameAsync(name);
-
-            // ✅ Retorna a lista obtida. O try-catch não é mais necessário aqui
-            //    porque a service não lança mais a exceção para busca vazia.
             return Ok(courses);
         }
 
-        // ✅ Perfeito, nenhuma alteração necessária
         [HttpPost]
-        public async Task<IActionResult> CreateCourse([FromBody] CreateCourseDto createDto)
+        // CORREÇÃO: Usando o nome correto do DTO definido na interface
+        public async Task<IActionResult> CreateCourse([FromBody] CreateUpdateCourseDto createDto)
         {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
             try
             {
                 var newCourse = await _courseService.CreateCourseAsync(createDto);
                 return CreatedAtAction(
-                    nameof(SearchCoursesByNameAsync),
-                    new { name = newCourse.Name },
+                    nameof(GetCoursesByPublicId), // Melhor apontar para o GetById
+                    new { id = newCourse.PublicId },
                     newCourse
                 );
             }
@@ -108,10 +113,16 @@ namespace MeuCrudCsharp.Features.Courses.Controllers
             }
         }
 
-        // ✅ Perfeito, nenhuma alteração necessária
         [HttpPut("{id:guid}")]
-        public async Task<IActionResult> UpdateCourse(Guid id, [FromBody] UpdateCourseDto updateDto)
+        // CORREÇÃO: Usando o nome correto do DTO definido na interface
+        public async Task<IActionResult> UpdateCourse(
+            Guid id,
+            [FromBody] CreateUpdateCourseDto updateDto
+        )
         {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
             try
             {
                 var updatedCourse = await _courseService.UpdateCourseAsync(id, updateDto);
@@ -127,7 +138,6 @@ namespace MeuCrudCsharp.Features.Courses.Controllers
             }
         }
 
-        // ✅ Perfeito, nenhuma alteração necessária
         [HttpDelete("{id:guid}")]
         public async Task<IActionResult> DeleteCourse(Guid id)
         {
@@ -142,7 +152,6 @@ namespace MeuCrudCsharp.Features.Courses.Controllers
             }
             catch (AppServiceException ex)
             {
-                // Retornar 'Conflict' aqui é uma excelente escolha de design!
                 return Conflict(new { message = ex.Message });
             }
         }
