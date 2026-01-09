@@ -11,11 +11,16 @@ namespace MeuCrudCsharp.Features.MercadoPago.Plans.Utils
             {
                 switch (interval)
                 {
-                    case 1: return "Mensal";
-                    case 3: return "Trimestral";
-                    case 6: return "Semestral";
-                    case 12: return "Anual";
-                    default: return $"Pacote de {interval} meses";
+                    case 1:
+                        return "Mensal";
+                    case 3:
+                        return "Trimestral";
+                    case 6:
+                        return "Semestral";
+                    case 12:
+                        return "Anual";
+                    default:
+                        return $"Pacote de {interval} meses";
                 }
             }
 
@@ -27,20 +32,22 @@ namespace MeuCrudCsharp.Features.MercadoPago.Plans.Utils
             return "Plano Padrão";
         }
 
-        public static List<string> GetDefaultFeatures() => new()
-        {
-            "Acesso a todos os cursos",
-            "Vídeos novos toda semana",
-            "Suporte via comunidade",
-            "Cancele quando quiser",
-        };
+        public static List<string> GetDefaultFeatures() =>
+            new()
+            {
+                "Acesso a todos os cursos",
+                "Vídeos novos toda semana",
+                "Suporte via comunidade",
+                "Cancele quando quiser",
+            };
 
         public static string FormatPriceDisplay(decimal amount, int frequency)
         {
             decimal monthlyPrice;
             switch (frequency)
             {
-                case 1: return $"R$ {amount:F2}".Replace('.', ',');
+                case 1:
+                    return $"R$ {amount:F2}".Replace('.', ',');
                 case 3:
                     monthlyPrice = amount / 3;
                     return $"R$ {monthlyPrice:F2}".Replace('.', ',');
@@ -50,7 +57,8 @@ namespace MeuCrudCsharp.Features.MercadoPago.Plans.Utils
                 case 12:
                     monthlyPrice = amount / 12;
                     return $"R$ {monthlyPrice:F2}".Replace('.', ',');
-                default: return $"Pacote de {frequency} meses";
+                default:
+                    return $"Pacote de {frequency} meses";
             }
         }
 
@@ -66,18 +74,25 @@ namespace MeuCrudCsharp.Features.MercadoPago.Plans.Utils
 
         public static void ApplyUpdateDtoToPlan(Plan localPlan, UpdatePlanDto updateDto)
         {
-            if (updateDto.Reason != null) localPlan.Name = updateDto.Reason;
+            if (updateDto.Reason != null)
+                localPlan.Name = updateDto.Reason;
             if (updateDto.AutoRecurring.TransactionAmount != 0)
                 localPlan.TransactionAmount = updateDto.AutoRecurring.TransactionAmount;
             if (updateDto.AutoRecurring.Frequency != 0)
                 localPlan.FrequencyInterval = updateDto.AutoRecurring.Frequency;
             if (updateDto.AutoRecurring.FrequencyType != null)
             {
-                if (!Enum.TryParse<PlanFrequencyType>(updateDto.AutoRecurring.FrequencyType, ignoreCase: true,
-                        out var frequencyTypeEnum))
+                if (
+                    !Enum.TryParse<PlanFrequencyType>(
+                        updateDto.AutoRecurring.FrequencyType,
+                        ignoreCase: true,
+                        out var frequencyTypeEnum
+                    )
+                )
                 {
                     throw new ArgumentException(
-                        $"O valor '{updateDto.AutoRecurring.FrequencyType}' é inválido para o tipo de frequência. Use 'Days' ou 'Months'.");
+                        $"O valor '{updateDto.AutoRecurring.FrequencyType}' é inválido para o tipo de frequência. Use 'Days' ou 'Months'."
+                    );
                 }
 
                 localPlan.FrequencyType = frequencyTypeEnum;

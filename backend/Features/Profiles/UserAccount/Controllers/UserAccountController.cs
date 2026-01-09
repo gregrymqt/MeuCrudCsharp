@@ -1,18 +1,7 @@
 // Usings combinados de todos os arquivos
-
-using System.Security.Claims;
-using MeuCrudCsharp.Features.Auth.Interfaces;
 using MeuCrudCsharp.Features.Base;
-using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.Files.Attributes;
-using MeuCrudCsharp.Features.MercadoPago.Clients.DTOs;
-using MeuCrudCsharp.Features.MercadoPago.Clients.Interfaces;
-using MeuCrudCsharp.Features.MercadoPago.Refunds.Interfaces;
-using MeuCrudCsharp.Features.MercadoPago.Subscriptions.DTOs;
 using MeuCrudCsharp.Features.Profiles.UserAccount.Interfaces;
-using MeuCrudCsharp.Models;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MeuCrudCsharp.Features.Profiles.UserAccount.Controllers;

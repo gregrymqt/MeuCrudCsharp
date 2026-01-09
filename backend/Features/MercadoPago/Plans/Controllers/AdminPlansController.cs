@@ -1,8 +1,8 @@
 ﻿using MeuCrudCsharp.Features.Base;
-using Microsoft.AspNetCore.Mvc;
 using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.MercadoPago.Plans.DTOs;
 using MeuCrudCsharp.Features.MercadoPago.Plans.Interfaces;
+using Microsoft.AspNetCore.Mvc;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Plans.Controllers;
 
@@ -29,7 +29,11 @@ public class AdminPlansController : MercadoPagoApiControllerBase
         {
             var planResponseDto = await _planService.CreatePlanAsync(createDto);
 
-            return CreatedAtAction(nameof(GetPlanById), new { id = planResponseDto.PublicId }, planResponseDto);
+            return CreatedAtAction(
+                nameof(GetPlanById),
+                new { id = planResponseDto.PublicId },
+                planResponseDto
+            );
         }
         catch (AppServiceException ex)
         {
@@ -45,7 +49,10 @@ public class AdminPlansController : MercadoPagoApiControllerBase
     /// Busca todos os planos ativos do sistema.
     /// </summary>
     [HttpGet]
-    public async Task<IActionResult> GetPlans([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+    public async Task<IActionResult> GetPlans(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10
+    )
     {
         try
         {
@@ -55,39 +62,46 @@ public class AdminPlansController : MercadoPagoApiControllerBase
         }
         catch (AppServiceException ex)
         {
-            return StatusCode(500, new { message = "Erro ao buscar os planos.", error = ex.Message });
+            return StatusCode(
+                500,
+                new { message = "Erro ao buscar os planos.", error = ex.Message }
+            );
         }
     }
 
     /// <summary>
     /// Busca um plano específico pelo seu ID.
     /// </summary>
-    [HttpGet("{id:guid}")]
+    [HttpGet("{id}")]
     [ActionName(nameof(GetPlanById))]
-    public async Task<IActionResult> GetPlanById(Guid id)
+    public async Task<IActionResult> GetPlanById(string id)
     {
-        // Chama o novo método que retorna o DTO específico para edição
-        var planEditDto = await _planService.GetPlanEditDtoByIdAsync(id);
-
-        if (planEditDto == null)
+        if (Guid.TryParse(id, out var guidId))
         {
-            return NotFound(new { message = $"Plano com ID {id} não encontrado." });
+            var planEditDto = await _planService.GetPlanEditDtoByIdAsync(guidId);
+            if (planEditDto == null)
+            {
+                return NotFound(new { message = $"Plano com ID {id} não encontrado." });
+            }
+            return Ok(planEditDto);
         }
-
-        return Ok(planEditDto);
+        return BadRequest(new { message = "ID inválido." });
     }
 
     /// <summary>
     /// Atualiza um plano existente.
     /// </summary>
-    [HttpPut("{id:guid}")]
-    public async Task<IActionResult> UpdatePlan(Guid id, [FromBody] UpdatePlanDto updateDto)
+    [HttpPut("{id}")]
+    public async Task<IActionResult> UpdatePlan(string id, [FromBody] UpdatePlanDto updateDto)
     {
         try
         {
-            // CORREÇÃO: Chamando o _planService.
-            var updatedPlan = await _planService.UpdatePlanAsync(id, updateDto);
-            return Ok(updatedPlan);
+            if (Guid.TryParse(id, out var guidId))
+            {
+                var updatedPlan = await _planService.UpdatePlanAsync(guidId, updateDto);
+                return Ok(updatedPlan);
+            }
+            return BadRequest(new { message = "ID inválido." });
         }
         catch (ResourceNotFoundException ex)
         {
@@ -95,7 +109,10 @@ public class AdminPlansController : MercadoPagoApiControllerBase
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new { message = "Erro ao atualizar o plano.", error = ex.Message });
+            return StatusCode(
+                500,
+                new { message = "Erro ao atualizar o plano.", error = ex.Message }
+            );
         }
     }
 
@@ -117,7 +134,10 @@ public class AdminPlansController : MercadoPagoApiControllerBase
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new { message = "Erro ao deletar o plano.", error = ex.Message });
+            return StatusCode(
+                500,
+                new { message = "Erro ao deletar o plano.", error = ex.Message }
+            );
         }
     }
 }

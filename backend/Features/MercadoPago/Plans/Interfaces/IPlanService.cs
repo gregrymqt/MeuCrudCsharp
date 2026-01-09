@@ -1,5 +1,4 @@
-﻿
-using MeuCrudCsharp.Features.MercadoPago.Plans.DTOs;
+﻿using MeuCrudCsharp.Features.MercadoPago.Plans.DTOs;
 using MeuCrudCsharp.Models;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Plans.Interfaces;
@@ -41,11 +40,9 @@ public interface IPlanService
     /// <returns>Uma tarefa que representa a operação assíncrona.</returns>
     Task DeletePlanAsync(Guid publicId);
 
-
     /// <summary>
-    /// retorna todos os planos, buscando na api do Mercado Pago 
+    /// retorna todos os planos, buscando na api do Mercado Pago
     /// </summary>
     /// <returns>Todos os planos</returns>
     Task<PagedResultDto<PlanDto>> GetActiveApiPlansAsync(int page, int pageSize);
-
 }

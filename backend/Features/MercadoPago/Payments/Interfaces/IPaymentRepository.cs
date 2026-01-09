@@ -14,6 +14,9 @@ public interface IPaymentRepository
     );
 
     Task<Models.Payments?> GetByExternalIdWithUserAsync(string externalPaymentId);
+
+    Task<Models.Payments?> GetByExternalIdWithSubscriptionAsync(string externalId);
+
     void Update(Models.Payments payment);
 
     Task AddAsync(Models.Payments payment);

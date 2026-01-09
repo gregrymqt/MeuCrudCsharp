@@ -1,0 +1,113 @@
+@use '../../../../styles/variables' as *;// Ajuste o caminho conforme sua estrutura
+
+.container {
+  padding: 1rem;
+  background-color: $bg-light;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px $shadow;
+
+  h2 {
+    color: $text-dark;
+    margin-bottom: 1.5rem;
+    font-size: 1.5rem;
+  }
+}
+
+// Área de busca com Mobile-First (Stack vertical)
+.searchSection {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 2rem;
+
+  // No Desktop vira horizontal
+  @include desktop {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  input {
+    flex: 1;
+    padding: 0.75rem;
+    border: 1px solid $border-color;
+    border-radius: 4px;
+    font-size: 1rem;
+    transition: border-color $transition-speed;
+
+    &:focus {
+      outline: none;
+      border-color: $primary-color;
+    }
+  }
+
+  button {
+    padding: 0.75rem 1.5rem;
+    background-color: $primary-color;
+    color: $text-light;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background-color $transition-speed;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+
+    &:hover {
+      background-color: $primary-hover;
+    }
+
+    &:disabled {
+      background-color: $secondary-color;
+      cursor: not-allowed;
+    }
+  }
+}
+
+// Badges para Status (UX Visual)
+.statusBadge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: bold;
+  text-transform: capitalize;
+  display: inline-block;
+
+  &.authorized {
+    background-color: rgba(40, 167, 69, 0.1); // Verde claro
+    color: #28a745;
+  }
+
+  &.paused {
+    background-color: rgba(255, 193, 7, 0.1); // Amarelo claro
+    color: #ffc107;
+  }
+
+  &.cancelled {
+    background-color: rgba(220, 53, 69, 0.1); // Vermelho claro
+    color: #dc3545;
+  }
+  
+  &.default {
+    background-color: $bg-grey;
+    color: $secondary-color;
+  }
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  
+  button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: $primary-color;
+    font-weight: 600;
+    
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}

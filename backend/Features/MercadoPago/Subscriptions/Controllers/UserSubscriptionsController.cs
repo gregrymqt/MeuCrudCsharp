@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace MeuCrudCsharp.Features.MercadoPago.Subscriptions.Controllers
 {
     [Route("api/subscriptions")] // Rota dedicada
-    public class SubscriptionsController : MercadoPagoApiControllerBase // Herança conforme 
+    public class SubscriptionsController : MercadoPagoApiControllerBase // Herança conforme
     {
         private readonly IUserSubscriptionService _service;
 
@@ -26,27 +26,33 @@ namespace MeuCrudCsharp.Features.MercadoPago.Subscriptions.Controllers
                 if (result == null)
                 {
                     // Retorna 404 padronizado se não houver assinatura [cite: 4]
-                    return NotFound(new { success = false, message = "Nenhuma assinatura encontrada." });
+                    return NotFound(
+                        new { success = false, message = "Nenhuma assinatura encontrada." }
+                    );
                 }
 
                 return Ok(result);
             }
             catch (Exception ex)
             {
-                // Usa o método base para tratar erros 
+                // Usa o método base para tratar erros
                 return HandleException(ex, "Erro ao buscar detalhes da assinatura.");
             }
         }
 
         [HttpPut("status")] // PUT: api/subscriptions/status
-        public async Task<IActionResult> UpdateStatus([FromBody] UpdateSubscriptionStatusDto request)
+        public async Task<IActionResult> UpdateStatus(
+            [FromBody] UpdateSubscriptionStatusDto request
+        )
         {
             try
             {
                 // O front envia { status: "paused" }, mapeamos para a string que o service espera
                 await _service.ChangeSubscriptionStatusAsync(request.Status);
 
-                return Ok(new { success = true, message = "Status da assinatura atualizado com sucesso." });
+                return Ok(
+                    new { success = true, message = "Status da assinatura atualizado com sucesso." }
+                );
             }
             catch (Exception ex)
             {

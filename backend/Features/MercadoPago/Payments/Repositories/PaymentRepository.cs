@@ -48,6 +48,13 @@ public class PaymentRepository : IPaymentRepository
             .FirstOrDefaultAsync(p => p.ExternalId == externalPaymentId);
     }
 
+    public async Task<Models.Payments?> GetByExternalIdWithSubscriptionAsync(string externalId)
+    {
+        return await _context
+            .Payments.Include(p => p.Subscription) // Vital para a lógica de reembolso de assinatura
+            .FirstOrDefaultAsync(p => p.ExternalId == externalId);
+    }
+
     public void Update(Models.Payments payment)
     {
         _context.Payments.Update(payment);

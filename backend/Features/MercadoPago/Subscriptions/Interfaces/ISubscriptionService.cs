@@ -19,7 +19,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Subscriptions.Interfaces
             string payerEmail,
             string lastFourDigits
         );
-        
+
         Task<Subscription> ActivateSubscriptionFromSinglePaymentAsync(
             string userId,
             Guid planPublicId,
@@ -35,9 +35,9 @@ namespace MeuCrudCsharp.Features.MercadoPago.Subscriptions.Interfaces
             UpdateSubscriptionValueDto dto
         );
 
-        Task<SubscriptionResponseDto> UpdateSubscriptionStatusAsync(string subscriptionId,
-            UpdateSubscriptionStatusDto dto);
-        
-        
+        Task<SubscriptionResponseDto> UpdateSubscriptionStatusAsync(
+            string subscriptionId,
+            UpdateSubscriptionStatusDto dto
+        );
     }
 }

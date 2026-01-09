@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 // Imports dos seus componentes
-import { SubscriptionActions } from '../../components/MercadoPago/Subscription/components/SubscriptionActions'; // [cite: 1]
-import { SubscriptionInfo } from '../../components/MercadoPago/Subscription/components/SubscriptionInfo'; // [cite: 1]
+import { SubscriptionActions } from '../../components/MercadoPago/Subscription/components/User/SubscriptionActions'; // [cite: 1]
+import { SubscriptionInfo } from '../../components/MercadoPago/Subscription/components/User/SubscriptionInfo'; // [cite: 1]
 import { useSubscription } from '../../components/MercadoPago/Subscription/hooks/useUserSubscription'; // 
 // Imports da Sidebar Genérica
 

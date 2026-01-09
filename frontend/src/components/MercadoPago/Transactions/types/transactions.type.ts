@@ -1,6 +1,8 @@
-import type { Payment } from "../../../../types/models";
-
-export interface PaymentItems extends Pick<Payment, 'id' | 'amount' | 'createdAt'> {
-  status: string; // Ou mapear para um Enum se tiver PaymentStatus global
+export interface PaymentItems {
+  id: string;
+  amount: number;
+  status: string;
+  createdAt: string; // O JSON retorna data como string ISO
   description?: string;
+  paymentMethod?: string;
 }

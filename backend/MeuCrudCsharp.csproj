@@ -72,6 +72,7 @@
     <Folder Include="Features\MercadoPago\Chargebacks\Controllers\" />
     <Folder Include="Features\MercadoPago\Chargebacks\Interfaces\" />
     <Folder Include="Features\MercadoPago\Clients\Controllers\" />
+    <Folder Include="Features\MercadoPago\Refunds\Controllers\" />
     <Folder Include="Features\Profiles\Admin\Repositories\" />
     <Folder Include="Features\Support\Controllers\" />
     <Folder Include="Features\Support\DTOs\" />

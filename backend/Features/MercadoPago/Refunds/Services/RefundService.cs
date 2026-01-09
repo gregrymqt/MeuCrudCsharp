@@ -1,83 +1,106 @@
 ﻿using MeuCrudCsharp.Data;
-using MeuCrudCsharp.Features.Auth.Interfaces;
+using MeuCrudCsharp.Features.Base;
 using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.MercadoPago.Base;
-using MeuCrudCsharp.Features.MercadoPago.Refunds.DTOs;
+using MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces; // Ajuste conforme seu namespace
 using MeuCrudCsharp.Features.MercadoPago.Refunds.Interfaces;
+using MeuCrudCsharp.Features.MercadoPago.Refunds.Interfaces;
+using MeuCrudCsharp.Features.MercadoPago.Subscriptions.Interfaces; // Ajuste conforme seu namespace
+using MeuCrudCsharp.Features.Shared.Work; // Ajuste conforme seu namespace
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Refunds.Services
 {
     public class RefundService : MercadoPagoServiceBase, IRefundService
     {
-        private readonly ApiDbContext _context;
-        private readonly IUserContext _userContext;
+        private readonly IPaymentRepository _paymentRepository;
+        private readonly ISubscriptionRepository _subscriptionRepository;
+        private readonly IUnitOfWork _unitOfWork;
 
         public RefundService(
-            ApiDbContext context,
+            IPaymentRepository paymentRepository,
+            ISubscriptionRepository subscriptionRepository,
+            IUnitOfWork unitOfWork,
             IHttpClientFactory httpClient,
-            ILogger<RefundService> logger,
-            IUserContext userContext
+            ILogger<RefundService> logger
         )
             : base(httpClient, logger)
         {
-            _context = context;
-            _userContext = userContext;
+            _paymentRepository = paymentRepository;
+            _subscriptionRepository = subscriptionRepository;
+            _unitOfWork = unitOfWork;
         }
 
-        public async Task RequestUserRefundAsync()
+        public async Task RequestRefundAsync(long paymentId)
         {
-            var userId = await _userContext.GetCurrentUserId();
+            var externalIdStr = paymentId.ToString();
 
-            var subscription = await _context.Subscriptions.FirstOrDefaultAsync(s =>
-                s.UserId == userId && s.Status == "ativo"
+            // 1. Busca usando o novo método do Repository que traz a Assinatura
+            var payment = await _paymentRepository.GetByExternalIdWithSubscriptionAsync(
+                externalIdStr
             );
 
-            if (subscription == null)
-            {
-                throw new AppServiceException("No active subscription found to request a refund.");
-            }
-
-            var payment = await _context
-                .Payments.Where(p => p.SubscriptionId == subscription.Id && p.Status == "aprovada")
-                .OrderByDescending(p => p.CreatedAt)
-                .FirstOrDefaultAsync();
-
+            // 2. Validações
             if (payment == null)
             {
-                throw new AppServiceException("No approved payment found for this subscription.");
+                throw new ResourceNotFoundException(
+                    $"Pagamento {paymentId} não encontrado no sistema."
+                );
+            }
+
+            if (payment.Status != "aprovada" && payment.Status != "approved")
+            {
+                throw new AppServiceException(
+                    "Apenas pagamentos aprovados podem ser reembolsados."
+                );
             }
 
             if (payment.CreatedAt < DateTime.UtcNow.AddDays(-7))
             {
-                throw new AppServiceException("The 7-day period for a refund request has expired.");
+                throw new AppServiceException(
+                    "O prazo de 7 dias para solicitação de reembolso expirou."
+                );
             }
 
             try
             {
+                // 3. Chama a API do Mercado Pago
                 await RefundPaymentOnMercadoPagoAsync(payment.ExternalId);
 
-                subscription.Status = "refund_pending";
-                _context.Subscriptions.Update(subscription);
-                await _context.SaveChangesAsync();
+                // 4. Atualiza o status via Repository
+                payment.Status = "refunded";
+                payment.UpdatedAt = DateTime.UtcNow;
+
+                // Marca o objeto Payment como modificado no contexto
+                _paymentRepository.Update(payment);
+
+                // Se houver assinatura vinculada, atualizamos via Repository dela
+                if (payment.Subscription != null)
+                {
+                    payment.Subscription.Status = "refund_pending";
+                    payment.Subscription.UpdatedAt = DateTime.UtcNow;
+
+                    // Marca o objeto Subscription como modificado
+                    _subscriptionRepository.Update(payment.Subscription);
+                }
+
+                // 5. Persiste tudo de uma vez (Atomicidade)
+                await _unitOfWork.CommitAsync();
 
                 _logger.LogInformation(
-                    "Refund request initiated for user {UserId}. Waiting for webhook confirmation.",
-                    userId
+                    "Reembolso solicitado com sucesso para o pagamento {ExternalId}.",
+                    payment.ExternalId
                 );
             }
             catch (Exception ex)
             {
                 _logger.LogError(
                     ex,
-                    "Failed to process refund on Mercado Pago for payment {ExternalId}. Database changes were not saved.",
+                    "Falha ao processar reembolso no Mercado Pago para o pagamento {ExternalId}.",
                     payment.ExternalId
                 );
-
-                throw new AppServiceException(
-                    "An error occurred while communicating with the payment provider. Please try again later.",
-                    ex
-                );
+                throw;
             }
         }
 
@@ -87,12 +110,12 @@ namespace MeuCrudCsharp.Features.MercadoPago.Refunds.Services
         )
         {
             _logger.LogInformation(
-                "Initiating refund on Mercado Pago for payment: {PaymentId}",
+                "Iniciando request de reembolso MP para: {PaymentId}",
                 externalPaymentId
             );
 
             var endpoint = $"/v1/payments/{externalPaymentId}/refunds";
-            var payload = new RefundRequestDto(amount);
+            var payload = new { amount = amount };
 
             await SendMercadoPagoRequestAsync(HttpMethod.Post, endpoint, payload);
         }

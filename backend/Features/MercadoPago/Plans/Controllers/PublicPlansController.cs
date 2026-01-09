@@ -1,4 +1,4 @@
-﻿    using MeuCrudCsharp.Features.Base;
+﻿using MeuCrudCsharp.Features.Base;
 using MeuCrudCsharp.Features.MercadoPago.Plans.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
@@ -7,7 +7,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Plans.Controllers
     /// <summary>
     /// Provides public, unauthenticated access to view subscription plans.
     /// </summary>
-   [Route("api/public/plans")]
+    [Route("api/public/plans")]
     public class PublicPlansController : MercadoPagoApiControllerBase
     {
         private readonly IPlanService _planService;
@@ -35,7 +35,10 @@ namespace MeuCrudCsharp.Features.MercadoPago.Plans.Controllers
         /// <response code="500">If an unexpected server error occurs while fetching the plans.</response>
         // Exemplo para o Public Controller (aplique o mesmo para o Admin)
         [HttpGet]
-        public async Task<IActionResult> GetPlans([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+        public async Task<IActionResult> GetPlans(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10
+        )
         {
             try
             {

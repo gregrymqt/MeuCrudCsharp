@@ -71,3 +71,25 @@ public record CreatePreferenceDto(
     string Title, // Ex: "Curso de Psicologia"
     string Description
 );
+
+public class PaymentHistoryDto
+{
+    // Mapeia para 'id' no JSON (Pode ser o ExternalId do MP ou o PublicId do seu banco)
+    [JsonPropertyName("id")]
+    public string Id { get; set; } = string.Empty;
+
+    [JsonPropertyName("amount")]
+    public decimal Amount { get; set; }
+
+    [JsonPropertyName("status")]
+    public string Status { get; set; } = string.Empty;
+
+    [JsonPropertyName("description")]
+    public string? Description { get; set; }
+
+    [JsonPropertyName("createdAt")]
+    public DateTime CreatedAt { get; set; }
+
+    [JsonPropertyName("paymentMethod")] // Extra útil
+    public string? PaymentMethod { get; set; }
+}

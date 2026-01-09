@@ -1,7 +1,7 @@
 import React from 'react';
 import styles from '../styles/SubscriptionInfo.module.scss';
-import { Card } from '../../../Card/Card';
-import type { SubscriptionDetailsDto } from '../types/subscription.type';
+import { Card } from '../../../../Card/Card';
+import type { SubscriptionDetailsDto } from '../../types/userSubscription.type';
 
 interface SubscriptionInfoProps {
     data: SubscriptionDetailsDto;

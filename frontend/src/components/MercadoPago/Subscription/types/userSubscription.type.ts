@@ -32,3 +32,4 @@ export interface SubscriptionDetailsDto {
   lastFourCardDigits: string | null;
   nextBillingDate: string | null;
 }
+

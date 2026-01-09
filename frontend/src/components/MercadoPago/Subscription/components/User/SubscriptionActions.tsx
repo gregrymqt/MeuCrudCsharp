@@ -1,6 +1,6 @@
 import React from 'react';
 import styles from '../styles/SubscriptionActions.module.scss';
-import  { Card } from '../../../Card/Card';
+import  { Card } from '../../../../Card/Card';
 
 interface SubscriptionActionsProps {
   status: string | null;

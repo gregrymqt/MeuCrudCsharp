@@ -70,6 +70,6 @@ namespace MeuCrudCsharp.Models
         public PlanFrequencyType FrequencyType { get; set; }
 
         [Required]
-        public bool IsActive { get; set; } = true;
+        public bool IsActive { get; set; } = false;
     }
 }
