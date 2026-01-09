@@ -1,4 +1,5 @@
 using System;
+using MeuCrudCsharp.Features.MercadoPago.Subscriptions.DTOs;
 using MeuCrudCsharp.Features.Profiles.UserAccount.DTOs;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Subscriptions.Interfaces;

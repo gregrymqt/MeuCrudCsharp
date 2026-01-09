@@ -40,21 +40,18 @@ public class SubscriptionRepository : ISubscriptionRepository
         return await query.FirstOrDefaultAsync(s => s.ExternalId == externalId);
     }
 
-    public async Task<Subscription?> GetActiveByUserIdAsync(string userId)
+    public async Task<Subscription?> GetActiveSubscriptionByUserIdAsync(string userId)
     {
+        // Status que consideramos "Vigentes"
+        var activeStatuses = new[] { "authorized", "pending", "paused" };
+
         return await _context
-            .Subscriptions.AsNoTracking()
-            .Where(s => s.UserId == userId && (s.Status == "authorized" || s.Status == "pending"))
-            .OrderByDescending(s => s.CurrentPeriodEndDate)
+            .Subscriptions.AsNoTracking() // Performance
+            .Include(s => s.Plan)
+            .Where(s => s.UserId == userId && activeStatuses.Contains(s.Status))
+            .OrderByDescending(s => s.CurrentPeriodEndDate) // Pega a mais recente
             .FirstOrDefaultAsync();
     }
-
-    public async Task<Subscription?> GetActiveSubscriptionByUserIdAsync(string userId) =>
-        await _context
-            .Subscriptions.Include(s => s.Plan) // Incluir o plano é importante para os detalhes
-            .FirstOrDefaultAsync(s =>
-                s.UserId == userId && (s.Status == "active" || s.Status == "paused")
-            );
 
     public void Remove(Subscription subscription)
     {

@@ -26,6 +26,12 @@ namespace MeuCrudCsharp.Models
         public string? LastFourCardDigits { get; set; }
 
         [Required]
+        public string? PayerMpId { get; set; }
+
+        [Required]
+        public int CurrentAmount { get; set; }
+
+        [Required]
         public DateTime CurrentPeriodStartDate { get; set; }
 
         [Required]

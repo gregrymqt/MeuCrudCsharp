@@ -1,17 +1,17 @@
-using System;
+namespace MeuCrudCsharp.Features.MercadoPago.Subscriptions.Services;
+
 using MeuCrudCsharp.Features.Auth.Interfaces;
 using MeuCrudCsharp.Features.Caching.Interfaces;
 using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.MercadoPago.Subscriptions.DTOs;
 using MeuCrudCsharp.Features.MercadoPago.Subscriptions.Interfaces;
-using MeuCrudCsharp.Features.Profiles.UserAccount.DTOs;
-
-namespace MeuCrudCsharp.Features.MercadoPago.Subscriptions.Services;
+using MeuCrudCsharp.Models.Enums;
+using Microsoft.Extensions.Logging;
 
 public class UserSubscriptionService : IUserSubscriptionService
 {
     private readonly IUserContext _userContext;
-    private readonly ISubscriptionRepository _repository; // Ajuste para sua interface real de repositório
+    private readonly ISubscriptionRepository _repository;
     private readonly IMercadoPagoSubscriptionService _mpSubscriptionService;
     private readonly ICacheService _cacheService;
     private readonly ILogger<UserSubscriptionService> _logger;
@@ -21,7 +21,8 @@ public class UserSubscriptionService : IUserSubscriptionService
         ISubscriptionRepository repository,
         IMercadoPagoSubscriptionService mpSubscriptionService,
         ICacheService cacheService,
-        ILogger<UserSubscriptionService> logger)
+        ILogger<UserSubscriptionService> logger
+    )
     {
         _userContext = userContext;
         _repository = repository;
@@ -30,7 +31,6 @@ public class UserSubscriptionService : IUserSubscriptionService
         _logger = logger;
     }
 
-    // Lógica extraída de [cite: 17-24]
     public async Task<SubscriptionDetailsDto?> GetMySubscriptionDetailsAsync()
     {
         var userId = await _userContext.GetCurrentUserId();
@@ -39,13 +39,13 @@ public class UserSubscriptionService : IUserSubscriptionService
             $"SubscriptionDetails_{userId}",
             async () =>
             {
-                // 1. Busca dados locais (Banco)
+                // 1. Busca dados locais usando a query unificada
                 var subscription = await _repository.GetActiveSubscriptionByUserIdAsync(userId);
-                // Verifica se existe assinatura e plano associado [cite: 18]
+
                 if (subscription?.Plan == null)
                     return null;
 
-                // 2. Busca dados externos (Mercado Pago) [cite: 19]
+                // 2. Busca dados externos para ter o status real e data de cobrança
                 var mpSubscription = await _mpSubscriptionService.GetSubscriptionByIdAsync(
                     subscription.ExternalId
                 );
@@ -53,16 +53,15 @@ public class UserSubscriptionService : IUserSubscriptionService
                 if (mpSubscription == null)
                     return null;
 
-                // 3. Combina os dados para o DTO [cite: 20-22]
-                return new SubscriptionDetailsDto
-                {
-                    SubscriptionId = subscription.ExternalId,
-                    PlanName = subscription.Plan.Name,
-                    Status = mpSubscription.Status,
-                    Amount = subscription.Plan.TransactionAmount,
-                    NextBillingDate = mpSubscription.NextPaymentDate, // [cite: 22]
-                    LastFourCardDigits = subscription.LastFourCardDigits,
-                };
+                // 3. CORREÇÃO DO ERRO: Uso do Construtor Positional do Record
+                return new SubscriptionDetailsDto(
+                    subscription.ExternalId, // subscriptionId
+                    subscription.Plan.Name, // planName
+                    mpSubscription.Status, // status (vem do MP)
+                    (decimal)subscription.CurrentAmount, // amount (cast explícito se necessário)
+                    subscription.LastFourCardDigits, // lastFourCardDigits
+                    mpSubscription.NextPaymentDate // nextBillingDate
+                );
             }
         );
     }
@@ -71,30 +70,35 @@ public class UserSubscriptionService : IUserSubscriptionService
     {
         var userId = await _userContext.GetCurrentUserId();
 
-        // Validação de status permitidos [cite: 9]
-        var allowed = new[] { "paused", "authorized", "cancelled" };
-        if (!allowed.Contains(newStatus))
-            throw new AppServiceException("Status de assinatura inválido.");
+        // 1. Validação usando o Enum para segurança
+        var statusEnum = SubscriptionStatusExtensions.FromMpString(newStatus);
+        if (statusEnum == SubscriptionStatus.Unknown)
+        {
+            throw new AppServiceException($"Status '{newStatus}' inválido.");
+        }
 
-        // Busca assinatura ativa no banco [cite: 10]
-        var subscription = await _repository.GetActiveSubscriptionByUserIdAsync(userId)
-            ?? throw new ResourceNotFoundException("Nenhuma assinatura ativa encontrada para atualização.");
+        var subscription =
+            await _repository.GetActiveSubscriptionByUserIdAsync(userId)
+            ?? throw new ResourceNotFoundException(
+                "Nenhuma assinatura ativa encontrada para atualização."
+            );
 
-        // Chama o serviço do Mercado Pago 
-        var dto = new UpdateSubscriptionStatusDto(newStatus);
+        // 2. Chama o Mercado Pago
+        var dto = new UpdateSubscriptionStatusDto(statusEnum.ToMpString());
+
         var result = await _mpSubscriptionService.UpdateSubscriptionStatusAsync(
             subscription.ExternalId,
             dto
         );
 
-        if (result.Status == newStatus)
+        // 3. Atualiza Localmente
+        // Se o MP retornou sucesso, atualizamos o banco local com o mesmo status
+        if (result.Status == statusEnum.ToMpString())
         {
-            // Mapeia "authorized" de volta para "active" se necessário, conforme sua regra de negócio [cite: 13-14]
-            subscription.Status = (newStatus == "authorized") ? "active" : newStatus;
+            subscription.Status = result.Status; // "authorized", "paused", etc.
             subscription.UpdatedAt = DateTime.UtcNow;
 
             await _repository.SaveChangesAsync();
-
             await _cacheService.RemoveAsync($"SubscriptionDetails_{userId}");
 
             _logger.LogInformation(

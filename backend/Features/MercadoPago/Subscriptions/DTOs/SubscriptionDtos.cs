@@ -81,3 +81,12 @@ public record UpdateSubscriptionValueDto(
     [Required(ErrorMessage = "O ID da moeda é obrigatório.")]
         string CurrencyId = "BRL" // O valor padrão pode ser definido diretamente no construtor do record
 );
+
+public record SubscriptionDetailsDto(
+    [property: JsonPropertyName("subscriptionId")] string? SubscriptionId,
+    [property: JsonPropertyName("planName")] string? PlanName,
+    [property: JsonPropertyName("status")] string? Status,
+    [property: JsonPropertyName("amount")] decimal Amount, // Mapeia para number no TS, ideal para valores monetários
+    [property: JsonPropertyName("lastFourCardDigits")] string? LastFourCardDigits,
+    [property: JsonPropertyName("nextBillingDate")] DateTime? NextBillingDate // O JSON serializer converterá para string ISO automaticamente
+);

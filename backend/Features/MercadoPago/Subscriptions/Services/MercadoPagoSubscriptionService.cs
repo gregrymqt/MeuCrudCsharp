@@ -1,12 +1,12 @@
+namespace MeuCrudCsharp.Features.MercadoPago.Subscriptions.Services;
+
 using System.Text.Json;
 using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.MercadoPago.Base;
 using MeuCrudCsharp.Features.MercadoPago.Subscriptions.DTOs;
 using MeuCrudCsharp.Features.MercadoPago.Subscriptions.Interfaces;
+using MeuCrudCsharp.Models.Enums;
 
-namespace MeuCrudCsharp.Features.MercadoPago.Subscriptions.Services;
-
-// Local: Features/MercadoPago/Subscriptions/Services/MercadoPagoSubscriptionService.cs
 public class MercadoPagoSubscriptionService
     : MercadoPagoServiceBase,
         IMercadoPagoSubscriptionService
@@ -21,30 +21,38 @@ public class MercadoPagoSubscriptionService
         CreateSubscriptionDto payload
     )
     {
-        const string endpoint = "/preapproval"; // Endpoint de criação não costuma ter /v1
+        // Criação: POST /preapproval
+        const string endpoint = "/preapproval";
         var responseBody = await SendMercadoPagoRequestAsync(HttpMethod.Post, endpoint, payload);
+
         return JsonSerializer.Deserialize<SubscriptionResponseDto>(responseBody)
             ?? throw new AppServiceException(
                 "Falha ao desserializar a resposta de criação de assinatura."
             );
     }
 
-    public async Task<SubscriptionResponseDto?> GetSubscriptionByIdAsync(string subscriptionId)
+    public async Task<SubscriptionResponseDto> GetSubscriptionByIdAsync(string subscriptionId)
     {
-        var endpoint = $"/preapproval/{subscriptionId}"; // Padronizado sem /v1 para GET
+        // Leitura: GET /preapproval/{id}
+        var endpoint = $"/preapproval/{subscriptionId}";
+
+        // Passamos null no payload pois é um GET
         var responseBody = await SendMercadoPagoRequestAsync(
             HttpMethod.Get,
             endpoint,
             (object?)null
         );
-        return JsonSerializer.Deserialize<SubscriptionResponseDto>(responseBody);
+
+        return JsonSerializer.Deserialize<SubscriptionResponseDto>(responseBody)
+            ?? throw new ResourceNotFoundException("Assinatura não encontrada no Mercado Pago.");
     }
 
     public async Task UpdateSubscriptionCardAsync(string subscriptionId, string newCardToken)
     {
-        // PADRONIZADO: Usando o endpoint com /v1, que é mais comum para updates.
-        var endpoint = $"/v1/preapproval/{subscriptionId}";
-        var payload = new { card_token_id = newCardToken }; // Monta o payload esperado pela API
+        // Update Cartão: PUT /preapproval/{id}
+        var endpoint = $"/preapproval/{subscriptionId}";
+        var payload = new { card_token_id = newCardToken };
+
         await SendMercadoPagoRequestAsync(HttpMethod.Put, endpoint, payload);
     }
 
@@ -53,13 +61,17 @@ public class MercadoPagoSubscriptionService
         UpdateSubscriptionValueDto dto
     )
     {
-        var endpoint = $"/v1/preapproval/{subscriptionId}";
+        // Update Valor: PUT /preapproval/{id}
+        // Nota: O MP às vezes exige /v1 para updates específicos, mas /preapproval costuma funcionar
+        var endpoint = $"/preapproval/{subscriptionId}";
+
+        // Estrutura específica exigida pelo MP para update de valor recorrente
         var payload = new { auto_recurring = new { transaction_amount = dto.TransactionAmount } };
+
         var responseBody = await SendMercadoPagoRequestAsync(HttpMethod.Put, endpoint, payload);
+
         return JsonSerializer.Deserialize<SubscriptionResponseDto>(responseBody)
-            ?? throw new AppServiceException(
-                "Falha ao desserializar a resposta de atualização de valor."
-            );
+            ?? throw new AppServiceException("Falha ao atualizar valor no MP.");
     }
 
     public async Task<SubscriptionResponseDto> UpdateSubscriptionStatusAsync(
@@ -67,21 +79,21 @@ public class MercadoPagoSubscriptionService
         UpdateSubscriptionStatusDto dto
     )
     {
-        var endpoint = $"/v1/preapproval/{subscriptionId}";
+        var endpoint = $"/preapproval/{subscriptionId}";
         var payload = new { status = dto.Status };
+
         var responseBody = await SendMercadoPagoRequestAsync(HttpMethod.Put, endpoint, payload);
+
         return JsonSerializer.Deserialize<SubscriptionResponseDto>(responseBody)
-            ?? throw new AppServiceException(
-                "Falha ao desserializar a resposta de atualização de status."
-            );
+            ?? throw new AppServiceException("Falha ao atualizar status no MP.");
     }
 
     public async Task CancelSubscriptionAsync(string subscriptionId)
     {
-        // Implementação do método de cancelamento para o rollback
+        // Usa o Enum para garantir a string correta "cancelled"
         await UpdateSubscriptionStatusAsync(
             subscriptionId,
-            new UpdateSubscriptionStatusDto("cancelled")
+            new UpdateSubscriptionStatusDto(SubscriptionStatus.Cancelled.ToMpString())
         );
     }
 }

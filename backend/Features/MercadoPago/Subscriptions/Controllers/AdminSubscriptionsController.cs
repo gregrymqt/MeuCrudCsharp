@@ -18,11 +18,6 @@ namespace MeuCrudCsharp.Features.MercadoPago.Subscriptions.Controllers
         private readonly ISubscriptionService _subscriptionService;
         private readonly ILogger<AdminSubscriptionsController> _logger;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="AdminSubscriptionsController"/> class.
-        /// </summary>
-        /// <param name="subscriptionService">The service for subscription business logic.</param>
-        /// <param name="logger">The logger for recording events and errors.</param>
         public AdminSubscriptionsController(
             ISubscriptionService subscriptionService,
             ILogger<AdminSubscriptionsController> logger
@@ -32,16 +27,6 @@ namespace MeuCrudCsharp.Features.MercadoPago.Subscriptions.Controllers
             _logger = logger;
         }
 
-        /// <summary>
-        /// Searches for a subscription by its unique identifier.
-        /// </summary>
-        /// <param name="query">The ID of the subscription to search for.</param>
-        /// <returns>The details of the found subscription.</returns>
-        /// <response code="200">Returns the subscription details.</response>
-        /// <response code="401">If the user is not authenticated.</response>
-        /// <response code="403">If the user is not in the 'Admin' role.</response>
-        /// <response code="500">If an unexpected server error occurs.</response>
-        /// <response code="502">If there is a communication failure with the payment provider.</response>
         [HttpGet("search")]
         [ProducesResponseType(typeof(SubscriptionResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(object), StatusCodes.Status502BadGateway)]
@@ -73,17 +58,6 @@ namespace MeuCrudCsharp.Features.MercadoPago.Subscriptions.Controllers
             }
         }
 
-        /// <summary>
-        /// Updates the transaction amount of a specific subscription.
-        /// </summary>
-        /// <param name="id">The unique identifier of the subscription to update.</param>
-        /// <param name="dto">The DTO containing the new transaction amount.</param>
-        /// <returns>The updated subscription details.</returns>
-        /// <response code="200">Returns the updated subscription details.</response>
-        /// <response code="401">If the user is not authenticated.</response>
-        /// <response code="403">If the user is not in the 'Admin' role.</response>
-        /// <response code="500">If an unexpected server error occurs.</response>
-        /// <response code="502">If there is a communication failure with the payment provider.</response>
         [HttpPut("{id}/value")]
         [ProducesResponseType(typeof(SubscriptionResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(object), StatusCodes.Status502BadGateway)]
@@ -118,17 +92,6 @@ namespace MeuCrudCsharp.Features.MercadoPago.Subscriptions.Controllers
             }
         }
 
-        /// <summary>
-        /// Updates the status of a specific subscription (e.g., pause, reactivate).
-        /// </summary>
-        /// <param name="id">The unique identifier of the subscription to update.</param>
-        /// <param name="dto">The DTO containing the new status.</param>
-        /// <returns>The updated subscription details.</returns>
-        /// <response code="200">Returns the updated subscription details.</response>
-        /// <response code="401">If the user is not authenticated.</response>
-        /// <response code="403">If the user is not in the 'Admin' role.</response>
-        /// <response code="500">If an unexpected server error occurs.</response>
-        /// <response code="502">If there is a communication failure with the payment provider.</response>
         [HttpPut("{id}/status")]
         [ProducesResponseType(typeof(SubscriptionResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(object), StatusCodes.Status502BadGateway)]
