@@ -1,35 +1,43 @@
+from datetime import datetime as dt
+import time
+
 class RowsView:
     def run_rows_sync(self, api_controller, data_service, rows_exporter):
-        """Orquestra o processo de envio de dados para o Dashboard do Rows/Notion."""
-        print("\n" + "="*70)
-        print(" SINCRONIZANDO DASHBOARD (ROWS.COM) ".center(70, " "))
-        print("="*70)
-        print("[PROCESSO] Extraindo dados da API...")
+        start_time = time.time()
+        
+        print("\n" + "═"*70)
+        print(f" 📦 GREG COMPANY | AUTOMATION ENGINE v1.0 ".center(70, " "))
+        print("═"*70)
 
-        # 1. Extração (Extract)
-        # Pegamos 50 itens para que o gráfico no Notion tenha volume de dados
+        # 1. Extração
+        print(f"[{dt.now().strftime('%H:%M:%S')}] 🔍 EXTRAÇÃO: Iniciando captura de produtos da API...")
         raw_data = api_controller.get_products(limit=50, skip=0)
-
+        
         if raw_data and "products" in raw_data:
-            print("[PROCESSO] Aplicando regras de negócio e limpeza...")
+            # 2. Transformação
+            print(f"[{dt.now().strftime('%H:%M:%S')}] ⚙️  PROCESSAMENTO: Aplicando regras de negócio e limpeza...")
+            clean_products, stats = data_service.prepare_products(raw_data["products"])
             
-            # 2. Transformação (Transform)
-            clean_products = data_service.prepare_products(raw_data["products"])
-            
-            # 4. Sincronização (Sync)
-            dashboard_metrics = data_service.get_dashboard_metrics(clean_products)
+            # Logs detalhados que ficam bem no print
+            print(f"    ├─ Total processado: {stats['total']} itens")
+            print(f"    ├─ Status OK: {stats['ok']} ✅")
+            print(f"    ├─ Alertas Críticos: {stats['critico']} ⚠️")
+            print(f"    |─ Esgotados: {stats['esgotado']} 🔴")
+            print(f"    └─ A Repor: {stats['repor']} 🟡")
 
-            print("[PROCESSO] Enviando para a nuvem do Rows.com...")
+            # 3. Sincronização e Carga
+            dashboard_metrics = data_service.get_dashboard_metrics(clean_products)
+            print(f"[{dt.now().strftime('%H:%M:%S')}] ☁️  UPLOAD: Sincronizando com a nuvem do Rows.com...")
             
-            # 3. Carga (Load)
             sucesso = rows_exporter.send_to_rows(clean_products, dashboard_metrics)
 
+            duration = round(time.time() - start_time, 2)
             if sucesso:
-                print("\n✅ SUCESSO: O Dashboard no Notion já está atualizado!")
-                print("Cores da Greg Company aplicadas com sucesso.")
+                print("\n" + "─"*70)
+                print(f" ✨ SUCESSO: Dashboard Notion atualizado em {duration}s!")
+                print(" Status: Operacional | Canal: Notion API")
+                print("─"*70 + "\n")
             else:
-                print("\n❌ ERRO: Falha na comunicação com a API do Rows.")
+                print(f"\n❌ ERRO: Falha crítica na comunicação após {duration}s.")
         else:
-            print("\n❌ ERRO: Falha ao obter dados da API de produtos.")
-            
-        print("="*70 + "\n")
+            print("\n❌ ERRO: API de origem não respondeu.")

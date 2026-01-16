@@ -1,5 +1,4 @@
 ﻿using MeuCrudCsharp.Models;
-using MeuCrudCsharp.Models.About;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;

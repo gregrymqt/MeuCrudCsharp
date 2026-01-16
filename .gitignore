@@ -1,0 +1,50 @@
+# ==========================================
+# Seção Python (BI & ETL)
+# ==========================================
+# Ambientes Virtuais (Visto no seu projeto)
+.venv/
+venv/
+env/
+ENV/
+
+# Caches de Bytecode (Visto em várias pastas do seu src)
+**/__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribuição / Pacotes
+dist/
+build/
+*.egg-info/
+
+# Variáveis de Ambiente (Segurança para Greg Company)
+.env
+
+# ==========================================
+# Seção .NET / Visual Studio (Sistema Principal)
+# ==========================================
+# Resultados de Build
+[Dd]ebug/
+[Rr]elease/
+bin/
+obj/
+
+# Arquivos do Visual Studio / JetBrains
+.vs/
+.idea/
+
+# Publicação
+publish/
+
+# ==========================================
+# Seção Frontend (React)
+# ==========================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnp/
+.pnp.js
+
+# Produção
+/build

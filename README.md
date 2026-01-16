@@ -15,6 +15,7 @@ Este ecossistema integra uma plataforma de gestão de produtos (Full-stack) com 
 *   **Sistema Transacional (Backend):** ASP.NET 8 (C#) para APIs RESTful.
 *   **Sistema Transacional (Frontend):** React com TypeScript.
 *   **Banco de Dados:** SQL Server para persistência de dados.
+*    **MongoDB:** Armazenamento NoSQL para dados flexíveis e documentos.
 *   **Cache:** Redis para caching de alta performance.
 *   **Pagamentos:** Integração completa com MercadoPago (Checkout Pro, Webhooks, PIX e Assinaturas).
 *   **Jobs em Background:** Hangfire para processamento de tarefas assíncronas (ex: renovação de assinaturas).

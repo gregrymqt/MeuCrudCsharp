@@ -97,6 +97,17 @@ services:
     depends_on:
       - backend
 
+  bi-engine:
+    build: ./bi-dashboard
+    container_name: greg_company_bi
+    env_file: .env
+    environment:
+      - PYTHONDONTWRITEBYTECODE=1 # Impede a criação de __pycache__ no container
+      - PYTHONUNBUFFERED=1        # Garante que os logs do ETL apareçam na hora
+    depends_on:
+      - backend
+    restart: on-failure   
+
 # --- [ PERSISTENCE LAYER ] ---
 
 volumes:

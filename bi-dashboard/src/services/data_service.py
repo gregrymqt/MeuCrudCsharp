@@ -1,8 +1,7 @@
-
-
 class DataService:
     def prepare_products(self, raw_products):
         cleaned_data = []
+        stats = {"total": 0, "critico": 0, "ok": 0, "repor": 0, "esgotado": 0}
         for item in raw_products:
             title = item.get('title') or "Produto Sem Nome"
             brand = item.get('brand') or "S/ Marca"
@@ -15,12 +14,18 @@ class DataService:
             match stock:
                 case 0:
                     status = "🔴 ESGOTADO"
+                    stats["esgotado"] += 1
                 case s if s < 10:
                     status = "⚠️ CRÍTICO"
+                    stats["critico"] += 1
                 case s if s < 20:
                     status = "🟡 REPOR"
+                    stats["repor"] += 1
                 case _:
                     status = "🟢 OK"
+                    stats["ok"] += 1
+                
+            stats["total"] += 1        
             
             cleaned_data.append({
                 "id": item.get('id'),
@@ -33,7 +38,7 @@ class DataService:
                 "status": status,     # Novo campo
                 "total_stock_value": price * stock
             })
-        return cleaned_data
+        return cleaned_data, stats
 
     def get_dashboard_metrics(self, cleaned_products):
         # 1. =SUM('Greg Company'!H:H) -> Patrimônio Total
@@ -52,3 +57,4 @@ class DataService:
             "critical_alerts": count_critico,
             "unique_categories": categorias_unicas
         }
+    

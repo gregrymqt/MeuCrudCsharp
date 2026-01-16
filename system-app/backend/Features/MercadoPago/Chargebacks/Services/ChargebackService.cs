@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using MeuCrudCsharp.Features.Caching.Interfaces;
 using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.MercadoPago.Chargebacks.Interfaces;
@@ -58,7 +59,7 @@ public class ChargebackService : IChargebackService
                             Customer = c.User.Name,
                             Amount = c.Amount,
                             Date = c.CreatedAt,
-                            Status = c.Status.ToString(),
+                            Status = (int)c.Status,
                             MercadoPagoUrl =
                                 $"https://www.mercadopago.com.br/gz/chargebacks/{c.ChargebackId}",
                         })
