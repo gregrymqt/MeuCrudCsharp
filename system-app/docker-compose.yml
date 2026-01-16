@@ -1,0 +1,105 @@
+# ==========================================================
+# GREG COMPANY - INFRASTRUCTURE ORCHESTRATION
+# Stack: .NET Core | React | SQL Server | MongoDB | Redis
+# ==========================================================
+
+services:
+
+  # --- [ INFRASTRUCTURE LAYER: DATABASES & CACHE ] ---
+
+  sql-server:
+    image: "mcr.microsoft.com/mssql/server:2022-latest"
+    container_name: mssql-db
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_USERNAME=sa
+      - SA_PASSWORD=Opala@1704.Test!
+    ports:
+      - "1433:1433"
+    volumes:
+      - sql-server-data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD", "/opt/mssql-tools18/bin/sqlcmd", "-S", "127.0.0.1,1433",
+       "-U", "sa", "-P", "Opala@1704.Test!", "-Q", "SELECT 1", "-C"]   
+      interval: 20s
+      timeout: 15s
+      retries: 10
+    restart: always
+
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb-store
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    restart: always
+
+  redis:
+    image: "redis:alpine"
+    container_name: redis-cache
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    restart: always
+
+  # --- [ APPLICATION LAYER: BACKEND API ] ---
+
+  backend:
+    container_name: backend-api
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "5045:8080" # Mapeamento limpo
+    env_file:
+      - .env
+    environment:
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__DefaultConnection=${ConnectionStrings__DefaultConnection}
+      - ConnectionStrings__MongoConnection=mongodb://mongo-db:27017
+      - ConnectionStrings__Redis=${ConnectionStrings__Redis}
+      - MercadoPago__AccessToken=${MercadoPago__AccessToken}
+      - MercadoPago__WebhookSecret=${MercadoPago__WebhookSecret}
+      - MercadoPago__PublicKey=${MercadoPago__PublicKey}
+      - Jwt__Key=${Jwt__Key}
+      - Google__ClientId=${Google__ClientId}
+      - Google__ClientSecret=${Google__ClientSecret}
+      - SendGrid__ApiKey=${SendGrid__ApiKey}
+      - SendGrid__FromEmail=${SendGrid__FromEmail}
+      - SendGrid__FromName=${SendGrid__FromName}
+      - General__BaseUrl=${GENERAL_BASEURL}
+      - USE_REDIS=${USE_REDIS}
+    depends_on:
+      redis:
+        condition: service_started
+      mongodb:
+        condition: service_started
+      sql-server:
+        condition: service_healthy
+    volumes:
+      - ./uploads:/app/wwwroot/uploads
+      - ./logs:/app/logs    
+
+  # --- [ FRONTEND LAYER: REACT + VITE ] ---
+
+  frontend:
+    container_name: frontend-app
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_GENERAL_BASEURL=${GENERAL_BASEURL} 
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+
+# --- [ PERSISTENCE LAYER ] ---
+
+volumes:
+  sql-server-data:
+  mongo-data:
+  redis-data:
