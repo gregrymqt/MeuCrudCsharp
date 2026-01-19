@@ -45,7 +45,7 @@ public class ClientService : IClientService
         var mpCards = await ListCardsFromCustomerAsync(user.CustomerId);
 
         // 2. Busca Assinatura Ativa
-        var activeSubscription = await _subscriptionRepository.GetActiveByUserIdAsync(userId);
+        var activeSubscription = await _subscriptionRepository.GetActiveSubscriptionByUserIdAsync(userId);
 
         // 3. Mapeia Record -> Class
         return mpCards
@@ -130,7 +130,7 @@ public class ClientService : IClientService
         if (user == null || string.IsNullOrEmpty(user.CustomerId))
             throw new ResourceNotFoundException("Carteira não encontrada.");
 
-        var activeSubscription = await _subscriptionRepository.GetActiveByUserIdAsync(userId);
+        var activeSubscription = await _subscriptionRepository.GetActiveSubscriptionByUserIdAsync(userId);
         if (activeSubscription != null && activeSubscription.CardTokenId == cardId)
         {
             throw new InvalidOperationException(

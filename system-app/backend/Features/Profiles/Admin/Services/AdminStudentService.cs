@@ -62,7 +62,7 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Services
                                 u.Email,
                                 u.Subscription != null ? u.Subscription.Status : "Sem Assinatura",
                                 u.Subscription?.Plan != null ? u.Subscription.Plan.Name : "N/A",
-                                u.CreatedAt,
+                                u.Subscription.CreatedAt,
                                 u.Subscription != null ? u.Subscription.Id : "Sem Assinatura"
                             ))
                             .ToList();
@@ -111,7 +111,7 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Services
                     user.Email,
                     user.Subscription?.Status ?? "Sem Assinatura",
                     user.Subscription?.Plan?.Name ?? "N/A",
-                    user.CreatedAt,
+                    user.Subscription.CreatedAt,
                     user.Subscription?.Id ?? "Sem Assinatura"
                 );
 

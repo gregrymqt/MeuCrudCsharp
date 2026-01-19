@@ -37,3 +37,4 @@ class TerminalView:
         print("-" * 70)
         print(f"VALOR TOTAL EM ESTOQUE (PÁGINA): ${total_value:,.2f}".rjust(70))
         print("=" * 70)
+        
