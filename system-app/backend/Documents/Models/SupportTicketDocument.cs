@@ -2,7 +2,7 @@ using MeuCrudCsharp.Documents.Interfaces;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 
-namespace MeuCrudCsharp.Features.Support.Documents.Models
+namespace MeuCrudCsharp.Documents.Models
 {
     public class SupportTicketDocument : IMongoDocument
     {

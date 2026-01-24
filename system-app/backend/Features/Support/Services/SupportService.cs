@@ -1,5 +1,6 @@
+using MeuCrudCsharp.Documents.Models;
 using MeuCrudCsharp.Features.Exceptions;
-using MeuCrudCsharp.Features.Support.Documents.Models; // Confirme se sua Model está aqui ou apenas em .Documents
+// Confirme se sua Model está aqui ou apenas em .Documents
 using MeuCrudCsharp.Features.Support.DTOs;
 using MeuCrudCsharp.Features.Support.Interfaces;
 using MeuCrudCsharp.Features.Support.Utils;

@@ -1,5 +1,4 @@
-using MeuCrudCsharp.Features.Support.Documents;
-using MeuCrudCsharp.Features.Support.Documents.Models;
+using MeuCrudCsharp.Documents.Models;
 using MeuCrudCsharp.Features.Support.DTOs;
 
 namespace MeuCrudCsharp.Features.Support.Utils

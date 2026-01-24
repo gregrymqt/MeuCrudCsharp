@@ -1,4 +1,4 @@
-using MeuCrudCsharp.Features.Support.Documents.Models;
+using MeuCrudCsharp.Documents.Models;
 using MeuCrudCsharp.Features.Support.Interfaces;
 using MongoDB.Driver;
 
