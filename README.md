@@ -2,6 +2,10 @@
 
 Este ecossistema integra uma plataforma de gestão de produtos (Full-stack) com um motor de inteligência de negócios (BI) automatizado. O projeto foi desenvolvido por Lucas Vicente De Souza, estudante de Desenvolvimento de Software Multiplataforma na FATEC.
 
+## ✅ Nota do Repositório
+
+**Nota: 6/10.** A documentação e a visão de arquitetura são claras e abrangentes, mas há falhas atuais de build/lint e ausência de testes automatizados descritos, o que reduz a confiabilidade imediata.
+
 <!-- Sugestão: Adicionar screenshots ou um GIF da aplicação em funcionamento torna o projeto muito mais atrativo. -->
 <!-- 
 ## 📸 Screenshots
