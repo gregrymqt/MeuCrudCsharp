@@ -1,63 +1,58 @@
 using Hangfire;
-using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Features.MercadoPago.Jobs.Interfaces;
 using MeuCrudCsharp.Features.MercadoPago.Notification.Interfaces;
 using MeuCrudCsharp.Features.MercadoPago.Webhooks.DTOs;
-using Microsoft.EntityFrameworkCore;
 
-namespace MeuCrudCsharp.Features.MercadoPago.Jobs.Job
+namespace MeuCrudCsharp.Features.MercadoPago.Jobs.Job;
+
+/// <summary>
+/// Job do Hangfire para processar notificações de Claims do Mercado Pago.
+/// Delega toda a lógica de negócio para o ClaimNotificationService.
+/// </summary>
+[AutomaticRetry(Attempts = 3, DelaysInSeconds = [60])]
+public class ProcessClaimJob(
+    ILogger<ProcessClaimJob> logger,
+    IClaimNotificationService claimNotification)
+    : IJob<ClaimNotificationPayload>
 {
-    [AutomaticRetry(Attempts = 3, DelaysInSeconds = [60])]
-    public class ProcessClaimJob(
-        ILogger<ProcessClaimJob> logger,
-        ApiDbContext context,
-        IClaimNotificationService claimNotification)
-        : IJob<ClaimNotificationPayload>
+    /// <summary>
+    /// Executa o processamento da notificação de claim.
+    /// </summary>
+    public async Task ExecuteAsync(ClaimNotificationPayload? claimPayload)
     {
-        public async Task ExecuteAsync(ClaimNotificationPayload? claimPayload)
+        if (claimPayload == null || string.IsNullOrEmpty(claimPayload.Id))
         {
-            if (claimPayload == null || string.IsNullOrEmpty(claimPayload.Id))
+            logger.LogError("Job de Claim recebido com payload nulo ou ID inválido. O job será descartado.");
+            return; // Não relança para evitar retentativas desnecessárias
+        }
+
+        logger.LogInformation("Iniciando processamento do job para a Claim ID: {ClaimId}", claimPayload.Id);
+
+        try
+        {
+            // Validação de formato do ID
+            if (!long.TryParse(claimPayload.Id, out _))
             {
-                logger.LogError("Job de Claim recebido com payload nulo ou ID inválido. O job será descartado.");
-                return;
+                logger.LogError("ID da Claim não é um número válido: {Id}", claimPayload.Id);
+                return; // Não relança para evitar retentativas desnecessárias
             }
 
-            logger.LogInformation("Iniciando processamento do job para a Claim ID: {ClaimId}", claimPayload.Id);
+            // Delega TODA a lógica para o serviço especializado
+            // O service é responsável por:
+            // 1. Buscar detalhes na API do MP
+            // 2. Verificar se claim já existe (idempotência)
+            // 3. Localizar usuário via Payment ou Subscription
+            // 4. Criar/Atualizar Claim via Repository
+            // 5. Commit via UnitOfWork
+            // 6. Enviar email
+            await claimNotification.VerifyAndProcessClaimAsync(claimPayload);
 
-            try
-            {
-                // CORREÇÃO: Converter string para long antes de comparar
-                if (!long.TryParse(claimPayload.Id, out var claimIdLong))
-                {
-                    logger.LogError("ID inválido: {Id}", claimPayload.Id);
-                    return;
-                }
-
-                // 1. Verifica a idempotência: checa se a notificação já foi registrada.
-                // CORREÇÃO: Comparando long com long agora
-                var existingClaim = await context
-                    .Claims.AsNoTracking()
-                    .FirstOrDefaultAsync(c => c.MpClaimId == claimIdLong);
-
-                if (existingClaim != null)
-                {
-                    logger.LogInformation("A notificação de Claim ID {ClaimId} já foi processada anteriormente.",
-                        claimPayload.Id);
-                    return;
-                }
-
-                logger.LogInformation("Notificação de Claim ID {ClaimId} é nova. Enviando para processamento.",
-                    claimPayload.Id);
-
-                await claimNotification.VerifyAndProcessClaimAsync(claimPayload);
-
-                logger.LogInformation("Processamento da Claim ID: {ClaimId} concluído com sucesso.", claimPayload.Id);
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Erro ao processar a notificação para a Claim ID: {ClaimId}.", claimPayload.Id);
-                throw;
-            }
+            logger.LogInformation("Processamento da Claim ID: {ClaimId} concluído com sucesso.", claimPayload.Id);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Erro ao processar a notificação para a Claim ID: {ClaimId}.", claimPayload.Id);
+            throw; // Relança para que o Hangfire aplique a política de retentativas
         }
     }
 }

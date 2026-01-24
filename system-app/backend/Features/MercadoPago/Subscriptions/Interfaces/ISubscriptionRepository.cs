@@ -13,6 +13,11 @@ public interface ISubscriptionRepository
     );
 
     Task<Subscription?> GetByIdAsync(string subscriptionId);
+    Task<Subscription?> GetByPaymentIdAsync(
+        string paymentId,
+        bool includePlan = false,
+        bool includeUser = false
+    );
     void Update(Subscription subscription);
 
     Task<Subscription?> GetActiveSubscriptionByUserIdAsync(string userId);

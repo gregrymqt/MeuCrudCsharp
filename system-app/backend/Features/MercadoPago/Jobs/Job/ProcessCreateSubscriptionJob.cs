@@ -1,111 +1,63 @@
-using System;
 using Hangfire;
-using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Features.Caching.Interfaces;
-using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.MercadoPago.Jobs.Interfaces;
 using MeuCrudCsharp.Features.MercadoPago.Notification.Interfaces;
-using MeuCrudCsharp.Features.MercadoPago.Utils;
 using MeuCrudCsharp.Features.MercadoPago.Webhooks.DTOs;
-using Microsoft.EntityFrameworkCore;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Jobs.Job;
 
-public class ProcessCreateSubscriptionJob : IJob<PaymentNotificationData>
+/// <summary>
+/// Job do Hangfire para processar criação de assinatura.
+/// Delega toda a lógica de negócio para o SubscriptionCreateNotificationService.
+/// </summary>
+[AutomaticRetry(Attempts = 3, DelaysInSeconds = [60])]
+public class ProcessCreateSubscriptionJob(
+    ILogger<ProcessCreateSubscriptionJob> logger,
+    ICacheService cache,
+    ISubscriptionCreateNotificationService notificationSubscriptionCreate)
+    : IJob<PaymentNotificationData>
 {
-    private readonly ILogger<ProcessCreateSubscriptionJob> _logger;
-    private readonly ApiDbContext _context;
-    private readonly ICacheService _cache;
-    private readonly ISubscriptionCreateNotificationService _notificationSubscriptionCreate;
-
-    public ProcessCreateSubscriptionJob(
-        ILogger<ProcessCreateSubscriptionJob> logger,
-        ApiDbContext context,
-        ICacheService cache,
-        ISubscriptionCreateNotificationService notificationSubscriptionCreate
-    )
+    /// <summary>
+    /// Executa o processamento da criação de assinatura.
+    /// </summary>
+    public async Task ExecuteAsync(PaymentNotificationData? resource)
     {
-        _logger = logger;
-        _context = context;
-        _cache = cache;
-        _notificationSubscriptionCreate = notificationSubscriptionCreate;
-    }
-
-    [AutomaticRetry(Attempts = 3, DelaysInSeconds = new int[] { 60 })]
-    public async Task ExecuteAsync(PaymentNotificationData resource)
-    {
-        if (string.IsNullOrEmpty(resource?.Id))
+        if (resource == null || string.IsNullOrEmpty(resource.Id))
         {
-            _logger.LogError(
-                "Job de notificação de pagamento recebido com um ResourceId nulo ou vazio. O job será descartado."
-            );
-            throw new ArgumentNullException(
-                nameof(resource.Id),
-                "O ID do recurso não pode ser nulo."
-            );
+            logger.LogError("Job recebido com ResourceId nulo ou vazio. O job será descartado.");
+            return; // Não relança para evitar retentativas desnecessárias
         }
 
-        _logger.LogInformation(
+        logger.LogInformation(
             "Iniciando processamento do job para a criação de assinatura: {ResourceId}",
             resource.Id
         );
 
-        await using var transaction = await _context.Database.BeginTransactionAsync();
-
         try
         {
-            var assinaturaExistente = await _context
-                .Subscriptions.FromSqlRaw(
-                    "SELECT * FROM Subscriptions WITH (UPDLOCK, ROWLOCK) WHERE ExternalId = {0}",
-                    resource.Id
-                )
-                .FirstOrDefaultAsync();
-            if (assinaturaExistente == null)
-            {
-                throw new ResourceNotFoundException(
-                    $"Assinatura com ID externo {resource.Id} não encontrada no banco. Tentando novamente mais tarde."
-                );
-            }
+            // Delega TODA a lógica para o serviço especializado
+            // O service é responsável por:
+            // 1. Buscar assinatura no banco via Repository
+            // 2. Verificar idempotência (status)
+            // 3. Atualizar status da assinatura
+            // 4. Commit via UnitOfWork
+            // 5. Enviar email
+            await notificationSubscriptionCreate.VerifyAndProcessSubscriptionAsync(resource.Id);
 
-            var statusProcessaveis = new[]
-            {
-                InternalPaymentStatus.Pendente,
-                InternalPaymentStatus.Iniciando,
-            };
-            if (!statusProcessaveis.Contains(assinaturaExistente.Status))
-            {
-                _logger.LogInformation(
-                    "Assinatura {ResourceId} já foi processada (Status: {Status}). Finalizando job com sucesso.",
-                    resource.Id,
-                    assinaturaExistente.Status
-                );
-                await transaction.CommitAsync();
-                return;
-            }
-            await _notificationSubscriptionCreate.VerifyAndProcessSubscriptionAsync(
-                assinaturaExistente // Passando o ID interno
-            );
-            await _context.SaveChangesAsync();
-            await transaction.CommitAsync();
-
-            _logger.LogInformation(
+            logger.LogInformation(
                 "Processamento da criação de assinatura ID: {ResourceId} concluído com sucesso.",
                 resource.Id
             );
+
+            // Invalida cache após sucesso
             var cacheKey = $"subscription_{resource.Id}";
-            await _cache.RemoveAsync(cacheKey);
-            _logger.LogInformation("Cache invalidado para a chave: {CacheKey}", cacheKey);
+            await cache.RemoveAsync(cacheKey);
+            logger.LogInformation("Cache invalidado para a chave: {CacheKey}", cacheKey);
         }
         catch (Exception ex)
         {
-            _logger.LogError(
-                ex,
-                "Erro ao processar a criação de assinatura ID: {ResourceId}",
-                resource.Id
-            );
-
-            await transaction.RollbackAsync();
-            throw;
+            logger.LogError(ex, "Erro ao processar a criação de assinatura ID: {ResourceId}", resource.Id);
+            throw; // Relança para que o Hangfire aplique a política de retentativas
         }
     }
 }

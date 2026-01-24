@@ -1,109 +1,61 @@
 using Hangfire;
-using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Features.MercadoPago.Jobs.Interfaces;
 using MeuCrudCsharp.Features.MercadoPago.Notification.Interfaces;
 using MeuCrudCsharp.Features.MercadoPago.Webhooks.DTOs;
-using Microsoft.EntityFrameworkCore;
 
-namespace MeuCrudCsharp.Features.MercadoPago.Jobs.Job
+namespace MeuCrudCsharp.Features.MercadoPago.Jobs.Job;
+
+/// <summary>
+/// Job do Hangfire para processar renovação de assinatura.
+/// Delega toda a lógica de negócio para o SubscriptionRenewalNotificationService.
+/// </summary>
+[AutomaticRetry(Attempts = 3, DelaysInSeconds = [60])]
+public class ProcessRenewalSubscriptionJob(
+    ILogger<ProcessRenewalSubscriptionJob> logger,
+    ISubscriptionNotificationService subscriptionNotificationService)
+    : IJob<PaymentNotificationData>
 {
-    [AutomaticRetry(Attempts = 3, DelaysInSeconds = new int[] { 60 })]
-    public class ProcessRenewalSubscriptionJob : IJob<PaymentNotificationData>
+    /// <summary>
+    /// Executa o processamento da renovação de assinatura.
+    /// </summary>
+    public async Task ExecuteAsync(PaymentNotificationData? resource)
     {
-        private readonly ILogger<ProcessRenewalSubscriptionJob> _logger;
-        private readonly ApiDbContext _context;
-        private readonly ISubscriptionNotificationService _subscriptionNotificationService;
-
-        public ProcessRenewalSubscriptionJob(
-            ILogger<ProcessRenewalSubscriptionJob> logger,
-            ApiDbContext context,
-            ISubscriptionNotificationService subscriptionNotificationService
-        )
+        if (resource == null || string.IsNullOrEmpty(resource.Id))
         {
-            _logger = logger;
-            _context = context;
-            _subscriptionNotificationService = subscriptionNotificationService;
+            logger.LogError("Job recebido com ResourceId nulo ou vazio. O job será descartado.");
+            return; // Não relança para evitar retentativas desnecessárias
         }
 
-        public async Task ExecuteAsync(PaymentNotificationData resource)
+        logger.LogInformation(
+            "Iniciando o processamento da renovação de assinatura com PaymentId: {PaymentId}",
+            resource.Id
+        );
+
+        try
         {
-            var resourceId = resource?.Id;
+            // Delega TODA a lógica para o serviço especializado
+            // O service é responsável por:
+            // 1. Buscar assinatura pelo PaymentId via Repository
+            // 2. Verificar idempotência (data de expiração)
+            // 3. Calcular nova data de expiração
+            // 4. Atualizar assinatura via Repository
+            // 5. Commit via UnitOfWork
+            // 6. Enviar email
+            await subscriptionNotificationService.ProcessRenewalAsync(resource.Id);
 
-            _logger.LogInformation(
-                "Iniciando o processamento do pagamento da assinatura com ResourceId: {ResourceId}",
-                resourceId
+            logger.LogInformation(
+                "Renovação da assinatura com PaymentId: {PaymentId} concluída com sucesso.",
+                resource.Id
             );
-
-            // Validação básica do recurso
-            if (string.IsNullOrEmpty(resourceId))
-            {
-                _logger.LogError(
-                    "ResourceId (ID do Pagamento) está nulo ou vazio. O job não será reprocessado."
-                );
-                return;
-            }
-
-            // Inicia a transação no banco de dados
-            await using var transaction = await _context.Database.BeginTransactionAsync();
-            try
-            {
-                // 1. Busca e TRAVA a assinatura no banco para evitar condições de corrida.
-                //    O 'resourceId' é o ID do pagamento, então buscamos a assinatura por esse ID.
-                var subscription = await _context
-                    .Subscriptions.FromSqlRaw(
-                        "SELECT * FROM Subscriptions WITH (UPDLOCK, ROWLOCK) WHERE PaymentId = {0}",
-                        resourceId
-                    )
-                    .Include(s => s.Plan)
-                    .FirstOrDefaultAsync();
-
-                if (subscription == null)
-                {
-                    // Se a assinatura não for encontrada, não há o que fazer. O job não deve falhar para não ser reprocessado.
-                    _logger.LogWarning(
-                        "Nenhuma assinatura encontrada para o pagamento com ID: {ResourceId}. Finalizando job.",
-                        resourceId
-                    );
-                    await transaction.CommitAsync(); // Comita a transação vazia
-                    return;
-                }
-
-                // 2. Garante a idempotência: se a assinatura já foi renovada (data futura), encerra.
-                //    Esta verificação evita o reprocessamento do mesmo pagamento.
-                if (subscription.CurrentPeriodEndDate > DateTime.UtcNow)
-                {
-                    _logger.LogInformation(
-                        "Assinatura {SubscriptionId} já parece ter sido renovada (Data de Expiração: {ExpirationDate}). Finalizando job.",
-                        subscription.Id,
-                        subscription.CurrentPeriodEndDate
-                    );
-                    await transaction.CommitAsync();
-                    return;
-                }
-
-                // 3. CHAMA O SERVIÇO para executar a regra de negócio
-                await _subscriptionNotificationService.ProcessRenewalAsync(subscription);
-
-                // 4. Salva as alterações e comita a transação
-                await _context.SaveChangesAsync();
-                await transaction.CommitAsync();
-
-                _logger.LogInformation(
-                    "Job para pagamento {ResourceId} da assinatura {SubscriptionId} concluído com sucesso.",
-                    resourceId,
-                    subscription.Id
-                );
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(
-                    ex,
-                    "Erro ao processar o pagamento {ResourceId}. A transação será revertida.",
-                    resourceId
-                );
-                await transaction.RollbackAsync();
-                throw; // Relança a exceção para o Hangfire saber que o job falhou e deve tentar novamente.
-            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(
+                ex,
+                "Erro ao processar renovação da assinatura com PaymentId: {PaymentId}",
+                resource.Id
+            );
+            throw; // Relança para que o Hangfire aplique a política de retentativas
         }
     }
 }

@@ -93,6 +93,27 @@ public class SubscriptionRepository(ApiDbContext context) : ISubscriptionReposit
         );
     }
 
+    public async Task<Subscription?> GetByPaymentIdAsync(
+        string paymentId,
+        bool includePlan = false,
+        bool includeUser = false
+    )
+    {
+        IQueryable<Subscription> query = context.Subscriptions;
+
+        if (includePlan)
+        {
+            query = query.Include(s => s.Plan);
+        }
+
+        if (includeUser)
+        {
+            query = query.Include(s => s.User);
+        }
+
+        return await query.FirstOrDefaultAsync(s => s.PaymentId == paymentId);
+    }
+
     public void Update(Subscription subscription)
     {
         context.Subscriptions.Update(subscription);

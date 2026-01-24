@@ -5,19 +5,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Payments.Repositories;
 
-public class PaymentRepository : IPaymentRepository
+public class PaymentRepository(ApiDbContext context) : IPaymentRepository
 {
-    private readonly ApiDbContext _context;
-
-    public PaymentRepository(ApiDbContext context)
-    {
-        _context = context;
-    }
-
     public async Task<bool> HasAnyPaymentByUserIdAsync(string userId)
     {
         // Gera um "SELECT 1 ... LIMIT 1", muito performático
-        return await _context.Payments.AsNoTracking().AnyAsync(p => p.UserId == userId);
+        return await context.Payments.AsNoTracking().AnyAsync(p => p.UserId == userId);
     }
 
     public async Task<List<Models.Payments>> GetPaymentsByUserIdAndTypeAsync(
@@ -25,7 +18,7 @@ public class PaymentRepository : IPaymentRepository
         string? method = null
     )
     {
-        var query = _context
+        var query = context
             .Payments.AsNoTracking() // Leitura rápida sem trackear mudanças
             .Where(p => p.UserId == userId);
 
@@ -41,32 +34,39 @@ public class PaymentRepository : IPaymentRepository
             .ToListAsync();
     }
 
+    public async Task<Models.Payments?> GetByIdWithUserAsync(string paymentId)
+    {
+        return await context
+            .Payments.Include(p => p.User) // Inclui User para processamento de notificação
+            .FirstOrDefaultAsync(p => p.Id == paymentId);
+    }
+
     public async Task<Models.Payments?> GetByExternalIdWithUserAsync(string externalPaymentId)
     {
-        return await _context
+        return await context
             .Payments.Include(p => p.User) // Essencial para pegar o e-mail do cliente
             .FirstOrDefaultAsync(p => p.ExternalId == externalPaymentId);
     }
 
     public async Task<Models.Payments?> GetByExternalIdWithSubscriptionAsync(string externalId)
     {
-        return await _context
+        return await context
             .Payments.Include(p => p.Subscription) // Vital para a lógica de reembolso de assinatura
             .FirstOrDefaultAsync(p => p.ExternalId == externalId);
     }
 
     public void Update(Models.Payments payment)
     {
-        _context.Payments.Update(payment);
+        context.Payments.Update(payment);
     }
 
     public async Task AddAsync(Models.Payments payment)
     {
-        await _context.Payments.AddAsync(payment);
+        await context.Payments.AddAsync(payment);
     }
 
     public async Task Remove(Models.Payments payment)
     {
-        _context.Payments.Remove(payment);
+        context.Payments.Remove(payment);
     }
 }

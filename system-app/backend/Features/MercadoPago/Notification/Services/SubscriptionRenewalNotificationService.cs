@@ -1,124 +1,183 @@
 using MeuCrudCsharp.Features.Emails.Interfaces;
 using MeuCrudCsharp.Features.Emails.ViewModels;
+using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.MercadoPago.Notification.Interfaces;
+using MeuCrudCsharp.Features.MercadoPago.Subscriptions.Interfaces;
+using MeuCrudCsharp.Features.Shared.Work;
 using MeuCrudCsharp.Models;
 using Microsoft.Extensions.Options;
 
-namespace MeuCrudCsharp.Features.MercadoPago.Notification.Services
+namespace MeuCrudCsharp.Features.MercadoPago.Notification.Services;
+
+/// <summary>
+/// Service responsável por processar renovação de assinatura.
+/// Usa o padrão Unit of Work para garantir transações atômicas.
+/// </summary>
+public class SubscriptionRenewalNotificationService(
+    ILogger<SubscriptionRenewalNotificationService> logger,
+    ISubscriptionRepository subscriptionRepository,
+    IUnitOfWork unitOfWork,
+    IEmailSenderService emailSenderService,
+    IRazorViewToStringRenderer razorViewToStringRenderer,
+    IOptions<GeneralSettings> generalSettings)
+    : ISubscriptionNotificationService
 {
-    public class SubscriptionRenewalNotificationService : ISubscriptionNotificationService
+    private readonly GeneralSettings _generalSettings = generalSettings.Value;
+
+    /// <summary>
+    /// Processa a renovação de uma assinatura.
+    /// </summary>
+    /// <param name="paymentId">ID do pagamento que renovou a assinatura.</param>
+    public async Task ProcessRenewalAsync(string paymentId)
     {
-        private readonly ILogger<SubscriptionRenewalNotificationService> _logger;
-        private readonly IEmailSenderService _emailSenderService;
-        private readonly IRazorViewToStringRenderer _razorViewToStringRenderer;
-        private readonly GeneralSettings _generalSettings;
+        logger.LogInformation(
+            "Iniciando processamento de renovação para o pagamento {PaymentId}.",
+            paymentId
+        );
 
-        public SubscriptionRenewalNotificationService(
-            ILogger<SubscriptionRenewalNotificationService> logger,
-            IEmailSenderService emailSenderService,
-            IRazorViewToStringRenderer razorViewToStringRenderer,
-            IOptions<GeneralSettings> generalSettings
-        )
+        try
         {
-            _logger = logger;
-            _emailSenderService = emailSenderService;
-            _razorViewToStringRenderer = razorViewToStringRenderer;
-            _generalSettings = generalSettings.Value;
-        }
-
-        public async Task ProcessRenewalAsync(Subscription subscription)
-        {
-            _logger.LogInformation(
-                "Iniciando regras de negócio para renovar a assinatura {SubscriptionId}.",
-                subscription.Id
+            // 1. Busca assinatura pelo PaymentId via Repository
+            var subscription = await subscriptionRepository.GetByPaymentIdAsync(
+                paymentId,
+                includePlan: true,
+                includeUser: true
             );
 
+            if (subscription == null)
+            {
+                logger.LogWarning(
+                    "Nenhuma assinatura encontrada para o PaymentId: {PaymentId}.",
+                    paymentId
+                );
+                return;
+            }
+
+            // 2. Verifica idempotência - se já foi renovada (data futura)
+            if (subscription.CurrentPeriodEndDate > DateTime.UtcNow)
+            {
+                logger.LogInformation(
+                    "Assinatura {SubscriptionId} já renovada (Expira: {ExpirationDate}).",
+                    subscription.Id,
+                    subscription.CurrentPeriodEndDate
+                );
+                return;
+            }
+
+            if (subscription.Plan == null)
+            {
+                throw new InvalidOperationException(
+                    $"Assinatura {subscription.Id} sem plano associado."
+                );
+            }
+
+            // 3. Calcula nova data de expiração
             var planInterval = subscription.Plan.FrequencyInterval;
             var planFrequency = subscription.Plan.FrequencyType;
 
-            DateTime newExpirationDate = subscription.CurrentPeriodEndDate;
-            if (planFrequency == PlanFrequencyType.Months)
+            var newExpirationDate = subscription.CurrentPeriodEndDate;
+            newExpirationDate = planFrequency switch
             {
-                newExpirationDate = newExpirationDate.AddMonths(planInterval);
-            }
-            else if (planFrequency == PlanFrequencyType.Days)
-            {
-                newExpirationDate = newExpirationDate.AddDays(planInterval);
-            }
+                PlanFrequencyType.Months => newExpirationDate.AddMonths(planInterval),
+                PlanFrequencyType.Days => newExpirationDate.AddDays(planInterval),
+                _ => newExpirationDate
+            };
 
+            // 4. Atualiza assinatura
             subscription.CurrentPeriodEndDate = newExpirationDate;
             subscription.Status = "active";
+            subscriptionRepository.Update(subscription); // ✅ Marca
 
-            _logger.LogInformation(
-                "Regra de negócio aplicada. Nova data de validade para a assinatura {SubscriptionId} é {NewExpirationDate}",
+            logger.LogInformation(
+                "Assinatura {SubscriptionId} marcada. Nova data: {NewDate}",
                 subscription.Id,
                 newExpirationDate
             );
 
-            var viewModel = new RenewalEmailViewModel(
-                userName: subscription.User.Name,
-                planName: subscription.Plan.Name,
-                newExpirationDate: subscription.CurrentPeriodEndDate,
-                transactionAmount: subscription.Plan.TransactionAmount,
-                accountUrl: $"{_generalSettings.BaseUrl}/Profile/User/index.cshtml",
-                supportUrl: $"{_generalSettings.BaseUrl}/Support/Contact/index.cshtml"
+            // ✅ 5. COMMIT - SALVA!
+            await unitOfWork.CommitAsync();
+
+            logger.LogInformation(
+                "Assinatura {SubscriptionId} renovada com sucesso.",
+                subscription.Id
             );
 
-            await SendEmailFromTemplateAsync(
-                recipientEmail: subscription.User.Email,
-                subject: "Sua assinatura foi renovada com sucesso!",
-                viewPath: "Pages/EmailTemplates/Renewal/index.cshtml",
-                model: viewModel
-            );
-
-            await Task.CompletedTask;
+            // 6. Email APÓS commit
+            if (subscription.User != null && !string.IsNullOrEmpty(subscription.User.Email))
+            {
+                await SendRenewalEmailAsync(subscription, newExpirationDate);
+            }
         }
-
-        private async Task SendEmailFromTemplateAsync<TModel>(
-            string recipientEmail,
-            string subject,
-            string viewPath,
-            TModel model
-        )
+        catch (Exception ex)
         {
-            _logger.LogInformation(
-                "Iniciando montagem de e-mail a partir do template '{ViewPath}' para {RecipientEmail}.",
+            logger.LogError(ex, "Erro ao renovar PaymentId: {PaymentId}", paymentId);
+            throw;
+        }
+    }
+
+    private async Task SendRenewalEmailAsync(Subscription subscription, DateTime newExpirationDate)
+    {
+        var viewModel = new RenewalEmailViewModel(
+            userName: subscription.User?.Name ?? "Cliente",
+            planName: subscription.Plan?.Name ?? "Plano",
+            newExpirationDate: newExpirationDate,
+            transactionAmount: subscription.Plan?.TransactionAmount ?? 0,
+            accountUrl: $"{_generalSettings.BaseUrl}/Profile/User/index.cshtml",
+            supportUrl: $"{_generalSettings.BaseUrl}/Support/Contact/index.cshtml"
+        );
+
+        await SendEmailFromTemplateAsync(
+            recipientEmail: subscription.User!.Email!,
+            subject: "Sua assinatura foi renovada com sucesso!",
+            viewPath: "Pages/EmailTemplates/Renewal/index.cshtml",
+            model: viewModel
+        );
+    }
+
+    private async Task SendEmailFromTemplateAsync<TModel>(
+        string recipientEmail,
+        string subject,
+        string viewPath,
+        TModel model
+    )
+    {
+        logger.LogInformation(
+            "Iniciando montagem de e-mail a partir do template '{ViewPath}' para {RecipientEmail}.",
+            viewPath,
+            recipientEmail
+        );
+
+        try
+        {
+            // Usa o modelo que foi passado como parâmetro.
+            var htmlBody = await razorViewToStringRenderer.RenderViewToStringAsync(
                 viewPath,
+                model
+            );
+
+            var plainTextBody =
+                $"Assunto: {subject}. Para visualizar esta mensagem, utilize um leitor de e-mail compatível com HTML.";
+
+            await emailSenderService.SendEmailAsync(
+                recipientEmail,
+                subject,
+                htmlBody,
+                plainTextBody
+            );
+
+            logger.LogInformation(
+                "E-mail para {RecipientEmail} enviado com sucesso.",
                 recipientEmail
             );
-
-            try
-            {
-                // Usa o modelo que foi passado como parâmetro.
-                var htmlBody = await _razorViewToStringRenderer.RenderViewToStringAsync(
-                    viewPath,
-                    model
-                );
-
-                var plainTextBody =
-                    $"Assunto: {subject}. Para visualizar esta mensagem, utilize um leitor de e-mail compatível com HTML.";
-
-                await _emailSenderService.SendEmailAsync(
-                    recipientEmail,
-                    subject,
-                    htmlBody,
-                    plainTextBody
-                );
-
-                _logger.LogInformation(
-                    "E-mail para {RecipientEmail} enviado com sucesso.",
-                    recipientEmail
-                );
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(
-                    ex,
-                    "Falha no processo de montagem e envio de e-mail para {RecipientEmail}.",
-                    recipientEmail
-                );
-                throw;
-            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(
+                ex,
+                "Falha no processo de montagem e envio de e-mail para {RecipientEmail}.",
+                recipientEmail
+            );
+            throw;
         }
     }
 }

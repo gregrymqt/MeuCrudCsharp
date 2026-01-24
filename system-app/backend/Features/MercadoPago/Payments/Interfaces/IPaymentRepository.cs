@@ -13,6 +13,7 @@ public interface IPaymentRepository
         string? method = null
     );
 
+    Task<Models.Payments?> GetByIdWithUserAsync(string paymentId);
     Task<Models.Payments?> GetByExternalIdWithUserAsync(string externalPaymentId);
 
     Task<Models.Payments?> GetByExternalIdWithSubscriptionAsync(string externalId);
