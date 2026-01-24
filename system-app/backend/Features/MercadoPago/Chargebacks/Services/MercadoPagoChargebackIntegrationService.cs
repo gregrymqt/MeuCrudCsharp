@@ -8,16 +8,12 @@ using MeuCrudCsharp.Features.MercadoPago.Chargebacks.Interfaces;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Chargebacks.Services;
 
-public class MercadoPagoChargebackIntegrationService
-    : MercadoPagoServiceBase,
+public class MercadoPagoChargebackIntegrationService(
+    IHttpClientFactory httpClientFactory,
+    ILogger<MercadoPagoChargebackIntegrationService> logger)
+    : MercadoPagoServiceBase(httpClientFactory, logger),
         IMercadoPagoChargebackIntegrationService
 {
-    public MercadoPagoChargebackIntegrationService(
-        IHttpClientFactory httpClientFactory,
-        ILogger<MercadoPagoChargebackIntegrationService> logger
-    )
-        : base(httpClientFactory, logger) { }
-
     public async Task<MercadoPagoChargebackResponse?> GetChargebackDetailsFromApiAsync(
         string chargebackId
     )
@@ -38,11 +34,9 @@ public class MercadoPagoChargebackIntegrationService
             if (string.IsNullOrEmpty(jsonResponse))
                 return null;
 
-            var options = new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true,
-                NumberHandling = JsonNumberHandling.AllowReadingFromString,
-            };
+            var options = new JsonSerializerOptions();
+            options.PropertyNameCaseInsensitive = true;
+            options.NumberHandling = JsonNumberHandling.AllowReadingFromString;
 
             return JsonSerializer.Deserialize<MercadoPagoChargebackResponse>(jsonResponse, options);
         }
@@ -53,7 +47,7 @@ public class MercadoPagoChargebackIntegrationService
         }
         catch (Exception ex)
         {
-            _logger.LogError(
+            logger.LogError(
                 ex,
                 "Falha de deserialização ou erro interno ao buscar chargeback {Id}",
                 chargebackId

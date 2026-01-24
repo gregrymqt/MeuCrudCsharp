@@ -16,6 +16,7 @@ public interface ISubscriptionRepository
     void Update(Subscription subscription);
 
     Task<Subscription?> GetActiveSubscriptionByUserIdAsync(string userId);
+    Task<Subscription?> GetActiveSubscriptionByCustomerIdAsync(string customerId);
 
     Task<bool> HasActiveSubscriptionByUserIdAsync(string userId);
     Task<int> SaveChangesAsync();

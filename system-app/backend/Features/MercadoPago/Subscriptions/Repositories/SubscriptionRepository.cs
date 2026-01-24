@@ -3,20 +3,13 @@ using MeuCrudCsharp.Features.MercadoPago.Subscriptions.Interfaces;
 using MeuCrudCsharp.Models;
 using Microsoft.EntityFrameworkCore;
 
-namespace MeuCrudCsharp.Features.MercadoPago.Subscriptions.Services;
+namespace MeuCrudCsharp.Features.MercadoPago.Subscriptions.Repositories;
 
-public class SubscriptionRepository : ISubscriptionRepository
+public class SubscriptionRepository(ApiDbContext context) : ISubscriptionRepository
 {
-    private readonly ApiDbContext _context;
-
-    public SubscriptionRepository(ApiDbContext context)
-    {
-        _context = context;
-    }
-
     public async Task AddAsync(Subscription subscription)
     {
-        await _context.Subscriptions.AddAsync(subscription);
+        await context.Subscriptions.AddAsync(subscription);
     }
 
     public async Task<Subscription?> GetByExternalIdAsync(
@@ -25,7 +18,7 @@ public class SubscriptionRepository : ISubscriptionRepository
         bool asNoTracking = true
     )
     {
-        IQueryable<Subscription> query = _context.Subscriptions;
+        IQueryable<Subscription> query = context.Subscriptions;
 
         if (asNoTracking)
         {
@@ -45,7 +38,7 @@ public class SubscriptionRepository : ISubscriptionRepository
         // Status que consideramos "Vigentes"
         var activeStatuses = new[] { "authorized", "pending", "paused" };
 
-        return await _context
+        return await context
             .Subscriptions.AsNoTracking() // Performance
             .Include(s => s.Plan)
             .Where(s => s.UserId == userId && activeStatuses.Contains(s.Status))
@@ -53,19 +46,35 @@ public class SubscriptionRepository : ISubscriptionRepository
             .FirstOrDefaultAsync();
     }
 
+    public async Task<Subscription?> GetActiveSubscriptionByCustomerIdAsync(string customerId)
+    {
+        // Status que consideramos "Vigentes"
+        var activeStatuses = new[] { "authorized", "pending", "paused" };
+
+        return await context
+            .Subscriptions
+            .Include(s => s.User) // ✅ Inclui User para envio de email
+            .Where(s => 
+                s.User != null && 
+                s.User.CustomerId == customerId && 
+                activeStatuses.Contains(s.Status))
+            .OrderByDescending(s => s.CurrentPeriodEndDate) // Pega a mais recente
+            .FirstOrDefaultAsync();
+    }
+
     public void Remove(Subscription subscription)
     {
-        _context.Subscriptions.Remove(subscription);
+        context.Subscriptions.Remove(subscription);
     }
 
     public async Task<int> SaveChangesAsync()
     {
-        return await _context.SaveChangesAsync();
+        return await context.SaveChangesAsync();
     }
 
     public Task<bool> HasActiveSubscriptionByUserIdAsync(string userId)
     {
-        return _context
+        return context
             .Subscriptions.AsNoTracking()
             .AnyAsync(s =>
                 s.UserId == userId
@@ -79,13 +88,13 @@ public class SubscriptionRepository : ISubscriptionRepository
     {
         // O Service passa o ID que está salvo na tabela de Pagamentos.
         // Geralmente é o ExternalId (ex: "2c938084...").
-        return await _context.Subscriptions.FirstOrDefaultAsync(s =>
+        return await context.Subscriptions.FirstOrDefaultAsync(s =>
             s.ExternalId == subscriptionId
         );
     }
 
     public void Update(Subscription subscription)
     {
-        _context.Subscriptions.Update(subscription);
+        context.Subscriptions.Update(subscription);
     }
 }

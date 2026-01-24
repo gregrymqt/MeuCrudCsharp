@@ -6,16 +6,14 @@ using static MeuCrudCsharp.Features.MercadoPago.Claims.DTOs.MercadoPagoClaimsDTO
 
 namespace MeuCrudCsharp.Features.MercadoPago.Claims.Services;
 
-public class MercadoPagoIntegrationService : MercadoPagoServiceBase, IMercadoPagoIntegrationService
+public class MercadoPagoIntegrationService(
+    IHttpClientFactory httpClientFactory,
+    ILogger<MercadoPagoIntegrationService> logger)
+    : MercadoPagoServiceBase(httpClientFactory, logger), IMercadoPagoIntegrationService
 {
-    const string BaseEndpoint = "post-purchase/v1/claims";
+    private const string BaseEndpoint = "post-purchase/v1/claims";
 
-    public MercadoPagoIntegrationService(
-        IHttpClientFactory httpClientFactory,
-        ILogger<MercadoPagoIntegrationService> logger
-    )
-        : base(httpClientFactory, logger) // [cite: 44, 45]
-    { }
+    // [cite: 44, 45]
 
     public async Task<MpClaimSearchResponse> SearchClaimsAsync(
         string role,
@@ -45,10 +43,6 @@ public class MercadoPagoIntegrationService : MercadoPagoServiceBase, IMercadoPag
             null
         );
 
-        if (jsonResponse == null)
-            return null;
-
-        // Usa a classe MpClaimItem que já está nas suas DTOs (Source 45)
         return JsonSerializer.Deserialize<MpClaimItem>(jsonResponse);
     }
 
@@ -70,7 +64,7 @@ public class MercadoPagoIntegrationService : MercadoPagoServiceBase, IMercadoPag
         );
 
         return JsonSerializer.Deserialize<List<MpMessageResponse>>(jsonResponse)
-            ?? new List<MpMessageResponse>();
+            ?? [];
     }
 
     public async Task SendMessageAsync(

@@ -12,7 +12,14 @@ public interface IClaimRepository
         int page,
         int pageSize
     );
+    
     Task<Models.Claims?> GetByIdAsync(long id);
-    Task UpdateClaimStatusAsync(Models.Claims claim, string newStatus);
+    Task<Models.Claims?> GetByMpClaimIdAsync(long mpClaimId);
+    Task<bool> ExistsByMpClaimIdAsync(long mpClaimId);
     Task<List<Models.Claims>> GetClaimsByUserIdAsync(string userId);
+    
+    // Métodos de escrita (não chamam SaveChanges)
+    Task AddAsync(Models.Claims claim);
+    void Update(Models.Claims claim);
+    void UpdateClaimStatus(Models.Claims claim, InternalClaimStatus newStatus);
 }

@@ -1,67 +1,67 @@
 using Hangfire;
-using MeuCrudCsharp.Features.MercadoPago.Chargebacks.Interfaces;
 using MeuCrudCsharp.Features.MercadoPago.Jobs.Interfaces;
 using MeuCrudCsharp.Features.MercadoPago.Notification.Interfaces;
-using MeuCrudCsharp.Features.MercadoPago.Webhooks.DTOs; // Namespace onde está o ChargebackNotificationPayload
+using MeuCrudCsharp.Features.MercadoPago.Webhooks.DTOs;
 
-// Adicione outros usings necessários (Data, Models, etc)
 namespace MeuCrudCsharp.Features.MercadoPago.Jobs.Job;
 
-[AutomaticRetry(Attempts = 3, DelaysInSeconds = new int[] { 60 })]
-public class ProcessChargebackJob : IJob<ChargebackNotificationPayload>
+/// <summary>
+/// Job do Hangfire para processar notificações de Chargeback do Mercado Pago.
+/// Delega toda a lógica de negócio para o ChargeBackNotificationService.
+/// </summary>
+[AutomaticRetry(Attempts = 3, DelaysInSeconds = [60])]
+public class ProcessChargebackJob(
+    ILogger<ProcessChargebackJob> logger,
+    IChargeBackNotificationService chargeBackNotificationService)
+    : IJob<ChargebackNotificationPayload>
 {
-    private readonly ILogger<ProcessChargebackJob> _logger;
-    // REMOVIDO: private readonly ApiDbContext _context;
-    private readonly IChargebackRepository _chargebackRepository; // ADICIONADO
-    private readonly IChargeBackNotificationService _chargeBackNotificationService;
-
-    public ProcessChargebackJob(
-        ILogger<ProcessChargebackJob> logger,
-        IChargebackRepository chargebackRepository,
-        IChargeBackNotificationService chargeBackNotificationService
-    )
-    {
-        _logger = logger;
-        _chargebackRepository = chargebackRepository;
-        _chargeBackNotificationService = chargeBackNotificationService;
-    }
-
-    public async Task ExecuteAsync(ChargebackNotificationPayload chargebackData)
+    /// <summary>
+    /// Executa o processamento da notificação de chargeback.
+    /// </summary>
+    /// <summary>
+    /// Executa o processamento da notificação de chargeback.
+    /// </summary>
+    public async Task ExecuteAsync(ChargebackNotificationPayload? chargebackData)
     {
         if (chargebackData == null || string.IsNullOrEmpty(chargebackData.Id))
         {
-            _logger.LogError("Job de Chargeback recebido com payload inválido.");
-            return;
+            logger.LogError("Job de Chargeback recebido com payload inválido.");
+            return; // Não relança para evitar retentativas desnecessárias
         }
 
-        _logger.LogInformation("Iniciando processamento do job para o Chargeback ID: {ChargebackId}", chargebackData.Id);
+        logger.LogInformation(
+            "Iniciando processamento do job para o Chargeback ID: {ChargebackId}", 
+            chargebackData.Id
+        );
 
         try
         {
-            if (!long.TryParse(chargebackData.Id, out long chargebackIdLong))
+            // Validação de formato do ID
+            if (!long.TryParse(chargebackData.Id, out _))
             {
-                _logger.LogError("ID do Chargeback não é um número válido: {Id}", chargebackData.Id);
-                return;
+                logger.LogError(
+                    "ID do Chargeback não é um número válido: {Id}", 
+                    chargebackData.Id
+                );
+                return; // Não relança para evitar retentativas desnecessárias
             }
 
-            // --- ALTERAÇÃO: Usando Repository para verificação ---
-            // Substitui: _context.Chargebacks.AsNoTracking().AnyAsync(...)
-            var exists = await _chargebackRepository.ExistsByExternalIdAsync(chargebackIdLong);
+            // Delega TODA a lógica para o serviço especializado
+            // O service é responsável por:
+            // 1. Buscar detalhes na API do MP
+            // 2. Verificar se chargeback já existe
+            // 3. Atualizar Payment e Subscription via Repositories
+            // 4. Criar/Atualizar Chargeback via Repository
+            // 5. Commit via UnitOfWork
+            // 6. Enviar email
+            await chargeBackNotificationService.VerifyAndProcessChargeBackAsync(chargebackData);
 
-            if (exists)
-            {
-                _logger.LogInformation("Chargeback {Id} já existe no banco. Verificando atualizações...", chargebackData.Id);
-                // Continua para permitir update
-            }
-
-            await _chargeBackNotificationService.VerifyAndProcessChargeBackAsync(chargebackData);
-
-            _logger.LogInformation("Job Chargeback {Id} concluído.", chargebackData.Id);
+            logger.LogInformation("Job Chargeback {Id} concluído com sucesso.", chargebackData.Id);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Erro no Job Chargeback {Id}.", chargebackData.Id);
-            throw; 
+            logger.LogError(ex, "Erro no Job Chargeback {Id}.", chargebackData.Id);
+            throw; // Relança para que o Hangfire aplique a política de retentativas
         }
     }
 }

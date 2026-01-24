@@ -1,35 +1,29 @@
 using MeuCrudCsharp.Features.Auth.Interfaces;
-using MeuCrudCsharp.Features.MercadoPago.Claims.DTOs;
 using MeuCrudCsharp.Features.MercadoPago.Claims.Interfaces;
-using MeuCrudCsharp.Features.MercadoPago.Claims.ViewModels;
 using MeuCrudCsharp.Models;
 using static MeuCrudCsharp.Features.MercadoPago.Claims.ViewModels.MercadoPagoClaimsViewModels;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Claims.Services;
 
-public class UserClaimService : IUserClaimService
+/// <summary>
+/// Service responsável por operações de Claims do lado do USUÁRIO/ALUNO.
+/// Apenas leitura local e envio de mensagens para o Mercado Pago (não precisa de UoW).
+/// </summary>
+public class UserClaimService(
+    IClaimRepository claimRepository,
+    IMercadoPagoIntegrationService mpService,
+    IUserContext userContext)
+    : IUserClaimService
 {
-    private readonly IClaimRepository _claimRepository; // Seu banco local
-    private readonly IMercadoPagoIntegrationService _mpService;
-    private readonly IUserContext _userContext; // Para pegar o ID do aluno logado
-
-    public UserClaimService(
-        IClaimRepository claimRepository,
-        IMercadoPagoIntegrationService mpService,
-        IUserContext userContext
-    )
-    {
-        _claimRepository = claimRepository;
-        _mpService = mpService;
-        _userContext = userContext;
-    }
-
-    // 1. Minhas Reclamações
+    /// <summary>
+    /// Lista todas as reclamações do usuário logado.
+    /// </summary>
     public async Task<List<ClaimSummaryViewModel>> GetMyClaimsAsync()
     {
-        var userId = _userContext.GetCurrentUserId().ToString() ?? throw new UnauthorizedAccessException();
+        var userId = userContext.GetCurrentUserId().ToString() 
+            ?? throw new UnauthorizedAccessException("Usuário não autenticado.");
 
-        var myClaims = await _claimRepository.GetClaimsByUserIdAsync(userId);
+        var myClaims = await claimRepository.GetClaimsByUserIdAsync(userId);
 
         return myClaims
             .Select(c => new ClaimSummaryViewModel
@@ -37,27 +31,28 @@ public class UserClaimService : IUserClaimService
                 InternalId = c.Id,
                 MpClaimId = c.MpClaimId,
                 Status = c.Status.ToString(),
-                // CORREÇÃO 1: ToString() no Enum Type
                 Type = c.Type.ToString(),
                 DateCreated = c.DataCreated,
-                // CORREÇÃO 2: Nome correto do Enum (InternalClaimStatus)
                 IsUrgent = c.Status == InternalClaimStatus.RespondidoPeloVendedor,
             })
             .ToList();
     }
 
-    // 2. Detalhes (O Aluno vendo o chat)
+    /// <summary>
+    /// Obtém detalhes de uma reclamação específica do usuário logado.
+    /// Busca mensagens em tempo real da API do Mercado Pago.
+    /// </summary>
     public async Task<ClaimDetailViewModel> GetMyClaimDetailAsync(int internalId)
     {
-        var userId = _userContext.GetCurrentUserId().ToString();
-        var claim = await _claimRepository.GetByIdAsync(internalId);
+        var userId = userContext.GetCurrentUserId().ToString();
+        var claim = await claimRepository.GetByIdAsync(internalId);
 
-        // SEGURANÇA: Impede ver reclamação de outro aluno
+        // Segurança: Impede visualizar reclamação de outro usuário
         if (claim == null || claim.UserId != userId)
             throw new UnauthorizedAccessException("Essa reclamação não é sua.");
 
-        // Busca mensagens no MP
-        var messages = await _mpService.GetClaimMessagesAsync(claim.MpClaimId);
+        // Busca mensagens atualizadas no Mercado Pago
+        var messages = await mpService.GetClaimMessagesAsync(claim.MpClaimId);
 
         return new ClaimDetailViewModel
         {
@@ -69,38 +64,47 @@ public class UserClaimService : IUserClaimService
                 {
                     MessageId = m.Id,
                     SenderRole = m.SenderRole,
-                    Content = m.Message, // [cite: 8]
+                    Content = m.Message,
                     DateCreated = m.DateCreated,
-                    Attachments = m.Attachments?.Select(a => a.Filename).ToList() ?? new(),
+                    Attachments = m.Attachments?.Select(a => a.Filename).ToList() ?? [],
                     IsMe = m.SenderRole == "complainant",
                 })
                 .ToList(),
         };
     }
 
-    // 3. Aluno Responde
+    /// <summary>
+    /// Envia uma resposta do aluno para uma reclamação.
+    /// A mensagem é enviada diretamente para a API do Mercado Pago.
+    /// </summary>
     public async Task ReplyAsync(int internalId, string message)
     {
-        var userId = _userContext.GetCurrentUserId().ToString();
-        var claim = await _claimRepository.GetByIdAsync(internalId);
+        // Validação de entrada
+        if (string.IsNullOrWhiteSpace(message))
+            throw new ArgumentException("Mensagem não pode ser vazia.", nameof(message));
+
+        var userId = userContext.GetCurrentUserId().ToString();
+        var claim = await claimRepository.GetByIdAsync(internalId);
 
         if (claim == null || claim.UserId != userId)
             throw new UnauthorizedAccessException("Ação não permitida.");
 
-        // Envia mensagem
-        await _mpService.SendMessageAsync(claim.MpClaimId, message);
+        // Envia mensagem para o Mercado Pago
+        await mpService.SendMessageAsync(claim.MpClaimId, message);
     }
 
-    // 4. Aluno pede Mediação (Escalar)
+    /// <summary>
+    /// Solicita mediação do Mercado Pago para uma reclamação (escalar disputa).
+    /// </summary>
     public async Task RequestMediationAsync(int internalId)
     {
-        var userId = _userContext.GetCurrentUserId().ToString();
-        var claim = await _claimRepository.GetByIdAsync(internalId);
+        var userId = userContext.GetCurrentUserId().ToString();
+        var claim = await claimRepository.GetByIdAsync(internalId);
 
         if (claim == null || claim.UserId != userId)
-            throw new UnauthorizedAccessException();
+            throw new UnauthorizedAccessException("Ação não permitida.");
 
-        // Chama endpoint de disputa
-        await _mpService.EscalateToMediationAsync(claim.MpClaimId);
+        // Escala para mediação na API do Mercado Pago
+        await mpService.EscalateToMediationAsync(claim.MpClaimId);
     }
 }

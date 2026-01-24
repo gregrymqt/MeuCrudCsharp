@@ -2,100 +2,104 @@ using MeuCrudCsharp.Features.Caching.Interfaces;
 using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.MercadoPago.Claims.Interfaces;
 using static MeuCrudCsharp.Features.MercadoPago.Claims.DTOs.MercadoPagoClaimsDTOs;
-using static MeuCrudCsharp.Features.MercadoPago.Claims.ViewModels.MercadoPagoClaimsViewModels; // Ajuste conforme seu namespace de ViewModels
+using static MeuCrudCsharp.Features.MercadoPago.Claims.ViewModels.MercadoPagoClaimsViewModels;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Claims.Services;
 
-public class AdminClaimService : IAdminClaimService
+/// <summary>
+/// Service responsável por operações de Claims do lado ADMINISTRATIVO.
+/// Apenas leitura e envio de mensagens para o Mercado Pago (não precisa de UoW).
+/// </summary>
+public class AdminClaimService(
+    IClaimRepository claimRepository,
+    IMercadoPagoIntegrationService mpService,
+    ICacheService cacheService,
+    ILogger<AdminClaimService> logger)
+    : IAdminClaimService
 {
-    private readonly IClaimRepository _claimRepository;
-    private readonly IMercadoPagoIntegrationService _mpService; // Injeção nova
-    private readonly ICacheService _cacheService;
-    private readonly ILogger<AdminClaimService> _logger;
-
     private const int PageSize = 10;
     private const string ClaimsCacheVersionKey = "claims_cache_version";
 
-    public AdminClaimService(
-        IClaimRepository claimRepository,
-        IMercadoPagoIntegrationService mpService, // Recebe o service do MP
-        ICacheService cacheService,
-        ILogger<AdminClaimService> logger
-    )
-    {
-        _claimRepository = claimRepository;
-        _mpService = mpService;
-        _cacheService = cacheService;
-        _logger = logger;
-    }
-
-    // 1. Listagem (Vem do Banco Local - Rápido e com Cache) [cite: 17, 18]
+    /// <summary>
+    /// Obtém lista paginada de claims com filtros opcionais.
+    /// Utiliza cache de 5 minutos para otimizar performance.
+    /// </summary>
     public async Task<ClaimsIndexViewModel> GetClaimsAsync(
         string? searchTerm,
         string? statusFilter,
         int page
     )
     {
+        // Validação básica
+        if (page < 1)
+        {
+            logger.LogWarning("Página inválida recebida: {Page}. Usando página 1.", page);
+            page = 1;
+        }
+
         var cacheVersion = await GetCacheVersionAsync();
-        string cacheKey = $"Claims_v{cacheVersion}_s:{searchTerm}_f:{statusFilter}_p:{page}";
+        var cacheKey = $"Claims_v{cacheVersion}_s:{searchTerm}_f:{statusFilter}_p:{page}";
 
-        return await _cacheService.GetOrCreateAsync(
-                cacheKey,
-                async () =>
-                {
-                    var (claims, totalCount) = await _claimRepository.GetPaginatedClaimsAsync(
-                        searchTerm,
-                        statusFilter,
-                        page,
-                        PageSize
-                    );
+        return await cacheService.GetOrCreateAsync(
+            cacheKey,
+            async () =>
+            {
+                var (claims, totalCount) = await claimRepository.GetPaginatedClaimsAsync(
+                    searchTerm,
+                    statusFilter,
+                    page,
+                    PageSize
+                );
 
-                    var claimSummaries = claims
-                        .Select(c => new ClaimSummaryViewModel
-                        {
-                            InternalId = c.Id,
-                            MpClaimId = c.MpClaimId,
-                            CustomerName = c.User?.Name ?? "Desconhecido",
-                            Status = c.Status.ToString(),
-                            DateCreated = c.DataCreated,
-                            // CORREÇÃO CS0029: Convertendo Enum para String
-                            Type = c.Type.ToString(),
-                        })
-                        .ToList();
-
-                    return new ClaimsIndexViewModel
+                var claimSummaries = claims
+                    .Select(c => new ClaimSummaryViewModel
                     {
-                        Claims = claimSummaries,
-                        CurrentPage = page,
-                        TotalPages = (int)Math.Ceiling(totalCount / (double)PageSize),
-                        SearchTerm = searchTerm,
-                        StatusFilter = statusFilter,
-                    };
-                },
-                TimeSpan.FromMinutes(5)
-            ) ?? new ClaimsIndexViewModel();
+                        InternalId = c.Id,
+                        MpClaimId = c.MpClaimId,
+                        CustomerName = c.User?.Name ?? "Desconhecido",
+                        Status = c.Status.ToString(),
+                        DateCreated = c.DataCreated,
+                        Type = c.Type.ToString(),
+                    })
+                    .ToList();
+
+                return new ClaimsIndexViewModel
+                {
+                    Claims = claimSummaries,
+                    CurrentPage = page,
+                    TotalPages = (int)Math.Ceiling(totalCount / (double)PageSize),
+                    SearchTerm = searchTerm,
+                    StatusFilter = statusFilter,
+                };
+            },
+            TimeSpan.FromMinutes(5)
+        ) ?? new ClaimsIndexViewModel();
     }
 
-    // 2. Detalhes com Chat (Vem do MP AO VIVO - Sem Cache longo)
+    /// <summary>
+    /// Obtém detalhes de uma claim específica com mensagens atualizadas do Mercado Pago.
+    /// </summary>
     public async Task<ClaimDetailViewModel> GetClaimDetailsAsync(long localId)
     {
-        var localClaim = await _claimRepository.GetByIdAsync(localId);
+        var localClaim = await claimRepository.GetByIdAsync(localId);
         if (localClaim == null)
             throw new ResourceNotFoundException("Reclamação não encontrada.");
 
         List<MpMessageResponse> messages;
         try
         {
-            messages = await _mpService.GetClaimMessagesAsync(localClaim.MpClaimId);
+            logger.LogInformation("Buscando mensagens da claim {MpClaimId} na API do Mercado Pago",
+                localClaim.MpClaimId);
+            messages = await mpService.GetClaimMessagesAsync(localClaim.MpClaimId);
         }
         catch (Exception ex)
         {
-            _logger.LogError(
+            logger.LogError(
                 ex,
                 "Falha ao buscar mensagens no MP para a claim {ClaimId}",
                 localClaim.MpClaimId
             );
-            messages = new List<MpMessageResponse>();
+            messages = [];
         }
 
         return new ClaimDetailViewModel
@@ -107,33 +111,38 @@ public class AdminClaimService : IAdminClaimService
                 .Select(m => new ClaimMessageViewModel
                 {
                     MessageId = m.Id,
-                    SenderRole = m.SenderRole, // Já é string, não precisa de ToString()
-                    Content = m.Message, // Corrigido de .Content para .Message
+                    SenderRole = m.SenderRole,
+                    Content = m.Message,
                     DateCreated = m.DateCreated,
-                    Attachments =
-                        m.Attachments?.Select(a => a.Filename).ToList() ?? new List<string>(),
+                    Attachments = m.Attachments?.Select(a => a.Filename).ToList() ?? [],
                 })
                 .ToList(),
         };
     }
 
-    // 3. Responder Aluno (Envia para MP)
+    /// <summary>
+    /// Envia uma resposta do administrador para uma reclamação.
+    /// A mensagem é enviada diretamente para a API do Mercado Pago.
+    /// </summary>
     public async Task ReplyToClaimAsync(long localId, string messageText)
     {
-        var localClaim = await _claimRepository.GetByIdAsync(localId);
+        // Validação de entrada
+        if (string.IsNullOrWhiteSpace(messageText))
+            throw new ArgumentException("Mensagem não pode ser vazia.", nameof(messageText));
+
+        var localClaim = await claimRepository.GetByIdAsync(localId);
         if (localClaim == null)
             throw new ResourceNotFoundException("Reclamação não encontrada.");
 
-        // Envia para o Mercado Pago
-        await _mpService.SendMessageAsync(localClaim.MpClaimId, messageText);
+        // Envia mensagem para o Mercado Pago
+        await mpService.SendMessageAsync(localClaim.MpClaimId, messageText);
 
-        // Opcional: Atualizar status local se necessário
-        _logger.LogInformation("Resposta enviada para a claim MP {MpId}", localClaim.MpClaimId);
+        logger.LogInformation("Resposta enviada para a claim MP {MpId}", localClaim.MpClaimId);
     }
 
     private Task<string?> GetCacheVersionAsync()
     {
-        return _cacheService.GetOrCreateAsync(
+        return cacheService.GetOrCreateAsync(
             ClaimsCacheVersionKey,
             () => Task.FromResult(Guid.NewGuid().ToString())
         );

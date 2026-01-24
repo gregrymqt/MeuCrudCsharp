@@ -1,4 +1,3 @@
-using System;
 using System.Text.Json;
 using MercadoPago.Client.Customer;
 using MercadoPago.Resource.Customer;
@@ -9,14 +8,18 @@ using MeuCrudCsharp.Features.MercadoPago.Clients.Interfaces;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Clients.Services;
 
-public class ClientMercadoPagoService : MercadoPagoServiceBase, IClientMercadoPagoService
+/// <summary>
+/// Service de integração com a API do Mercado Pago para gerenciar Customers e Cards.
+/// Usa o SDK oficial do Mercado Pago.
+/// </summary>
+public class ClientMercadoPagoService(
+    IHttpClientFactory httpClientFactory,
+    ILogger<ClientMercadoPagoService> logger)
+    : MercadoPagoServiceBase(httpClientFactory, logger), IClientMercadoPagoService
 {
-    public ClientMercadoPagoService(
-        IHttpClientFactory httpClientFactory,
-        ILogger<ClientMercadoPagoService> logger
-    )
-        : base(httpClientFactory, logger) { }
-
+    /// <summary>
+    /// Cria um novo Customer no Mercado Pago.
+    /// </summary>
     public async Task<Customer> CreateCustomerAsync(string email, string firstName)
     {
         var customerClient = new CustomerClient();
@@ -24,6 +27,9 @@ public class ClientMercadoPagoService : MercadoPagoServiceBase, IClientMercadoPa
         return await customerClient.CreateAsync(request);
     }
 
+    /// <summary>
+    /// Adiciona um cartão a um Customer existente no Mercado Pago.
+    /// </summary>
     public async Task<CustomerCard> AddCardAsync(string customerId, string cardToken)
     {
         var customerClient = new CustomerClient();
@@ -31,7 +37,10 @@ public class ClientMercadoPagoService : MercadoPagoServiceBase, IClientMercadoPa
         return await customerClient.CreateCardAsync(customerId, request);
     }
 
-    // --- CORREÇÃO AQUI: Usando o objeto do SDK em vez de JSON cru ---
+    /// <summary>
+    /// Lista todos os cartões de um Customer no Mercado Pago.
+    /// Converte do objeto do SDK para nosso DTO.
+    /// </summary>
     public async Task<List<CardInCustomerResponseDto>> ListCardsAsync(string customerId)
     {
         var customerClient = new CustomerClient();
@@ -40,9 +49,9 @@ public class ClientMercadoPagoService : MercadoPagoServiceBase, IClientMercadoPa
         var cards = await customerClient.ListCardsAsync(customerId);
 
         if (cards == null || !cards.Any())
-            return new List<CardInCustomerResponseDto>();
+            return [];
 
-        // Mapeamos do Objeto do SDK -> Nosso DTO
+        // Mapeia do Objeto do SDK -> Nosso DTO
         return cards
             .Select(c => new CardInCustomerResponseDto(
                 c.Id,
@@ -54,7 +63,10 @@ public class ClientMercadoPagoService : MercadoPagoServiceBase, IClientMercadoPa
             .ToList();
     }
 
-    public async Task<CardInCustomerResponseDto> GetCardAsync(string customerId, string cardId)
+    /// <summary>
+    /// Obtém um cartão específico de um Customer no Mercado Pago.
+    /// </summary>
+    public async Task<CardInCustomerResponseDto?> GetCardAsync(string customerId, string cardId)
     {
         var customerClient = new CustomerClient();
         var c = await customerClient.GetCardAsync(customerId, cardId);
@@ -71,18 +83,21 @@ public class ClientMercadoPagoService : MercadoPagoServiceBase, IClientMercadoPa
         );
     }
 
+    /// <summary>
+    /// Remove um cartão de um Customer no Mercado Pago.
+    /// Usa chamada HTTP direta pois o SDK às vezes falha nesta operação.
+    /// </summary>
     public async Task<CardInCustomerResponseDto> DeleteCardAsync(string customerId, string cardId)
     {
-        // Mantemos sua lógica manual aqui, pois o Delete do SDK as vezes falha
         var endpoint = $"/v1/customers/{customerId}/cards/{cardId}";
 
-        var responseBody = await SendMercadoPagoRequestAsync(
+        var responseBody = await SendMercadoPagoRequestAsync<object>(
             HttpMethod.Delete,
             endpoint,
-            (object?)null
+            null
         );
 
-        // Aqui tudo bem usar JSON manual pois é uma resposta raw do nosso BaseService
+        // Desserializa a resposta JSON manual
         var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
         return JsonSerializer.Deserialize<CardInCustomerResponseDto>(responseBody, options)
             ?? throw new AppServiceException("Falha ao desserializar resposta do MP.");

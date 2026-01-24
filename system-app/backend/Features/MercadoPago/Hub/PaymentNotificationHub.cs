@@ -4,31 +4,24 @@ using Microsoft.AspNetCore.SignalR;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Hub
 {
-    public class PaymentNotificationHub : IPaymentNotificationHub
+    public class PaymentNotificationHub(
+        IHubContext<PaymentProcessingHub> hubContext,
+        ConnectionMapping<string> mapping)
+        : IPaymentNotificationHub
     {
-        private readonly IHubContext<PaymentProcessingHub> _hubContext;
-
         // 1. Injetar o ConnectionMapping que usa STRING como chave (para o userId)
-        private readonly ConnectionMapping<string> _mapping;
 
-        public PaymentNotificationHub(
-            IHubContext<PaymentProcessingHub> hubContext,
-            ConnectionMapping<string> mapping
-        ) // Adicionado aqui
-        {
-            _hubContext = hubContext;
-            _mapping = mapping;
-        }
+        // Adicionado aqui
 
         public async Task SendStatusUpdateAsync(string userId, PaymentStatusUpdate update)
         {
             // 2. Obter a lista de todas as conexões ativas para este userId
-            var connectionIds = _mapping.GetConnections(userId).ToList();
+            var connectionIds = mapping.GetConnections(userId).ToList();
 
             // 3. Enviar a mensagem apenas para as conexões daquele usuário específico
-            if (connectionIds.Any())
+            if (connectionIds.Count != 0)
             {
-                await _hubContext
+                await hubContext
                     .Clients.Clients(connectionIds)
                     .SendAsync("UpdatePaymentStatus", update);
             }

@@ -1,25 +1,29 @@
 namespace MeuCrudCsharp.Features.Auth.Repositories;
 
-using System.Threading.Tasks;
 using Data;
-using MeuCrudCsharp.Features.Auth.Interfaces;
+using Interfaces;
 using Models;
 using Microsoft.EntityFrameworkCore;
 
-public class UserRepository : IUserRepository
+/// <summary>
+/// Repository para gerenciar operações de persistência de Users.
+/// Segue o padrão Repository + UnitOfWork (não chama SaveChanges diretamente).
+/// </summary>
+public class UserRepository(ApiDbContext dbContext) : IUserRepository
 {
-    private readonly ApiDbContext _dbContext;
-
-    public UserRepository(ApiDbContext dbContext)
-    {
-        _dbContext = dbContext;
-    }
-
     public async Task<Users?> FindByGoogleIdAsync(string googleId) =>
-        await _dbContext.Users.FirstOrDefaultAsync(u => u.GoogleId == googleId);
+        await dbContext.Users.FirstOrDefaultAsync(u => u.GoogleId == googleId);
 
     public async Task<Users?> GetByIdAsync(string id) =>
-        await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == id);
+        await dbContext.Users.FirstOrDefaultAsync(u => u.Id == id);
 
-    // SaveChangesAsync removido - UnitOfWork é responsável por persistir
+    /// <summary>
+    /// Marca um usuário existente para atualização.
+    /// O SaveChanges será chamado pelo UnitOfWork.
+    /// </summary>
+    public void Update(Users user)
+    {
+        dbContext.Users.Update(user);
+        // O SaveChanges será chamado pelo UnitOfWork
+    }
 }

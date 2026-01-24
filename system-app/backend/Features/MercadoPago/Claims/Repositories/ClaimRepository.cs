@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Features.MercadoPago.Claims.Interfaces;
 using MeuCrudCsharp.Models;
@@ -10,20 +6,24 @@ using Microsoft.EntityFrameworkCore;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Claims.Repositories;
 
-public class ClaimRepository : IClaimRepository
+/// <summary>
+/// Repository para gerenciar operações de persistência de Claims.
+/// Segue o padrão Repository + UnitOfWork (não chama SaveChanges diretamente).
+/// </summary>
+public class ClaimRepository(ApiDbContext context) : IClaimRepository
 {
-    private readonly ApiDbContext _context;
-
-    public ClaimRepository(ApiDbContext context)
-    {
-        _context = context;
-    }
-
+    /// <summary>
+    /// Busca uma claim pelo ID interno com dados do usuário incluídos.
+    /// Usado para edição, então não usa AsNoTracking.
+    /// </summary>
     public async Task<Models.Claims?> GetByIdAsync(long id)
     {
-        return await _context.Claims.Include(c => c.User).FirstOrDefaultAsync(c => c.Id == id);
+        return await context.Claims.Include(c => c.User).FirstOrDefaultAsync(c => c.Id == id);
     }
 
+    /// <summary>
+    /// Busca paginada de claims com filtros opcionais.
+    /// </summary>
     public async Task<(List<Models.Claims> Claims, int TotalCount)> GetPaginatedClaimsAsync(
         string? searchTerm,
         string? statusFilter,
@@ -31,14 +31,14 @@ public class ClaimRepository : IClaimRepository
         int pageSize
     )
     {
-        var query = _context.Claims.Include(c => c.User).AsQueryable();
+        var query = context.Claims.Include(c => c.User).AsQueryable();
 
-        // 1. Correção do Erro CS8602 (Dereference of possibly null reference)
+        // Filtro de busca textual
         if (!string.IsNullOrEmpty(searchTerm))
         {
             query = query.Where(c =>
-                c.MpClaimId.ToString().Contains(searchTerm)
-                || (c.User != null && c.User.Name.Contains(searchTerm)) // Verificação de nulo adicionada
+                c.MpClaimId.ToString().Contains(searchTerm) ||
+                (c.User != null && !string.IsNullOrEmpty(c.User.Name) && c.User.Name.Contains(searchTerm))
             );
         }
 
@@ -59,22 +59,64 @@ public class ClaimRepository : IClaimRepository
         return (claims, totalCount);
     }
 
-    public async Task UpdateClaimStatusAsync(Models.Claims claim, string newStatus)
+    /// <summary>
+    /// Atualiza o status de uma claim.
+    /// O SaveChanges será chamado pelo UnitOfWork.
+    /// </summary>
+    public void UpdateClaimStatus(Models.Claims claim, InternalClaimStatus newStatus)
     {
-        // 2. Correção do Erro CS0266 (Conversão de Enum incorreta)
-        // O seu model usa 'InternalClaimStatus', não 'MpClaimStatus'
-        if (Enum.TryParse<InternalClaimStatus>(newStatus, true, out var parsedStatus))
-        {
-            claim.Status = parsedStatus;
-            _context.Claims.Update(claim);
-            await _context.SaveChangesAsync();
-        }
+        claim.Status = newStatus;
+        context.Claims.Update(claim);
+        // O SaveChanges será chamado pelo UnitOfWork
     }
 
+    /// <summary>
+    /// Marca uma claim existente para atualização.
+    /// O SaveChanges será chamado pelo UnitOfWork.
+    /// </summary>
+    public void Update(Models.Claims claim)
+    {
+        context.Claims.Update(claim);
+        // O SaveChanges será chamado pelo UnitOfWork
+    }
+
+    /// <summary>
+    /// Adiciona uma nova claim ao contexto.
+    /// O SaveChanges será chamado pelo UnitOfWork.
+    /// </summary>
+    public async Task AddAsync(Models.Claims claim)
+    {
+        await context.Claims.AddAsync(claim);
+        // O SaveChanges será chamado pelo UnitOfWork
+    }
+
+    /// <summary>
+    /// Verifica se uma claim já existe pelo ID do Mercado Pago.
+    /// Usa AsNoTracking pois é apenas verificação.
+    /// </summary>
+    public async Task<bool> ExistsByMpClaimIdAsync(long mpClaimId)
+    {
+        return await context.Claims.AsNoTracking().AnyAsync(c => c.MpClaimId == mpClaimId);
+    }
+
+    /// <summary>
+    /// Busca uma claim pelo ID do Mercado Pago.
+    /// Não usa AsNoTracking para permitir rastreamento de mudanças.
+    /// </summary>
+    public async Task<Models.Claims?> GetByMpClaimIdAsync(long mpClaimId)
+    {
+        return await context.Claims.FirstOrDefaultAsync(c => c.MpClaimId == mpClaimId);
+    }
+
+    /// <summary>
+    /// Busca todas as claims de um usuário específico.
+    /// Usa AsNoTracking pois é apenas leitura.
+    /// </summary>
     public async Task<List<Models.Claims>> GetClaimsByUserIdAsync(string userId)
     {
-        return await _context
-            .Claims.Where(c => c.UserId == userId)
+        return await context
+            .Claims.AsNoTracking()
+            .Where(c => c.UserId == userId)
             .OrderByDescending(c => c.DataCreated)
             .ToListAsync();
     }
