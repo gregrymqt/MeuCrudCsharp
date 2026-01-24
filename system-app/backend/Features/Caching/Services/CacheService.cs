@@ -9,18 +9,11 @@ using StackExchange.Redis;
 
 namespace MeuCrudCsharp.Features.Caching.Services;
 
-public class CacheService : ICacheService
+public class CacheService(IDistributedCache cache, ILogger<CacheService> logger) : ICacheService
 {
-    private readonly IDistributedCache _cache;
-    private readonly ILogger<CacheService> _logger;
     private static readonly TimeSpan DefaultExpiration = TimeSpan.FromMinutes(10);
 
     // Removi IMemoryCache para manter a classe focada e consistente.
-    public CacheService(IDistributedCache cache, ILogger<CacheService> logger)
-    {
-        _cache = cache;
-        _logger = logger;
-    }
 
     /// <summary>
     /// Obtém um item do cache. Se não existir, executa a função 'factory' para criar o item,
@@ -36,11 +29,11 @@ public class CacheService : ICacheService
         var cachedValue = await GetAsync<T>(key);
         if (cachedValue != null)
         {
-            _logger.LogDebug("Cache HIT para a chave {CacheKey}.", key);
+            logger.LogDebug("Cache HIT para a chave {CacheKey}.", key);
             return cachedValue;
         }
 
-        _logger.LogDebug("Cache MISS para a chave {CacheKey}. Buscando da fonte de dados.", key);
+        logger.LogDebug("Cache MISS para a chave {CacheKey}. Buscando da fonte de dados.", key);
 
         // 2. Se não encontrar (cache miss), executa a função factory para buscar os dados.
         var freshValue = await factory();
@@ -58,12 +51,12 @@ public class CacheService : ICacheService
     {
         try
         {
-            await _cache.RemoveAsync(key);
-            _logger.LogInformation("Chave de cache {CacheKey} removida com sucesso.", key);
+            await cache.RemoveAsync(key);
+            logger.LogInformation("Chave de cache {CacheKey} removida com sucesso.", key);
         }
         catch (RedisConnectionException ex)
         {
-            _logger.LogError(
+            logger.LogError(
                 ex,
                 "Não foi possível conectar ao Redis para remover a chave {CacheKey}.",
                 key
@@ -80,7 +73,7 @@ public class CacheService : ICacheService
             // Usamos SetAsync para definir explicitamente a nova versão.
             await SetAsync(cacheVersionKey, newVersion, TimeSpan.FromDays(30));
 
-            _logger.LogInformation(
+            logger.LogInformation(
                 "Cache para a chave de versão '{CacheKey}' invalidado. Nova versão: {CacheVersion}",
                 cacheVersionKey,
                 newVersion
@@ -88,7 +81,7 @@ public class CacheService : ICacheService
         }
         catch (Exception ex)
         {
-            _logger.LogError(
+            logger.LogError(
                 ex,
                 "Falha ao invalidar o cache para a chave de versão {CacheKey}",
                 cacheVersionKey
@@ -101,16 +94,12 @@ public class CacheService : ICacheService
     {
         try
         {
-            var cachedValue = await _cache.GetStringAsync(key);
-            if (string.IsNullOrEmpty(cachedValue))
-            {
-                return default;
-            }
-            return JsonSerializer.Deserialize<T>(cachedValue);
+            var cachedValue = await cache.GetStringAsync(key);
+            return string.IsNullOrEmpty(cachedValue) ? default : JsonSerializer.Deserialize<T>(cachedValue);
         }
         catch (Exception ex)
         {
-            _logger.LogError(
+            logger.LogError(
                 ex,
                 "Falha ao ler ou desserializar o cache para a chave {CacheKey}.",
                 key
@@ -124,7 +113,7 @@ public class CacheService : ICacheService
         long count = 0;
 
         // 1. Tenta pegar o valor atual (como string)
-        var valueStr = await _cache.GetStringAsync(key);
+        var valueStr = await cache.GetStringAsync(key);
 
         // 2. Se existir, converte para número
         if (!string.IsNullOrEmpty(valueStr) && long.TryParse(valueStr, out var current))
@@ -144,7 +133,7 @@ public class CacheService : ICacheService
             AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(expirationSeconds),
         };
 
-        await _cache.SetStringAsync(key, count.ToString(), options);
+        await cache.SetStringAsync(key, count.ToString(), options);
 
         return count;
     }
@@ -158,11 +147,11 @@ public class CacheService : ICacheService
                 AbsoluteExpirationRelativeToNow = absoluteExpireTime ?? DefaultExpiration,
             };
             var serializedValue = JsonSerializer.Serialize(value);
-            await _cache.SetStringAsync(key, serializedValue, options);
+            await cache.SetStringAsync(key, serializedValue, options);
         }
         catch (Exception ex)
         {
-            _logger.LogError(
+            logger.LogError(
                 ex,
                 "Não foi possível conectar ao Redis ou serializar para definir a chave {CacheKey}.",
                 key

@@ -6,23 +6,22 @@ namespace MeuCrudCsharp.Features.Courses.Interfaces
     {
         // Consultas
         Task<Course?> GetByPublicIdAsync(Guid publicId);
-        Task<Course?> GetByPublicIdWithVideosAsync(Guid publicId); // Necessário para validação de delete
+        Task<Course?> GetByPublicIdWithVideosAsync(Guid publicId);
         Task<Course?> GetByNameAsync(string name);
         Task<IEnumerable<Course>> SearchByNameAsync(string name);
         Task<bool> ExistsByNameAsync(string name);
 
-        // Paginação (Retorna os itens e o total para o Service montar o DTO)
+        // Paginação
         Task<(IEnumerable<Course> Items, int TotalCount)> GetPaginatedWithVideosAsync(
             int pageNumber,
             int pageSize
         );
 
-        // Comandos
+        // Comandos (Só rastreiam mudanças, não persistem)
         Task AddAsync(Course course);
         void Update(Course course);
         void Delete(Course course);
 
-        // Persistência
-        Task SaveChangesAsync();
+        // SaveChangesAsync removido - UnitOfWork é responsável
     }
 }

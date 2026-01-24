@@ -7,7 +7,7 @@ public class SubscriptionAuthorizationMiddlewareResultHandler
     : IAuthorizationMiddlewareResultHandler
 {
     // Vamos usar a implementação padrão como base
-    private readonly IAuthorizationMiddlewareResultHandler _defaultHandler =
+    public readonly IAuthorizationMiddlewareResultHandler _defaultHandler =
         new AuthorizationMiddlewareResultHandler();
 
     public async Task HandleAsync(
@@ -32,8 +32,7 @@ public class SubscriptionAuthorizationMiddlewareResultHandler
                 // Se for uma chamada de API (ex: de um frontend JavaScript), um redirect não é ideal.
                 // Verificamos o header 'Accept' para decidir o que fazer.
                 var isApiCall = context
-                    .Request.Headers["Accept"]
-                    .ToString()
+                    .Request.Headers.Accept.ToString()
                     .Contains("application/json");
 
                 if (isApiCall)
@@ -48,14 +47,16 @@ public class SubscriptionAuthorizationMiddlewareResultHandler
                             redirectUrl = "/Payment/CreditCard", // O frontend usará essa URL
                         }
                     );
-                    return; // Importante: Paramos a execução aqui.
+                    // Importante: Paramos a execução aqui.
                 }
                 else
                 {
                     // Para navegação normal (ex: MVC, Razor Pages), fazemos o redirect.
                     context.Response.Redirect("/Payment/CreditCard"); // <-- SEU REDIRECIONAMENTO AQUI
-                    return; // Importante: Paramos a execução aqui.
+                    // Importante: Paramos a execução aqui.
                 }
+
+                return; // Importante: Paramos a execução aqui.
             }
         }
 

@@ -4,6 +4,7 @@ using MeuCrudCsharp.Features.About.Interfaces;
 using MeuCrudCsharp.Features.Caching.Interfaces;
 using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.Files.Interfaces;
+using MeuCrudCsharp.Features.Shared.Work;
 using MeuCrudCsharp.Models;
 
 namespace MeuCrudCsharp.Features.About.Services;
@@ -12,17 +13,19 @@ public class AboutService : IAboutService
 {
     private readonly IAboutRepository _repository;
     private readonly ICacheService _cache;
-    private readonly IFileService _fileService; // Injeção
+    private readonly IFileService _fileService;
+    private readonly IUnitOfWork _unitOfWork;
 
     private const string ABOUT_CACHE_KEY = "ABOUT_PAGE_CONTENT";
     private const string CAT_SECTION = "AboutSection"; // Categorias para organizar arquivos
     private const string CAT_TEAM = "AboutTeam";
 
-    public AboutService(IAboutRepository repository, ICacheService cache, IFileService fileService)
+    public AboutService(IAboutRepository repository, ICacheService cache, IFileService fileService, IUnitOfWork unitOfWork)
     {
         _repository = repository;
         _cache = cache;
         _fileService = fileService;
+        _unitOfWork = unitOfWork;
     }
 
     public async Task<AboutPageContentDto> GetAboutPageContentAsync()
@@ -77,32 +80,35 @@ public class AboutService : IAboutService
 
     public async Task<AboutSectionDto?> CreateSectionAsync(CreateUpdateAboutSectionDto dto)
     {
-        string imageUrl = string.Empty;
+        var imageUrl = string.Empty;
         int? fileId = null;
 
         // 1. Lógica de Chunking (Arquivo Grande)
-        if (dto.IsChunk && dto.File != null)
+        if (dto is { IsChunk: true, File: not null })
         {
             // Processa o pedaço e vê se completou
-            var tempPath = await _fileService.ProcessChunkAsync(
-                dto.File,
-                dto.FileName,
-                dto.ChunkIndex,
-                dto.TotalChunks
-            );
+            if (dto.FileName != null)
+            {
+                var tempPath = await _fileService.ProcessChunkAsync(
+                    dto.File,
+                    dto.FileName,
+                    dto.ChunkIndex,
+                    dto.TotalChunks
+                );
 
-            // Se for null, ainda faltam pedaços. Retorna null para o Controller dar OK.
-            if (tempPath == null)
-                return null;
+                // Se for null, ainda faltam pedaços. Retorna null para o Controller dar OK.
+                if (tempPath == null)
+                    return null;
 
-            // Se retornou path, o arquivo está completo na pasta temp! Vamos salvar.
-            var arquivoSalvo = await _fileService.SalvarArquivoDoTempAsync(
-                tempPath,
-                dto.FileName,
-                CAT_SECTION
-            );
-            imageUrl = arquivoSalvo.CaminhoRelativo;
-            fileId = arquivoSalvo.Id;
+                // Se retornou path, o arquivo está completo na pasta temp! Vamos salvar.
+                var arquivoSalvo = await _fileService.SalvarArquivoDoTempAsync(
+                    tempPath,
+                    dto.FileName,
+                    CAT_SECTION
+                );
+                imageUrl = arquivoSalvo.CaminhoRelativo;
+                fileId = arquivoSalvo.Id;
+            }
         }
         // 2. Lógica de Upload Normal (Arquivo Pequeno)
         else if (dto.File != null)
@@ -124,6 +130,7 @@ public class AboutService : IAboutService
         };
 
         await _repository.AddSectionAsync(entity);
+        await _unitOfWork.CommitAsync(); // Persiste no banco
         await _cache.RemoveAsync(ABOUT_CACHE_KEY);
 
         return new AboutSectionDto
@@ -148,7 +155,7 @@ public class AboutService : IAboutService
             throw new ResourceNotFoundException($"Seção {id} não encontrada.");
 
         // === Lógica de Arquivo ===
-        if (dto.IsChunk && dto.File != null)
+        if (dto is { IsChunk: true, File: not null })
         {
             var tempPath = await _fileService.ProcessChunkAsync(
                 dto.File,
@@ -164,23 +171,29 @@ public class AboutService : IAboutService
             // Acabou! Substitui o arquivo usando o temp
             if (entity.FileId.HasValue)
             {
-                var arquivoAtualizado = await _fileService.SubstituirArquivoDoTempAsync(
-                    entity.FileId.Value,
-                    tempPath,
-                    dto.FileName
-                );
-                entity.ImageUrl = arquivoAtualizado.CaminhoRelativo;
-                entity.FileId = arquivoAtualizado.Id;
+                if (dto.FileName != null)
+                {
+                    var arquivoAtualizado = await _fileService.SubstituirArquivoDoTempAsync(
+                        entity.FileId.Value,
+                        tempPath,
+                        dto.FileName
+                    );
+                    entity.ImageUrl = arquivoAtualizado.CaminhoRelativo;
+                    entity.FileId = arquivoAtualizado.Id;
+                }
             }
             else
             {
-                var arquivoSalvo = await _fileService.SalvarArquivoDoTempAsync(
-                    tempPath,
-                    dto.FileName,
-                    CAT_SECTION
-                );
-                entity.ImageUrl = arquivoSalvo.CaminhoRelativo;
-                entity.FileId = arquivoSalvo.Id;
+                if (dto.FileName != null)
+                {
+                    var arquivoSalvo = await _fileService.SalvarArquivoDoTempAsync(
+                        tempPath,
+                        dto.FileName,
+                        CAT_SECTION
+                    );
+                    entity.ImageUrl = arquivoSalvo.CaminhoRelativo;
+                    entity.FileId = arquivoSalvo.Id;
+                }
             }
         }
         else if (dto.File != null) // Upload normal
@@ -209,6 +222,7 @@ public class AboutService : IAboutService
         entity.ImageAlt = dto.ImageAlt;
 
         await _repository.UpdateSectionAsync(entity);
+        await _unitOfWork.CommitAsync(); // Persiste no banco
         await _cache.RemoveAsync(ABOUT_CACHE_KEY);
 
         return true; // Update concluído
@@ -227,6 +241,7 @@ public class AboutService : IAboutService
         }
 
         await _repository.DeleteSectionAsync(entity);
+        await _unitOfWork.CommitAsync(); // Persiste no banco
         await _cache.RemoveAsync(ABOUT_CACHE_KEY);
     }
 
@@ -250,13 +265,16 @@ public class AboutService : IAboutService
             if (tempPath == null)
                 return null; // Esperando mais chunks
 
-            var arquivoSalvo = await _fileService.SalvarArquivoDoTempAsync(
-                tempPath,
-                dto.FileName,
-                CAT_TEAM
-            );
-            photoUrl = arquivoSalvo.CaminhoRelativo;
-            fileId = arquivoSalvo.Id;
+            if (dto.FileName != null)
+            {
+                var arquivoSalvo = await _fileService.SalvarArquivoDoTempAsync(
+                    tempPath,
+                    dto.FileName,
+                    CAT_TEAM
+                );
+                photoUrl = arquivoSalvo.CaminhoRelativo;
+                fileId = arquivoSalvo.Id;
+            }
         }
         else if (dto.File != null)
         {
@@ -276,6 +294,7 @@ public class AboutService : IAboutService
         };
 
         await _repository.AddTeamMemberAsync(entity);
+        await _unitOfWork.CommitAsync(); // Persiste no banco
         await _cache.RemoveAsync(ABOUT_CACHE_KEY);
 
         return new TeamMemberDto
@@ -321,6 +340,7 @@ public class AboutService : IAboutService
         }
 
         await _repository.UpdateTeamMemberAsync(entity);
+        await _unitOfWork.CommitAsync(); // Persiste no banco
         await _cache.RemoveAsync(ABOUT_CACHE_KEY);
 
         return true;
@@ -339,6 +359,7 @@ public class AboutService : IAboutService
         }
 
         await _repository.DeleteTeamMemberAsync(entity);
+        await _unitOfWork.CommitAsync(); // Persiste no banco
         await _cache.RemoveAsync(ABOUT_CACHE_KEY);
     }
 }

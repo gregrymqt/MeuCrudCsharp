@@ -34,19 +34,21 @@ public class AboutRepository : IAboutRepository
     public async Task AddSectionAsync(AboutSection section)
     {
         await _context.AboutSections.AddAsync(section);
-        await _context.SaveChangesAsync();
+        // NÃO chama SaveChangesAsync - deixa pro UnitOfWork
     }
 
-    public async Task UpdateSectionAsync(AboutSection section)
+    public Task UpdateSectionAsync(AboutSection section)
     {
         _context.AboutSections.Update(section);
-        await _context.SaveChangesAsync();
+        // NÃO chama SaveChangesAsync - deixa pro UnitOfWork
+        return Task.CompletedTask;
     }
 
-    public async Task DeleteSectionAsync(AboutSection section)
+    public Task DeleteSectionAsync(AboutSection section)
     {
         _context.AboutSections.Remove(section);
-        await _context.SaveChangesAsync();
+        // NÃO chama SaveChangesAsync - deixa pro UnitOfWork
+        return Task.CompletedTask;
     }
 
     // ==========================================
@@ -65,18 +67,20 @@ public class AboutRepository : IAboutRepository
     public async Task AddTeamMemberAsync(TeamMember member)
     {
         await _context.TeamMembers.AddAsync(member);
-        await _context.SaveChangesAsync();
+        // NÃO chama SaveChangesAsync - deixa pro UnitOfWork
     }
 
-    public async Task UpdateTeamMemberAsync(TeamMember member)
+    public Task UpdateTeamMemberAsync(TeamMember member)
     {
         _context.TeamMembers.Update(member);
-        await _context.SaveChangesAsync();
+        // NÃO chama SaveChangesAsync - deixa pro UnitOfWork
+        return Task.CompletedTask;
     }
 
-    public async Task DeleteTeamMemberAsync(TeamMember member)
+    public Task DeleteTeamMemberAsync(TeamMember member)
     {
         _context.TeamMembers.Remove(member);
-        await _context.SaveChangesAsync();
+        // NÃO chama SaveChangesAsync - deixa pro UnitOfWork
+        return Task.CompletedTask;
     }
 }

@@ -1,27 +1,21 @@
 // Infrastructure/Services/UserContext.cs
+
 using System.Security.Claims;
 using MeuCrudCsharp.Features.Auth.Interfaces;
 
-namespace MeuCrudCsharp.Features.User.Utils;
+namespace MeuCrudCsharp.Features.Auth.Utils;
 
-public class UserContext : IUserContext
+public class UserContext(IHttpContextAccessor httpContextAccessor) : IUserContext
 {
-    private readonly IHttpContextAccessor _httpContextAccessor;
-
-    public UserContext(IHttpContextAccessor httpContextAccessor)
+    public Task<string> GetCurrentUserId()
     {
-        _httpContextAccessor = httpContextAccessor;
+        return Task.FromResult(httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier)
+                               ?? throw new ArgumentException("No user id claim found"));
     }
 
-    public async Task<string> GetCurrentUserId()
+    public Task<string> GetCurrentEmail()
     {
-        return _httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier)
-            ?? throw new ArgumentException("No user id claim found");
-    }
-
-    public async Task<string> GetCurrentEmail()
-    {
-        return _httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.Email)
-            ?? throw new ArgumentException("No email claim found");
+        return Task.FromResult(httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.Email)
+                               ?? throw new ArgumentException("No email claim found"));
     }
 }

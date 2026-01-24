@@ -5,37 +5,30 @@ using Microsoft.EntityFrameworkCore;
 
 namespace MeuCrudCsharp.Features.Courses.Repositories
 {
-    public class CourseRepository : ICourseRepository
+    public class CourseRepository(ApiDbContext context) : ICourseRepository
     {
-        private readonly ApiDbContext _context;
-
-        public CourseRepository(ApiDbContext context)
-        {
-            _context = context;
-        }
-
         public async Task<Course?> GetByPublicIdAsync(Guid publicId)
         {
-            return await _context.Courses.FirstOrDefaultAsync(c => c.PublicId == publicId);
+            return await context.Courses.FirstOrDefaultAsync(c => c.PublicId == publicId);
         }
 
         public async Task<Course?> GetByPublicIdWithVideosAsync(Guid publicId)
         {
-            return await _context
+            return await context
                 .Courses.Include(c => c.Videos) // Carrega os vídeos (usado no DeleteCourseAsync)
                 .FirstOrDefaultAsync(c => c.PublicId == publicId);
         }
 
         public async Task<Course?> GetByNameAsync(string name)
         {
-            return await _context.Courses.FirstOrDefaultAsync(c =>
+            return await context.Courses.FirstOrDefaultAsync(c =>
                 c.Name.Equals(name, StringComparison.OrdinalIgnoreCase)
             );
         }
 
         public async Task<IEnumerable<Course>> SearchByNameAsync(string name)
         {
-            return await _context
+            return await context
                 .Courses.AsNoTracking()
                 .Where(c => c.Name.Contains(name, StringComparison.OrdinalIgnoreCase))
                 .ToListAsync();
@@ -43,7 +36,9 @@ namespace MeuCrudCsharp.Features.Courses.Repositories
 
         public async Task<bool> ExistsByNameAsync(string name)
         {
-            return await _context.Courses.AnyAsync(c => c.Name == name);
+            return await context.Courses.AnyAsync(c => 
+                EF.Functions.Collate(c.Name, "SQL_Latin1_General_CP1_CI_AS") == 
+                EF.Functions.Collate(name, "SQL_Latin1_General_CP1_CI_AS"));
         }
 
         public async Task<(IEnumerable<Course> Items, int TotalCount)> GetPaginatedWithVideosAsync(
@@ -51,9 +46,9 @@ namespace MeuCrudCsharp.Features.Courses.Repositories
             int pageSize
         )
         {
-            var totalCount = await _context.Courses.CountAsync();
+            var totalCount = await context.Courses.CountAsync();
 
-            var items = await _context
+            var items = await context
                 .Courses.AsNoTracking()
                 .Include(c => c.Videos)
                 .OrderBy(c => c.Name)
@@ -66,22 +61,19 @@ namespace MeuCrudCsharp.Features.Courses.Repositories
 
         public async Task AddAsync(Course course)
         {
-            await _context.Courses.AddAsync(course);
+            await context.Courses.AddAsync(course);
         }
 
         public void Update(Course course)
         {
-            _context.Courses.Update(course);
+            context.Courses.Update(course);
         }
 
         public void Delete(Course course)
         {
-            _context.Courses.Remove(course);
+            context.Courses.Remove(course);
         }
 
-        public async Task SaveChangesAsync()
-        {
-            await _context.SaveChangesAsync();
-        }
+        // SaveChangesAsync removido - UnitOfWork é responsável por persistir
     }
 }

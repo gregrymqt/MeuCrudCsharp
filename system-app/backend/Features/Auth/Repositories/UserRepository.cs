@@ -1,10 +1,10 @@
 namespace MeuCrudCsharp.Features.Auth.Repositories;
 
 using System.Threading.Tasks;
-using Data; // Substitua pelo seu namespace do DbContext
+using Data;
 using MeuCrudCsharp.Features.Auth.Interfaces;
+using Models;
 using Microsoft.EntityFrameworkCore;
-using Models; // Substitua pelo seu namespace de Models
 
 public class UserRepository : IUserRepository
 {
@@ -21,6 +21,5 @@ public class UserRepository : IUserRepository
     public async Task<Users?> GetByIdAsync(string id) =>
         await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == id);
 
-    public async Task<int> SaveChangesAsync() => await _dbContext.SaveChangesAsync();
-
+    // SaveChangesAsync removido - UnitOfWork é responsável por persistir
 }

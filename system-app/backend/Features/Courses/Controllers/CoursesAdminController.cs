@@ -13,15 +13,8 @@ namespace MeuCrudCsharp.Features.Courses.Controllers
 {
     [Authorize(Roles = "Admin")]
     [Route("api/admin/courses")]
-    public class CoursesAdminController : ApiControllerBase
+    public class CoursesAdminController(ICourseService courseService) : ApiControllerBase
     {
-        private readonly ICourseService _courseService;
-
-        public CoursesAdminController(ICourseService courseService)
-        {
-            _courseService = courseService;
-        }
-
         [HttpGet]
         public async Task<IActionResult> GetCoursesPaginated(
             [FromQuery] int pageNumber = 1,
@@ -30,7 +23,7 @@ namespace MeuCrudCsharp.Features.Courses.Controllers
         {
             try
             {
-                var paginatedResult = await _courseService.GetCoursesWithVideosPaginatedAsync(
+                var paginatedResult = await courseService.GetCoursesWithVideosPaginatedAsync(
                     pageNumber,
                     pageSize
                 );
@@ -45,7 +38,7 @@ namespace MeuCrudCsharp.Features.Courses.Controllers
             }
         }
 
-        [HttpGet("{id}")]
+        [HttpGet("{id:guid}")]
         public async Task<IActionResult> GetCoursesByPublicId(Guid id)
         {
             // CORREÇÃO: Guid nunca é null. Verifica se é vazio (0000-000...)
@@ -55,7 +48,7 @@ namespace MeuCrudCsharp.Features.Courses.Controllers
             }
 
             // A Service retorna a entidade 'Course' (conforme sua interface)
-            var course = await _courseService.FindCourseByPublicIdOrFailAsync(id);
+            var course = await courseService.FindCourseByPublicIdOrFailAsync(id);
 
             // Mapeamento manual para DTO (Correto)
             var courseDto = new CourseDto
@@ -71,7 +64,7 @@ namespace MeuCrudCsharp.Features.Courses.Controllers
                             Id = v.PublicId, // Assumindo que VideoDto tem Id/PublicId
                             Title = v.Title,
                         })
-                        .ToList() ?? new List<VideoDto>(),
+                        .ToList() ?? [],
             };
 
             return Ok(courseDto);
@@ -87,7 +80,7 @@ namespace MeuCrudCsharp.Features.Courses.Controllers
                 return Ok(Enumerable.Empty<CourseDto>());
             }
 
-            var courses = await _courseService.SearchCoursesByNameAsync(name);
+            var courses = await courseService.SearchCoursesByNameAsync(name);
             return Ok(courses);
         }
 
@@ -100,7 +93,7 @@ namespace MeuCrudCsharp.Features.Courses.Controllers
 
             try
             {
-                var newCourse = await _courseService.CreateCourseAsync(createDto);
+                var newCourse = await courseService.CreateCourseAsync(createDto);
                 return CreatedAtAction(
                     nameof(GetCoursesByPublicId), // Melhor apontar para o GetById
                     new { id = newCourse.PublicId },
@@ -125,7 +118,7 @@ namespace MeuCrudCsharp.Features.Courses.Controllers
 
             try
             {
-                var updatedCourse = await _courseService.UpdateCourseAsync(id, updateDto);
+                var updatedCourse = await courseService.UpdateCourseAsync(id, updateDto);
                 return Ok(updatedCourse);
             }
             catch (ResourceNotFoundException ex)
@@ -143,7 +136,7 @@ namespace MeuCrudCsharp.Features.Courses.Controllers
         {
             try
             {
-                await _courseService.DeleteCourseAsync(id);
+                await courseService.DeleteCourseAsync(id);
                 return NoContent();
             }
             catch (ResourceNotFoundException ex)

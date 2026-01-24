@@ -15,32 +15,15 @@ namespace MeuCrudCsharp.Features.Auth.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class AuthController : ApiControllerBase
+    public class AuthController(
+        SignInManager<Users> signInManager,
+        IAppAuthService authService,
+        IJwtService jwtService,
+        ILogger<AuthController> logger,
+        IConfiguration configuration,
+        ICacheService cacheService)
+        : ApiControllerBase
     {
-        private readonly SignInManager<Users> _signInManager;
-        private readonly IAppAuthService _authService;
-        private readonly IJwtService _jwtService;
-        private readonly ILogger<AuthController> _logger;
-        private readonly IConfiguration _configuration;
-        private readonly ICacheService _cacheService;
-
-        public AuthController(
-            SignInManager<Users> signInManager,
-            IAppAuthService authService,
-            IJwtService jwtService,
-            ILogger<AuthController> logger,
-            IConfiguration configuration,
-            ICacheService cacheService
-        )
-        {
-            _signInManager = signInManager;
-            _authService = authService;
-            _jwtService = jwtService;
-            _logger = logger;
-            _configuration = configuration;
-            _cacheService = cacheService;
-        }
-
         /// <summary>
         /// 1. O React redireciona o usuário para cá para iniciar o login
         /// GET: api/auth/google-login
@@ -52,7 +35,7 @@ namespace MeuCrudCsharp.Features.Auth.Controllers
             // Define que, após o Google logar, ele deve chamar a nossa action 'GoogleCallback' abaixo
             var redirectUrl = Url.Action(nameof(GoogleCallback), "Auth");
 
-            var properties = _signInManager.ConfigureExternalAuthenticationProperties(
+            var properties = signInManager.ConfigureExternalAuthenticationProperties(
                 "Google",
                 redirectUrl
             );
@@ -70,19 +53,19 @@ namespace MeuCrudCsharp.Features.Auth.Controllers
         {
             // URL do seu Frontend (React)
             // Idealmente, coloque isso no appsettings.json como "FrontendUrl"
-            var frontendUrl = _configuration["General:BaseUrl"] ?? "http://localhost:5173";
+            var frontendUrl = configuration["General:BaseUrl"] ?? "http://localhost:5173";
             var frontendCallbackUrl = $"{frontendUrl}/google-callback";
 
             if (remoteError != null)
             {
-                _logger.LogError($"Erro do provedor externo: {remoteError}");
+                logger.LogError("Erro do provedor externo: {RemoteError}", remoteError);
                 return Redirect($"{frontendUrl}/login?error=ExternalProviderError");
             }
 
-            var info = await _signInManager.GetExternalLoginInfoAsync();
+            var info = await signInManager.GetExternalLoginInfoAsync();
             if (info == null)
             {
-                _logger.LogError("Erro ao carregar informações de login externo.");
+                logger.LogError("Erro ao carregar informações de login externo.");
                 return Redirect($"{frontendUrl}/login?error=NoExternalInfo");
             }
 
@@ -90,10 +73,10 @@ namespace MeuCrudCsharp.Features.Auth.Controllers
             {
                 // REUTILIZANDO SUA LÓGICA EXISTENTE
                 // O método SignInWithGoogleAsync já cria o usuário, faz updates e gera o cookie se necessário
-                var user = await _authService.SignInWithGoogleAsync(info.Principal, HttpContext);
+                var user = await authService.SignInWithGoogleAsync(info.Principal, HttpContext);
 
                 // REUTILIZANDO SEU SERVIÇO DE JWT [cite: 56, 62]
-                var tokenString = await _jwtService.GenerateJwtTokenAsync(user);
+                var tokenString = await jwtService.GenerateJwtTokenAsync(user);
 
                 // Limpa o cookie temporário do Identity External
                 await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
@@ -104,7 +87,7 @@ namespace MeuCrudCsharp.Features.Auth.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erro no fluxo de login Google.");
+                logger.LogError(ex, "Erro no fluxo de login Google.");
                 return Redirect($"{frontendUrl}/login?error=ServerException");
             }
         }
@@ -123,7 +106,7 @@ namespace MeuCrudCsharp.Features.Auth.Controllers
 
                 // 2. Chama o serviço otimizado
                 // O retorno agora é o DTO leve com booleanos
-                var userSession = await _authService.GetAuthenticatedUserDataAsync(userId);
+                var userSession = await authService.GetAuthenticatedUserDataAsync(userId);
 
                 return Ok(userSession); // [cite: 35]
             }
@@ -133,7 +116,7 @@ namespace MeuCrudCsharp.Features.Auth.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erro ao recuperar dados do usuário.");
+                logger.LogError(ex, "Erro ao recuperar dados do usuário.");
                 return StatusCode(500, "Erro interno ao obter dados do usuário.");
             }
         }
@@ -148,8 +131,7 @@ namespace MeuCrudCsharp.Features.Auth.Controllers
             {
                 // 1. Pega o Token do Header Authorization
                 var token = HttpContext
-                    .Request.Headers["Authorization"]
-                    .ToString()
+                    .Request.Headers.Authorization.ToString()
                     .Replace("Bearer ", "");
 
                 if (string.IsNullOrEmpty(token))
@@ -169,25 +151,25 @@ namespace MeuCrudCsharp.Features.Auth.Controllers
                 if (ttl.TotalSeconds > 0)
                 {
                     // A chave será "blacklist:eyJhbGci..."
-                    await _cacheService.GetOrCreateAsync<string>(
+                    await cacheService.GetOrCreateAsync<string>(
                         $"blacklist:{token}",
                         () => Task.FromResult("revoked"), // Valor dummy
                         ttl // Tempo de vida exato
                     );
 
-                    _logger.LogInformation(
-                        $"Token invalidado e adicionado à blacklist por {ttl.TotalMinutes} minutos."
+                    logger.LogInformation(
+                        "Token invalidado e adicionado à blacklist por {TtlTotalMinutes} minutos.", ttl.TotalMinutes
                     );
                 }
 
                 // 4. Logout do Identity (Cookie) caso esteja usando cookie híbrido
-                await _signInManager.SignOutAsync();
+                await signInManager.SignOutAsync();
 
                 return Ok(new { message = "Logout realizado com sucesso." });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erro ao processar logout.");
+                logger.LogError(ex, "Erro ao processar logout.");
                 return BadRequest("Erro ao processar logout.");
             }
         }

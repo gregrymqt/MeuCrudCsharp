@@ -18,41 +18,40 @@ public abstract class MercadoPagoApiControllerBase : ApiControllerBase
     {
         // Dica: Aqui seria o lugar ideal para colocar um _logger.LogError(ex, ...)
 
-        // Cenario 1: Erro de Regra de Negócio ou Validação (Retorna 400)
-        // Note que ExternalApiException entra aqui pois herda de AppServiceException
-        if (ex is AppServiceException || ex is InvalidOperationException)
+        switch (ex)
         {
-            return BadRequest(
-                new
-                {
-                    success = false,
-                    message = friendlyMessage,
-                    error = ex.Message,
-                }
-            );
+            // Cenario 1: Erro de Regra de Negócio ou Validação (Retorna 400)
+            // Note que ExternalApiException entra aqui pois herda de AppServiceException
+            case AppServiceException:
+            case InvalidOperationException:
+                return BadRequest(
+                    new
+                    {
+                        success = false,
+                        message = friendlyMessage,
+                        error = ex.Message,
+                    }
+                );
+            // Cenario 2: Não Encontrado (Retorna 404)
+            case ResourceNotFoundException:
+                return NotFound(
+                    new
+                    {
+                        success = false,
+                        message = ex.Message, // Aqui geralmente a msg da exception já é amigável
+                    }
+                );
+            default:
+                // Cenario 3: Erro Crítico/Inesperado (Retorna 500)
+                return StatusCode(
+                    500,
+                    new
+                    {
+                        success = false,
+                        message = friendlyMessage,
+                        details = "Ocorreu um erro interno no servidor. Tente novamente mais tarde.",
+                    }
+                );
         }
-
-        // Cenario 2: Não Encontrado (Retorna 404)
-        if (ex is ResourceNotFoundException)
-        {
-            return NotFound(
-                new
-                {
-                    success = false,
-                    message = ex.Message, // Aqui geralmente a msg da exception já é amigável
-                }
-            );
-        }
-
-        // Cenario 3: Erro Crítico/Inesperado (Retorna 500)
-        return StatusCode(
-            500,
-            new
-            {
-                success = false,
-                message = friendlyMessage,
-                details = "Ocorreu um erro interno no servidor. Tente novamente mais tarde.",
-            }
-        );
     }
 }
