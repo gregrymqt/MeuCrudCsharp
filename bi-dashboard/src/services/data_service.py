@@ -1,60 +1,52 @@
-class DataService:
-    def prepare_products(self, raw_products):
-        cleaned_data = []
-        stats = {"total": 0, "critico": 0, "ok": 0, "repor": 0, "esgotado": 0}
-        for item in raw_products:
-            title = item.get('title') or "Produto Sem Nome"
-            brand = item.get('brand') or "S/ Marca"
-            category = item.get('category', 'Geral').capitalize()
-            stock = item.get('stock', 0)
-            price = item.get('price', 0.0)
+from typing import List, Tuple
+import numpy as np
+from models.product_dto import ProductDTO
+from models.cleaned_product_dto import CleanedProductDTO
+from interfaces.Idata_service import IDataService
+from enums.product_status import ProductStatus
 
-            # Lógica de Administração: Alerta de estoque baixo
-            # Se o estoque for menor que 15, marcamos para reposição
-            match stock:
+class DataService(IDataService):
+    def prepare_products(self, raw_products: List[ProductDTO]) -> Tuple[List[CleanedProductDTO], dict]:
+        cleaned_data = []
+        # Usar os valores do enum (strings) como chaves, não as instâncias
+        stats = {status.value: 0 for status in ProductStatus}
+        stats["total"] = 0
+
+        for item in raw_products:
+            match item.stock:
                 case 0:
-                    status = "🔴 ESGOTADO"
-                    stats["esgotado"] += 1
+                    current_status = ProductStatus.ESGOTADO
                 case s if s < 10:
-                    status = "⚠️ CRÍTICO"
-                    stats["critico"] += 1
+                    current_status = ProductStatus.CRITICO
                 case s if s < 20:
-                    status = "🟡 REPOR"
-                    stats["repor"] += 1
+                    current_status = ProductStatus.REPOR
                 case _:
-                    status = "🟢 OK"
-                    stats["ok"] += 1
-                
-            stats["total"] += 1        
+                    current_status = ProductStatus.OK
             
-            cleaned_data.append({
-                "id": item.get('id'),
-                "display_title": (title[:22] + '..') if len(title) > 22 else title,
-                "full_title": title,
-                "brand": brand,
-                "category": category, # Novo campo
-                "price": price,
-                "stock": stock,
-                "status": status,     # Novo campo
-                "total_stock_value": price * stock
-            })
+            stats[current_status.value] += 1
+            stats["total"] += 1
+            
+            cleaned_data.append(CleanedProductDTO(
+                id=item.id,
+                full_title=item.title or "Sem Nome",
+                display_title=(item.title[:20] + "...") if item.title and len(item.title) > 20 else (item.title or "Sem Nome"),
+                category=item.category.capitalize() if item.category else "Geral",
+                brand=item.brand or "S/ Marca",
+                price=item.price,
+                stock=item.stock,
+                status=current_status.value.capitalize(),
+                total_stock_value=item.price * item.stock
+            ))
+            
         return cleaned_data, stats
 
-    def get_dashboard_metrics(self, cleaned_products):
-        # 1. =SUM('Greg Company'!H:H) -> Patrimônio Total
-        total_patrimonio = sum(p['total_stock_value'] for p in cleaned_products)
-
-        # 2. =COUNTIF('Greg Company'!G:G,"*⚠️*") -> Contagem de itens CRÍTICOS
-        # Procuramos o emoji ou a palavra "CRÍTICO" dentro da string status
-        count_critico = sum(1 for p in cleaned_products if "⚠️" in p['status'])
-
-        # 3. =COUNTUNIQUE('Greg Company'!C:C) -> Quantidade de categorias únicas
-        # Usamos o 'set' que automaticamente remove duplicatas
-        categorias_unicas = len(set(p['category'] for p in cleaned_products))
+    def get_dashboard_metrics(self, cleaned_products: List[CleanedProductDTO]) -> dict:
+        precos = np.array([p.price for p in cleaned_products])
+        estoques = np.array([p.stock for p in cleaned_products])
+        status_array = np.array([p.status for p in cleaned_products])
 
         return {
-            "total_value": total_patrimonio,
-            "critical_alerts": count_critico,
-            "unique_categories": categorias_unicas
+            "total_value": float(np.sum(precos * estoques)),
+            "critical_alerts": int(np.sum(np.char.find(status_array, "⚠️") != -1)),
+            "unique_categories": len(np.unique([p.category for p in cleaned_products]))
         }
-    

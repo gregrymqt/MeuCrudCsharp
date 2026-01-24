@@ -17,4 +17,4 @@ COPY . .
 ENV PYTHONUNBUFFERED=1
 
 # Comando para rodar o motor de BI
-CMD ["python", "src/main.py"]
+CMD ["py", "src.main.py"]

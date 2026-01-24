@@ -50,7 +50,7 @@ services:
   backend:
     container_name: backend-api
     build: 
-      context: ./backend
+      context: ./system-app/backend
       dockerfile: Dockerfile
     ports:
       - "5045:8080" # Mapeamento limpo
@@ -88,7 +88,7 @@ services:
   frontend:
     container_name: frontend-app
     build:
-      context: ./frontend
+      context: ./system-app/frontend
       dockerfile: Dockerfile
       args:
         - VITE_GENERAL_BASEURL=${GENERAL_BASEURL} 
@@ -98,7 +98,9 @@ services:
       - backend
 
   bi-engine:
-    build: ./bi-dashboard
+    build:
+      context: .
+      dockerfile: ./bi-dashboard/Dockerfile
     container_name: greg_company_bi
     env_file: .env
     environment:

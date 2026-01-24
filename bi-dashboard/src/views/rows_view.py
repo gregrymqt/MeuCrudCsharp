@@ -1,43 +1,58 @@
 from datetime import datetime as dt
 import time
+from interfaces.Iproduct_source import IProductSource
+from interfaces.Idata_service import IDataService
+from interfaces.Iproduct_exporter import IProductExporter
 
 class RowsView:
-    def run_rows_sync(self, api_controller, data_service, rows_exporter):
+    def __init__(self, source: IProductSource, service: IDataService, exporter: IProductExporter):
+        # Injeção de Dependência via Construtor
+        self.source = source
+        self.service = service
+        self.exporter = exporter
+
+    def run_rows_sync(self):
         start_time = time.time()
-        
-        print("\n" + "═"*70)
-        print(f" 📦 GREG COMPANY | AUTOMATION ENGINE v1.0 ".center(70, " "))
-        print("═"*70)
+        print("\n" + "="*70)
+        print(f" GREG COMPANY | AUTOMATION ENGINE v1.1 ".center(70, " "))
+        print("="*70)
 
-        # 1. Extração
-        print(f"[{dt.now().strftime('%H:%M:%S')}] 🔍 EXTRAÇÃO: Iniciando captura de produtos da API...")
-        raw_data = api_controller.get_products(limit=50, skip=0)
-        
-        if raw_data and "products" in raw_data:
-            # 2. Transformação
-            print(f"[{dt.now().strftime('%H:%M:%S')}] ⚙️  PROCESSAMENTO: Aplicando regras de negócio e limpeza...")
-            clean_products, stats = data_service.prepare_products(raw_data["products"])
+        try:
+            # 1. ETAPA: EXTRAÇÃO
+            print(f"[{dt.now().strftime('%H:%M:%S')}] [EXTRACAO] Capturando dados...")
+            raw_products = self.source.fetch_products(limit=50, skip=0)
             
-            # Logs detalhados que ficam bem no print
-            print(f"    ├─ Total processado: {stats['total']} itens")
-            print(f"    ├─ Status OK: {stats['ok']} ✅")
-            print(f"    ├─ Alertas Críticos: {stats['critico']} ⚠️")
-            print(f"    |─ Esgotados: {stats['esgotado']} 🔴")
-            print(f"    └─ A Repor: {stats['repor']} 🟡")
+            if not raw_products:
+                raise ValueError("A fonte de dados retornou uma lista vazia.")
 
-            # 3. Sincronização e Carga
-            dashboard_metrics = data_service.get_dashboard_metrics(clean_products)
-            print(f"[{dt.now().strftime('%H:%M:%S')}] ☁️  UPLOAD: Sincronizando com a nuvem do Rows.com...")
-            
-            sucesso = rows_exporter.send_to_rows(clean_products, dashboard_metrics)
+            # 2. ETAPA: TRANSFORMAÇÃO (Com try/except específico)
+            try:
+                print(f"[{dt.now().strftime('%H:%M:%S')}] [PROCESSAMENTO] Aplicando regras...")
+                clean_products, stats = self.service.prepare_products(raw_products)
+                
+                print(f"    +- Total: {stats['total']} | OK: {stats.get('🟢 OK', 0)}")
+                print(f"    +- Criticos: {stats.get('⚠️ CRÍTICO', 0)} | Esgotados: {stats.get('🔴 ESGOTADO', 0)}")
 
-            duration = round(time.time() - start_time, 2)
+                metrics = self.service.get_dashboard_metrics(clean_products)
+            except Exception as e:
+                print(f"[ERRO] TRANSFORMACAO: Falha ao processar tipos ou calculos. Detalhes: {e}")
+                return
+
+            # 3. ETAPA: CARGA (LOAD)
+            print(f"[{dt.now().strftime('%H:%M:%S')}] [UPLOAD] Sincronizando com Rows.com...")
+            sucesso = self.exporter.send_to_rows(clean_products, metrics)
+
             if sucesso:
-                print("\n" + "─"*70)
-                print(f" ✨ SUCESSO: Dashboard Notion atualizado em {duration}s!")
-                print(" Status: Operacional | Canal: Notion API")
-                print("─"*70 + "\n")
+                duration = round(time.time() - start_time, 2)
+                print("\n" + "-"*70)
+                print(f" [SUCESSO] Automacao concluida em {duration}s!")
+                print("-"*70 + "\n")
             else:
-                print(f"\n❌ ERRO: Falha crítica na comunicação após {duration}s.")
-        else:
-            print("\n❌ ERRO: API de origem não respondeu.")
+                print("\n[AVISO] O pipeline terminou, mas a API de destino reportou falha.")
+
+        except ConnectionError as ce:
+            print(f"\n[ERRO] REDE: Nao foi possivel alcançar o servidor. {ce}")
+        except ValueError as ve:
+            print(f"\n[ERRO] VALIDACAO: {ve}")
+        except Exception as e:
+            print(f"\n[ERRO CRITICO] NAO ESPERADO: {type(e).__name__} - {e}")
