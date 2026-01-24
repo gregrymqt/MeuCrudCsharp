@@ -69,7 +69,7 @@ public static class PipelineExtensions
         using var scope = app.ApplicationServices.CreateScope();
         var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<Roles>>();
 
-        string[] roles = { AppRoles.Admin, AppRoles.User, AppRoles.Manager };
+        string[] roles = [AppRoles.Admin, AppRoles.User, AppRoles.Manager];
 
         foreach (var roleName in roles)
         {
@@ -111,7 +111,7 @@ public static class PipelineExtensions
             .CurrentDomain.GetAssemblies()
             .SelectMany(s => s.GetTypes())
             .Where(p =>
-                typeof(IMongoDocument).IsAssignableFrom(p) && !p.IsInterface && !p.IsAbstract
+                typeof(IMongoDocument).IsAssignableFrom(p) && p is { IsInterface: false, IsAbstract: false }
             );
 
         foreach (var docType in documentTypes)
@@ -147,11 +147,11 @@ public static class PipelineExtensions
 
                 try
                 {
-                    var indexKeys = attribute.Descending
+                    var indexKeys = attribute is { Descending: true }
                         ? Builders<BsonDocument>.IndexKeys.Descending(fieldName)
                         : Builders<BsonDocument>.IndexKeys.Ascending(fieldName);
 
-                    var indexOptions = new CreateIndexOptions { Unique = attribute.Unique };
+                    var indexOptions = new CreateIndexOptions { Unique = attribute?.Unique };
                     var indexModel = new CreateIndexModel<BsonDocument>(indexKeys, indexOptions);
 
                     // Agora a variável 'collection' existe e pode ser usada

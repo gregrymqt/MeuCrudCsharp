@@ -31,7 +31,6 @@ public static class WebAppBuilderExtensions
         });
 
         // 3. Adiciona os serviços fundamentais para uma API web.
-        builder.Services.AddControllers();
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
 

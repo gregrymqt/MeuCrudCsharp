@@ -1,10 +1,13 @@
 using Hangfire;
 using Hangfire.Redis.StackExchange;
 using MeuCrudCsharp.Data;
-using MeuCrudCsharp.Models; // Necessário para acessar a classe Roles
+using MeuCrudCsharp.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using MongoDB.Driver;
+// Necessário para acessar a classe Roles
+
+namespace MeuCrudCsharp.Extensions;
 
 public static class PersistenceExtensions
 {
@@ -31,7 +34,7 @@ public static class PersistenceExtensions
 
         // --- 2. Configuração do MongoDB (NOVO) ---
         // Aqui configuramos para que qualquer Service possa pedir um IMongoDatabase
-        builder.Services.AddSingleton<IMongoClient>(sp =>
+        builder.Services.AddSingleton<IMongoClient>(_ =>
         {
             var mongoConnString = builder.Configuration.GetConnectionString("MongoConnection");
             return new MongoClient(mongoConnString);

@@ -39,8 +39,12 @@ public static class AuthExtensions
                     .Configuration.GetSection("Google")
                     .Get<GoogleSettings>();
 
-                if (googleSettings?.ClientId is null || googleSettings?.ClientSecret is null)
-                    throw new InvalidOperationException("Credenciais do Google não encontradas."); // [cite: 7]
+                if (googleSettings is null || 
+                    string.IsNullOrEmpty(googleSettings.ClientId) || 
+                    string.IsNullOrEmpty(googleSettings.ClientSecret))
+                {
+                    throw new InvalidOperationException("Credenciais do Google não encontradas.");
+                }
 
                 options.ClientId = googleSettings.ClientId;
                 options.ClientSecret = googleSettings.ClientSecret;
@@ -75,6 +79,7 @@ public static class AuthExtensions
                         {
                             context.Token = tokenFromCookie;
                         }
+
                         return Task.CompletedTask;
                     },
                     // Opcional: Logar falhas de autenticação para debug
@@ -87,27 +92,22 @@ public static class AuthExtensions
             });
 
         // --- 2. Configuração da Autorização ---
-        builder.Services.AddAuthorization(options =>
-        {
-            options.AddPolicy(
-                "RequireJwtToken",
-                policy =>
+        builder.Services.AddAuthorizationBuilder()
+            // --- 2. Configuração da Autorização ---
+            .AddPolicy("RequireJwtToken", policy =>
                 {
                     policy.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme);
                     policy.RequireAuthenticatedUser();
                 }
-            );
-
-            options.AddPolicy(
-                "ActiveSubscription",
-                policy =>
+            )
+            // --- 2. Configuração da Autorização ---
+            .AddPolicy("ActiveSubscription", policy =>
                 {
                     policy.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme);
                     policy.RequireAuthenticatedUser();
                     policy.AddRequirements(new ActiveSubscriptionRequirement()); // [cite: 21]
                 }
             );
-        });
 
         return builder;
     }

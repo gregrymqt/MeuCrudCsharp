@@ -1,6 +1,6 @@
 using MercadoPago.Config;
-using MeuCrudCsharp.Features.MercadoPago.Base;
 using Microsoft.AspNetCore.HttpOverrides;
+using Polly;
 
 namespace MeuCrudCsharp.Extensions;
 
@@ -16,41 +16,72 @@ public static class WebServicesExtensions
     public static WebApplicationBuilder AddWebServices(this WebApplicationBuilder builder)
     {
         // --- 1. Configuração do HttpClient para a API do Mercado Pago ---
-        builder.Services.AddHttpClient(
-            "MercadoPagoClient",
-            client =>
-            {
-                var mercadoPagoSettings = builder
-                    .Configuration.GetSection("MercadoPago")
-                    .Get<MercadoPagoSettings>();
-                if (
-                    mercadoPagoSettings is null
-                    || string.IsNullOrEmpty(mercadoPagoSettings.AccessToken)
-                )
-                {
-                    throw new InvalidOperationException(
-                        "Configurações do Mercado Pago não encontradas ou o AccessToken está vazio."
-                    );
-                }
-
-                client.BaseAddress = new Uri("https://api.mercadopago.com");
-                client.DefaultRequestHeaders.Authorization =
-                    new System.Net.Http.Headers.AuthenticationHeaderValue(
-                        "Bearer",
-                        mercadoPagoSettings.AccessToken
-                    );
-            }
-        );
-
+        // Obtém configurações do Mercado Pago
         var mercadoPagoSettings = builder
             .Configuration.GetSection("MercadoPago")
             .Get<MercadoPagoSettings>();
+            
         if (mercadoPagoSettings is null || string.IsNullOrEmpty(mercadoPagoSettings.AccessToken))
         {
             throw new InvalidOperationException(
                 "Configurações do Mercado Pago não encontradas ou o AccessToken está vazio."
             );
         }
+
+        builder.Services
+            .AddHttpClient(
+                "MercadoPagoClient",
+                client =>
+                {
+                    client.BaseAddress = new Uri("https://api.mercadopago.com");
+                    client.DefaultRequestHeaders.Authorization =
+                        new System.Net.Http.Headers.AuthenticationHeaderValue(
+                            "Bearer",
+                            mercadoPagoSettings.AccessToken
+                        );
+
+                    // ✅ TIMEOUT: Define tempo máximo de espera de 30 segundos
+                    client.Timeout = TimeSpan.FromSeconds(30);
+                }
+            )
+            // ✅ RETRY POLICY: Tenta novamente até 3x com backoff exponencial (1s, 2s, 4s)
+            // Trata automaticamente: HTTP 5xx, HttpRequestException (timeout, DNS failure)
+            .AddTransientHttpErrorPolicy(policyBuilder =>
+                policyBuilder.WaitAndRetryAsync(
+                    retryCount: 3,
+                    sleepDurationProvider: retryAttempt =>
+                        TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
+                    onRetry: (outcome, timespan, retryAttempt, context) =>
+                    {
+                        // Log opcional para rastrear tentativas
+                        Console.WriteLine(
+                            $"[Mercado Pago] Tentativa {retryAttempt} de 3 após {timespan.TotalSeconds}s. Erro: {outcome.Exception?.Message ?? outcome.Result?.StatusCode.ToString()}"
+                        );
+                    }
+                )
+            )
+            // ✅ CIRCUIT BREAKER: Abre o circuito após 5 falhas consecutivas por 30 segundos
+            // Evita sobrecarregar a API quando ela está indisponível
+            .AddTransientHttpErrorPolicy(policyBuilder =>
+                policyBuilder.CircuitBreakerAsync(
+                    handledEventsAllowedBeforeBreaking: 5,
+                    durationOfBreak: TimeSpan.FromSeconds(30),
+                    onBreak: (outcome, duration) =>
+                    {
+                        Console.WriteLine(
+                            $"[Mercado Pago] ⚠️ CIRCUIT BREAKER ABERTO! Pausando requisições por {duration.TotalSeconds}s devido a falhas consecutivas."
+                        );
+                    },
+                    onReset: () =>
+                    {
+                        Console.WriteLine(
+                            "[Mercado Pago] ✅ Circuit Breaker fechado. Requisições normalizadas."
+                        );
+                    }
+                )
+            );
+
+        // Configuração global do SDK do Mercado Pago
         MercadoPagoConfig.AccessToken = mercadoPagoSettings.AccessToken;
 
         // --- 2. Configuração da Política de CORS ---
