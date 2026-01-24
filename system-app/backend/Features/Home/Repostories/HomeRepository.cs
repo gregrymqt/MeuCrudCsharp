@@ -1,4 +1,3 @@
-using System;
 using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Features.Home.Interfaces;
 using MeuCrudCsharp.Models;
@@ -30,19 +29,21 @@ public class HomeRepository : IHomeRepository
     public async Task AddHeroAsync(HomeHero hero)
     {
         await _context.HomeHeroes.AddAsync(hero);
-        await _context.SaveChangesAsync();
+        // NÃO chama SaveChangesAsync - deixa pro UnitOfWork
     }
 
-    public async Task UpdateHeroAsync(HomeHero hero)
+    public Task UpdateHeroAsync(HomeHero hero)
     {
         _context.HomeHeroes.Update(hero);
-        await _context.SaveChangesAsync();
+        // NÃO chama SaveChangesAsync - deixa pro UnitOfWork
+        return Task.CompletedTask;
     }
 
-    public async Task DeleteHeroAsync(HomeHero hero)
+    public Task DeleteHeroAsync(HomeHero hero)
     {
         _context.HomeHeroes.Remove(hero);
-        await _context.SaveChangesAsync();
+        // NÃO chama SaveChangesAsync - deixa pro UnitOfWork
+        return Task.CompletedTask;
     }
 
     // --- SERVICES ---
@@ -60,18 +61,20 @@ public class HomeRepository : IHomeRepository
     public async Task AddServiceAsync(HomeService service)
     {
         await _context.HomeServices.AddAsync(service);
-        await _context.SaveChangesAsync();
+        // NÃO chama SaveChangesAsync - deixa pro UnitOfWork
     }
 
-    public async Task UpdateServiceAsync(HomeService service)
+    public Task UpdateServiceAsync(HomeService service)
     {
         _context.HomeServices.Update(service);
-        await _context.SaveChangesAsync();
+        // NÃO chama SaveChangesAsync - deixa pro UnitOfWork
+        return Task.CompletedTask;
     }
 
-    public async Task DeleteServiceAsync(HomeService service)
+    public Task DeleteServiceAsync(HomeService service)
     {
         _context.HomeServices.Remove(service);
-        await _context.SaveChangesAsync();
+        // NÃO chama SaveChangesAsync - deixa pro UnitOfWork
+        return Task.CompletedTask;
     }
 }

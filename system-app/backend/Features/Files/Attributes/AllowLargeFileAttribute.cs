@@ -1,4 +1,3 @@
-using System;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
@@ -15,8 +14,15 @@ public class AllowLargeFileAttribute : RequestFormLimitsAttribute, IResourceFilt
     private readonly long _maxSizeBytes;
 
     /// <param name="maxSizeInMb">Tamanho máximo em Megabytes (Padrão: 500MB)</param>
+    /// <exception cref="ArgumentException">Lançada quando o tamanho é inválido (menor ou igual a zero, ou maior que 5GB).</exception>
     public AllowLargeFileAttribute(int maxSizeInMb = 500)
     {
+        if (maxSizeInMb <= 0)
+            throw new ArgumentException("O tamanho máximo deve ser maior que zero.", nameof(maxSizeInMb));
+
+        if (maxSizeInMb > 5120) // Limite máximo de 5GB
+            throw new ArgumentException("O tamanho máximo não pode exceder 5GB (5120MB).", nameof(maxSizeInMb));
+
         _maxSizeBytes = (long)maxSizeInMb * 1024 * 1024;
 
         // Configurações do Form (Herdado de RequestFormLimitsAttribute)
@@ -31,7 +37,7 @@ public class AllowLargeFileAttribute : RequestFormLimitsAttribute, IResourceFilt
         var features = context.HttpContext.Features;
         var maxBodySizeFeature = features.Get<IHttpMaxRequestBodySizeFeature>();
 
-        if (maxBodySizeFeature != null && !maxBodySizeFeature.IsReadOnly)
+        if (maxBodySizeFeature is { IsReadOnly: false })
         {
             maxBodySizeFeature.MaxRequestBodySize = _maxSizeBytes;
         }

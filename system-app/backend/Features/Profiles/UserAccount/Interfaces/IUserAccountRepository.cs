@@ -6,5 +6,5 @@ namespace MeuCrudCsharp.Features.Profiles.UserAccount.Interfaces;
 public interface IUserAccountRepository
 {
     Task<Users?> GetUserByIdAsync(string userId);
-    Task<bool> SaveChangesAsync();
+    // SaveChangesAsync removido - UnitOfWork é responsável por isso
 }

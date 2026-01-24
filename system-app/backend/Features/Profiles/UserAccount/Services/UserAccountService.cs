@@ -2,6 +2,7 @@
 using MeuCrudCsharp.Features.Files.Interfaces;
 using MeuCrudCsharp.Features.Profiles.UserAccount.DTOs;
 using MeuCrudCsharp.Features.Profiles.UserAccount.Interfaces;
+using MeuCrudCsharp.Features.Shared.Work;
 
 namespace MeuCrudCsharp.Features.Profiles.UserAccount.Services;
 
@@ -11,6 +12,7 @@ public class UserAccountService : IUserAccountService
     private readonly IFileService _fileService;
     private readonly IUserContext _userContext;
     private readonly ILogger<UserAccountService> _logger;
+    private readonly IUnitOfWork _unitOfWork;
 
     // Constante para organizar a pasta de uploads
     private const string CATEGORIA_AVATAR = "UserAvatars";
@@ -19,13 +21,15 @@ public class UserAccountService : IUserAccountService
         IUserAccountRepository repository,
         IFileService fileService,
         IUserContext userContext,
-        ILogger<UserAccountService> logger
+        ILogger<UserAccountService> logger,
+        IUnitOfWork unitOfWork
     )
     {
         _repository = repository;
         _fileService = fileService;
         _userContext = userContext;
         _logger = logger;
+        _unitOfWork = unitOfWork;
     }
 
     public async Task<AvatarUpdateResponse> UpdateProfilePictureAsync(IFormFile file)
@@ -67,7 +71,7 @@ public class UserAccountService : IUserAccountService
         user.AvatarFileId = novoIdArquivo;
 
         // 5. Persistir no banco
-        await _repository.SaveChangesAsync();
+        await _unitOfWork.CommitAsync();
 
         _logger.LogInformation($"Avatar atualizado para o usuário {userId}");
 

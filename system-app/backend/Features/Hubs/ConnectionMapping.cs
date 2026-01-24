@@ -58,15 +58,13 @@ namespace MeuCrudCsharp.Features.Hubs
                 return;
             }
 
-            if (_keyToConnections.TryGetValue(key, out var connections))
+            if (!_keyToConnections.TryGetValue(key, out var connections)) return;
+            lock (connections)
             {
-                lock (connections)
+                connections.Remove(connectionId);
+                if (connections.Count == 0)
                 {
-                    connections.Remove(connectionId);
-                    if (connections.Count == 0)
-                    {
-                        _keyToConnections.TryRemove(key, out _);
-                    }
+                    _keyToConnections.TryRemove(key, out _);
                 }
             }
         }

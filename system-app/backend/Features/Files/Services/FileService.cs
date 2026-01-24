@@ -1,22 +1,54 @@
 using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.Files.Interfaces;
-using MeuCrudCsharp.Features.Files.Utils; // Importante para usar o Helper
+using MeuCrudCsharp.Features.Shared.Work;
 using MeuCrudCsharp.Models;
+using Microsoft.AspNetCore.StaticFiles;
 
 namespace MeuCrudCsharp.Features.Files.Services;
 
-public class FileService : IFileService
+public class FileService(
+    IFileRepository repository,
+    IWebHostEnvironment environment,
+    IUnitOfWork unitOfWork)
+    : IFileService
 {
-    private readonly IFileRepository _repository;
-    private readonly IWebHostEnvironment _environment;
+    // =========================================================================
+    // MÉTODOS AUXILIARES PRIVADOS (Substituem FilesHelper)
+    // =========================================================================
 
-    public FileService(IFileRepository repository, IWebHostEnvironment environment)
+    private string GerarCaminhoFisico(string featureCategoria, string nomeArquivo)
     {
-        _repository = repository;
-        _environment = environment;
+        var pastaDestino = Path.Combine(environment.WebRootPath, "uploads", featureCategoria);
 
-        // Inicializa o Helper com as dependências deste escopo
-        FilesHelper.Initialize(_repository, _environment);
+        if (!Directory.Exists(pastaDestino))
+        {
+            Directory.CreateDirectory(pastaDestino);
+        }
+
+        return Path.Combine(pastaDestino, nomeArquivo);
+    }
+
+    private static string ObterContentType(string nomeArquivo)
+    {
+        var provider = new FileExtensionContentTypeProvider();
+        if (!provider.TryGetContentType(nomeArquivo, out var contentType))
+        {
+            contentType = "application/octet-stream";
+        }
+        return contentType;
+    }
+
+    private EntityFile CriarEntityFile(string nomeArquivo, string nomeOriginal, string featureCategoria, long tamanhoBytes)
+    {
+        return new EntityFile
+        {
+            NomeArquivo = nomeArquivo,
+            FeatureCategoria = featureCategoria,
+            ContentType = ObterContentType(nomeOriginal),
+            TamanhoBytes = tamanhoBytes,
+            CaminhoRelativo = Path.Combine("uploads", featureCategoria, nomeArquivo)
+                .Replace("\\", "/"),
+        };
     }
 
     // =========================================================================
@@ -40,17 +72,12 @@ public class FileService : IFileService
 
         var tempFilePath = Path.Combine(tempFolderPath, fileName);
 
-        using (var stream = new FileStream(tempFilePath, FileMode.Append))
+        await using (var stream = new FileStream(tempFilePath, FileMode.Append))
         {
             await chunk.CopyToAsync(stream);
         }
 
-        if (chunkIndex == totalChunks - 1)
-        {
-            return tempFilePath;
-        }
-
-        return null;
+        return chunkIndex == totalChunks - 1 ? tempFilePath : null;
     }
 
     // =========================================================================
@@ -63,27 +90,56 @@ public class FileService : IFileService
         string categoria
     )
     {
+        string? caminhoFinalFisico = null;
         try
         {
             if (!File.Exists(tempPath))
                 throw new FileNotFoundException("Arquivo temporário não encontrado.", tempPath);
 
-            string novoNome = $"{Guid.NewGuid()}_{nomeOriginal}";
+            var novoNome = $"{Guid.NewGuid()}_{nomeOriginal}";
+            caminhoFinalFisico = GerarCaminhoFisico(categoria, novoNome);
 
-            // Usa o Helper para pegar o caminho correto
-            string caminhoFinalFisico = FilesHelper.GerarCaminhoFisico(categoria, novoNome);
-
-            // Move o arquivo
+            // 1. Move o arquivo do temp para o destino final
             File.Move(tempPath, caminhoFinalFisico);
 
-            // Usa o Helper para salvar no banco (ele já cria a EntityFile e salva)
-            return await FilesHelper.RegistrarNoBancoAsync(novoNome, nomeOriginal, categoria);
+            // 2. Obtém informações do arquivo
+            var fileInfo = new FileInfo(caminhoFinalFisico);
+
+            // 3. Cria EntityFile e rastreia no contexto
+            var novoArquivo = CriarEntityFile(novoNome, nomeOriginal, categoria, fileInfo.Length);
+            await repository.AddAsync(novoArquivo);
+            
+            // 4. Persiste no banco (pode falhar)
+            await unitOfWork.CommitAsync();
+
+            return novoArquivo;
         }
-        catch (Exception ex)
+        catch
         {
-            if (File.Exists(tempPath))
+            // Rollback: Remove arquivo físico se persistência falhou
+            if (caminhoFinalFisico != null && File.Exists(caminhoFinalFisico))
+            {
+                try
+                {
+                    File.Delete(caminhoFinalFisico);
+                }
+                catch
+                {
+                    // Ignora erro de limpeza
+                }
+            }
+            
+            // Cleanup: Remove arquivo temp se ainda existir
+            if (!File.Exists(tempPath)) throw;
+            try
+            {
                 File.Delete(tempPath);
-            throw new AppServiceException("Erro ao salvar arquivo remontado.", ex);
+            }
+            catch
+            {
+                // Ignora erro de limpeza
+            }
+            throw;
         }
     }
 
@@ -93,44 +149,45 @@ public class FileService : IFileService
         string nomeOriginal
     )
     {
+        string? caminhoAntigoFisico = null;
+        string? novoCaminhoFisico = null;
+        byte[]? backupArquivoAntigo = null;
+        
         try
         {
-            var arquivoBanco = await _repository.GetByIdAsync(fileId);
+            var arquivoBanco = await repository.GetByIdAsync(fileId);
             if (arquivoBanco == null)
                 throw new ResourceNotFoundException($"Arquivo ID {fileId} não encontrado.");
 
-            // Apaga arquivo físico antigo
-            string caminhoAntigoFisico = Path.Combine(
-                _environment.WebRootPath,
+            // 1. Backup do arquivo antigo (para rollback)
+            caminhoAntigoFisico = Path.Combine(
+                environment.WebRootPath,
                 arquivoBanco.CaminhoRelativo
             );
             if (File.Exists(caminhoAntigoFisico))
             {
+                backupArquivoAntigo = await File.ReadAllBytesAsync(caminhoAntigoFisico);
                 File.Delete(caminhoAntigoFisico);
             }
 
-            // Gera dados do novo arquivo
-            string novoNome = $"{Guid.NewGuid()}_{nomeOriginal}";
-            string novoCaminhoFisico = FilesHelper.GerarCaminhoFisico(
-                arquivoBanco.FeatureCategoria,
-                novoNome
-            );
+            // 2. Gera dados do novo arquivo
+            var novoNome = $"{Guid.NewGuid()}_{nomeOriginal}";
+            novoCaminhoFisico = GerarCaminhoFisico(arquivoBanco.FeatureCategoria, novoNome);
 
-            // Move do Temp
-            if (File.Exists(tempPath))
-            {
-                File.Move(tempPath, novoCaminhoFisico);
-            }
-            else
+            // 3. Move do Temp
+            if (!File.Exists(tempPath))
             {
                 throw new FileNotFoundException("Arquivo temporário sumiu antes de mover.");
             }
+            
+            File.Move(tempPath, novoCaminhoFisico);
 
-            // Atualiza Objeto no Banco (Update Manual, pois o Helper só faz Add)
+            // 4. Obtém informações do novo arquivo
             var fileInfo = new FileInfo(novoCaminhoFisico);
 
+            // 5. Atualiza dados no objeto
             arquivoBanco.NomeArquivo = novoNome;
-            arquivoBanco.ContentType = FilesHelper.ObterContentType(nomeOriginal); // Reusa o Helper
+            arquivoBanco.ContentType = ObterContentType(nomeOriginal);
             arquivoBanco.TamanhoBytes = fileInfo.Length;
             arquivoBanco.CaminhoRelativo = Path.Combine(
                     "uploads",
@@ -139,17 +196,50 @@ public class FileService : IFileService
                 )
                 .Replace("\\", "/");
 
-            await _repository.UpdateAsync(arquivoBanco);
+            await repository.UpdateAsync(arquivoBanco);
+            
+            // 6. Persiste no banco (pode falhar)
+            await unitOfWork.CommitAsync();
+            
             return arquivoBanco;
         }
-        catch (Exception ex)
+        catch
         {
-            if (File.Exists(tempPath))
+            // Rollback: Restaura arquivo antigo e remove novo
+            if (backupArquivoAntigo != null && caminhoAntigoFisico != null)
+            {
+                try
+                {
+                    await File.WriteAllBytesAsync(caminhoAntigoFisico, backupArquivoAntigo);
+                }
+                catch
+                {
+                    // Ignora erro de restauração
+                }
+            }
+            
+            if (novoCaminhoFisico != null && File.Exists(novoCaminhoFisico))
+            {
+                try
+                {
+                    File.Delete(novoCaminhoFisico);
+                }
+                catch
+                {
+                    // Ignora erro de limpeza
+                }
+            }
+
+            if (!File.Exists(tempPath)) throw;
+            try
+            {
                 File.Delete(tempPath);
-            throw new AppServiceException(
-                $"Erro ao substituir pelo arquivo remontado ID {fileId}.",
-                ex
-            );
+            }
+            catch
+            {
+                // Ignora erro de limpeza
+            }
+            throw;
         }
     }
 
@@ -159,81 +249,134 @@ public class FileService : IFileService
 
     public async Task<EntityFile> SalvarArquivoAsync(IFormFile arquivo, string featureCategoria)
     {
+        string? caminhoFisico = null;
         try
         {
             if (arquivo == null || arquivo.Length == 0)
                 throw new AppServiceException("Nenhum arquivo enviado.");
 
-            string nomeArquivo = $"{Guid.NewGuid()}_{arquivo.FileName}";
+            var nomeArquivo = $"{Guid.NewGuid()}_{arquivo.FileName}";
+            caminhoFisico = GerarCaminhoFisico(featureCategoria, nomeArquivo);
 
-            // Usa o Helper para caminho
-            string caminhoFisico = FilesHelper.GerarCaminhoFisico(featureCategoria, nomeArquivo);
-
-            using (var stream = new FileStream(caminhoFisico, FileMode.Create))
+            // 1. Salva arquivo físico
+            await using (var stream = new FileStream(caminhoFisico, FileMode.Create))
             {
                 await arquivo.CopyToAsync(stream);
             }
 
-            // Usa o Helper para registrar no banco
-            return await FilesHelper.RegistrarNoBancoAsync(
-                nomeArquivo,
-                arquivo.FileName,
-                featureCategoria
-            );
+            // 2. Cria EntityFile e rastreia
+            var novoArquivo = CriarEntityFile(nomeArquivo, arquivo.FileName, featureCategoria, arquivo.Length);
+            await repository.AddAsync(novoArquivo);
+            
+            // 3. Persiste no banco (pode falhar)
+            await unitOfWork.CommitAsync();
+
+            return novoArquivo;
         }
-        catch (Exception ex)
+        catch
         {
-            throw new AppServiceException("Falha ao salvar arquivo direto.", ex);
+            // Rollback: Remove arquivo físico se persistência falhou
+            if (caminhoFisico == null || !File.Exists(caminhoFisico)) throw;
+            try
+            {
+                File.Delete(caminhoFisico);
+            }
+            catch
+            {
+                // Ignora erro de limpeza, mas loga a exceção original
+            }
+            throw;
         }
     }
 
     public async Task<EntityFile> SubstituirArquivoAsync(int idArquivoAntigo, IFormFile novoArquivo)
     {
-        var arquivoBanco = await _repository.GetByIdAsync(idArquivoAntigo);
-        if (arquivoBanco == null)
-            throw new ResourceNotFoundException("Arquivo antigo não encontrado.");
-
-        // Remove antigo
-        string caminhoAntigo = Path.Combine(_environment.WebRootPath, arquivoBanco.CaminhoRelativo);
-        if (File.Exists(caminhoAntigo))
-            File.Delete(caminhoAntigo);
-
-        // Salva novo
-        string novoNome = $"{Guid.NewGuid()}_{novoArquivo.FileName}";
-        string novoCaminho = FilesHelper.GerarCaminhoFisico(
-            arquivoBanco.FeatureCategoria,
-            novoNome
-        );
-
-        using (var stream = new FileStream(novoCaminho, FileMode.Create))
+        string? caminhoAntigo = null;
+        string? novoCaminho = null;
+        byte[]? backupArquivoAntigo = null;
+        
+        try
         {
-            await novoArquivo.CopyToAsync(stream);
+            var arquivoBanco = await repository.GetByIdAsync(idArquivoAntigo);
+            if (arquivoBanco == null)
+                throw new ResourceNotFoundException("Arquivo antigo não encontrado.");
+
+            // 1. Backup do arquivo antigo (para rollback)
+            caminhoAntigo = Path.Combine(environment.WebRootPath, arquivoBanco.CaminhoRelativo);
+            if (File.Exists(caminhoAntigo))
+            {
+                backupArquivoAntigo = await File.ReadAllBytesAsync(caminhoAntigo);
+                File.Delete(caminhoAntigo);
+            }
+
+            // 2. Salva novo arquivo físico
+            var novoNome = $"{Guid.NewGuid()}_{novoArquivo.FileName}";
+            novoCaminho = GerarCaminhoFisico(arquivoBanco.FeatureCategoria, novoNome);
+
+            await using (var stream = new FileStream(novoCaminho, FileMode.Create))
+            {
+                await novoArquivo.CopyToAsync(stream);
+            }
+
+            // 3. Atualiza dados do registro
+            arquivoBanco.NomeArquivo = novoNome;
+            arquivoBanco.ContentType = novoArquivo.ContentType;
+            arquivoBanco.TamanhoBytes = novoArquivo.Length;
+            arquivoBanco.CaminhoRelativo = Path.Combine(
+                    "uploads",
+                    arquivoBanco.FeatureCategoria,
+                    novoNome
+                )
+                .Replace("\\", "/");
+
+            await repository.UpdateAsync(arquivoBanco);
+            
+            // 4. Persiste no banco (pode falhar)
+            await unitOfWork.CommitAsync();
+            
+            return arquivoBanco;
         }
+        catch
+        {
+            // Rollback: Restaura arquivo antigo e remove novo
+            if (backupArquivoAntigo != null && caminhoAntigo != null)
+            {
+                try
+                {
+                    await File.WriteAllBytesAsync(caminhoAntigo, backupArquivoAntigo);
+                }
+                catch
+                {
+                    // Ignora erro de restauração
+                }
+            }
 
-        // Atualiza Dados
-        arquivoBanco.NomeArquivo = novoNome;
-        arquivoBanco.ContentType = novoArquivo.ContentType;
-        arquivoBanco.TamanhoBytes = novoArquivo.Length;
-        arquivoBanco.CaminhoRelativo = Path.Combine(
-                "uploads",
-                arquivoBanco.FeatureCategoria,
-                novoNome
-            )
-            .Replace("\\", "/");
-
-        await _repository.UpdateAsync(arquivoBanco);
-        return arquivoBanco;
+            if (novoCaminho == null || !File.Exists(novoCaminho)) throw;
+            try
+            {
+                File.Delete(novoCaminho);
+            }
+            catch
+            {
+                // Ignora erro de limpeza
+            }
+            throw;
+        }
     }
 
     public async Task DeletarArquivoAsync(int id)
     {
-        var arquivo = await _repository.GetByIdAsync(id);
+        var arquivo = await repository.GetByIdAsync(id);
         if (arquivo != null)
         {
-            string path = Path.Combine(_environment.WebRootPath, arquivo.CaminhoRelativo);
+            // Remove arquivo físico
+            var path = Path.Combine(environment.WebRootPath, arquivo.CaminhoRelativo);
             if (File.Exists(path))
                 File.Delete(path);
-            await _repository.DeleteAsync(arquivo);
+            
+            // Remove registro do banco
+            await repository.DeleteAsync(arquivo);
+            await unitOfWork.CommitAsync(); // Persiste no banco
         }
     }
 }

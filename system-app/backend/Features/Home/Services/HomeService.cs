@@ -3,33 +3,28 @@ using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.Files.Interfaces;
 using MeuCrudCsharp.Features.Home.DTOs;
 using MeuCrudCsharp.Features.Home.Interfaces;
+using MeuCrudCsharp.Features.Shared.Work;
 
 namespace MeuCrudCsharp.Features.Home.Services;
 
-public class HomeService : IHomeService
+public class HomeService(
+    IHomeRepository repository,
+    ICacheService cache,
+    IFileService fileService,
+    IUnitOfWork unitOfWork)
+    : IHomeService
 {
-    private readonly IHomeRepository _repository;
-    private readonly ICacheService _cache;
-    private readonly IFileService _fileService;
-
     private const string HOME_CACHE_KEY = "HOME_PAGE_CONTENT";
     private const string FEATURE_CATEGORY = "HomeHero";
 
-    public HomeService(IHomeRepository repository, ICacheService cache, IFileService fileService)
-    {
-        _repository = repository;
-        _cache = cache;
-        _fileService = fileService;
-    }
-
     public async Task<HomeContentDto> GetHomeContentAsync()
     {
-        return await _cache.GetOrCreateAsync(
+        return await cache.GetOrCreateAsync(
                 HOME_CACHE_KEY,
                 async () =>
                 {
-                    var heroes = await _repository.GetAllHeroesAsync();
-                    var services = await _repository.GetAllServicesAsync();
+                    var heroes = await repository.GetAllHeroesAsync();
+                    var services = await repository.GetAllServicesAsync();
 
                     return new HomeContentDto
                     {
@@ -67,39 +62,42 @@ public class HomeService : IHomeService
 
     public async Task<HeroSlideDto?> CreateHeroAsync(CreateUpdateHeroDto dto)
     {
-        string imageUrl = string.Empty;
+        var imageUrl = string.Empty;
         int? fileId = null;
 
         // 1. Lógica de Chunking (Arquivos Grandes/Fatiados)
-        if (dto.IsChunk && dto.File != null)
+        if (dto is { IsChunk: true, File: not null })
         {
             // Processa o pedaço atual
-            var tempPath = await _fileService.ProcessChunkAsync(
-                dto.File,
-                dto.FileName,
-                dto.ChunkIndex,
-                dto.TotalChunks
-            );
+            if (dto.FileName != null)
+            {
+                var tempPath = await fileService.ProcessChunkAsync(
+                    dto.File,
+                    dto.FileName,
+                    dto.ChunkIndex,
+                    dto.TotalChunks
+                );
 
-            // Se retornar null, significa que ainda faltam pedaços.
-            // Retornamos null para a Controller avisar o Front para mandar o próximo.
-            if (tempPath == null)
-                return null;
+                // Se retornar null, significa que ainda faltam pedaços.
+                // Retornamos null para a Controller avisar o Front para mandar o próximo.
+                if (tempPath == null)
+                    return null;
 
-            // Se chegou aqui, o arquivo foi remontado com sucesso no Temp!
-            // Agora movemos para a pasta oficial e registramos no banco.
-            var arquivoSalvo = await _fileService.SalvarArquivoDoTempAsync(
-                tempPath,
-                dto.FileName,
-                FEATURE_CATEGORY
-            );
-            imageUrl = arquivoSalvo.CaminhoRelativo;
-            fileId = arquivoSalvo.Id;
+                // Se chegou aqui, o arquivo foi remontado com sucesso no Temp!
+                // Agora movemos para a pasta oficial e registramos no banco.
+                var arquivoSalvo = await fileService.SalvarArquivoDoTempAsync(
+                    tempPath,
+                    dto.FileName,
+                    FEATURE_CATEGORY
+                );
+                imageUrl = arquivoSalvo.CaminhoRelativo;
+                fileId = arquivoSalvo.Id;
+            }
         }
         // 2. Lógica de Upload Normal (Direto)
         else if (dto.File != null)
         {
-            var arquivoSalvo = await _fileService.SalvarArquivoAsync(dto.File, FEATURE_CATEGORY);
+            var arquivoSalvo = await fileService.SalvarArquivoAsync(dto.File, FEATURE_CATEGORY);
             imageUrl = arquivoSalvo.CaminhoRelativo;
             fileId = arquivoSalvo.Id;
         }
@@ -115,8 +113,9 @@ public class HomeService : IHomeService
             ActionUrl = dto.ActionUrl,
         };
 
-        await _repository.AddHeroAsync(entity);
-        await _cache.RemoveAsync(HOME_CACHE_KEY);
+        await repository.AddHeroAsync(entity);
+        await unitOfWork.CommitAsync(); // Persiste no banco
+        await cache.RemoveAsync(HOME_CACHE_KEY);
 
         return new HeroSlideDto
         {
@@ -131,51 +130,54 @@ public class HomeService : IHomeService
 
     public async Task<bool> UpdateHeroAsync(int id, CreateUpdateHeroDto dto)
     {
-        var entity = await _repository.GetHeroByIdAsync(id);
+        var entity = await repository.GetHeroByIdAsync(id);
         if (entity == null)
             throw new ResourceNotFoundException($"Hero com ID {id} não encontrado.");
 
         // --- LÓGICA DE ARQUIVO ---
-        if (dto.IsChunk && dto.File != null)
+        if (dto is { IsChunk: true, File: not null })
         {
-            var tempPath = await _fileService.ProcessChunkAsync(
-                dto.File,
-                dto.FileName,
-                dto.ChunkIndex,
-                dto.TotalChunks
-            );
-
-            // Se ainda não acabou os chunks, retorna false
-            if (tempPath == null)
-                return false;
-
-            // Acabou! Substitui o arquivo usando o temp
-            if (entity.FileId.HasValue)
+            if (dto.FileName != null)
             {
-                var arquivoAtualizado = await _fileService.SubstituirArquivoDoTempAsync(
-                    entity.FileId.Value,
-                    tempPath,
-                    dto.FileName
-                );
-                entity.ImageUrl = arquivoAtualizado.CaminhoRelativo;
-                entity.FileId = arquivoAtualizado.Id;
-            }
-            else
-            {
-                var arquivoSalvo = await _fileService.SalvarArquivoDoTempAsync(
-                    tempPath,
+                var tempPath = await fileService.ProcessChunkAsync(
+                    dto.File,
                     dto.FileName,
-                    FEATURE_CATEGORY
+                    dto.ChunkIndex,
+                    dto.TotalChunks
                 );
-                entity.ImageUrl = arquivoSalvo.CaminhoRelativo;
-                entity.FileId = arquivoSalvo.Id;
+
+                // Se ainda não acabou os chunks, retorna false
+                if (tempPath == null)
+                    return false;
+
+                // Acabou! Substitui o arquivo usando o temp
+                if (entity.FileId.HasValue)
+                {
+                    var arquivoAtualizado = await fileService.SubstituirArquivoDoTempAsync(
+                        entity.FileId.Value,
+                        tempPath,
+                        dto.FileName
+                    );
+                    entity.ImageUrl = arquivoAtualizado.CaminhoRelativo;
+                    entity.FileId = arquivoAtualizado.Id;
+                }
+                else
+                {
+                    var arquivoSalvo = await fileService.SalvarArquivoDoTempAsync(
+                        tempPath,
+                        dto.FileName,
+                        FEATURE_CATEGORY
+                    );
+                    entity.ImageUrl = arquivoSalvo.CaminhoRelativo;
+                    entity.FileId = arquivoSalvo.Id;
+                }
             }
         }
         else if (dto.File != null) // Upload normal
         {
             if (entity.FileId.HasValue)
             {
-                var arquivoAtualizado = await _fileService.SubstituirArquivoAsync(
+                var arquivoAtualizado = await fileService.SubstituirArquivoAsync(
                     entity.FileId.Value,
                     dto.File
                 );
@@ -184,7 +186,7 @@ public class HomeService : IHomeService
             }
             else
             {
-                var arquivoSalvo = await _fileService.SalvarArquivoAsync(
+                var arquivoSalvo = await fileService.SalvarArquivoAsync(
                     dto.File,
                     FEATURE_CATEGORY
                 );
@@ -200,25 +202,27 @@ public class HomeService : IHomeService
         entity.ActionText = dto.ActionText;
         entity.ActionUrl = dto.ActionUrl;
 
-        await _repository.UpdateHeroAsync(entity);
-        await _cache.RemoveAsync(HOME_CACHE_KEY);
+        await repository.UpdateHeroAsync(entity);
+        await unitOfWork.CommitAsync(); // Persiste no banco
+        await cache.RemoveAsync(HOME_CACHE_KEY);
 
         return true; // Update finalizado
     }
 
     public async Task DeleteHeroAsync(int id)
     {
-        var entity = await _repository.GetHeroByIdAsync(id);
+        var entity = await repository.GetHeroByIdAsync(id);
         if (entity == null)
             throw new ResourceNotFoundException($"Hero com ID {id} não encontrado.");
 
         if (entity.FileId.HasValue)
         {
-            await _fileService.DeletarArquivoAsync(entity.FileId.Value);
+            await fileService.DeletarArquivoAsync(entity.FileId.Value);
         }
 
-        await _repository.DeleteHeroAsync(entity);
-        await _cache.RemoveAsync(HOME_CACHE_KEY);
+        await repository.DeleteHeroAsync(entity);
+        await unitOfWork.CommitAsync(); // Persiste no banco
+        await cache.RemoveAsync(HOME_CACHE_KEY);
     }
 
     // =========================================================================
@@ -237,8 +241,9 @@ public class HomeService : IHomeService
             ActionUrl = dto.ActionUrl,
         };
 
-        await _repository.AddServiceAsync(entity);
-        await _cache.RemoveAsync(HOME_CACHE_KEY);
+        await repository.AddServiceAsync(entity);
+        await unitOfWork.CommitAsync(); // Persiste no banco
+        await cache.RemoveAsync(HOME_CACHE_KEY);
 
         return new ServiceDto
         {
@@ -253,7 +258,7 @@ public class HomeService : IHomeService
 
     public async Task UpdateServiceAsync(int id, CreateUpdateServiceDto dto)
     {
-        var entity = await _repository.GetServiceByIdAsync(id);
+        var entity = await repository.GetServiceByIdAsync(id);
         if (entity == null)
             throw new ResourceNotFoundException($"Serviço com ID {id} não encontrado.");
 
@@ -263,17 +268,19 @@ public class HomeService : IHomeService
         entity.ActionText = dto.ActionText;
         entity.ActionUrl = dto.ActionUrl;
 
-        await _repository.UpdateServiceAsync(entity);
-        await _cache.RemoveAsync(HOME_CACHE_KEY);
+        await repository.UpdateServiceAsync(entity);
+        await unitOfWork.CommitAsync(); // Persiste no banco
+        await cache.RemoveAsync(HOME_CACHE_KEY);
     }
 
     public async Task DeleteServiceAsync(int id)
     {
-        var entity = await _repository.GetServiceByIdAsync(id);
+        var entity = await repository.GetServiceByIdAsync(id);
         if (entity == null)
             throw new ResourceNotFoundException($"Serviço com ID {id} não encontrado.");
 
-        await _repository.DeleteServiceAsync(entity);
-        await _cache.RemoveAsync(HOME_CACHE_KEY);
+        await repository.DeleteServiceAsync(entity);
+        await unitOfWork.CommitAsync(); // Persiste no banco
+        await cache.RemoveAsync(HOME_CACHE_KEY);
     }
 }

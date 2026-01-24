@@ -48,6 +48,9 @@ namespace MeuCrudCsharp.Features.Emails.Services
         /// <returns>Uma <see cref="Task{TResult}"/> que representa a operação assíncrona, contendo a string renderizada da view.</returns>
         public async Task<string> RenderViewToStringAsync<TModel>(string viewName, TModel model)
         {
+            if (string.IsNullOrWhiteSpace(viewName))
+                throw new ArgumentException("O nome da view não pode ser vazio.", nameof(viewName));
+
             var actionContext = GetActionContext();
             var view = FindView(actionContext, viewName);
 

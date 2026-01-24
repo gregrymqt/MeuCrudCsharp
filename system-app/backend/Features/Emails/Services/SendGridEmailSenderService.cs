@@ -44,6 +44,16 @@ namespace MeuCrudCsharp.Features.Emails.Services
             string plainTextBody
         )
         {
+            // Validação de parâmetros de entrada
+            if (string.IsNullOrWhiteSpace(to))
+                throw new ArgumentException("O endereço de e-mail do destinatário não pode ser vazio.", nameof(to));
+
+            if (string.IsNullOrWhiteSpace(subject))
+                throw new ArgumentException("O assunto do e-mail não pode ser vazio.", nameof(subject));
+
+            if (string.IsNullOrWhiteSpace(htmlBody) && string.IsNullOrWhiteSpace(plainTextBody))
+                throw new ArgumentException("O e-mail deve conter pelo menos um corpo (HTML ou texto simples).");
+
             try
             {
                 var apiKey = _settings.ApiKey;
@@ -87,7 +97,15 @@ namespace MeuCrudCsharp.Features.Emails.Services
                         response.StatusCode,
                         responseBody
                     );
+                    throw new AppServiceException(
+                        $"Falha ao enviar e-mail. Status: {response.StatusCode}. Detalhes: {responseBody}"
+                    );
                 }
+            }
+            catch (AppServiceException)
+            {
+                // Re-lança AppServiceException sem envolver em outra exceção
+                throw;
             }
             catch (Exception ex)
             {
