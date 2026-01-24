@@ -7,7 +7,8 @@ using Microsoft.EntityFrameworkCore;
 
 /// <summary>
 /// Repository para gerenciar operações de persistência de Users.
-/// Segue o padrão Repository + UnitOfWork (não chama SaveChanges diretamente).
+/// Apenas marca as mudanças no DbContext - NÃO persiste diretamente.
+/// O Service é responsável por chamar UnitOfWork.CommitAsync().
 /// </summary>
 public class UserRepository(ApiDbContext dbContext) : IUserRepository
 {
@@ -19,11 +20,11 @@ public class UserRepository(ApiDbContext dbContext) : IUserRepository
 
     /// <summary>
     /// Marca um usuário existente para atualização.
-    /// O SaveChanges será chamado pelo UnitOfWork.
+    /// O Service chamará UnitOfWork.CommitAsync().
     /// </summary>
     public void Update(Users user)
     {
         dbContext.Users.Update(user);
-        // O SaveChanges será chamado pelo UnitOfWork
+        // O SaveChanges será chamado pelo Service via UnitOfWork
     }
 }

@@ -49,7 +49,7 @@ public class UserAccountService : IUserAccountService
         int novoIdArquivo;
 
         // Verifica se o usuário JÁ TEM um avatar anterior
-        if (user.AvatarFileId.HasValue && user.AvatarFileId.Value > 0)
+        if (user.AvatarFileId is > 0)
         {
             // Se já tem, SUBSTITUI (Deleta o velho, cria o novo)
             var arquivoSalvo = await _fileService.SubstituirArquivoAsync(
@@ -73,7 +73,7 @@ public class UserAccountService : IUserAccountService
         // 5. Persistir no banco
         await _unitOfWork.CommitAsync();
 
-        _logger.LogInformation($"Avatar atualizado para o usuário {userId}");
+        _logger.LogInformation("Avatar atualizado para o usuário {UserId}", userId);
 
         return new AvatarUpdateResponse
         {

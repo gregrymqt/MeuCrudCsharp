@@ -36,7 +36,7 @@ public class ProgressRunnerService : IProcessRunnerService
             }
         }
 
-        string error = await process.StandardError.ReadToEndAsync();
+        var error = await process.StandardError.ReadToEndAsync();
         await process.WaitForExitAsync();
 
         if (process.ExitCode != 0)
@@ -71,14 +71,10 @@ public class ProgressRunnerService : IProcessRunnerService
 
         await process.WaitForExitAsync();
 
-        if (process.ExitCode != 0)
-        {
-            string error = await errorTask;
-            throw new AppServiceException(
-                $"Erro ao executar '{filePath}' (Code {process.ExitCode}): {error}"
-            );
-        }
-
-        return (await outputTask, await errorTask);
+        if (process.ExitCode == 0) return (await outputTask, await errorTask);
+        var error = await errorTask;
+        throw new AppServiceException(
+            $"Erro ao executar '{filePath}' (Code {process.ExitCode}): {error}"
+        );
     }
 }

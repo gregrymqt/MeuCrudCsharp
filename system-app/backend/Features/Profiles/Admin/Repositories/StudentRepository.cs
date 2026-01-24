@@ -27,14 +27,14 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Repositories
 
             if (totalCount == 0)
             {
-                return (Enumerable.Empty<Users>(), 0);
+                return ([], 0);
             }
 
             // 3. Busca paginada com relacionamentos
             var items = await query
                 .Include(u => u.Subscription)
                 .ThenInclude(s => s.Plan)
-                .OrderBy(u => u.Name)
+                .OrderBy(u => u.Name ?? string.Empty) // Trata null como string vazia para ordenação
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync();

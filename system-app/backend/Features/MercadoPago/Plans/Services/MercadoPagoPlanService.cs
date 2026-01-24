@@ -28,14 +28,14 @@ public class MercadoPagoPlanService : MercadoPagoServiceBase, IMercadoPagoPlanSe
     {
         const string endpoint = "/preapproval_plan";
         var responseBody = await SendMercadoPagoRequestAsync(HttpMethod.Post, endpoint, payload);
-        return JsonSerializer.Deserialize<PlanResponseDto>(responseBody);
+        return JsonSerializer.Deserialize<PlanResponseDto>(responseBody) ?? throw new InvalidOperationException();
     }
 
     public async Task<PlanResponseDto> UpdatePlanAsync(string externalPlanId, object payload)
     {
         var endpoint = $"/preapproval_plan/{externalPlanId}";
         var responseBody = await SendMercadoPagoRequestAsync(HttpMethod.Put, endpoint, payload);
-        return JsonSerializer.Deserialize<PlanResponseDto>(responseBody);
+        return JsonSerializer.Deserialize<PlanResponseDto>(responseBody) ?? throw new InvalidOperationException();
     }
 
     public async Task CancelPlanAsync(string externalPlanId)
@@ -48,12 +48,12 @@ public class MercadoPagoPlanService : MercadoPagoServiceBase, IMercadoPagoPlanSe
     public async Task<PlanResponseDto> GetPlanByExternalIdAsync(string externalPlanId)
     {
         var endpoint = $"/preapproval_plan/{externalPlanId}";
-        var responseBody = await SendMercadoPagoRequestAsync(
+        var responseBody = await SendMercadoPagoRequestAsync<object>(
             HttpMethod.Get,
             endpoint,
-            (object?)null
+            null
         );
-        return JsonSerializer.Deserialize<PlanResponseDto>(responseBody);
+        return JsonSerializer.Deserialize<PlanResponseDto>(responseBody) ?? throw new InvalidOperationException();
     }
 
     public async Task<IEnumerable<PlanResponseDto>> SearchActivePlansAsync(
@@ -74,15 +74,15 @@ public class MercadoPagoPlanService : MercadoPagoServiceBase, IMercadoPagoPlanSe
 
         var endpoint = queryString.ToString();
 
-        var responseBody = await SendMercadoPagoRequestAsync(
+        var responseBody = await SendMercadoPagoRequestAsync<object>(
             HttpMethod.Get,
             endpoint,
-            (object?)null
+            null
         );
         var apiResponse = JsonSerializer.Deserialize<PlanSearchResponseDto>(responseBody);
 
         // A filtragem de status agora é feita pela API, então o .Where() foi removido.
         return apiResponse?.Results?.Where(plan => plan.AutoRecurring != null)
-            ?? Enumerable.Empty<PlanResponseDto>();
+            ?? [];
     }
 }

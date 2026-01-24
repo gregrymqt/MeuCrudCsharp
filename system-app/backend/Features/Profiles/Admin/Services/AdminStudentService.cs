@@ -24,7 +24,7 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Services
 
         public async Task<PaginatedResult<StudentDto>> GetAllStudentsAsync(int page, int pageSize)
         {
-            string cacheKey = $"Admin_AllStudents_Page{page}_Size{pageSize}";
+            var cacheKey = $"Admin_AllStudents_Page{page}_Size{pageSize}";
 
             return await _cacheService.GetOrCreateAsync(
                 cacheKey,
@@ -47,7 +47,7 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Services
                         {
                             return new PaginatedResult<StudentDto>
                             {
-                                Items = new List<StudentDto>(),
+                                Items = [],
                                 TotalCount = 0,
                                 TotalPages = 0,
                                 CurrentPage = page,
@@ -58,12 +58,12 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Services
                         var studentDtos = users
                             .Select(u => new StudentDto(
                                 u.PublicId.ToString(),
-                                u.Name,
-                                u.Email,
-                                u.Subscription != null ? u.Subscription.Status : "Sem Assinatura",
-                                u.Subscription?.Plan != null ? u.Subscription.Plan.Name : "N/A",
-                                u.Subscription.CreatedAt,
-                                u.Subscription != null ? u.Subscription.Id : "Sem Assinatura"
+                                u.Name ?? "N/A",
+                                u.Email ?? "N/A",
+                                u.Subscription?.Status ?? "Sem Assinatura",
+                                u.Subscription?.Plan?.Name ?? "N/A",
+                                u.Subscription?.CreatedAt ?? DateTime.MinValue,
+                                u.Subscription?.Id ?? "Sem Assinatura"
                             ))
                             .ToList();
 
@@ -86,7 +86,7 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Services
                     }
                 },
                 absoluteExpireTime: TimeSpan.FromMinutes(5)
-            );
+            ) ?? throw new InvalidOperationException();
         }
 
         public async Task<StudentDto> GetStudentByIdAsync(Guid id)
@@ -100,18 +100,18 @@ namespace MeuCrudCsharp.Features.Profiles.Admin.Services
 
                 if (user == null)
                 {
-                    _logger.LogWarning($"Tentativa de buscar aluno com ID {id} não encontrado.");
+                    _logger.LogWarning("Tentativa de buscar aluno com ID {Guid} não encontrado.", id);
                     throw new KeyNotFoundException($"Aluno com ID {id} não encontrado.");
                 }
 
                 // Mapeamento (Entity -> DTO)
                 var studentDto = new StudentDto(
                     user.PublicId.ToString(),
-                    user.Name,
-                    user.Email,
+                    user.Name ?? "N/A",
+                    user.Email ?? "N/A",
                     user.Subscription?.Status ?? "Sem Assinatura",
                     user.Subscription?.Plan?.Name ?? "N/A",
-                    user.Subscription.CreatedAt,
+                    user.Subscription?.CreatedAt ?? DateTime.MinValue,
                     user.Subscription?.Id ?? "Sem Assinatura"
                 );
 

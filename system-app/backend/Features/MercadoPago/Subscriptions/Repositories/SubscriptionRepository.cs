@@ -5,11 +5,41 @@ using Microsoft.EntityFrameworkCore;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Subscriptions.Repositories;
 
+/// <summary>
+/// Repository para gerenciar operações de persistência de Subscriptions.
+/// Apenas marca as mudanças no DbContext - NÃO persiste diretamente.
+/// O Service é responsável por chamar UnitOfWork.CommitAsync().
+/// </summary>
 public class SubscriptionRepository(ApiDbContext context) : ISubscriptionRepository
 {
+    /// <summary>
+    /// Marca uma assinatura para adição.
+    /// NÃO persiste - O Service chamará UnitOfWork.CommitAsync().
+    /// </summary>
     public async Task AddAsync(Subscription subscription)
     {
         await context.Subscriptions.AddAsync(subscription);
+        // NÃO chama SaveChanges - deixa pro Service via UnitOfWork
+    }
+
+    /// <summary>
+    /// Marca uma assinatura para atualização.
+    /// NÃO persiste - O Service chamará UnitOfWork.CommitAsync().
+    /// </summary>
+    public void Update(Subscription subscription)
+    {
+        context.Subscriptions.Update(subscription);
+        // NÃO chama SaveChanges - deixa pro Service via UnitOfWork
+    }
+
+    /// <summary>
+    /// Marca uma assinatura para remoção.
+    /// NÃO persiste - O Service chamará UnitOfWork.CommitAsync().
+    /// </summary>
+    public void Remove(Subscription subscription)
+    {
+        context.Subscriptions.Remove(subscription);
+        // NÃO chama SaveChanges - deixa pro Service via UnitOfWork
     }
 
     public async Task<Subscription?> GetByExternalIdAsync(
@@ -39,10 +69,10 @@ public class SubscriptionRepository(ApiDbContext context) : ISubscriptionReposit
         var activeStatuses = new[] { "authorized", "pending", "paused" };
 
         return await context
-            .Subscriptions.AsNoTracking() // Performance
+            .Subscriptions.AsNoTracking()
             .Include(s => s.Plan)
             .Where(s => s.UserId == userId && activeStatuses.Contains(s.Status))
-            .OrderByDescending(s => s.CurrentPeriodEndDate) // Pega a mais recente
+            .OrderByDescending(s => s.CurrentPeriodEndDate)
             .FirstOrDefaultAsync();
     }
 
@@ -53,23 +83,13 @@ public class SubscriptionRepository(ApiDbContext context) : ISubscriptionReposit
 
         return await context
             .Subscriptions
-            .Include(s => s.User) // ✅ Inclui User para envio de email
+            .Include(s => s.User)
             .Where(s => 
                 s.User != null && 
                 s.User.CustomerId == customerId && 
                 activeStatuses.Contains(s.Status))
-            .OrderByDescending(s => s.CurrentPeriodEndDate) // Pega a mais recente
+            .OrderByDescending(s => s.CurrentPeriodEndDate)
             .FirstOrDefaultAsync();
-    }
-
-    public void Remove(Subscription subscription)
-    {
-        context.Subscriptions.Remove(subscription);
-    }
-
-    public async Task<int> SaveChangesAsync()
-    {
-        return await context.SaveChangesAsync();
     }
 
     public Task<bool> HasActiveSubscriptionByUserIdAsync(string userId)
@@ -79,15 +99,12 @@ public class SubscriptionRepository(ApiDbContext context) : ISubscriptionReposit
             .AnyAsync(s =>
                 s.UserId == userId
                 && s.CurrentPeriodEndDate > DateTime.UtcNow
-                && // [cite: 8]
-                (s.Status == "paid" || s.Status == "authorized") // [cite: 8, 38]
+                && (s.Status == "paid" || s.Status == "authorized")
             );
     }
 
     public async Task<Subscription?> GetByIdAsync(string subscriptionId)
     {
-        // O Service passa o ID que está salvo na tabela de Pagamentos.
-        // Geralmente é o ExternalId (ex: "2c938084...").
         return await context.Subscriptions.FirstOrDefaultAsync(s =>
             s.ExternalId == subscriptionId
         );
@@ -112,10 +129,5 @@ public class SubscriptionRepository(ApiDbContext context) : ISubscriptionReposit
         }
 
         return await query.FirstOrDefaultAsync(s => s.PaymentId == paymentId);
-    }
-
-    public void Update(Subscription subscription)
-    {
-        context.Subscriptions.Update(subscription);
     }
 }

@@ -7,20 +7,18 @@ using Microsoft.Extensions.Logging;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
 {
-    public class MercadoPagoPaymentService : MercadoPagoServiceBase, IMercadoPagoPaymentService
+    public class MercadoPagoPaymentService(
+        IHttpClientFactory httpClient,
+        ILogger<MercadoPagoPaymentService> logger)
+        : MercadoPagoServiceBase(httpClient, logger), IMercadoPagoPaymentService
     {
         // O construtor apenas passa as dependências para a classe base
-        public MercadoPagoPaymentService(
-            IHttpClientFactory httpClient,
-            ILogger<MercadoPagoPaymentService> logger
-        )
-            : base(httpClient, logger) { }
 
         public async Task<MercadoPagoPaymentDetails?> GetPaymentStatusAsync(
             string externalPaymentId
         )
         {
-            _logger.LogInformation(
+            logger.LogInformation(
                 "Buscando status do pagamento {PaymentId} no Mercado Pago.",
                 externalPaymentId
             );

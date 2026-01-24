@@ -1,8 +1,5 @@
-using MeuCrudCsharp.Features.Support.Documents;
 using MeuCrudCsharp.Features.Support.Documents.Models;
 using MeuCrudCsharp.Features.Support.Interfaces;
-// using MeuCrudCsharp.Features.Support.Documents.Models; // Provavelmente desnecessário se a Model está no namespace acima
-using MeuCrudCsharp.Features.Support.Repositories; // Ajuste para o namespace correto da Interface
 using MongoDB.Driver;
 
 namespace MeuCrudCsharp.Features.Support.Repositories

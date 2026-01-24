@@ -1,12 +1,12 @@
 namespace MeuCrudCsharp.Features.MercadoPago.Subscriptions.Services;
 
-using MeuCrudCsharp.Features.Auth.Interfaces;
-using MeuCrudCsharp.Features.Caching.Interfaces;
-using MeuCrudCsharp.Features.Exceptions;
-using MeuCrudCsharp.Features.MercadoPago.Subscriptions.DTOs;
-using MeuCrudCsharp.Features.MercadoPago.Subscriptions.Interfaces;
-using MeuCrudCsharp.Models.Enums;
-using Microsoft.Extensions.Logging;
+using Auth.Interfaces;
+using Caching.Interfaces;
+using Exceptions;
+using MercadoPago.Subscriptions.DTOs;
+using MercadoPago.Subscriptions.Interfaces;
+using Models.Enums;
+using Shared.Work;
 
 public class UserSubscriptionService : IUserSubscriptionService
 {
@@ -15,13 +15,15 @@ public class UserSubscriptionService : IUserSubscriptionService
     private readonly IMercadoPagoSubscriptionService _mpSubscriptionService;
     private readonly ICacheService _cacheService;
     private readonly ILogger<UserSubscriptionService> _logger;
+    private readonly IUnitOfWork _unitOfWork;
 
     public UserSubscriptionService(
         IUserContext userContext,
         ISubscriptionRepository repository,
         IMercadoPagoSubscriptionService mpSubscriptionService,
         ICacheService cacheService,
-        ILogger<UserSubscriptionService> logger
+        ILogger<UserSubscriptionService> logger,
+        IUnitOfWork unitOfWork
     )
     {
         _userContext = userContext;
@@ -29,6 +31,7 @@ public class UserSubscriptionService : IUserSubscriptionService
         _mpSubscriptionService = mpSubscriptionService;
         _cacheService = cacheService;
         _logger = logger;
+        _unitOfWork = unitOfWork;
     }
 
     public async Task<SubscriptionDetailsDto?> GetMySubscriptionDetailsAsync()
@@ -77,28 +80,45 @@ public class UserSubscriptionService : IUserSubscriptionService
             throw new AppServiceException($"Status '{newStatus}' inválido.");
         }
 
-        var subscription =
-            await _repository.GetActiveSubscriptionByUserIdAsync(userId)
-            ?? throw new ResourceNotFoundException(
-                "Nenhuma assinatura ativa encontrada para atualização."
-            );
-
-        // 2. Chama o Mercado Pago
-        var dto = new UpdateSubscriptionStatusDto(statusEnum.ToMpString());
-
-        var result = await _mpSubscriptionService.UpdateSubscriptionStatusAsync(
-            subscription.ExternalId,
-            dto
+        // 2. Busca assinatura ativa (precisa ser rastreada para atualização)
+        var subscription = await _repository.GetByExternalIdAsync(
+            await GetActiveSubscriptionExternalIdAsync(userId),
+            includePlan: false,
+            asNoTracking: false // ✅ Rastreada para poder atualizar
+        ) ?? throw new ResourceNotFoundException(
+            "Nenhuma assinatura ativa encontrada para atualização."
         );
 
-        // 3. Atualiza Localmente
-        // Se o MP retornou sucesso, atualizamos o banco local com o mesmo status
-        if (result.Status == statusEnum.ToMpString())
-        {
-            subscription.Status = result.Status; // "authorized", "paused", etc.
-            subscription.UpdatedAt = DateTime.UtcNow;
+        var originalStatus = subscription.Status;
 
-            await _repository.SaveChangesAsync();
+        // 3. Atualiza localmente (apenas em memória)
+        subscription.Status = statusEnum.ToMpString();
+        subscription.UpdatedAt = DateTime.UtcNow;
+
+        try
+        {
+            // 4. Chama o MercadoPago primeiro
+            var dto = new UpdateSubscriptionStatusDto(statusEnum.ToMpString());
+            var result = await _mpSubscriptionService.UpdateSubscriptionStatusAsync(
+                subscription.ExternalId,
+                dto
+            );
+
+            // 5. Verifica se MP retornou o status esperado
+            if (result.Status != statusEnum.ToMpString())
+            {
+                _logger.LogWarning(
+                    "MP retornou status {MpStatus} diferente do solicitado {RequestedStatus}",
+                    result.Status,
+                    statusEnum.ToMpString()
+                );
+                subscription.Status = result.Status; // Usa o status que MP retornou
+            }
+
+            // 6. ✅ COMMIT ÚNICO - Se MP OK, persiste localmente
+            await _unitOfWork.CommitAsync();
+
+            // 7. Limpa cache
             await _cacheService.RemoveAsync($"SubscriptionDetails_{userId}");
 
             _logger.LogInformation(
@@ -108,5 +128,34 @@ public class UserSubscriptionService : IUserSubscriptionService
                 subscription.Status
             );
         }
+        catch (ExternalApiException ex)
+        {
+            _logger.LogError(
+                ex,
+                "Falha no MP ao atualizar status da assinatura para {NewStatus}. Rollback automático.",
+                newStatus
+            );
+
+            // ✅ ROLLBACK AUTOMÁTICO
+            // Como a entidade está rastreada mas não foi comitada, precisamos reverter manualmente
+            subscription.Status = originalStatus;
+
+            _logger.LogInformation(
+                "Rollback concluído. Status da assinatura permanece em {OriginalStatus}",
+                originalStatus
+            );
+
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Helper method para buscar ExternalId da assinatura ativa.
+    /// </summary>
+    private async Task<string> GetActiveSubscriptionExternalIdAsync(string userId)
+    {
+        var subscription = await _repository.GetActiveSubscriptionByUserIdAsync(userId);
+        return subscription?.ExternalId 
+            ?? throw new ResourceNotFoundException("Nenhuma assinatura ativa encontrada.");
     }
 }

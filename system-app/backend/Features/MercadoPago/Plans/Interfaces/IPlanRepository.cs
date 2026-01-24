@@ -5,16 +5,15 @@ namespace MeuCrudCsharp.Features.MercadoPago.Plans.Interfaces;
 
 public interface IPlanRepository
 {
-    // Métodos de escrita (já definidos anteriormente)
+    // Métodos de escrita (não chamam SaveChanges - Service usa UnitOfWork)
     Task AddAsync(Plan plan);
     void Update(Plan plan);
-    Task<int> SaveChangesAsync();
     void Remove(object payload);
 
     // --- Métodos de Leitura ---
 
     /// <summary>
-    /// Busca um plano pelo seu ID público. Lança ResourceNotFoundException se não encontrar.
+    /// Busca um plano pelo seu ID público.
     /// </summary>
     Task<Plan?> GetByPublicIdAsync(Guid publicId, bool asNoTracking);
 

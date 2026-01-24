@@ -1,5 +1,3 @@
-using System;
-
 namespace MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces;
 
 public interface IPaymentRepository

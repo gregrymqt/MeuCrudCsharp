@@ -2,8 +2,6 @@
 using MercadoPago.Client.Common;
 using MercadoPago.Client.Payment;
 using MercadoPago.Error;
-using MercadoPago.Resource.Payment;
-using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Features.Auth.Interfaces;
 using MeuCrudCsharp.Features.Caching.Interfaces;
 using MeuCrudCsharp.Features.Caching.Record;
@@ -11,11 +9,12 @@ using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.MercadoPago.Clients.DTOs;
 using MeuCrudCsharp.Features.MercadoPago.Clients.Interfaces;
 using MeuCrudCsharp.Features.MercadoPago.Hub;
-using MeuCrudCsharp.Features.MercadoPago.Notification.Record; // Nossas exceções
+using MeuCrudCsharp.Features.MercadoPago.Notification.Record;
 using MeuCrudCsharp.Features.MercadoPago.Payments.Dtos;
 using MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces;
 using MeuCrudCsharp.Features.MercadoPago.Subscriptions.Interfaces;
 using MeuCrudCsharp.Features.MercadoPago.Utils;
+using MeuCrudCsharp.Features.Shared.Work;
 using Microsoft.Extensions.Options;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
@@ -26,7 +25,6 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
     public class CreditCardPaymentService : ICreditCardPaymentService
     {
         private const string IDEMPOTENCY_PREFIX = "CreditCardPayment";
-        private readonly ApiDbContext _context;
         private readonly ISubscriptionService _subscriptionService;
         private readonly ILogger<CreditCardPaymentService> _logger;
         private readonly IPaymentNotificationHub _notificationHub;
@@ -35,9 +33,10 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
         private readonly IUserContext _userContext;
         private readonly IClientService _clientService;
         private readonly IUserRepository _userRepository;
+        private readonly IPaymentRepository _paymentRepository;
+        private readonly IUnitOfWork _unitOfWork;
 
         public CreditCardPaymentService(
-            ApiDbContext context,
             ISubscriptionService subscriptionService,
             ILogger<CreditCardPaymentService> logger,
             IPaymentNotificationHub notificationHub,
@@ -45,12 +44,12 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
             ICacheService cacheService,
             IUserContext userContext,
             IClientService clientService,
-            IUserRepository userRepository
+            IUserRepository userRepository,
+            IPaymentRepository paymentRepository,
+            IUnitOfWork unitOfWork
         )
         {
-            if (userContext == null)
-                throw new ArgumentNullException(nameof(userContext));
-            _context = context;
+            ArgumentNullException.ThrowIfNull(userContext);
             _logger = logger;
             _subscriptionService = subscriptionService;
             _notificationHub = notificationHub;
@@ -59,6 +58,8 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
             _userContext = userContext;
             _clientService = clientService;
             _userRepository = userRepository;
+            _paymentRepository = paymentRepository;
+            _unitOfWork = unitOfWork;
         }
 
         public async Task<CachedResponse> CreatePaymentOrSubscriptionAsync(
@@ -103,8 +104,8 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
                     {
                         var errorBody = new
                         {
-                            error = "MercadoPago Error",
                             message = e.ApiError.Message,
+                            error = "MercadoPago Error",
                         };
                         return new CachedResponse(errorBody, 400);
                     }
@@ -121,7 +122,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
                 TimeSpan.FromHours(24)
             );
 
-            return response;
+            return response ?? throw new InvalidOperationException();
         }
 
         private async Task<PaymentResponseDto> CreateSinglePaymentInternalAsync(
@@ -130,7 +131,6 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
         {
             var userId = await _userContext.GetCurrentUserId();
             var user = await _userRepository.GetByIdAsync(userId);
-            Models.Payments novoPagamento = null;
 
             if (
                 paymentData.Payer?.Email is null
@@ -142,6 +142,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
 
             try
             {
+                // 1. Gerenciar cliente/cartão
                 if (string.IsNullOrEmpty(user.CustomerId))
                 {
                     _logger.LogInformation(
@@ -154,6 +155,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
                         paymentData.Token
                     );
                     user.CustomerId = customerWithCard.CustomerId;
+                    _userRepository.Update(user); // Marca para atualização
                 }
                 else
                 {
@@ -169,7 +171,8 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
                     new PaymentStatusUpdate("A processar o seu pagamento...", "processing", false)
                 );
 
-                novoPagamento = new Models.Payments()
+                // 2. Criar registro inicial de pagamento
+                var novoPagamento = new Models.Payments()
                 {
                     UserId = userId,
                     Status = "iniciando",
@@ -183,7 +186,8 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
                     UpdatedAt = DateTime.UtcNow,
                 };
 
-                _context.Payments.Add(novoPagamento);
+                await _paymentRepository.AddAsync(novoPagamento); // Usa repository ao invés de _context
+                
                 _logger.LogInformation(
                     "Registro de pagamento inicial criado com ID: {PaymentId}",
                     novoPagamento.Id
@@ -198,6 +202,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
                     )
                 );
 
+                // 3. Chamar MercadoPago
                 var paymentClient = new PaymentClient();
                 var requestOptions = new RequestOptions
                 {
@@ -225,9 +230,23 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
                     NotificationUrl = $"{_generalSettings.BaseUrl}/webhook/mercadopago",
                 };
 
-                Payment payment = await paymentClient.CreateAsync(paymentRequest, requestOptions);
+                var payment = await paymentClient.CreateAsync(paymentRequest, requestOptions);
 
-                if (payment.Status == "approved" || payment.Status == "in_process")
+                // 4. Atualizar pagamento com resposta do MercadoPago
+                novoPagamento.PaymentId = payment.Id.ToString();
+                novoPagamento.Status = PaymentStatusMapper.MapFromMercadoPago(payment.Status);
+                novoPagamento.DateApproved = payment.DateApproved;
+                novoPagamento.UpdatedAt = DateTime.UtcNow;
+                novoPagamento.LastFourDigits = payment.Card.LastFourDigits;
+
+                _paymentRepository.Update(novoPagamento); // Marca para atualização
+
+                // 5. COMMIT ÚNICO - ATOMICIDADE GARANTIDA
+                // Salva todas as alterações (User.CustomerId + Payment) em uma única transação
+                await _unitOfWork.CommitAsync();
+
+                // 6. Notificar resultado
+                if (payment.Status is "approved" or "in_process")
                 {
                     await _notificationHub.SendStatusUpdateAsync(
                         userId,
@@ -252,13 +271,6 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
                     );
                 }
 
-                novoPagamento.PaymentId = payment.Id.ToString();
-                novoPagamento.Status = PaymentStatusMapper.MapFromMercadoPago(payment.Status);
-                novoPagamento.DateApproved = payment.DateApproved;
-                novoPagamento.UpdatedAt = DateTime.UtcNow;
-                novoPagamento.LastFourDigits = payment.Card.LastFourDigits;
-
-                await _context.SaveChangesAsync();
                 _logger.LogInformation(
                     "Pagamento {PaymentId} processado e atualizado no banco. Status: {Status}",
                     novoPagamento.PaymentId,
@@ -317,7 +329,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
 
             try
             {
-                CustomerWithCardResponseDto customerWithCard = null;
+                CustomerWithCardResponseDto? customerWithCard;
 
                 if (string.IsNullOrEmpty(user.CustomerId))
                 {
@@ -331,6 +343,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
                         subscriptionData.Token
                     );
                     user.CustomerId = customerWithCard.CustomerId;
+                    _userRepository.Update(user); // Marca para atualização
                 }
                 else
                 {
@@ -350,9 +363,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
                             card.LastFourDigits,
                             card.ExpirationMonth,
                             card.ExpirationYear,
-                            // CORREÇÃO: Passando o PaymentMethod que faltava
-                            card.PaymentMethod // Se 'card' já tiver essa propriedade preenchida
-                                ?? new PaymentMethodDto("credit_card", "Credit Card") // Fallback se for nulo
+                            card.PaymentMethod ?? new PaymentMethodDto("credit_card", "Credit Card")
                         )
                     );
                 }
@@ -370,7 +381,9 @@ namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services
                     customerWithCard.Card.LastFourDigits
                 );
 
-                await _userRepository.SaveChangesAsync();
+                // Salva as alterações do usuário (CustomerId) usando o UnitOfWork
+                // OBS: A assinatura já foi salva pelo SubscriptionService
+                await _unitOfWork.CommitAsync();
 
                 _logger.LogInformation(
                     "Fluxo de criação de assinatura concluído para o usuário {UserId}. ID da Assinatura: {SubscriptionId}",

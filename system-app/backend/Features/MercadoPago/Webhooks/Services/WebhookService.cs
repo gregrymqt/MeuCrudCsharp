@@ -62,7 +62,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Webhooks.Services
                 }
 
                 // --- CORREÇÃO 1: Acesso direto ao objeto, sem TryGetProperty ---
-                if (notification.Data == null || string.IsNullOrEmpty(notification.Data.Id))
+                if (string.IsNullOrEmpty(notification.Data.Id))
                 {
                     _logger.LogWarning("Payload sem Data.Id para validação.");
                     return false;
@@ -81,17 +81,14 @@ namespace MeuCrudCsharp.Features.MercadoPago.Webhooks.Services
                     .Replace("-", "")
                     .ToLower();
 
-                if (!calculatedHash.Equals(hash))
-                {
-                    _logger.LogWarning(
-                        "Assinatura inválida. Recebido: {Hash}, Calculado: {Calc}",
-                        hash,
-                        calculatedHash
-                    );
-                    return false;
-                }
+                if (calculatedHash.Equals(hash)) return true;
+                _logger.LogWarning(
+                    "Assinatura inválida. Recebido: {Hash}, Calculado: {Calc}",
+                    hash,
+                    calculatedHash
+                );
+                return false;
 
-                return true;
             }
             catch (Exception ex)
             {
@@ -105,7 +102,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Webhooks.Services
         )
         {
             // --- CORREÇÃO 2: Verificação de nulo padrão do C# ---
-            if (notification.Data == null || string.IsNullOrEmpty(notification.Data.Id))
+            if (string.IsNullOrEmpty(notification.Data.Id))
             {
                 _logger.LogWarning(
                     "Notificação recebida sem dados válidos (Data null ou Id vazio)."
@@ -119,7 +116,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Webhooks.Services
                 // Como o objeto já veio deserializado, nós apenas repassamos o ID para os Jobs.
                 // O Webhook do MP geralmente só manda o ID dentro do Data mesmo.
 
-                string entityId = notification.Data.Id;
+                var entityId = notification.Data.Id;
 
                 switch (notification.Type)
                 {

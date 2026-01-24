@@ -1,10 +1,14 @@
-using System;
 using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Features.MercadoPago.Payments.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Payments.Repositories;
 
+/// <summary>
+/// Repository para gerenciar operações de persistência de Payments.
+/// Apenas marca as mudanças no DbContext - NÃO persiste diretamente.
+/// O Service é responsável por chamar UnitOfWork.CommitAsync().
+/// </summary>
 public class PaymentRepository(ApiDbContext context) : IPaymentRepository
 {
     public async Task<bool> HasAnyPaymentByUserIdAsync(string userId)
@@ -25,12 +29,11 @@ public class PaymentRepository(ApiDbContext context) : IPaymentRepository
         if (!string.IsNullOrEmpty(method))
         {
             // Filtra pelo método se ele for informado (ex: "credit_card", "pix")
-            // Baseado na propriedade [cite: 40]
             query = query.Where(p => p.Method == method);
         }
 
         return await query
-            .OrderByDescending(p => p.DateApproved) // [cite: 42]
+            .OrderByDescending(p => p.DateApproved)
             .ToListAsync();
     }
 
@@ -55,18 +58,34 @@ public class PaymentRepository(ApiDbContext context) : IPaymentRepository
             .FirstOrDefaultAsync(p => p.ExternalId == externalId);
     }
 
+    /// <summary>
+    /// Marca um pagamento para atualização.
+    /// NÃO persiste - O Service chamará UnitOfWork.CommitAsync().
+    /// </summary>
     public void Update(Models.Payments payment)
     {
         context.Payments.Update(payment);
+        // NÃO chama SaveChanges - deixa pro Service via UnitOfWork
     }
 
+    /// <summary>
+    /// Adiciona um novo pagamento ao contexto.
+    /// NÃO persiste - O Service chamará UnitOfWork.CommitAsync().
+    /// </summary>
     public async Task AddAsync(Models.Payments payment)
     {
         await context.Payments.AddAsync(payment);
+        // NÃO chama SaveChanges - deixa pro Service via UnitOfWork
     }
 
-    public async Task Remove(Models.Payments payment)
+    /// <summary>
+    /// Marca um pagamento para remoção.
+    /// NÃO persiste - O SaveChanges será chamado pelo Service via UnitOfWork.
+    /// </summary>
+    public Task Remove(Models.Payments payment)
     {
         context.Payments.Remove(payment);
+        // NÃO chama SaveChanges - deixa pro Service via UnitOfWork
+        return Task.CompletedTask;
     }
 }

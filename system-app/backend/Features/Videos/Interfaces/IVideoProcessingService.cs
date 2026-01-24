@@ -1,12 +1,15 @@
-﻿using System.Threading.Tasks;
-
-namespace MeuCrudCsharp.Features.Videos.Interfaces
+﻿namespace MeuCrudCsharp.Features.Videos.Interfaces
 {
     /// <summary>
-    /// Defines the contract for a service that processes video files.
+    /// Define o contrato para um serviço que processa vídeos em formato HLS.
     /// </summary>
     public interface IVideoProcessingService
     {
-        Task ProcessVideoToHlsAsync(string storageIdentifier, string originalFileName);
+        /// <summary>
+        /// Processa um vídeo para formato HLS (HTTP Live Streaming) usando FFmpeg.
+        /// </summary>
+        /// <param name="videoId">ID interno do vídeo no banco de dados.</param>
+        /// <param name="fileId">ID do arquivo original (MP4) no banco de dados.</param>
+        Task ProcessVideoToHlsAsync(int videoId, int fileId);
     }
 }

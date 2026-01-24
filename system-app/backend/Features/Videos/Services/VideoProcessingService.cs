@@ -1,42 +1,44 @@
-﻿using System.Diagnostics;
-using System.Globalization;
+﻿using System.Globalization;
 using System.Text.RegularExpressions;
-using MeuCrudCsharp.Data;
 using MeuCrudCsharp.Features.Exceptions;
 using MeuCrudCsharp.Features.Files.Interfaces;
-using MeuCrudCsharp.Features.Hubs;
+using MeuCrudCsharp.Features.Shared.Work;
 using MeuCrudCsharp.Features.Videos.Interfaces;
 using MeuCrudCsharp.Models;
-using Microsoft.AspNetCore.SignalR;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace MeuCrudCsharp.Features.Videos.Services;
 
-public class VideoProcessingService
+/// <summary>
+/// Service responsável por processar vídeos em formato HLS usando FFmpeg.
+/// Roda em background via Hangfire e notifica progresso via SignalR.
+/// </summary>
+public class VideoProcessingService : IVideoProcessingService
 {
     private readonly ILogger<VideoProcessingService> _logger;
-    private readonly IVideoRepository _videoRepository; // Novo
-    private readonly IFileRepository _fileRepository; // Novo
+    private readonly IVideoRepository _videoRepository;
+    private readonly IFileRepository _fileRepository;
     private readonly IVideoNotificationService _videoNotificationService;
     private readonly IProcessRunnerService _processRunnerService;
     private readonly FFmpegSettings _ffmpegSettings;
     private readonly IWebHostEnvironment _env;
+    private readonly IUnitOfWork _unitOfWork;
 
-    // Regex mantido (está correto)
-    private static readonly Regex FfmpegProgressRegex = new Regex(
+    // Regex para extrair progresso do FFmpeg
+    private static readonly Regex FfmpegProgressRegex = new(
         @"time=(\d{2}):(\d{2}):(\d{2})\.(\d{2})",
         RegexOptions.Compiled
     );
 
     public VideoProcessingService(
         ILogger<VideoProcessingService> logger,
-        IVideoRepository videoRepository, // Injetando Repository
-        IFileRepository fileRepository, // Injetando Repository
+        IVideoRepository videoRepository,
+        IFileRepository fileRepository,
         IVideoNotificationService videoNotificationService,
         IProcessRunnerService processRunnerService,
         IOptions<FFmpegSettings> ffmpegSettings,
-        IWebHostEnvironment env
+        IWebHostEnvironment env,
+        IUnitOfWork unitOfWork
     )
     {
         _logger = logger;
@@ -46,13 +48,14 @@ public class VideoProcessingService
         _processRunnerService = processRunnerService;
         _ffmpegSettings = ffmpegSettings.Value;
         _env = env;
+        _unitOfWork = unitOfWork;
     }
 
     // Assinatura ajustada para receber IDs (usada pelo AdminVideoService)
     public async Task ProcessVideoToHlsAsync(int videoId, int fileId)
     {
         Video video = null;
-        string groupName = "";
+        var groupName = "";
 
         try
         {
@@ -99,10 +102,19 @@ public class VideoProcessingService
                 0
             );
 
-            // 4. Obter Duração
+            // 4. Obter Duração do vídeo
             var duration = await GetVideoDurationAsync(inputFilePath);
             video.Duration = duration;
-            await _videoRepository.UpdateAsync(video); // Salva duração parcial
+            await _videoRepository.UpdateAsync(video);
+            
+            // ✅ COMMIT - Persiste a duração
+            await _unitOfWork.CommitAsync();
+            
+            _logger.LogInformation(
+                "Duração do vídeo {VideoId} detectada: {Duration}",
+                videoId,
+                duration
+            );
 
             // 5. Configurar FFMPEG para HLS
             var manifestPath = Path.Combine(hlsOutputDirectory, "manifest.m3u8");
@@ -113,19 +125,13 @@ public class VideoProcessingService
                 $"-i \"{inputFilePath}\" -c:v libx264 -c:a aac -hls_time 10 -hls_playlist_type vod -hls_segment_filename \"{segmentPattern}\" \"{manifestPath}\"";
 
             // 6. Callback de Progresso
-            Func<string, Task> onProgress = rawOutput =>
+            Task OnProgress(string rawOutput)
             {
                 var progressPercent = ParseFfmpegProgress(rawOutput, duration.TotalSeconds);
-                if (progressPercent.HasValue)
-                {
-                    return _videoNotificationService.SendProgressUpdate(
-                        groupName,
-                        "Convertendo...",
-                        progressPercent.Value
-                    );
-                }
-                return Task.CompletedTask;
-            };
+                return progressPercent.HasValue
+                    ? _videoNotificationService.SendProgressUpdate(groupName, "Convertendo...", progressPercent.Value)
+                    : Task.CompletedTask;
+            }
 
             await _videoNotificationService.SendProgressUpdate(
                 groupName,
@@ -137,11 +143,14 @@ public class VideoProcessingService
             await _processRunnerService.RunProcessWithProgressAsync(
                 _ffmpegSettings.FfmpegPath,
                 arguments,
-                onProgress
+                OnProgress
             );
 
-            // 7. Finalização
+            // 7. Finalização - Atualiza status para Available
             await _videoRepository.UpdateStatusAsync(videoId, VideoStatus.Available);
+            
+            // ✅ COMMIT - Persiste o status final
+            await _unitOfWork.CommitAsync();
 
             await _videoNotificationService.SendProgressUpdate(
                 groupName,
@@ -151,7 +160,7 @@ public class VideoProcessingService
             );
 
             _logger.LogInformation(
-                "Vídeo {Id} ({StorageIdentifier}) processado com sucesso.",
+                "Vídeo {Id} ({StorageIdentifier}) processado com sucesso e disponível para reprodução.",
                 videoId,
                 video.StorageIdentifier
             );
@@ -160,16 +169,21 @@ public class VideoProcessingService
         {
             _logger.LogError(ex, "Erro no processamento do vídeo ID {VideoId}", videoId);
 
-            if (video != null)
-            {
-                await _videoRepository.UpdateStatusAsync(videoId, VideoStatus.Error);
-                await _videoNotificationService.SendProgressUpdate(
-                    groupName,
-                    $"Erro: {ex.Message}",
-                    0,
-                    isError: true
-                );
-            }
+            if (video == null) throw; // Relança para o Hangfire marcar como Failed
+            
+            // Marca vídeo com status de erro
+            await _videoRepository.UpdateStatusAsync(videoId, VideoStatus.Error);
+            
+            // ✅ COMMIT - Persiste o status de erro
+            await _unitOfWork.CommitAsync();
+            
+            await _videoNotificationService.SendProgressUpdate(
+                groupName,
+                $"Erro: {ex.Message}",
+                0,
+                isError: true
+            );
+
             throw; // Relança para o Hangfire marcar como Failed
         }
     }
@@ -189,7 +203,7 @@ public class VideoProcessingService
                 result.StandardOutput,
                 NumberStyles.Any,
                 CultureInfo.InvariantCulture,
-                out double seconds
+                out var seconds
             )
         )
         {
@@ -210,18 +224,16 @@ public class VideoProcessingService
             return null;
 
         var match = FfmpegProgressRegex.Match(ffmpegLine);
-        if (match.Success)
-        {
-            var hours = int.Parse(match.Groups[1].Value);
-            var minutes = int.Parse(match.Groups[2].Value);
-            var seconds = int.Parse(match.Groups[3].Value);
-            var milliseconds = int.Parse(match.Groups[4].Value);
+        if (!match.Success) return null;
+        var hours = int.Parse(match.Groups[1].Value);
+        var minutes = int.Parse(match.Groups[2].Value);
+        var seconds = int.Parse(match.Groups[3].Value);
+        var milliseconds = int.Parse(match.Groups[4].Value);
 
-            var processedTime = new TimeSpan(0, hours, minutes, seconds, milliseconds * 10);
-            var progress = (int)(processedTime.TotalSeconds / totalDurationSeconds * 100);
+        var processedTime = new TimeSpan(0, hours, minutes, seconds, milliseconds * 10);
+        var progress = (int)(processedTime.TotalSeconds / totalDurationSeconds * 100);
 
-            return Math.Min(99, progress); // Trava em 99% até terminar o processo
-        }
-        return null;
+        return Math.Min(99, progress); // Trava em 99% até terminar o processo
+
     }
 }

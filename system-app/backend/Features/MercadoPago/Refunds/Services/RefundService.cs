@@ -12,32 +12,20 @@ using Microsoft.Extensions.Logging;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Refunds.Services
 {
-    public class RefundService : MercadoPagoServiceBase, IRefundService
+    public class RefundService(
+        IPaymentRepository paymentRepository,
+        ISubscriptionRepository subscriptionRepository,
+        IUnitOfWork unitOfWork,
+        IHttpClientFactory httpClient,
+        ILogger<RefundService> logger)
+        : MercadoPagoServiceBase(httpClient, logger), IRefundService
     {
-        private readonly IPaymentRepository _paymentRepository;
-        private readonly ISubscriptionRepository _subscriptionRepository;
-        private readonly IUnitOfWork _unitOfWork;
-
-        public RefundService(
-            IPaymentRepository paymentRepository,
-            ISubscriptionRepository subscriptionRepository,
-            IUnitOfWork unitOfWork,
-            IHttpClientFactory httpClient,
-            ILogger<RefundService> logger
-        )
-            : base(httpClient, logger)
-        {
-            _paymentRepository = paymentRepository;
-            _subscriptionRepository = subscriptionRepository;
-            _unitOfWork = unitOfWork;
-        }
-
         public async Task RequestRefundAsync(long paymentId)
         {
             var externalIdStr = paymentId.ToString();
 
             // 1. Busca usando o novo método do Repository que traz a Assinatura
-            var payment = await _paymentRepository.GetByExternalIdWithSubscriptionAsync(
+            var payment = await paymentRepository.GetByExternalIdWithSubscriptionAsync(
                 externalIdStr
             );
 
@@ -73,7 +61,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Refunds.Services
                 payment.UpdatedAt = DateTime.UtcNow;
 
                 // Marca o objeto Payment como modificado no contexto
-                _paymentRepository.Update(payment);
+                paymentRepository.Update(payment);
 
                 // Se houver assinatura vinculada, atualizamos via Repository dela
                 if (payment.Subscription != null)
@@ -82,20 +70,20 @@ namespace MeuCrudCsharp.Features.MercadoPago.Refunds.Services
                     payment.Subscription.UpdatedAt = DateTime.UtcNow;
 
                     // Marca o objeto Subscription como modificado
-                    _subscriptionRepository.Update(payment.Subscription);
+                    subscriptionRepository.Update(payment.Subscription);
                 }
 
                 // 5. Persiste tudo de uma vez (Atomicidade)
-                await _unitOfWork.CommitAsync();
+                await unitOfWork.CommitAsync();
 
-                _logger.LogInformation(
+                logger.LogInformation(
                     "Reembolso solicitado com sucesso para o pagamento {ExternalId}.",
                     payment.ExternalId
                 );
             }
             catch (Exception ex)
             {
-                _logger.LogError(
+                logger.LogError(
                     ex,
                     "Falha ao processar reembolso no Mercado Pago para o pagamento {ExternalId}.",
                     payment.ExternalId
@@ -109,7 +97,7 @@ namespace MeuCrudCsharp.Features.MercadoPago.Refunds.Services
             decimal? amount = null
         )
         {
-            _logger.LogInformation(
+            logger.LogInformation(
                 "Iniciando request de reembolso MP para: {PaymentId}",
                 externalPaymentId
             );

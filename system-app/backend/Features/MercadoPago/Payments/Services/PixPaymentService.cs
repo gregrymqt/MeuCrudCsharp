@@ -2,7 +2,6 @@ using MercadoPago.Client;
 using MercadoPago.Client.Common;
 using MercadoPago.Client.Payment;
 using MercadoPago.Error;
-using MercadoPago.Resource.Payment;
 
 using MeuCrudCsharp.Features.Auth.Interfaces;
 using MeuCrudCsharp.Features.Caching.Interfaces;
@@ -18,39 +17,21 @@ using Microsoft.Extensions.Options;
 
 namespace MeuCrudCsharp.Features.MercadoPago.Payments.Services;
 
-public class PixPaymentService : IPixPaymentService
+public class PixPaymentService(
+    ILogger<PixPaymentService> logger,
+    ICacheService cacheService,
+    IPaymentNotificationHub notificationHub,
+    IPaymentRepository paymentRepository, // Injeção do Repo
+    IUnitOfWork unitOfWork, // Injeção do UoW
+    IOptions<GeneralSettings> settings,
+    IUserContext userContext)
+    : IPixPaymentService
 {
-    private readonly ILogger<PixPaymentService> _logger;
-    private readonly ICacheService _cacheService;
-    private readonly IPaymentNotificationHub _notificationHub;
-
     // REMOVIDO: private readonly ApiDbContext _dbContext;
     // ADICIONADO: Repository e UnitOfWork
-    private readonly IPaymentRepository _paymentRepository;
-    private readonly IUnitOfWork _unitOfWork;
 
-    private readonly GeneralSettings _generalsettings;
+    private readonly GeneralSettings _generalsettings = settings.Value;
     private const string IDEMPOTENCY_PREFIX = "PixPayment";
-    private readonly IUserContext _userContext;
-
-    public PixPaymentService(
-        ILogger<PixPaymentService> logger,
-        ICacheService cacheService,
-        IPaymentNotificationHub notificationHub,
-        IPaymentRepository paymentRepository, // Injeção do Repo
-        IUnitOfWork unitOfWork, // Injeção do UoW
-        IOptions<GeneralSettings> settings,
-        IUserContext userContext
-    )
-    {
-        _logger = logger;
-        _cacheService = cacheService;
-        _notificationHub = notificationHub;
-        _paymentRepository = paymentRepository;
-        _unitOfWork = unitOfWork;
-        _generalsettings = settings.Value;
-        _userContext = userContext;
-    }
 
     public async Task<CachedResponse> CreateIdempotentPixPaymentAsync(
         CreatePixPaymentRequest request,
@@ -59,14 +40,14 @@ public class PixPaymentService : IPixPaymentService
     {
         var cacheKey = $"{IDEMPOTENCY_PREFIX}_idempotency_pix_{idempotencyKey}";
 
-        var response = await _cacheService.GetOrCreateAsync(
+        var response = await cacheService.GetOrCreateAsync(
             cacheKey,
             async () =>
             {
                 try
                 {
                     var result = await CreatePixPaymentAsync(
-                        await _userContext.GetCurrentUserId(),
+                        await userContext.GetCurrentUserId(),
                         request,
                         idempotencyKey
                     );
@@ -80,7 +61,7 @@ public class PixPaymentService : IPixPaymentService
                         error = "MercadoPago Error",
                         message = mpex.ApiError?.Message ?? "Erro ao comunicar com o provedor.",
                     };
-                    _logger.LogError(
+                    logger.LogError(
                         mpex,
                         "Erro da API do Mercado Pago (IdempotencyKey: {Key}): {ApiError}",
                         idempotencyKey,
@@ -95,7 +76,7 @@ public class PixPaymentService : IPixPaymentService
                         message = "Ocorreu um erro inesperado.",
                         error = ex.Message,
                     };
-                    _logger.LogError(
+                    logger.LogError(
                         ex,
                         "Erro inesperado ao processar PIX (IdempotencyKey: {Key})",
                         idempotencyKey
@@ -106,7 +87,7 @@ public class PixPaymentService : IPixPaymentService
             TimeSpan.FromHours(24)
         );
 
-        return response;
+        return response ?? throw new InvalidOperationException();
     }
 
     private async Task<PaymentResponseDto> CreatePixPaymentAsync(
@@ -120,17 +101,15 @@ public class PixPaymentService : IPixPaymentService
             throw new ArgumentException("userId is required");
         }
 
-        Models.Payments? novoPixPayment = null;
-
         try
         {
-            await _notificationHub.SendStatusUpdateAsync(
+            await notificationHub.SendStatusUpdateAsync(
                 userId,
                 new PaymentStatusUpdate("A processar o seu pagamento...", "processing", false)
             );
 
-            // 1. Prepara a Entidade
-            novoPixPayment = new Models.Payments()
+            // 1. Prepara a Entidade (apenas em memória, NÃO persiste ainda)
+            var novoPixPayment = new Models.Payments()
             {
                 UserId = userId,
                 Status = "Iniciando",
@@ -143,16 +122,15 @@ public class PixPaymentService : IPixPaymentService
                 CustomerCpf = request.Payer.Identification.Number,
             };
 
-            // 2. Persiste Inicialmente (Status "Iniciando") via Repository
-            await _paymentRepository.AddAsync(novoPixPayment);
-            await _unitOfWork.CommitAsync(); // Gera o ID no Banco
+            // 2. Marca para adição (NÃO persiste ainda)
+            await paymentRepository.AddAsync(novoPixPayment);
 
-            _logger.LogInformation(
-                "Pix payment adicionado com sucesso, com o Id: {Id}",
-                novoPixPayment.Id
+            logger.LogInformation(
+                "Pix payment preparado para o usuário {UserId}. Aguardando resposta do MercadoPago.",
+                userId
             );
 
-            await _notificationHub.SendStatusUpdateAsync(
+            await notificationHub.SendStatusUpdateAsync(
                 userId,
                 new PaymentStatusUpdate(
                     "Comunicando com o provedor de pagamento...",
@@ -188,32 +166,33 @@ public class PixPaymentService : IPixPaymentService
                 NotificationUrl = $"{_generalsettings.BaseUrl}/webhook/mercadpago",
             };
 
-            Payment payment = await paymentClient.CreateAsync(paymentRequest, requestOptions);
+            var payment = await paymentClient.CreateAsync(paymentRequest, requestOptions);
 
-            // 4. Atualiza a Entidade com dados do MP
+            // 4. Atualiza a Entidade com dados do MP (ainda em memória)
             novoPixPayment.PaymentId = payment.Id.ToString();
             novoPixPayment.Status = PaymentStatusMapper.MapFromMercadoPago(payment.Status);
             novoPixPayment.DateApproved = payment.DateApproved;
             novoPixPayment.UpdatedAt = DateTime.UtcNow;
 
-            // Usa o Update do Repository + Commit
-            _paymentRepository.Update(novoPixPayment);
-            await _unitOfWork.CommitAsync();
+            // 5. ✅ COMMIT ÚNICO - ATOMICIDADE GARANTIDA
+            // Persiste o payment com TODOS os dados já preenchidos (incluindo resposta do MP)
+            await unitOfWork.CommitAsync();
 
-            _logger.LogInformation(
-                "Pagamento PIX {PaymentId} para o usuário {UserId} salvo com sucesso.",
+            logger.LogInformation(
+                "Pagamento PIX {PaymentId} para o usuário {UserId} salvo com sucesso. Status: {Status}",
                 novoPixPayment.PaymentId,
-                userId
+                userId,
+                novoPixPayment.Status
             );
 
-            // 5. Notifica via Hub
+            // 6. Notifica via Hub
             if (
                 payment.Status == "approved"
                 || payment.Status == "pending"
                 || payment.Status == "in_process"
             )
             {
-                await _notificationHub.SendStatusUpdateAsync(
+                await notificationHub.SendStatusUpdateAsync(
                     userId,
                     new PaymentStatusUpdate(
                         "Pagamento processado com sucesso!",
@@ -225,7 +204,7 @@ public class PixPaymentService : IPixPaymentService
             }
             else
             {
-                await _notificationHub.SendStatusUpdateAsync(
+                await notificationHub.SendStatusUpdateAsync(
                     userId,
                     new PaymentStatusUpdate(
                         payment.StatusDetail ?? "O pagamento foi recusado.",
@@ -236,7 +215,7 @@ public class PixPaymentService : IPixPaymentService
                 );
             }
 
-            // 6. Retorno
+            // 7. Retorno
             return new PaymentResponseDto(
                 payment.Status,
                 payment.Id.GetValueOrDefault(), // Safe unwrap
@@ -253,34 +232,31 @@ public class PixPaymentService : IPixPaymentService
             if (ex is MercadoPagoApiException mpex)
             {
                 mensagemErro = mpex.ApiError?.Message ?? "Erro ao comunicar com o provedor.";
-                _logger.LogError(
+                logger.LogError(
                     mpex,
-                    "Erro da API do Mercado Pago: {ApiError}",
+                    "Erro da API do Mercado Pago ao processar PIX para {UserId}: {ApiError}",
+                    userId,
                     mpex.ApiError?.Message
                 );
             }
             else
             {
-                _logger.LogError(
+                logger.LogError(
                     ex,
-                    "Erro inesperado ao processar pagamento para {UserId}.",
+                    "Erro inesperado ao processar pagamento PIX para {UserId}.",
                     userId
                 );
             }
 
-            // Rollback manual (Remover o registro temporário se falhar)
-            if (novoPixPayment != null && novoPixPayment.Id != null)
-            {
-                _paymentRepository.Remove(novoPixPayment);
-                await _unitOfWork.CommitAsync();
+            // ✅ ROLLBACK AUTOMÁTICO
+            // Como não fizemos commit ainda, o UnitOfWork descarta todas as mudanças automaticamente
+            // Não precisa remover manualmente - o Entity Framework faz isso
+            logger.LogWarning(
+                "Pagamento PIX para o usuário {UserId} NÃO foi persistido devido a uma falha. Rollback automático.",
+                userId
+            );
 
-                _logger.LogWarning(
-                    "Registro de pagamento para o usuário {UserId} foi removido devido a uma falha.",
-                    userId
-                );
-            }
-
-            await _notificationHub.SendStatusUpdateAsync(
+            await notificationHub.SendStatusUpdateAsync(
                 userId,
                 new PaymentStatusUpdate(mensagemErro, "error", true)
             );
