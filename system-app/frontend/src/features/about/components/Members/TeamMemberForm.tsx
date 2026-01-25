@@ -1,7 +1,7 @@
 import React from 'react';
 // CORREÇÃO 1: Importação correta (GenericForm como valor)
 
-import styles from './AboutForms.module.scss'; // Mesmo arquivo de estilo
+import styles from '../../styles/AboutForm.module.scss'; // Mesmo arquivo de estilo
 import { type FormField, GenericForm } from '../../../../components/Form/GenericForm';
 import type { TeamMember, TeamMemberFormValues } from '../../types/about.types';
 
@@ -74,6 +74,15 @@ export const TeamMemberForm: React.FC<MemberFormProps> = ({
         <h2>{isEditing ? 'Editar Membro' : 'Adicionar ao Time'}</h2>
         <p>Cadastre ou atualize as informações do colaborador.</p>
       </div>
+
+      {isEditing && initialData?.photoUrl && (
+        <div className={`${styles.imagePreviewHint} ${styles.warning}`}>
+          <i className="fas fa-info-circle"></i>
+          <span>
+            Imagem atual configurada. Envie um arquivo apenas para substituí-la.
+          </span>
+        </div>
+      )}
 
       <GenericForm<TeamMemberFormValues>
         fields={fields}

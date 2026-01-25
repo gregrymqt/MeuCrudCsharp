@@ -1,4 +1,4 @@
-import type { Video, Course } from '../../../../types/models'; //
+import type { Video, Course } from 'src/types/models'; //
 
 // As abas da Sidebar
 export type VideoTab = 'list' | 'form' | 'player';

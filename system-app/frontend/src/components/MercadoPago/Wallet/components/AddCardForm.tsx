@@ -4,7 +4,7 @@ import styles from '../styles/AddCardForm.module.scss';
 
 import { MercadoPagoBrick } from '../../Payment/components/Credit-Card/components/MercadoPagoBrick';
 import type { BrickPaymentData } from '../../Payment/components/Credit-Card/types/credit-card.types';
-import { usePreference } from '../../Payment/components/Preference/hooks/usePreference';
+import { usePreference } from '../../Payment/components/Preferences/hooks/usePreference';
 import { useWallet } from '../hooks/useWallet';
 
 interface AddCardFormProps {

@@ -1,4 +1,4 @@
-@use 'variables' as *; // Importando suas variáveis globais
+@use '../../styles/variables' as *; // Importando suas variáveis globais
 
 .access-denied-container {
   display: flex;

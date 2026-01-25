@@ -3,7 +3,7 @@ import type { VideoFormData, VideoFormProps } from '../types/video-manager.types
 // Reutiliza estilo do container de form se quiser, ou cria um novo. 
 // Usaremos um module específico aqui para manter o padrão.
 import styles from '../styles/VideoForm.module.scss'; 
-import { type FormField, GenericForm } from '../../../../components/Form/GenericForm';
+import { type FormField, GenericForm } from 'src/components/Form/GenericForm';
 
 export const VideoForm: React.FC<VideoFormProps> = ({
   initialData,
@@ -65,7 +65,7 @@ export const VideoForm: React.FC<VideoFormProps> = ({
     title: initialData.title,
     description: initialData.description,
     duration: initialData.duration,
-    courseId: initialData.courseId,
+    courseId: String(initialData.courseId), // Converter number para string
     videoUrl: initialData.storageIdentifier // Supondo que a URL venha aqui
   } : {};
 

@@ -2,14 +2,13 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import { ProtectedRoute } from "./ProtectedRoute";
 import { SubscriptionRoute } from "./SubscriptionRoute"; // Importe o novo componente
 import { AppRoles } from "../types/models";
-import { MainLayout } from "../components/layout/MainLayout";
 import { AccessDenied } from "../pages/AccessDenied/AccessDenied";
 import { GoogleCallbackPage } from "../features/auth/components/GoogleCallbackPage";
 import { Home } from "../pages/Home/Home";
-import { AdminCourseManager } from "../features/admin/Courses/components/AdminCourseManager";
+import { AdminCourseManager } from "../features/course/Admin/components/AdminCourseManager";
 import { AdminProfile } from "../pages/Admin/AdminProfile";
-import { GoogleLoginButton } from "../features/auth/pages/GoogleLoginButton";
-import { CourseFeed } from "../features/course/pages/CourseFeed";
+import { GoogleLoginButton } from "../features/auth/components/GoogleLoginButton";
+import { CourseFeed } from "../features/course/Allow/pages/CourseFeed";
 import { PlansFeed } from "../features/plan/pages/PlansFeed";
 import { PlayerScreen } from "../features/player/pages/PlayerScreen";
 import { AdminClaimsPage } from "../features/Claim/components/AdminClaimsPage";
@@ -24,6 +23,7 @@ import { SupportAdminPage } from "../pages/Support/SupportAdminPage";
 import { AboutPage } from "../pages/About/AboutPage";
 import { AdminAboutPage } from "../pages/About/AdminAboutPage";
 import { AdminHomePage } from "../pages/Home/AdminHomePage";
+import { MainLayout } from "src/components/layout/components/MainLayout";
 
 export const AppRoutes = () => {
   return (

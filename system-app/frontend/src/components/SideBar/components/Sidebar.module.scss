@@ -1,5 +1,6 @@
-@use '../../styles/variables' as *; // Importa suas vars ($primary-color, etc)
+@use '../../../styles/variables' as *; // Importa suas vars ($primary-color, etc)
 @use 'sass:color';
+
 // --- Mobile Header (Aparece só no mobile) ---
 .mobileHeader {
   display: flex;

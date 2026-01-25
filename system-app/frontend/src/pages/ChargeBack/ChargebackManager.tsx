@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import styles from "./styles/ChargebackManager.module.scss";
+import styles from "./ChargebackManager.module.scss";
 import { ChargebackList } from "../../components/MercadoPago/Chargeback/components/ChargebackList";
 import { Sidebar } from "../../components/SideBar/components/Sidebar";
 import type { SidebarItem } from "../../components/SideBar/types/sidebar.types";

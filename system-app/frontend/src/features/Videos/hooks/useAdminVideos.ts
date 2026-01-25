@@ -2,9 +2,9 @@
 
 import { useState, useCallback } from 'react';
 import { VideoService } from '../services/video.service';
-import { AlertService } from '../../../../shared/services/alert.service'; // 
-import { ApiError } from '../../../../shared/services/api.service'; //
-import type { Video } from '../../../../types/models';
+import { AlertService } from 'src/shared/services/alert.service'; // 
+import { ApiError } from 'src/shared/services/api.service'; //
+import type { Video } from 'src/types/models';
 import type { PaginatedResponse, CreateVideoParams, UpdateVideoParams } from '../types/video-manager.types';
 
 export const useAdminVideos = () => {
@@ -40,7 +40,7 @@ export const useAdminVideos = () => {
       );
       
       return true;
-    } catch (error) {
+    } catch (error: unknown) {
       const message = error instanceof ApiError ? error.message : 'Falha no upload do vídeo.';
       AlertService.error('Erro no Upload', message);
       return false;
@@ -58,7 +58,7 @@ export const useAdminVideos = () => {
       // Atualização otimista local (opcional) ou feedback visual
       AlertService.success('Sucesso', 'Informações do vídeo atualizadas.');
       return true;
-    } catch (error) {
+    } catch (error: unknown) {
       const message = error instanceof ApiError ? error.message : 'Erro ao atualizar.';
       AlertService.error('Erro', message);
       return false;
@@ -91,7 +91,7 @@ export const useAdminVideos = () => {
         });
       }
       return true;
-    } catch (error) {
+    } catch (error: unknown) {
       if (error instanceof ApiError) {
         AlertService.error('Erro', error.message);
         return false;

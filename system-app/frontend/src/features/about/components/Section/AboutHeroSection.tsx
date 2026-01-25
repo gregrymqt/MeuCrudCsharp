@@ -1,5 +1,5 @@
 import React from 'react';
-import styles from '../styles/AboutHeroSection.module.scss';
+import styles from '../../styles/AboutHeroSection.module.scss';
 import type { AboutSectionData } from '../../types/about.types';
 
 interface AboutHeroSectionProps {

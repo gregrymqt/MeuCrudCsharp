@@ -1,19 +1,17 @@
-// src/features/admin/videos/pages/AdminVideoManager.tsx
-
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 
 // Styles
-import styles from "AdminVideoManager.module.scss";
+import styles from "./AdminVideoManager.module.scss";
 import { Sidebar } from "../../components/SideBar/components/Sidebar";
 import type { SidebarItem } from "../../components/SideBar/types/sidebar.types";
-import { VideoForm } from "../../features/admin/Videos/components/VideoForm";
-import { VideoList } from "../../features/admin/Videos/components/VideoList";
-import { VideoPlayer } from "../../features/admin/Videos/components/VideoPlayer";
-import { useAdminVideos } from "../../features/admin/Videos/hooks/useAdminVideos";
-import type { VideoTab, VideoFormData } from "../../features/admin/Videos/types/video-manager.types";
-import { useCourses } from "../../features/course/hooks/useCourses";
+import { VideoForm } from "../../features/Videos/components/VideoForm";
+import { VideoList } from "../../features/Videos/components/VideoList";
+import { VideoPlayer } from "../../features/Videos/components/VideoPlayer";
+import { useAdminVideos } from "../../features/Videos/hooks/useAdminVideos";
+import type { VideoTab, VideoFormData } from "../../features/Videos/types/video-manager.types";
+import { useCourses } from "../../features/course/Allow/hooks/useCourses";
 import { AlertService } from "../../shared/services/alert.service";
-import type { Video } from "../../types/models";
+import type { Video, Course } from "../../types/models";
 
 
 
@@ -29,7 +27,18 @@ export const AdminVideoManager: React.FC = () => {
   } = useAdminVideos();
 
   // Precisamos dos cursos para preencher o <select> do formulário
-  const { courses, fetchCourses } = useCourses();
+  const { courses, refresh: refreshCourses } = useCourses();
+
+  // Converter CourseRowUI para Course para compatibilidade com VideoForm
+  const coursesForForm = useMemo<Course[]>(() => {
+    return courses.map(courseRow => ({
+      id: courseRow.id,
+      publicId: String(courseRow.id), // CourseRowUI não tem publicId, usando id como fallback
+      name: courseRow.categoryName,
+      description: '', // CourseRowUI não tem description
+      videos: [] // Não precisamos dos videos aqui
+    }));
+  }, [courses]);
 
   // 2. Estados de UI (Controle de Abas e Seleção)
   const [activeTab, setActiveTab] = useState<VideoTab>("list");
@@ -39,8 +48,8 @@ export const AdminVideoManager: React.FC = () => {
   // 3. Carregar dados iniciais
   useEffect(() => {
     fetchVideos();
-    fetchCourses();
-  }, [fetchVideos, fetchCourses]);
+    refreshCourses();
+  }, [fetchVideos]);
 
   // Itens da Sidebar
   const sidebarItems: SidebarItem[] = [
@@ -154,13 +163,14 @@ export const AdminVideoManager: React.FC = () => {
                 setSelectedVideo(null);
                 setActiveTab("form");
               }}
+              onRefresh={() => fetchVideos()}
             />
           )}
 
           {activeTab === "form" && (
             <VideoForm
               initialData={selectedVideo}
-              courses={courses} // Passando cursos reais da API
+              courses={coursesForForm} // Usando cursos convertidos
               isLoading={loadingVideos}
               onSubmit={handleFormSubmit}
               onCancel={() => setActiveTab("list")}

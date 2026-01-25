@@ -49,7 +49,7 @@ export const PixForm: React.FC<PixFormProps> = ({
       name: 'identificationType',
       label: 'Tipo de Documento',
       type: 'select',
-      colSpan: 4,
+      colSpan: 6,
       options: docTypes.map(d => ({ label: d.name, value: d.id })),
       validation: { required: 'Selecione o tipo' }
     },
@@ -57,7 +57,7 @@ export const PixForm: React.FC<PixFormProps> = ({
       name: 'identificationNumber',
       label: 'Número do Documento',
       type: 'text',
-      colSpan: 8,
+      colSpan: 6,
       validation: { required: 'Documento é obrigatório' }
     }
   ], [docTypes]);

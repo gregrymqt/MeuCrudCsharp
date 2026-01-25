@@ -1,5 +1,5 @@
 import React from 'react';
-import styles from './HomeForms.module.scss';
+import styles from '../../styles/HomeForms.module.scss';
 import { type FormField, GenericForm } from '../../../../components/Form/GenericForm';
 import type { ServiceData, ServiceFormValues } from '../../types/home.types'; //
 

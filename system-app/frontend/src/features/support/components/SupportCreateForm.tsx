@@ -5,7 +5,7 @@ import type {
   SupportTicketStatus,
 } from "../types/support.types";
 
-import styles from "./SupportTicketList.module.scss"; // Use o mesmo SCSS
+import styles from "../styles/SupportTicketList.module.scss"; // Use o mesmo SCSS
 import { ActionMenu } from "../../../components/ActionMenu/ActionMenu";
 import {
   type FormField,
@@ -15,7 +15,7 @@ import { type TableColumn, Table } from "../../../components/Table/Table";
 
 type TabOption = "list" | "search";
 
-export const SupportTicketList: React.FC = () => {
+export const SupportCreateForm: React.FC = () => {
   const {
     tickets,
     currentTicket,

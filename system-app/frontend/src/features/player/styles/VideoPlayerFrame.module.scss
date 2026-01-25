@@ -1,0 +1,74 @@
+@use "../../../styles/variables" as *;
+
+.playerWrapper {
+  width: 100%;
+  background-color: #000; // Fundo preto estilo cinema
+  margin-bottom: 20px;
+}
+
+.aspectRatioBox {
+  position: relative;
+  width: 100%;
+  padding-top: 56.25%; // Truque clássico para Aspect Ratio 16:9 (9 / 16 = 0.5625)
+  background-color: #1a1a1a;
+}
+
+.posterContainer {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-size: cover;
+  background-position: center;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover .bigPlayButton {
+    transform: scale(1.1);
+    background-color: $primary-color; // [cite: 12] Usando var do arquivo
+    border-color: $primary-color;
+  }
+}
+
+.playOverlay {
+  background: rgba(0,0,0,0.3); // Escurece levemente a imagem
+  width: 100%; height: 100%;
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bigPlayButton {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background-color: rgba(0, 0, 0, 0.6);
+  border: 3px solid #fff;
+  color: #fff;
+  font-size: 2rem;
+  cursor: pointer;
+  transition: all $transition-speed ease; // [cite: 13] Usando var de transição
+  padding-left: 8px; // Ajuste visual ótico do ícone play
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.videoPlaceholder {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nativePlayer {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  background-color: black;
+}

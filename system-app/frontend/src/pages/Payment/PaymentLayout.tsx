@@ -11,7 +11,7 @@ import { Sidebar } from "../../components/SideBar/components/Sidebar";
 import type { SidebarItem } from "../../components/SideBar/types/sidebar.types";
 import { CreditCardPayment } from "../../components/MercadoPago/Payment/components/Credit-Card/CreditCardPayment";
 import { PixPayment } from "../../components/MercadoPago/Payment/components/Pix/PixPayment";
-import { usePreference } from "../../components/MercadoPago/Payment/components/Preference/hooks/usePreference";
+import { usePreference } from "../../components/MercadoPago/Payment/components/Preferences/hooks/usePreference";
 import type {
   PaymentLayoutProps,
   PaymentMethodId,

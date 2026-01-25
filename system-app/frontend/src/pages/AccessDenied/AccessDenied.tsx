@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import '../styles/AccessDenied.scss'; // Criaremos abaixo
+import './AccessDenied.scss'; // Criaremos abaixo
 
 export const AccessDenied = () => {
   const navigate = useNavigate();

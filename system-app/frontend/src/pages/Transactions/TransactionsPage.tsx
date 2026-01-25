@@ -3,7 +3,7 @@ import styles from './TransactionsPage.module.scss'; // CSS Modules
 import { FailedPaymentsList } from '../../components/MercadoPago/Transactions/components/FailedPaymentsList';
 import { Sidebar } from '../../components/SideBar/components/Sidebar';
 import type { SidebarItem } from '../../components/SideBar/types/sidebar.types';
-import { PaymentHistory } from '../../features/profile/components/history/PaymentHistory';
+import {PaymentHistory} from "src/components/MercadoPago/Transactions/components/PaymentHistory.tsx";
 
 // Definição dos itens do menu lateral
 const MENU_ITEMS: SidebarItem[] = [

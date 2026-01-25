@@ -1,9 +1,9 @@
 import React from "react";
-import { type Video, VideoStatus } from "../../../../types/models"; 
+import { type Video, VideoStatus } from "src/types/models"; 
 import { type VideoListProps } from "../types/video-manager.types";
 import styles from "../styles/VideoList.module.scss";
-import { ActionMenu } from "../../../../components/ActionMenu/ActionMenu";
-import { type TableColumn, Table } from "../../../../components/Table/Table";
+import { ActionMenu } from "src/components/ActionMenu/ActionMenu";
+import { type TableColumn, Table } from "src/components/Table/Table";
 import { ProcessingBadge } from "./ProcessingBadge"; //
 
 export const VideoList: React.FC<VideoListProps> = ({
@@ -44,7 +44,7 @@ export const VideoList: React.FC<VideoListProps> = ({
     {
       header: "Preview",
       width: "80px",
-      render: (video) => (
+      render: (video: Video) => (
         <button
           className={styles.playBtn}
           onClick={() => onWatch(video)}
@@ -58,13 +58,13 @@ export const VideoList: React.FC<VideoListProps> = ({
     {
       header: "Curso",
       width: "25%",
-      render: (video) => video.course?.name || "Sem Curso",
+      render: (video: Video) => video.course?.name || "Sem Curso",
     },
     { header: "Duração", accessor: "duration", width: "15%" },
     {
       header: "Status",
       width: "20%",
-      render: (video) => {
+      render: (video: Video) => {
         // 1. Prioridade: Se estiver processando, mostra o Badge com Socket/Progresso
         if (video.status === VideoStatus.Processing) {
           return (
@@ -83,7 +83,7 @@ export const VideoList: React.FC<VideoListProps> = ({
     {
       header: "Ações",
       width: "10%",
-      render: (video) => (
+      render: (video: Video) => (
         <ActionMenu
           onEdit={() => onEdit(video)}
           onDelete={() => onDelete(video.publicId)}
@@ -104,7 +104,7 @@ export const VideoList: React.FC<VideoListProps> = ({
       <Table
         data={videos}
         columns={columns}
-        keyExtractor={(v) => v.publicId}
+        keyExtractor={(v: Video) => v.publicId}
         isLoading={isLoading}
         emptyMessage="Nenhum vídeo encontrado."
       />

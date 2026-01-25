@@ -1,6 +1,6 @@
 import React from 'react';
 
-import styles from './HomeLists.module.scss';
+import styles from '../../styles/HomeLists.module.scss';
 import { ActionMenu } from '../../../../components/ActionMenu/ActionMenu';
 import { type TableColumn, Table } from '../../../../components/Table/Table';
 import type { ServiceData } from '../../types/home.types';

@@ -1,5 +1,5 @@
-import { ApiService } from "../../../../shared/services/api.service";
-import type { Video } from "../../../../types/models";
+import { ApiService } from "src/shared/services/api.service";
+import type { Video } from "src/types/models";
 import type {
   VideoFilters,
   PaginatedResponse,

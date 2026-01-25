@@ -1,5 +1,5 @@
 import React from 'react';
-import styles from './Home.module.scss';
+import styles from '../../styles/Home.module.scss';
 import { Carousel } from '../../../../components/Carousel/Carousel';
 import { useScrollOpacity } from '../../hooks/useScrollOpacity';
 import type { HeroSlideData } from '../../types/home.types';

@@ -1,7 +1,7 @@
 import React, { useCallback } from 'react';
 import styles from '../styles/PlansFeed.module.scss';
-import { PlanCard } from '../components/Card/PlanCard';
-import { PaginationControls } from '../components/PaginationControl/PaginationControls';
+import { PlanCard } from '../components/PlanCard';
+import { PaginationControls } from '../components/PaginationControls';
 import { usePlans } from '../hooks/usePlans';
 import type { PlanUI } from '../types/plan.type';
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import styles from '../../features/home/styles/Home.module.scss'; // Ajuste o caminho conforme sua estrutura
+import styles from './styles/Home.module.scss'; // Ajuste o caminho conforme sua estrutura
 
 // Componentes
 import { Services } from '../../features/home/components/Service/Services';

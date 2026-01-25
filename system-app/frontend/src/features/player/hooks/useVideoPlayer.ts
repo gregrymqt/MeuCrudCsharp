@@ -68,7 +68,7 @@ export const useVideoPlayer = (publicId: string | undefined) => {
         videoElement.play().catch(e => console.log('Autoplay bloqueado pelo browser', e));
       });
 
-      hls.on(Hls.Events.ERROR, (event, data) => {
+      hls.on(Hls.Events.ERROR, (_event, data) => {
         if (data.fatal) {
            console.error('Erro fatal HLS:', data); // [cite: 15]
            // Aqui você poderia tentar recuperar o erro

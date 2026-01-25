@@ -4,7 +4,7 @@ import React from 'react';
 import { ClaimStatusBadge } from './ClaimStatusBadge';
 // MUDANÇA: Importamos ClaimSummary ao invés de Claim
 import { type ClaimSummary } from '../types/claims.type'; 
-import styles from './ClaimsList.module.scss';
+import styles from '../styles/ClaimsList.module.scss';
 import type { ClaimStatus } from '../../../../types/models';
 import { type TableColumn, Table } from '../../../Table/Table';
 

@@ -1,0 +1,39 @@
+@use "../../../styles/variables" as *;
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  padding: 1rem 0;
+
+  button {
+    background-color: $bg-light;
+    border: 1px solid $primary-color;
+    color: $primary-color;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color $transition-speed, color $transition-speed;
+
+    &:hover:not(:disabled) {
+      background-color: $primary-color;
+      color: $bg-light;
+    }
+
+    &:disabled {
+      border-color: $border-color;
+      color: $secondary-color;
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+  }
+
+  span {
+    color: $text-dark;
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+}

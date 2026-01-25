@@ -6,12 +6,12 @@ import type { SupportTicketStatus, SupportTicket } from '../types/support.types'
 import styles from '../styles/SupportTicketList.module.scss';
 
 export const SupportTicketList: React.FC = () => {
-  const { tickets, loading, fetchTickets, updateStatus } = useSupport();
+  const { tickets, loading, fetchTicketsPaginated, updateStatus } = useSupport();
 
   // Busca os dados ao montar o componente
   useEffect(() => {
-    fetchTickets();
-  }, [fetchTickets]);
+    fetchTicketsPaginated();
+  }, [fetchTicketsPaginated]);
 
   // --- Renderizadores Auxiliares ---
 
@@ -113,7 +113,7 @@ export const SupportTicketList: React.FC = () => {
             <small className="text-muted">Visualize e atenda as solicitações dos usuários</small>
         </div>
         
-        <button className={styles.refreshBtn} onClick={() => fetchTickets()} disabled={loading}>
+        <button className={styles.refreshBtn} onClick={() => fetchTicketsPaginated(1, true)} disabled={loading}>
           <i className={`fas fa-sync-alt ${loading ? 'fa-spin' : ''}`}></i> 
           Atualizar
         </button>

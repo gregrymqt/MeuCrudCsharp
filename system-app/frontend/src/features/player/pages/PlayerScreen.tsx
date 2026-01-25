@@ -2,8 +2,8 @@ import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom'; // Necessário para pegar o ID da URL
 
 import styles from '../styles/PlayerScreen.module.scss';
-import { VideoMetadata } from '../components/MetaData/VideoMetadata';
-import { VideoPlayerFrame } from '../components/PlayerFrame/VideoPlayerFrame';
+import { VideoMetadata } from '../components/VideoMetadata';
+import { VideoPlayerFrame } from '../components/VideoPlayerFrame';
 import { useVideoPlayer } from '../hooks/useVideoPlayer';
 
 export const PlayerScreen: React.FC = () => {

@@ -5,7 +5,7 @@ import styles from "./styles/AboutPage.module.scss";
 
 // Componentes
 import { AboutHeroSection } from "../../features/about/components/Section/AboutHeroSection";
-import { AboutTeamSection } from "../../features/about/components/Members/AboutTeamSection";
+import { AboutTeamSection } from "../../features/about/components/Members/TeamMemberSection";
 
 // Hook (CORREÇÃO: Usar o hook de leitura criado anteriormente)
 import { useAboutData } from "../../features/about/hooks/useAboutData";

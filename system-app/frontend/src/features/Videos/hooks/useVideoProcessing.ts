@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { socketService } from '../../../../shared/services/socket.service';
-import { AlertService } from '../../../../shared/services/alert.service';
-import { AppHubs } from '../../../../shared/enums/hub.enums';
-import { VideoStatus } from '../../../../types/models';
+import { socketService } from 'src/shared/services/socket.service';
+import { AlertService } from 'src/shared/services/alert.service';
+import { AppHubs } from 'src/shared/enums/hub.enums';
+import { VideoStatus } from 'src/types/models';
 
 interface ProgressData {
   message: string;
@@ -32,7 +32,7 @@ export const useVideoProcessing = (
       await socketService.connect(hub);
 
       // 2. Ouvir atualizações (Callback)
-      socketService.on<ProgressData>(hub, 'ProgressUpdate', (data) => {
+      socketService.on<ProgressData>(hub, 'ProgressUpdate', (data: ProgressData) => {
         if (!mounted) return;
 
         setProgress(data.progress);

@@ -1,0 +1,60 @@
+@use '../../../styles/variables' as v;
+
+.pageContainer {
+  padding: 1rem;
+  width: 100%;
+  min-height: 100vh;
+  background-color: v.$bg-color;
+
+  // Animação de entrada da página
+  animation: fadeSlideIn 0.4s ease-out;
+
+  @include v.desktop {
+    padding: 2rem;
+  }
+}
+
+.pageHeader {
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid v.$border-color;
+  padding-bottom: 1rem;
+  
+  // Flexbox para alinhar Título e Breadcrumb (se houver)
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  @include v.desktop {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  h1 {
+    font-size: 1.8rem;
+    color: v.$text-dark;
+    font-weight: 700;
+    margin: 0;
+
+    i {
+      color: v.$primary-color;
+      margin-right: 10px;
+    }
+  }
+
+  p {
+    color: v.$secondary-color;
+    margin: 0;
+    font-size: 0.9rem;
+  }
+}
+
+.contentArea {
+  // Garante que a tabela tenha um container sólido
+  background: transparent; 
+}
+
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}

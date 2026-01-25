@@ -11,14 +11,12 @@ SYSTEM_APP_PATH = os.path.join(PROJECT_ROOT, "system-app")
 @mcp.tool()
 def explicar_arquitetura():
     """Retorna as regras de arquitetura e padrões do projeto."""
-    return """
-    PADRÕES GREG COMPANY:
-    - Backend (C#): Clean Architecture. Camadas: API, Application, Domain, Infrastructure.
-    - Frontend (React): Componentes modulares com TypeScript e Hooks customizados.
-    - Jobs: Sempre usar Hangfire para processos assíncronos.
-    - Cache: Redis para performance.
-    - Pagamentos: Integração Mercado Pago via checkout transparente ou Webhooks.
-    """
+    try:
+        instructions_path = os.path.join(PROJECT_ROOT, '.github', 'copilot-instructions.md')
+        with open(instructions_path, 'r', encoding='utf-8') as f:
+            return f.read()
+    except Exception as e:
+        return f"Erro ao ler as instruções de arquitetura: {e}"
 
 @mcp.tool()
 def mapear_estrutura_system():
@@ -36,4 +34,11 @@ def mapear_estrutura_system():
         return f"Erro ao ler pastas: {e}"
 
 if __name__ == "__main__":
+
     mcp.run()
+
+
+
+
+
+

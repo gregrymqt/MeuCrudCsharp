@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { StorageService, STORAGE_KEYS } from '../../../shared/services/storage.service';
-import { ApiError } from '../../../shared/services/api.service';
+import { StorageService, STORAGE_KEYS } from 'src/shared/services/storage.service.ts';
+import { ApiError } from 'src/shared/services/api.service.ts';
 import { authService } from '../services/auth.service';
 import type { UserSession } from '../types/auth.types';
 
