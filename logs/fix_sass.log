@@ -1,0 +1,11 @@
+--- Início da correção Sass: Mon Jan 26 14:50:17     2026 ---
+Updating: /c/Users/digob/desktop/greg-company-ecosystem/system-app/frontend/src/features/about/styles/AboutHeroSection.module.scss
+   + Added @use "sass:color"
+Updating: /c/Users/digob/desktop/greg-company-ecosystem/system-app/frontend/src/features/plan/styles/PlanCard.module.scss
+   + Added @use "sass:color"
+Updating: /c/Users/digob/desktop/greg-company-ecosystem/system-app/frontend/src/features/profile/Admin/styles/ProfileInfo.module.scss
+   + Added @use "sass:color"
+Updating: /c/Users/digob/desktop/greg-company-ecosystem/system-app/frontend/src/pages/Home/styles/Home.module.scss
+   + Added @use "sass:color"
+Updating: /c/Users/digob/desktop/greg-company-ecosystem/system-app/frontend/src/pages/Subscription/SubscriptionPage.module.scss
+   + Added @use "sass:color"

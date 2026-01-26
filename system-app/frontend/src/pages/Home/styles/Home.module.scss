@@ -1,3 +1,4 @@
+@use "sass:color";
 @use '../../../styles/variables' as *; // Importando suas variáveis globais
 
 // =========================================
@@ -130,7 +131,7 @@
     transition: transform 0.2s, background-color 0.2s;
 
     &:hover {
-      background-color: darken($primary-color, 10%);
+      background-color: color.adjust($primary-color, $lightness: -10%);
       transform: translateY(-2px);
     }
   }
