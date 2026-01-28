@@ -1,9 +1,9 @@
 @use '../../../../styles/variables' as *; // Importando suas variáveis globais
 
 .container {
-  background-color: $bg-white; // Assumindo uma var para fundo branco
+  background-color: $bg-light;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  box-shadow: $shadow;
   padding: 1.5rem;
   width: 100%;
   overflow: hidden;

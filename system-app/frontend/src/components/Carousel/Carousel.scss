@@ -44,11 +44,13 @@
     opacity: 0.5;
     transition: all $transition-speed;
 
-    &-active {
-      background-color: $primary-color; // [cite: 1]
-      opacity: 1;
-      width: 20px; // Estica a bolinha ativa (efeito moderno)
-      border-radius: 4px;
-    }
+  }
+
+  // Bullet ativo
+  :global(.swiper-pagination-bullet-active) {
+    background-color: $primary-color;
+    opacity: 1;
+    width: 20px; // Estica a bolinha ativa (efeito moderno)
+    border-radius: 4px;
   }
 }

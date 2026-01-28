@@ -4,19 +4,46 @@ $primary-hover: #0056b3;
 $secondary-color: #6c757d;
 $text-dark: #212529;
 $text-light: #f8f9fa;
+$text-muted: #6c757d; // Cor para textos com menos destaque
+$text-color: $text-dark; // Cor de texto padrão principal
+$text-secondary: $secondary-color; // Cor de texto secundária, para parágrafos, etc.
 $bg-light: #ffffff;
 $bg-grey: #f8f9fa;
 $border-color: #dee2e6;
-$shadow: rgba(0, 0, 0, 0.08);
+
+// Cores Semânticas
+$success-color: #28a745;
+$danger-color: #dc3545;
+$warning-color: #ffc107;
+
+// Sombras
+$shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+$shadow-lg: 0 10px 20px rgba(0,0,0,0.1);
+
+// Fontes e Espaçamento
+$font-size-sm: 0.875rem;
+$font-size-base: 1rem;
+$font-size-md: 1rem;
+$font-size-lg: 1.25rem;
+$font-size-xxl: 2rem;
+
+$spacing-sm: 0.5rem;
+$spacing-md: 1rem;
+$spacing-lg: 1.5rem;
+$spacing-xl: 2rem;
+$spacing-xxl: 3rem;
 
 // Layout
+$container-max-width: 1140px;
 $header-height: 60px;
 $transition-speed: 0.3s;
-$breakpoint-desktop: 992px;
+$breakpoint-md: 768px;
+$breakpoint-lg: 992px; // Antigo $breakpoint-desktop
+$breakpoint-xl: 1200px;
 
 // Mixin para Responsividade (Mobile First -> Desktop)
 @mixin desktop {
-  @media (min-width: $breakpoint-desktop) {
+  @media (min-width: $breakpoint-lg) {
     @content;
   }
 }

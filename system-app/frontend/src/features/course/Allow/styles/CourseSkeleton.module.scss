@@ -1,5 +1,25 @@
 @use '../../../../styles/variables' as *; // Ajuste o caminho conforme suas variáveis
 
+// Mixin de Animação (Pode colocar no global se preferir)
+@mixin shimmer {
+  animation: pulse 1.5s infinite ease-in-out;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+    background-color: #222;
+  }
+  50% {
+    opacity: 0.5;
+    background-color: #333; // Levemente mais claro
+  }
+  100% {
+    opacity: 1;
+    background-color: #222;
+  }
+}
+
 .skeletonContainer {
   padding: 20px;
   display: flex;
@@ -50,25 +70,5 @@
       width: 220px;
       height: 124px;
     }
-  }
-}
-
-// Mixin de Animação (Pode colocar no global se preferir)
-@mixin shimmer {
-  animation: pulse 1.5s infinite ease-in-out;
-}
-
-@keyframes pulse {
-  0% {
-    opacity: 1;
-    background-color: #222;
-  }
-  50% {
-    opacity: 0.5;
-    background-color: #333; // Levemente mais claro
-  }
-  100% {
-    opacity: 1;
-    background-color: #222;
   }
 }

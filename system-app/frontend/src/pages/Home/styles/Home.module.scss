@@ -201,7 +201,7 @@
   // Ícone (FontAwesome)
   i {
     font-size: 3rem;
-    color: lighten($primary-color, 10%);
+    color: color.adjust($primary-color, $lightness: -10%);
     margin-bottom: 1.5rem;
     display: block;
     transition: all 0.3s ease;

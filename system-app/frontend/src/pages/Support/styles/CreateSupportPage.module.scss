@@ -4,7 +4,7 @@
   width: 100%;
   min-height: 100vh; // Garante altura total
   padding: 1rem;
-  background-color: v.$bg-color; // Cor de fundo padrão do site
+  background-color: v.$bg-grey; // Cor de fundo padrão do site
   
   // Centraliza o conteúdo horizontalmente
   display: flex;
@@ -13,7 +13,7 @@
 
   @include v.desktop {
     padding: 3rem 1rem;
-    background-image: linear-gradient(to bottom, v.$bg-light 0%, v.$bg-color 100%);
+    background-image: linear-gradient(to bottom, v.$bg-light 0%, v.$bg-grey 100%);
   }
 }
 

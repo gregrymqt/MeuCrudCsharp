@@ -28,7 +28,7 @@
   left: 50%;
   transform: translateX(-50%);
   background: $primary-color;
-  color: white;
+  color: $bg-light;
   padding: 4px 12px;
   border-radius: 12px;
   font-size: 0.75rem;
@@ -83,7 +83,7 @@
     margin-bottom: 0.8rem;
     display: flex;
     align-items: center;
-    color: $text-grey;
+    color: $text-secondary;
     font-size: 0.95rem;
   }
 
@@ -100,12 +100,12 @@
   border-radius: 8px;
   border: none;
   background-color: $primary-color;
-  color: white;
+  color: $bg-light;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s;
 
   &:hover {
-    background-color: color.adjust($primary-color, $lightness: -10%);
+    background-color: $primary-hover;
   }
 }
